@@ -2,6 +2,7 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { AppState, Linking } from 'react-native';
 
+import { showError } from '@/feedback/appAlert';
 import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
 import { haptic } from '@/feedback/haptics';
@@ -130,9 +131,19 @@ export function useWebEditing(): {
         haptic('success');
       } else if (result.error.kind === 'cancelled') {
         publish({ kind: 'ready', connection: previous, busy: null });
+      } else if (result.error.kind === 'alreadyRegistered') {
+        // The user picks another provider; nothing to report.
+        publish({ kind: 'ready', connection: previous, busy: null });
+        pushToast(t('passkeys.alreadyRegistered'), 'info');
       } else {
         publish({ kind: 'ready', connection: previous, busy: null });
-        pushToast(t(result.error.kind === 'alreadyRegistered' ? 'passkeys.alreadyRegistered' : 'passkeys.addFailed'), 'info');
+        haptic('error');
+        showError({
+          context: 'Settings › Passkeys › Add',
+          summary: t('passkeys.addFailed'),
+          code: result.error.kind,
+          error: result.error.detail,
+        });
       }
     } catch {
       if (isCurrent()) publish({ kind: 'error', operation, previous });

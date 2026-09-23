@@ -53,7 +53,7 @@ export interface RootVaultPendingStore {
   clear(): void;
 }
 
-export type RootVaultSyncError =
+export type RootVaultSyncError = (
   | { readonly kind: 'cancelled' }
   | { readonly kind: 'unsupported' }
   | { readonly kind: 'noPrf' }
@@ -63,17 +63,33 @@ export type RootVaultSyncError =
   | { readonly kind: 'alreadyRegistered' }
   | { readonly kind: 'storageFailed' }
   | { readonly kind: 'busy' }
-  | { readonly kind: 'networkFailed' };
+  | { readonly kind: 'networkFailed' }
+) & {
+  /**
+   * PII-free native or transport diagnostic (provider exception type, HTTP
+   * status) for the error report sheet. Never rendered as UI copy.
+   */
+  readonly detail?: string;
+};
+
+/** Bounded so a provider's verbose message can't swamp the report. */
+function errorDetail(error: unknown): string {
+  return (error instanceof Error ? error.message : String(error)).slice(0, 300);
+}
 
 function classifyNativeError(error: unknown): RootVaultSyncError {
-  const message = error instanceof Error ? error.message : String(error);
-  if (message.includes('cancelled') || message.includes('canceled')) {
+  const message = errorDetail(error);
+  // Native errors carry a `passkey_prf_*` code (the bridge may prefix the
+  // exception class); provider text after it is report detail only and must
+  // not steer the classification.
+  const code = /passkey_prf_[a-z_]+/.exec(message)?.[0] ?? message;
+  if (code.includes('cancelled') || code.includes('canceled')) {
     return { kind: 'cancelled' };
   }
-  if (message.includes('already_registered')) return { kind: 'alreadyRegistered' };
-  if (message.includes('unsupported')) return { kind: 'unsupported' };
-  if (message.includes('no_prf')) return { kind: 'noPrf' };
-  return { kind: 'invalidCredential' };
+  if (code.includes('already_registered')) return { kind: 'alreadyRegistered' };
+  if (code.includes('unsupported')) return { kind: 'unsupported', detail: message };
+  if (code.includes('no_prf')) return { kind: 'noPrf', detail: message };
+  return { kind: 'invalidCredential', detail: message };
 }
 
 export async function connectRootIdentityToPasskey(input: {
@@ -159,8 +175,8 @@ export async function connectRootIdentityToPasskey(input: {
       input.pending?.clear();
     }
     return uploaded;
-  } catch {
-    return { ok: false, error: { kind: 'networkFailed' } };
+  } catch (error) {
+    return { ok: false, error: { kind: 'networkFailed', detail: errorDetail(error) } };
   } finally {
     credentialId.fill(0);
     prfOutput.fill(0);
@@ -200,8 +216,11 @@ export function createRootVaultUploadClient(
           },
           body: JSON.stringify(record),
         });
-      } catch {
-        return { ok: false, error: { kind: 'networkFailed' } };
+      } catch (error) {
+        return {
+          ok: false,
+          error: { kind: 'networkFailed', detail: errorDetail(error) },
+        };
       }
       if (response.status === 200 || response.status === 201) {
         return { ok: true, value: undefined };
@@ -209,7 +228,7 @@ export function createRootVaultUploadClient(
       if (response.status === 409) {
         return { ok: false, error: { kind: 'alreadyConnected' } };
       }
-      return { ok: false, error: { kind: 'networkFailed' } };
+      return { ok: false, error: { kind: 'networkFailed', detail: `HTTP ${response.status}` } };
     },
   };
 }
@@ -224,8 +243,8 @@ export async function connectRootIdentityWithNativePasskey(input: {
   connecting = true;
   try {
     return await connectNative(input);
-  } catch {
-    return { ok: false, error: { kind: 'invalidCredential' } };
+  } catch (error) {
+    return { ok: false, error: { kind: 'invalidCredential', detail: errorDetail(error) } };
   } finally {
     connecting = false;
   }

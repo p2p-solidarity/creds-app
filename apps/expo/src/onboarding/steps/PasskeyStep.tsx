@@ -4,7 +4,7 @@ import { useState, type ReactNode } from 'react';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
-import { appAlert, showError } from '@/feedback/appAlert';
+import { showError } from '@/feedback/appAlert';
 import { haptic } from '@/feedback/haptics';
 import { useTranslation } from '@/i18n';
 import {
@@ -83,9 +83,12 @@ export function PasskeyStep({
       if (outcome.kind === 'failed') {
         setRootVaultSyncState('deferred');
         if (outcome.error.kind !== 'cancelled') {
-          appAlert({
+          showError({
             title: t('rootVault.failed.title'),
-            message: t('ob.passkey.connectLater'),
+            context: 'Onboarding › Web Editing › Passkey',
+            summary: t('ob.passkey.connectLater'),
+            code: outcome.error.kind,
+            error: outcome.error.detail,
           });
         }
         onCreated();

@@ -10,6 +10,7 @@ import {
 } from '@solidarity/shared';
 import {
   connectRootIdentityToPasskey,
+  createRootVaultUploadClient,
   type PasskeyPrfClient,
   type RootVaultUploadClient,
 } from '../../src/identity/rootVaultSync';
@@ -114,7 +115,10 @@ describe('root vault passkey sync', () => {
       },
     });
 
-    expect(result).toEqual({ ok: false, error: { kind: 'unsupported' } });
+    expect(result).toEqual({
+      ok: false,
+      error: { kind: 'unsupported', detail: 'passkey_prf_unsupported' },
+    });
     expect(uploadCalled).toBe(false);
   });
 
@@ -139,5 +143,60 @@ describe('root vault passkey sync', () => {
 
     expect(result).toEqual({ ok: false, error: { kind: 'noPrf' } });
     expect(uploadCalled).toBe(false);
+  });
+
+  test('keeps the native provider failure as report detail and classifies by its code', async () => {
+    const native =
+      'passkey_prf_invalid_credential (CreatePublicKeyCredentialDomException: ' +
+      'androidx.credentials.TYPE_SECURITY_ERROR: request canceled by policy)';
+    const result = await connectRootIdentityToPasskey({
+      mnemonic: MNEMONIC,
+      userName: 'Solidarity',
+      passkey: {
+        createCredential: async () => {
+          throw new Error(native);
+        },
+      },
+      upload: { put: async () => ({ ok: true, value: undefined }) },
+    });
+
+    // "canceled" in the provider text must not turn a refusal into a silent cancel.
+    expect(result).toEqual({
+      ok: false,
+      error: { kind: 'invalidCredential', detail: native },
+    });
+  });
+
+  test('classifies a code the native bridge prefixed with its exception class', async () => {
+    const result = await connectRootIdentityToPasskey({
+      mnemonic: MNEMONIC,
+      userName: 'Solidarity',
+      passkey: {
+        createCredential: async () => {
+          throw new Error('java.lang.IllegalStateException: passkey_prf_cancelled');
+        },
+      },
+      upload: { put: async () => ({ ok: true, value: undefined }) },
+    });
+
+    expect(result).toEqual({ ok: false, error: { kind: 'cancelled' } });
+  });
+
+  test('reports the HTTP status when the vault upload is refused', async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async () =>
+      new Response('{}', { status: 503 })) as unknown as typeof fetch;
+    try {
+      const result = await createRootVaultUploadClient('https://vault.test').put(
+        'locator',
+        { v: 1, ciphertext: 'AA' },
+      );
+      expect(result).toEqual({
+        ok: false,
+        error: { kind: 'networkFailed', detail: 'HTTP 503' },
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 });
