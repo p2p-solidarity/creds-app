@@ -24,7 +24,6 @@ interface ParityRow {
 const PARITY: readonly ParityRow[] = [
   { swiftName: 'Palette.ink',       swiftHex: '#2F2F30', tsToken: 'text1' },
   { swiftName: 'Palette.slate',     swiftHex: '#5F5E67', tsToken: 'text2' },
-  { swiftName: 'Palette.stone',     swiftHex: '#9C9AA6', tsToken: 'text3' },
   { swiftName: 'Palette.fog',       swiftHex: '#D1D1D1', tsToken: 'divider' },
   { swiftName: 'Palette.mist',      swiftHex: '#EEEEEE', tsToken: 'searchBg' },
   { swiftName: 'Palette.cream',     swiftHex: '#FBF9F2', tsToken: 'pageBg' },

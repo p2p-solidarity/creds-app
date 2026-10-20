@@ -29,7 +29,7 @@ module.exports = {
         // Text — map to Color.Theme.textPrimary/Secondary/Tertiary
         text1: 'var(--color-text1, #2F2F30)',
         text2: 'var(--color-text2, #5F5E67)',
-        text3: 'var(--color-text3, #9C9AA6)',
+        text3: 'var(--color-text3, #6E6B7B)',
 
         // Accents — map to Color.Theme.accentRose/primaryBlue/destructive
         // NOTE: `primaryBlue` is brand mauve, NOT iOS system blue — the
@@ -49,7 +49,7 @@ module.exports = {
         warningText: 'var(--color-warningText, #9C5B00)',
         destructiveText: 'var(--color-destructiveText, #B7364D)',
         accentRoseText: 'var(--color-accentRoseText, #AA568A)',
-        text3Strong: 'var(--color-text3Strong, #747181)',
+        text3Strong: 'var(--color-text3Strong, #6E6B7B)',
 
         // Decorative — map to Color.Theme.dustyMauve/blobCenter
         dustyMauve: 'var(--color-dustyMauve, #B89BB1)',

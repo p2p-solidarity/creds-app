@@ -131,11 +131,11 @@ function LanguageRow({
         style={{
           paddingHorizontal: 16,
           paddingVertical: 16,
-          borderRadius: 14,
-          borderWidth: 2,
+          borderRadius: 0,
+          borderWidth: 1,
           gap: 16,
           backgroundColor: isSelected ? `${Colors.primaryBlue}1F` : Colors.cardBg,
-          borderColor: isSelected ? Colors.primaryBlue : 'transparent',
+          borderColor: isSelected ? Colors.primaryBlue : Colors.divider,
         }}
       >
         <View

@@ -45,19 +45,19 @@ const RAW = {
   searchBg: '#EEEEEE',
   searchBgDark: '#1C1424',
 
-  /** 1-pt divider line — #d1d1d1 / #2D2438. */
+  /** 1-pt divider line — #d1d1d1 / #5F5E67. */
   divider: '#D1D1D1',
-  dividerDark: '#2D2438',
+  dividerDark: '#5F5E67',
 
   /** Primary text — #2f2f30 / #F0E8F0. */
   text1: '#2F2F30',
   text1Dark: '#F0E8F0',
-  /** Secondary text — #5f5e67 / #A898A8. */
+  /** Secondary text — #5f5e67 / #D1D1D1. */
   text2: '#5F5E67',
-  text2Dark: '#A898A8',
+  text2Dark: '#D1D1D1',
   /** Tertiary text / placeholders — #9c9aa6 / 50% white. */
-  text3: '#9C9AA6',
-  text3Dark: '#808080',
+  text3: '#6E6B7B',
+  text3Dark: '#8A8A8A',
 
   /** Pill / chip background — #eeeeee / white@18%. */
   pillBg: '#EEEEEE',
@@ -75,7 +75,7 @@ const RAW = {
 
   /** Chip / verified-tag surface — #F7F2FA / rgba(47,47,48,0.5). */
   chipSurface: '#F7F2FA',
-  chipSurfaceDark: 'rgba(47,47,48,0.5)',
+  chipSurfaceDark: '#222026',
 
   /** Muted card / row container — #eeeeee@80% / rgba(47,47,48,0.6). */
   mutedSurface: 'rgba(238,238,238,0.8)',
@@ -166,16 +166,15 @@ const RAW = {
    * text/icon uses these. */
   terminalGreenText: '#2F6B45',
   terminalGreenTextDark: '#4CAF51',
-  warningText: '#9C5B00',
+  warningText: '#8A5000',
   warningTextDark: '#FF9500',
-  destructiveText: '#B7364D',
+  destructiveText: '#A83048',
   destructiveTextDark: '#D2677A',
   accentRoseText: '#AA568A',
   accentRoseTextDark: '#BF80A7',
-  /** text3 fails 4.5:1 on light surfaces; use this where tertiary text carries
-   * meaning (not mere decoration). Dark mode keeps text3Dark. */
-  text3Strong: '#747181',
-  text3StrongDark: '#808080',
+  /** Same as text3 since text3 itself took creds.id's accessible value. */
+  text3Strong: '#6E6B7B',
+  text3StrongDark: '#8A8A8A',
 
   /** Public Page template palette. These are separate from the app theme:
    * choosing a visitor-facing template must never replace the owner's app UI. */

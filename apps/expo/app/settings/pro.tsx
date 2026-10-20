@@ -149,7 +149,7 @@ export default function ProSettingsScreen() {
               colors={[Colors.heroGradientStart, Colors.heroGradientEnd]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={{ borderRadius: 20, overflow: 'hidden', padding: 18 }}>
+              style={{ overflow: 'hidden', padding: 18 }}>
               <View className="flex-row items-center justify-between gap-3">
                 <View className="gap-1">
                   <ThemedText variant="titleLarge">

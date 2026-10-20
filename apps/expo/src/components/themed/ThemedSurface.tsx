@@ -11,13 +11,15 @@ import { View, type ViewProps } from 'react-native';
 
 export type SurfaceVariant = 'card' | 'elevated' | 'outlined' | 'inset';
 
+// Radii by role, the same table as creds.id (`--radius-*`): a bordered
+// content card is square, a sheet is 16, a muted group is 12.
 const VARIANT_CLASS: Readonly<Record<SurfaceVariant, string>> = {
   // Solid card on pageBg
-  card: 'bg-cardBg rounded-2xl border border-divider',
+  card: 'bg-cardBg rounded-none border border-divider',
   // Sheet / modal — slightly raised
   elevated: 'bg-cardBg rounded-2xl shadow-lg shadow-black/10',
-  // Empty borders for placeholders
-  outlined: 'bg-transparent rounded-2xl border border-divider',
+  // Bordered group on pageBg
+  outlined: 'bg-transparent rounded-none border border-divider',
   // Subtle inset like search backgrounds
   inset: 'bg-searchBg rounded-xl',
 };
