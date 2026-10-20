@@ -57,3 +57,16 @@
 - 工作階段內重複發布不再提示；閒置 15 分鐘後下一次簽名必須重新用 passkey。
 - 不支援 PRF、取消、密文缺失／損壞、credential 不同步都不建立新身份；顯示單一簡短後備入口。
 - App 的 iCloud 一般資料備份與現有未提交的備份 UI 改動不受影響。
+
+## 5. 2026-10-20 修訂：creds.id 自主建立 + 跨裝置 passkey 管理
+
+使用者裁決（取代 §0 第 2 點「web 不建立身份」與 App 本機 passkey 清單）：
+
+1. **網頁可直接建立身份**：creds.id 產生 seed（只在記憶體）→ 用存在 iCloud 鑰匙圈 / Google 密碼管理工具的 passkey 建立 PRF 外殼 → 只上傳密文。不做 OAuth、不託管金鑰。`user.id = sha256(did)`（與 App 相同），`user.name = name@creds.id`。PRF 拿不到就 `signalUnknownCredential` 移除該 passkey，不留孤兒。
+2. **救援**：靠同步 passkey；登入後可「顯示 / 下載救援詞」，每次都要重新驗一次 passkey 且 DID 必須等於目前 session。
+3. **owner 索引**（`packages/shared/src/rootVault.ts`）：`ownerSecret = HKDF(seed, 'solidarity-root-vault-owner-v1')`、`metaKey = HKDF(seed, 'solidarity-root-vault-meta-v1')`。服務只存 `sha256(ownerSecret)` 與 AES-GCM 密封的 meta（AAD = locator，無法搬到別列）。服務仍看不到 DID、裝置名稱或 Page。
+4. **API**：`GET /vault/root`（Bearer ownerSecret）列表、`PATCH /vault/root/:locator/meta` 改名、`PUT /vault/root/:locator/owner` 只認領 owner 為 NULL 的舊列、`DELETE /vault/root/:locator` 只限 owner。`PUT` 帶 Bearer 時建立即帶 owner；ciphertext 仍 create-once（§1.4 不變，只有 owner/meta 可變）。每個 owner 上限 20 列。
+5. **殘餘風險（接受）**：知道某個 2026-10-20 前建立、尚未被認領之舊列 locator 的人可以先認領並刪除它——只會讓那把 passkey 的網頁登入失效，不洩漏金鑰；任何新版客戶端登入時會自動認領自己的舊列。
+6. **pending**：上傳失敗時只把密文（PRF 封裝）留在 localStorage；下次用同一把 passkey 登入、遠端 404 時用本機密文解開並補傳。
+
+E2E：`docs/e2e/2026-10-20-creds-passkey/result.md`。
