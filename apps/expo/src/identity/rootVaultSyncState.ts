@@ -18,6 +18,9 @@ export interface PendingRootVaultUpload {
   readonly locator: string;
   readonly record: RootVaultRecordV1;
   readonly row?: PasskeyRow;
+  /** First attempt carried the owner secret (08 §5); absent on older records. */
+  readonly owned?: true;
+  readonly meta?: string;
 }
 
 export function getRootVaultSyncState(binding?: string): RootVaultSyncState {
@@ -71,6 +74,8 @@ export function readPendingRootVaultUpload(): Result<PendingRootVaultUpload | nu
       typeof value.locator !== 'string' ||
       typeof value.record !== 'object' || value.record === null ||
       value.record.v !== 1 || typeof value.record.ciphertext !== 'string' ||
+      (value.meta !== undefined && typeof value.meta !== 'string') ||
+      (value.owned !== undefined && value.owned !== true) ||
       (value.row !== undefined && (!isPasskeyRow(value.row) || value.row.binding !== value.binding || value.row.locator !== value.locator))
     ) return { ok: false, error: { kind: 'storageFailed' } };
     return { ok: true, value };

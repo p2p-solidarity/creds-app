@@ -30,3 +30,21 @@ WebAuthn was a page-level shim (fake authenticator with PRF = sha256(secret‖in
 - Real iCloud Keychain / Google Password Manager PRF (needs a real device; the pane can't drive OS passkey sheets).
 - Publishing to live relays / claiming the name on the production directory (outward-facing; publish code unchanged).
 - Upload-failure → next sign-in retry: covered by `test/passkeyAccount.test.ts`, not by the browser run.
+
+## Phase 5 — App (iOS 27 simulator, iPhone 18 Pro, dev client)
+Local worker seeded with a throwaway identity owning two passkey rows (one "web", one "iOS"); the dev build's
+vault origin was pointed at `localhost:8787` for the run only (reverted, not committed — writing test rows to
+production was blocked). Identity imported through onboarding › 我已經有帳號 › 輸入復原字詞.
+
+| Step | Result |
+|---|---|
+| Settings › 通行密鑰 | loading → both rows, labels decrypted from sealed meta (`E2E 網頁 Passkey` · Chrome · macOS · 網頁; `E2E 舊 iPhone` · iOS App) |
+| Row › rename `… renamed` › 儲存名稱 | server list shows the new label |
+| Row › 移除通行密鑰 › confirm | row gone in app and on server |
+| 在電腦上編輯 | shows `creds.id/edit` + 開啟 when server passkeys exist (was "add a passkey first" — fixed) |
+
+Repo verify after the run: `bun run typecheck && bun run lint && bun run test` → 0 errors, 1817 pass.
+
+### Not run
+- Creating a passkey from the App on the simulator (needs the creds.id associated domain on a signed device).
+- The App against the production service (blocked from writing test rows there).

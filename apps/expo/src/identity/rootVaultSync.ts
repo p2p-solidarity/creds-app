@@ -1,19 +1,21 @@
 import {
   base64UrlDecode,
   base64UrlEncode,
+  deriveRootVaultAccess,
   deriveSecp256k1Scalar,
   HKDF_INFO_NOSTR,
   nostrPublicKeyHex,
   rootVaultLocator,
   rootVaultPrfInput,
   sealRootVault,
+  sealRootVaultMeta,
   sha256Bytes,
   utf8ToBytes,
   type Result,
   type RootVaultRecordV1,
 } from '@solidarity/shared';
 
-import { passkeyAaguid } from './passkeyAaguid';
+import { passkeyAaguid, passkeyProvider } from './passkeyAaguid';
 import { getPasskeyRegistry, type PasskeyRow } from './passkeyRegistry';
 import type { PendingRootVaultUpload } from './rootVaultSyncState';
 
@@ -41,15 +43,25 @@ export interface PasskeyPrfClient {
   ): Promise<PasskeyPrfCreateResult>;
 }
 
+/**
+ * Owner index credentials for an upload (08 §5): the seed-derived owner
+ * secret authenticates; `meta` is the locator-bound sealed row metadata.
+ */
+export interface RootVaultUploadOwner {
+  readonly ownerSecret: Uint8Array;
+  readonly meta?: string;
+}
+
 export interface RootVaultUploadClient {
   put(
     locator: string,
     record: RootVaultRecordV1,
+    owner?: RootVaultUploadOwner,
   ): Promise<Result<void, RootVaultSyncError>>;
 }
 
 export interface RootVaultPendingStore {
-  set(locator: string, record: RootVaultRecordV1, row?: PasskeyRow): void;
+  set(locator: string, record: RootVaultRecordV1, row?: PasskeyRow, meta?: string): void;
   clear(): void;
 }
 
@@ -152,6 +164,23 @@ export async function connectRootIdentityToPasskey(input: {
       undefined,
       input.nostrScalar,
     );
+    const access = deriveRootVaultAccess(input.mnemonic);
+    if (!access.ok) return { ok: false, error: { kind: 'invalidMnemonic' } };
+    const platform = row?.platform === 'android' ? 'android' : row?.platform === 'ios' ? 'ios' : null;
+    const meta = row && platform ? sealRootVaultMeta({
+      v: 1,
+      label: (passkeyProvider(row.aaguid) ?? row.device).slice(0, 64),
+      credentialId: row.credentialId,
+      createdAt: row.createdAt,
+      platform,
+      device: row.device.slice(0, 64),
+      aaguid: row.aaguid,
+    }, locator, access.value.metaKey) : null;
+    access.value.metaKey.fill(0);
+    const owner: RootVaultUploadOwner = {
+      ownerSecret: access.value.ownerSecret,
+      ...(meta?.ok ? { meta: meta.value } : {}),
+    };
     if (!sealed.ok) {
       if (sealed.error.kind === 'invalidMnemonic') {
         return { ok: false, error: { kind: 'invalidMnemonic' } };
@@ -162,11 +191,13 @@ export async function connectRootIdentityToPasskey(input: {
       return { ok: false, error: { kind: 'invalidCredential' } };
     }
     try {
-      input.pending?.set(locator, sealed.value, row);
+      input.pending?.set(locator, sealed.value, row, owner.meta);
     } catch {
+      owner.ownerSecret.fill(0);
       return { ok: false, error: { kind: 'storageFailed' } };
     }
-    const uploaded = await input.upload.put(locator, sealed.value);
+    const uploaded = await input.upload.put(locator, sealed.value, owner);
+    owner.ownerSecret.fill(0);
     if (uploaded.ok) {
       if (row && input.registration) {
         const saved = input.registration.registry.save({ ...row, status: 'synced' });
@@ -205,7 +236,7 @@ export function createRootVaultUploadClient(
   origin = ROOT_VAULT_ORIGIN,
 ): RootVaultUploadClient {
   return {
-    put: async (locator, record) => {
+    put: async (locator, record, owner) => {
       let response: Response;
       try {
         response = await fetch(`${origin}/vault/root/${locator}`, {
@@ -213,8 +244,11 @@ export function createRootVaultUploadClient(
           headers: {
             accept: 'application/json',
             'content-type': 'application/json',
+            ...(owner ? { authorization: `Bearer ${base64UrlEncode(owner.ownerSecret)}` } : {}),
           },
-          body: JSON.stringify(record),
+          body: JSON.stringify(owner?.meta === undefined
+            ? { v: record.v, ciphertext: record.ciphertext }
+            : { v: record.v, ciphertext: record.ciphertext, meta: owner.meta }),
         });
       } catch (error) {
         return {
@@ -297,7 +331,11 @@ async function connectNative(input: {
       if (pending.binding !== binding) {
         state.clearPendingRootVaultUpload();
       } else {
-        const retried = await retryPasskeyUpload(pending, upload, registry);
+        const access = deriveRootVaultAccess(input.mnemonic);
+        if (!access.ok) return { ok: false, error: { kind: 'invalidMnemonic' } };
+        access.value.metaKey.fill(0);
+        const retried = await retryPasskeyUpload(pending, upload, registry, access.value.ownerSecret)
+          .finally(() => access.value.ownerSecret.fill(0));
         if (!retried.ok) return retried;
         state.setRootVaultSyncState('connected', binding);
         state.clearPendingRootVaultUpload();
@@ -325,8 +363,8 @@ async function connectNative(input: {
       excludeCredentialIds: excluded.value,
       registration: { binding, device, platform: Platform.OS, registry },
       pending: {
-        set: (locator, record, row) => {
-          state.setPendingRootVaultUpload({ binding, locator, record, row });
+        set: (locator, record, row, meta) => {
+          state.setPendingRootVaultUpload({ binding, locator, record, row, owned: true, ...(meta === undefined ? {} : { meta }) });
           state.rememberRootVaultBinding(binding);
         },
         clear: state.clearPendingRootVaultUpload,
@@ -398,13 +436,20 @@ export async function retryPasskeyUpload(
   pending: PendingRootVaultUpload,
   upload: RootVaultUploadClient,
   registry: ReturnType<typeof getPasskeyRegistry>,
+  ownerSecret?: Uint8Array,
 ): Promise<Result<void, RootVaultSyncError>> {
   try {
     if (pending.row) {
       const saved = registry.save({ ...pending.row, status: 'pending' });
       if (!saved.ok) return saved;
     }
-    const uploaded = await upload.put(pending.locator, pending.record);
+    // The server accepts a retry only if it repeats the first attempt byte for
+    // byte, so an upload saved before the owner index retries unowned (the
+    // Passkeys screen claims it afterwards).
+    const owner = pending.owned && ownerSecret
+      ? { ownerSecret, ...(pending.meta === undefined ? {} : { meta: pending.meta }) }
+      : undefined;
+    const uploaded = await upload.put(pending.locator, pending.record, owner);
     if (!uploaded.ok) return uploaded;
     return pending.row ? registry.save({ ...pending.row, status: 'synced' }) : uploaded;
   } catch {
