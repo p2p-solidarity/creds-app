@@ -25,7 +25,7 @@ export function IDSectionContainer({ children }: { readonly children: ReactNode 
   return (
     <ThemedSurface
       variant="inset"
-      className="rounded-none p-4"
+      className="p-4"
       style={{ borderWidth: 1, borderColor: Colors.divider, gap: 8 }}>
       {children}
     </ThemedSurface>

@@ -338,7 +338,7 @@ function LinkPresetChips({
             accessibilityLabel={label}>
             <ThemedSurface
               variant="outlined"
-              className="justify-center rounded-none px-3"
+              className="justify-center px-3"
               style={{
                 minHeight: 44,
                 borderColor: active ? Colors.primaryBlue : Colors.divider,

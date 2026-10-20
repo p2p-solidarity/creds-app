@@ -55,7 +55,6 @@ export function GroupPanel(): ReactNode {
           {groups.length === 0 ? (
             <ThemedSurface
               variant="inset"
-              className="rounded-none"
               style={{ padding: 16, alignItems: 'flex-start' }}>
               <ThemedText variant="bodySmall" tone="secondary">
                 No groups found. Create or join a group.
@@ -70,7 +69,7 @@ export function GroupPanel(): ReactNode {
                   }}
                   accessibilityRole="button"
                   accessibilityLabel={g.name}>
-                  <ThemedSurface variant="inset" className="rounded-none" style={{ padding: 16 }}>
+                  <ThemedSurface variant="inset" style={{ padding: 16 }}>
                     <ThemedText variant="label">{g.name}</ThemedText>
                     <ThemedText
                       variant="caption"
@@ -96,7 +95,6 @@ export function GroupPanel(): ReactNode {
         </View>
         <ThemedSurface
           variant="inset"
-          className="rounded-none"
           style={{
             padding: 16,
             borderWidth: 1,

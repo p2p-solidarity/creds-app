@@ -180,7 +180,6 @@ function MetadataRow({ label, value, position: _position }: MetadataRowProps) {
   return (
     <ThemedSurface
       variant="inset"
-      className="rounded-none"
       style={{
         height: 48,
         paddingHorizontal: 12,
@@ -274,7 +273,6 @@ function Chip({ icon, text }: ChipProps) {
   return (
     <ThemedSurface
       variant="inset"
-      className="rounded-none"
       style={{
         flexDirection: 'row',
         alignItems: 'center',
@@ -318,7 +316,7 @@ function ClaimRow({
 }) {
   return (
     <PressableScale onPress={onToggle} accessibilityRole="button" accessibilityState={{ selected }}>
-      <ThemedSurface variant="inset" className="flex-row items-center gap-2 rounded-none px-3 py-3">
+      <ThemedSurface variant="inset" className="flex-row items-center gap-2 px-3 py-3">
         <View style={{ width: 18, height: 18, alignItems: 'center', justifyContent: 'center' }}>
           <SfIcon name={claimIcon(claim.claimType)} size={14} color={Colors.terminalGreen} />
         </View>
@@ -579,7 +577,7 @@ export default function CredentialDetailScreen() {
           {isWorkContext ? (
             <ThemedSurface
               variant="inset"
-              className="mx-4 flex-row items-center gap-2 rounded-none px-3 py-3">
+              className="mx-4 flex-row items-center gap-2 px-3 py-3">
               <SfIcon name="briefcase" size={14} color={Colors.terminalGreen} />
               <ThemedText variant="bodySmall" tone="secondary" style={{ flex: 1 }}>
                 {t('credentialDetail.workContextBanner')}

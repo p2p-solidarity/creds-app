@@ -103,7 +103,7 @@ export function ConnectStep({
       }>
       <View style={{ flex: 1, justifyContent: 'center', gap: 16 }}>
         {profileStatus !== 'ready' || record === null ? (
-          <ThemedSurface variant="outlined" className="rounded-none p-4">
+          <ThemedSurface variant="outlined" className="p-4">
             <View style={{ gap: 8 }}>
               <ThemedText variant="titleMedium">{t('connectStep.noPageTitle')}</ThemedText>
               <ThemedText variant="bodySmall" tone="secondary">
@@ -114,7 +114,7 @@ export function ConnectStep({
         ) : hasClaim ? (
           <ExistingBindingState badge={badge} preferredProvider={preferredProvider} />
         ) : (
-          <ThemedSurface variant="inset" className="rounded-none p-4">
+          <ThemedSurface variant="inset" className="p-4">
             <View style={{ gap: 10 }}>
               <SfIcon name="checkmark.seal" size={22} color={Colors.primaryBlue} />
               <ThemedText variant="titleMedium">{t('connectStep.publishTitle')}</ThemedText>
@@ -141,7 +141,7 @@ function ExistingBindingState({
   const checking = badge.status === 'checking' && renderableResult === null;
 
   return (
-    <ThemedSurface variant="inset" className="rounded-none p-4">
+    <ThemedSurface variant="inset" className="p-4">
       <View style={{ gap: 12 }}>
         <ThemedText variant="titleMedium">{t('connectStep.currentBadge')}</ThemedText>
         {checking ? (

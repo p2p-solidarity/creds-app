@@ -205,7 +205,7 @@ function ProfileQrSheet({
       {(close) => (
         <ThemedSurface
           variant="elevated"
-          className="rounded-none px-4 pt-5"
+          className="px-4 pt-5"
           style={{ maxHeight: windowHeight - Math.max(insets.top, 12) }}>
           <View className="flex-row items-start gap-3">
             <ThemedText variant="titleLarge" className="flex-1 pt-2">
@@ -256,7 +256,7 @@ function ProfileQrSheet({
                 }}
               />
             ) : shareState.kind === 'unpublished' ? (
-              <ThemedSurface variant="inset" className="gap-4 rounded-none p-4">
+              <ThemedSurface variant="inset" className="gap-4 p-4">
                 <View className="flex-row items-center gap-2">
                   <SfIcon name="icloud" size={22} color={Colors.warning} />
                   <ThemedText variant="label">{t('meShare.unpublishedTitle')}</ThemedText>
@@ -284,7 +284,7 @@ function ProfileQrSheet({
                 />
               </ThemedSurface>
             ) : (
-              <ThemedSurface variant="inset" className="items-center gap-4 rounded-none p-4">
+              <ThemedSurface variant="inset" className="items-center gap-4 p-4">
                 <SfIcon name="exclamationmark.triangle" size={24} color={Colors.destructive} />
                 <ThemedText variant="bodyMedium" tone="error" style={{ textAlign: 'center' }}>
                   {t('meShare.modelError')}

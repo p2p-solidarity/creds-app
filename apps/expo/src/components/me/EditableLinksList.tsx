@@ -66,7 +66,7 @@ export function EditableLinksList({
         <ThemedSurface
           key={link.id}
           variant="outlined"
-          className="flex-row rounded-none">
+          className="flex-row">
           <PressableScale
             fill
             haptic="tap"
@@ -87,7 +87,7 @@ export function EditableLinksList({
             }}>
             <ThemedSurface
               variant="inset"
-              className="h-9 w-9 items-center justify-center rounded-none">
+              className="h-9 w-9 items-center justify-center rounded-sm2">
               <BrandIcon
                 name={brandIconForLink(link.label, link.url)}
                 size={16}

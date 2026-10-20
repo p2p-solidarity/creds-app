@@ -338,7 +338,7 @@ function PlatformRow({
       accessibilityLabel={label}>
       <ThemedSurface
         variant="outlined"
-        className="min-h-14 flex-row items-center gap-3 rounded-none px-4 py-3">
+        className="min-h-14 flex-row items-center gap-3 px-4 py-3">
         <View className="w-7 items-center">
           <BrandIcon
             name={brandIconForLink(preset, '')}

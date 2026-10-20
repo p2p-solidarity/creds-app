@@ -169,7 +169,7 @@ export default function EvidencePackScreen(): ReactNode {
             {t('evidencePack.explainer')}
           </ThemedText>
 
-          <ThemedSurface variant="outlined" className="rounded-none">
+          <ThemedSurface variant="outlined">
             <IdentityRow
               name={source.record.displayName}
               username={source.username}
@@ -224,7 +224,7 @@ export default function EvidencePackScreen(): ReactNode {
           ) : null}
 
           {pack.kind === 'ready' ? (
-            <ThemedSurface variant="outlined" className="items-center gap-2 rounded-none p-4">
+            <ThemedSurface variant="outlined" className="items-center gap-2 p-4">
               {/* The generated SVG carries its own white module background —
                   the wrapper stays on the card token in both themes. */}
               <View style={{ backgroundColor: Colors.cardBg, padding: 8 }}>

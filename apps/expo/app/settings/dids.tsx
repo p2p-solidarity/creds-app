@@ -179,7 +179,6 @@ function DIDListSheet() {
                   <ThemedSurface
                     key={candidate.labelHex}
                     variant="inset"
-                    className="rounded-none"
                     style={{ paddingHorizontal: 14, paddingVertical: 12, gap: 8 }}>
                     <View className="flex-row items-center" style={{ gap: 8 }}>
                       <SfIcon
@@ -246,7 +245,6 @@ function DidCard({ did }: { did: string }) {
   return (
     <ThemedSurface
       variant="inset"
-      className="rounded-none"
       style={{ paddingHorizontal: 14, paddingVertical: 12 }}>
       <View className="flex-row items-center" style={{ marginBottom: 8 }}>
         <View
@@ -274,7 +272,7 @@ function NoActiveDidCard({ label }: { label: string }) {
   return (
     <ThemedSurface
       variant="inset"
-      className="flex-row items-center rounded-none"
+      className="flex-row items-center"
       style={{ paddingHorizontal: 14, paddingVertical: 14 }}>
       <View
         style={{

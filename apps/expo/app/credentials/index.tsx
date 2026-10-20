@@ -64,7 +64,7 @@ function ActionRow({ icon, title, onPress, disabled = false }: ActionRowProps) {
       accessibilityLabel={title}>
       <ThemedSurface
         variant="inset"
-        className="flex-row items-center gap-3 rounded-none px-[14px] py-[14px]"
+        className="flex-row items-center gap-3 px-[14px] py-[14px]"
         style={{ opacity: disabled ? 0.5 : 1 }}>
         <View style={{ width: 20, height: 20, alignItems: 'center', justifyContent: 'center' }}>
           <SfIcon name={icon} size={14} color={Colors.text1} />

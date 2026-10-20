@@ -150,7 +150,6 @@ function CommitmentRow({ commitment }: { readonly commitment: string }): React.J
   return (
     <ThemedSurface
       variant="inset"
-      className="rounded-none"
       style={{ paddingHorizontal: 14, paddingVertical: 12 }}>
       <View className="flex-row items-center" style={{ gap: 12, marginBottom: 8 }}>
         <View style={{ width: 20, height: 20, alignItems: 'center', justifyContent: 'center' }}>

@@ -309,7 +309,7 @@ function ReadyStep({
   return (
     <View style={{ flex: 1, justifyContent: 'center', gap: 20 }}>
       <PublishingConstellation phase="ready" />
-      <ThemedSurface variant="inset" className="rounded-none p-4">
+      <ThemedSurface variant="inset" className="p-4">
         <View style={{ gap: 10 }}>
           <SfIcon name="checkmark.seal" size={24} color={Colors.primaryBlue} />
           <ThemedText variant="titleMedium">{t('nostrConnect.promiseTitle')}</ThemedText>
@@ -424,7 +424,7 @@ function ErrorStep({
         phase={outcome ? 'partial' : 'error'}
         relayStatuses={outcome ? relayNodeStatuses(outcome) : undefined}
       />
-      <ThemedSurface variant="outlined" className="rounded-none p-4">
+      <ThemedSurface variant="outlined" className="p-4">
         <View style={{ gap: 8 }}>
           <ThemedText variant="titleMedium" tone="error">
             {t('nostrConnect.errorTitle')}

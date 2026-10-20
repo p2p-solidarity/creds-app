@@ -180,7 +180,7 @@ function RecoveryOption({
   readonly onPress: () => void;
 }): ReactNode {
   return (
-    <ThemedSurface variant="outlined" className="rounded-none p-1">
+    <ThemedSurface variant="outlined" className="p-1">
       <ThemedButton
         label={title}
         variant="secondary"

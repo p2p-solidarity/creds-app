@@ -172,7 +172,6 @@ function ReviewView({
     <View className="flex-1 gap-4">
       <ThemedSurface
         variant="inset"
-        className="rounded-none"
         style={{
           borderWidth: 1,
           borderColor: Colors.divider,

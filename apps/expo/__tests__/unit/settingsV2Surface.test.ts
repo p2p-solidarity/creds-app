@@ -9,14 +9,6 @@ function source(path: string): string {
 }
 
 describe('v2 settings surface', () => {
-  it('uses the Page-tab square list treatment for settings rows and dividers', () => {
-    const blocks = source('../../src/components/settings/SettingsBlocks.tsx');
-
-    expect(blocks).toContain('rounded-none');
-    expect(blocks).toContain('borderBottomWidth: 0.5');
-    expect(blocks).not.toContain('rounded-xl');
-  });
-
   it('puts the public page first and routes every product row to a real screen', () => {
     const settings = source('../../app/settings/index.tsx');
     const sections = [

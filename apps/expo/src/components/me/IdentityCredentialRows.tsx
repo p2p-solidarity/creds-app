@@ -66,7 +66,7 @@ export function IdentityCredentialRows({
 
   return (
     <View className="px-4">
-      <ThemedSurface variant="inset" className="overflow-hidden rounded-none">
+      <ThemedSurface variant="inset" className="overflow-hidden">
         <InsetRow
           icon="checkmark.seal"
           title={t('meHome.identityCredentialsTitle')}

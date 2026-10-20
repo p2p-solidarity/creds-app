@@ -47,7 +47,7 @@ export function MeProfileGate({ onCreatePage, onSetUpIdentity }: MeProfileGatePr
   return (
     <View className="flex-1 justify-center px-4 pb-24">
       <Animated.View entering={fadeUpIn(0, reduceMotion)}>
-        <ThemedSurface variant="outlined" className="gap-4 rounded-none px-5 py-6">
+        <ThemedSurface variant="outlined" className="gap-4 px-5 py-6">
           {state === 'loading' ? (
             <View className="items-center gap-3 py-2">
               <ActivityIndicator size="small" color={Colors.text3} />

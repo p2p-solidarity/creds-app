@@ -65,7 +65,7 @@ export function LinkVisibilityControl({
               style={{ flex: 1 }}>
               <ThemedSurface
                 variant="outlined"
-                className="items-center justify-center rounded-none px-2"
+                className="items-center justify-center px-2"
                 style={{
                   minHeight: 44,
                   borderColor: active ? Colors.primaryBlue : Colors.divider,
@@ -125,7 +125,7 @@ export function PublishPreviewSheet({
             </ThemedText>
           </View>
 
-          <ThemedSurface variant="inset" className="gap-2 rounded-none px-4 py-3">
+          <ThemedSurface variant="inset" className="gap-2 px-4 py-3">
             <ThemedText variant="bodyMedium">
               {summary.public === 0
                 ? t('meEdit.preview.nonePublic')

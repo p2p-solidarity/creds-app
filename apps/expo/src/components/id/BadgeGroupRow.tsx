@@ -30,7 +30,6 @@ export function BadgeGroupRow({
     <PressableScale onPress={onPress} accessibilityRole="button" accessibilityLabel={name}>
       <ThemedSurface
         variant="card"
-        className="rounded-none"
         style={{
           flexDirection: 'row',
           alignItems: 'center',

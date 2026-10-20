@@ -173,7 +173,7 @@ function QrPreview({
   return (
     <ThemedSurface
       variant="card"
-      className="self-center rounded-none"
+      className="self-center"
       style={{
         // `.qr` — square-cornered card on a 20pt inset (creds-design mock).
         padding: QR_PLATE_PADDING,
@@ -302,7 +302,7 @@ function OtherFormatRow({
 
   return (
     <Animated.View entering={fadeUpIn(index, reduceMotion)}>
-      <ThemedSurface variant="inset" className="flex-row items-center gap-3 rounded-none px-3 py-2">
+      <ThemedSurface variant="inset" className="flex-row items-center gap-3 px-3 py-2">
         <BrandIcon name={brandIconForHost(candidate.url)} size={20} color={Colors.text2} />
         <View className="flex-1 gap-0.5">
           <ThemedText variant="bodySmall">{label}</ThemedText>

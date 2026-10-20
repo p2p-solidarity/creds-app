@@ -304,7 +304,7 @@ function PublicPageSection({ model }: { readonly model: PresentModel }): ReactNo
     <View className="gap-3">
       <PageSectionLabel title={t('present.publicPage')} />
       {model.publicLinks.length === 0 ? (
-        <ThemedSurface variant="outlined" padded className="rounded-none">
+        <ThemedSurface variant="outlined" padded>
           <ThemedText variant="bodyMedium" tone="tertiary">
             {t('present.noPublicLinks')}
           </ThemedText>
@@ -394,7 +394,7 @@ function CardOnlySection({
         <ThemedSurface
           variant="outlined"
           padded
-          className="items-center gap-3 rounded-none"
+          className="items-center gap-3"
         >
           <ActivityIndicator />
           <ThemedText variant="bodySmall" tone="tertiary">
@@ -403,7 +403,7 @@ function CardOnlySection({
         </ThemedSurface>
       ) : null}
       {model.cardState.kind === 'error' ? (
-        <ThemedSurface variant="outlined" padded className="gap-3 rounded-none">
+        <ThemedSurface variant="outlined" padded className="gap-3">
           <ThemedText variant="bodyMedium" tone="error">
             {t('present.cardLoadError')}
           </ThemedText>
@@ -415,7 +415,7 @@ function CardOnlySection({
         </ThemedSurface>
       ) : null}
       {model.cardState.kind === 'empty' ? (
-        <ThemedSurface variant="outlined" padded className="gap-4 rounded-none">
+        <ThemedSurface variant="outlined" padded className="gap-4">
           <View className="flex-row items-center" style={{ gap: 10 }}>
             <SfIcon name="person.text.rectangle" size={20} color={Colors.text3} />
             <ThemedText variant="bodyMedium" tone="tertiary" style={{ flex: 1 }}>
@@ -446,7 +446,7 @@ function CardOnlySection({
             />
           ))}
           {model.cardOnlyFields.length === 0 ? (
-            <ThemedSurface variant="outlined" padded className="rounded-none">
+            <ThemedSurface variant="outlined" padded>
               <ThemedText variant="bodyMedium" tone="tertiary">
                 {t('present.noOptionalCardFields')}
               </ThemedText>

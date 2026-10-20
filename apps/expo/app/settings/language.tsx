@@ -131,7 +131,7 @@ function LanguageRow({
         style={{
           paddingHorizontal: 16,
           paddingVertical: 16,
-          borderRadius: 0,
+          borderRadius: 12,
           borderWidth: 1,
           gap: 16,
           backgroundColor: isSelected ? `${Colors.primaryBlue}1F` : Colors.cardBg,

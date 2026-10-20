@@ -144,7 +144,7 @@ export default function BlueskyConnectScreen(): ReactNode {
         }}>
         {screen.kind === 'input' ? (
           <View style={{ flex: 1, justifyContent: 'center', gap: 20 }}>
-            <ThemedSurface variant="inset" className="rounded-none p-4">
+            <ThemedSurface variant="inset" className="p-4">
               <View style={{ gap: 8 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <SfIcon name="checkmark.seal.fill" size={17} color={Colors.primaryBlue} />
@@ -230,7 +230,7 @@ function SuccessState({
 
   return (
     <View style={{ flex: 1, justifyContent: 'center', gap: 20 }}>
-      <ThemedSurface variant="inset" className="rounded-none p-4">
+      <ThemedSurface variant="inset" className="p-4">
         <View style={{ gap: 12 }}>
           <BindingBadgeChip
             result={{ provider: 'bluesky', result: outcome.verification }}
@@ -271,7 +271,7 @@ function ErrorState({
   const { t } = useTranslation();
   return (
     <View style={{ flex: 1, justifyContent: 'center', gap: 20 }}>
-      <ThemedSurface variant="outlined" className="rounded-none p-4">
+      <ThemedSurface variant="outlined" className="p-4">
         <View style={{ gap: 8 }}>
           <ThemedText variant="titleMedium" tone="error">
             {t('blueskyConnect.errorTitle')}

@@ -171,7 +171,7 @@ function PageAddSheetContent({
   return (
     <ThemedSurface
       variant="elevated"
-      className="rounded-none px-4 pt-5"
+      className="px-4 pt-5"
       style={{ maxHeight: windowHeight - Math.max(insets.top, 12) }}>
       <View className="flex-row items-start gap-3">
         <ThemedText variant="titleLarge" className="flex-1 pt-2">

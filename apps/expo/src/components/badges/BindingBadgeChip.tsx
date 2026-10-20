@@ -47,7 +47,7 @@ export function BindingBadgeChip({
   return (
     <ThemedSurface
       variant="inset"
-      className="self-start rounded-none px-3 py-2"
+      className="self-start px-3 py-2"
       accessible
       accessibilityRole="text"
       accessibilityLabel={label}

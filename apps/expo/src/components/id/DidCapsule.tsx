@@ -27,7 +27,7 @@ export function DidCapsule({ title, subtitle, isActive, onPress }: DidCapsulePro
       accessibilityLabel={`${title} ${subtitle}`}>
       <ThemedSurface
         variant={isActive ? 'card' : 'outlined'}
-        className="items-center justify-center rounded-none"
+        className="items-center justify-center"
         style={{ width: 120, height: 50 }}>
         <View style={{ alignItems: 'center' }}>
           <ThemedText variant="label" tone={isActive ? 'primary' : 'secondary'}>

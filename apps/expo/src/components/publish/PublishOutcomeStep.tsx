@@ -105,7 +105,7 @@ function RelayReportSection({
 
   return (
     <Animated.View entering={entering(sectionIndex * STAGGER_MS)}>
-      <ThemedSurface variant="inset" className="rounded-none p-3">
+      <ThemedSurface variant="inset" className="p-3">
         <View style={{ gap: 8 }}>
           <ThemedText variant="label">{title}</ThemedText>
           <ThemedText variant="caption" tone="secondary">

@@ -59,7 +59,7 @@ export function PresentAttestationsMode({
   return (
     <View className="gap-3">
       {state === 'loading' ? (
-        <ThemedSurface variant="outlined" padded className="items-center gap-3 rounded-none">
+        <ThemedSurface variant="outlined" padded className="items-center gap-3">
           <ActivityIndicator />
           <ThemedText variant="bodySmall" tone="tertiary">
             {t('present.loadingAttestations')}
@@ -67,7 +67,7 @@ export function PresentAttestationsMode({
         </ThemedSurface>
       ) : null}
       {state === 'error' ? (
-        <ThemedSurface variant="outlined" padded className="gap-3 rounded-none">
+        <ThemedSurface variant="outlined" padded className="gap-3">
           <ThemedText variant="bodyMedium" tone="error">
             {t('present.attestationsLoadError')}
           </ThemedText>
@@ -78,7 +78,7 @@ export function PresentAttestationsMode({
         holdsUnpresentableOpenAcV3 ? (
           <CannotPresentHerePanel />
         ) : (
-          <ThemedSurface variant="outlined" padded className="gap-4 rounded-none">
+          <ThemedSurface variant="outlined" padded className="gap-4">
             <ThemedText variant="bodyMedium" tone="tertiary">
               {t('present.noAttestations')}
             </ThemedText>

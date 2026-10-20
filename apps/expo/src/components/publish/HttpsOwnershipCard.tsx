@@ -23,7 +23,7 @@ export function HttpsOwnershipCard({
       : 'nostrConnect.httpsSetup';
 
   return (
-    <ThemedSurface variant="outlined" className="rounded-none p-3">
+    <ThemedSurface variant="outlined" className="p-3">
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
         <View
           style={{

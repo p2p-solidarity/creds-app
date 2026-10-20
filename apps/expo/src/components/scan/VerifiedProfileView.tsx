@@ -134,7 +134,7 @@ function HandleBindingBadge({ binding }: { readonly binding: VerifiedHandleBindi
   return (
     <ThemedSurface
       variant="inset"
-      className="self-start rounded-none px-3 py-2"
+      className="self-start px-3 py-2"
       style={{ borderWidth: 1, borderColor: Colors.divider }}
     >
       <View className="flex-row items-center" style={{ gap: 7 }}>

@@ -221,7 +221,7 @@ function ChoiceCard({
       containerStyle={{ alignSelf: 'stretch' }}>
       <ThemedSurface
         variant="card"
-        className="flex-row items-center gap-4 rounded-none px-4 py-4"
+        className="flex-row items-center gap-4 px-4 py-4"
         style={{ minHeight: 76 }}>
         <View
           className="h-11 w-11 items-center justify-center rounded-full"
