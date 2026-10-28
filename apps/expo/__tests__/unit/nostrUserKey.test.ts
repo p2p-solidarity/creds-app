@@ -42,7 +42,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test
 import { bech32 } from '@scure/base';
 
 import derivedVectors from '../../../../packages/shared/vectors/derive.json';
-import { verifyNostrEvent } from '@/dag/nostrAdapter';
+import { verifyNostrEvent } from '@/nostr/nostrAdapter';
 import {
   __resetLocalDataWipeBarrierForTesting,
   beginLocalDataWipe,

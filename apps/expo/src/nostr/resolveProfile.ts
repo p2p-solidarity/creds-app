@@ -25,7 +25,7 @@
  * reason (`unreachable`/`notFound`/`bindingMismatch` + the shared verify
  * reasons), so callers render the same honest 「無法驗證」 card the scanner uses.
  */
-import { subscribeEvents } from '@/dag/nostrAdapter';
+import { subscribeEvents } from '@/nostr/nostrAdapter';
 import { verifyProfileJws, type VerifiedPageResult } from '@/scan/verifiedPageHandler';
 
 import {

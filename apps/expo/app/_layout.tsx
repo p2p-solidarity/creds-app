@@ -13,7 +13,7 @@
  *   2b. await warmNostrKeyMirror()       — resident already; warms the
  *                                          userKey.ts sync-mirror cache
  *   3. sync seed all feature manifests   — zero await, frame-1 ready
- *      (cards, contacts, groups, vault, shoutouts, credentials, issuers)
+ *      (cards, contacts, groups, credentials, issuers)
  *   4. await installI18n + preferences   — cheap, on-the-spot
  *   5. setReady(true) → splash hides     — UI paints from manifests
  *   6. fire-and-forget bulk hydrate      — per-record decrypt in background;
@@ -40,7 +40,6 @@ import { useEffect, useState } from 'react';
 import { Appearance, AppState } from 'react-native';
 import { router, Stack } from 'expo-router';
 import * as Linking from 'expo-linking';
-import * as Notifications from 'expo-notifications';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -73,12 +72,8 @@ import { hydrateProfileSnapshots } from '@/people/profileSnapshots';
 import { prepareProEntitlement } from '@/pro/entitlementStore';
 import { initProPurchases } from '@/pro/purchases';
 import { hydrateProfile } from '@/profile/store';
-import { syncOnce } from '@/sakura/inbox';
-import { registerForPushNotificationsAsync } from '@/sakura/pushRegistration';
 import { hydratePreferences, usePreferences } from '@/settings/preferences';
-import { useShoutoutStore } from '@/shoutouts/store';
 import { initMmkv, ManifestStorage } from '@/storage';
-import { useVaultStore } from '@/vault/store';
 import { PRIMARY_TAB_HREFS } from '@/navigation/primaryTabs';
 
 import { CARDS_MANIFEST_SCOPE } from '@/cards/cardManifest';
@@ -86,8 +81,6 @@ import { CONTACTS_MANIFEST_SCOPE } from '@/contacts/contactManifest';
 import { CREDENTIALS_MANIFEST_SCOPE } from '@/credentials/credentialManifest';
 import { ISSUERS_MANIFEST_SCOPE } from '@/credentials/issuerManifest';
 import { GROUPS_MANIFEST_SCOPE } from '@/groups/groupManifest';
-import { SHOUTOUTS_MANIFEST_SCOPE } from '@/shoutouts/shoutoutManifest';
-import { VAULT_MANIFEST_SCOPE } from '@/vault/vaultManifest';
 
 // App-wide JS error boundary (wraps <Stack> below so it gets the React
 // component stack of any render throw) + global uncaught-JS handler (installed
@@ -109,8 +102,6 @@ const MIGRATION_SCOPES = [
   CARDS_MANIFEST_SCOPE,
   CONTACTS_MANIFEST_SCOPE,
   GROUPS_MANIFEST_SCOPE,
-  VAULT_MANIFEST_SCOPE,
-  SHOUTOUTS_MANIFEST_SCOPE,
   CREDENTIALS_MANIFEST_SCOPE,
   ISSUERS_MANIFEST_SCOPE,
 ] as const;
@@ -151,10 +142,6 @@ export default function RootLayout() {
   // so toggling Light/Dark/System in Appearance settings actually flips
   // every `bg-pageBg` / `text-text1` style without a relaunch.
   const appColorScheme = usePreferences((s) => s.appColorScheme);
-  // Opt-in gate for the Sakura push rail (R25). Reflects the persisted value
-  // once boot runs `hydratePreferences()` (before `ready` flips true), so the
-  // registration effect below reads the real preference, not the default.
-  const remoteNotificationsEnabled = usePreferences((s) => s.notificationsRemote);
   const hasCompletedOnboarding = usePreferences((s) => s.hasCompletedOnboarding);
   const backupEnabled = usePreferences((s) => s.backupEnabled);
   useEffect(() => {
@@ -176,8 +163,6 @@ export default function RootLayout() {
       void useCardStore.getState().hydrate();
       void useContactStore.getState().hydrate();
       void useGroupStore.getState().hydrate();
-      void useVaultStore.getState().hydrate();
-      void useShoutoutStore.getState().hydrate();
       void useCredentialStore.getState().hydrate();
       void useIssuerMetadataStore.getState().hydrate();
       void useIdentityData.getState().hydrate();
@@ -208,8 +193,6 @@ export default function RootLayout() {
         useCardStore.getState().seedFromManifest();
         useContactStore.getState().seedFromManifest();
         useGroupStore.getState().seedFromManifest();
-        useVaultStore.getState().seedFromManifest();
-        useShoutoutStore.getState().seedFromManifest();
         useCredentialStore.getState().seedFromManifest();
         useIssuerMetadataStore.getState().seedFromManifest();
         logBoot('manifest-seed:done');
@@ -242,8 +225,6 @@ export default function RootLayout() {
             useCardStore.getState().hydrate(),
             useContactStore.getState().hydrate(),
             useGroupStore.getState().hydrate(),
-            useVaultStore.getState().hydrate(),
-            useShoutoutStore.getState().hydrate(),
             useCredentialStore.getState().hydrate(),
             useIssuerMetadataStore.getState().hydrate(),
           ]);
@@ -332,45 +313,6 @@ export default function RootLayout() {
       sub.remove();
     };
   }, [hasCompletedOnboarding, ready]);
-
-  // Sakura push rail — inbox-sync listeners are always safe to attach: they
-  // only fire when the OS actually delivers a notification (none, if the user
-  // opted out), and they never touch permission. Mirrors Swift
-  // AppDelegate.didReceiveRemoteNotification.
-  useEffect(() => {
-    const received = Notifications.addNotificationReceivedListener(() => {
-      // Inbox decrypt failures are not surfaced to the user; mirrors
-      // Swift MessageService logging behaviour.
-      if (usePreferences.getState().hasCompletedOnboarding) {
-        void syncOnce().catch(() => undefined);
-      }
-    });
-    const response = Notifications.addNotificationResponseReceivedListener(() => {
-      if (usePreferences.getState().hasCompletedOnboarding) {
-        void syncOnce().catch(() => undefined);
-      }
-    });
-    return () => {
-      received.remove();
-      response.remove();
-    };
-  }, []);
-
-  // Registration is opt-in gated (R25). We only register once boot has
-  // hydrated the persisted preference (`ready`) AND remote notifications are
-  // enabled. The automatic path NEVER prompts — it registers only if the OS
-  // already granted permission — so a user who never opted in never sees a
-  // system dialog on cold launch. Fire-and-forget per Rule 10.
-  useEffect(() => {
-    if (!ready || !hasCompletedOnboarding || !remoteNotificationsEnabled) return;
-    void registerForPushNotificationsAsync().catch(() => undefined);
-    const tokenChange = Notifications.addPushTokenListener(() => {
-      void registerForPushNotificationsAsync().catch(() => undefined);
-    });
-    return () => {
-      tokenChange.remove();
-    };
-  }, [hasCompletedOnboarding, ready, remoteNotificationsEnabled]);
 
   if (!ready) return null;
 

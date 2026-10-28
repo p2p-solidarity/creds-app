@@ -16,7 +16,7 @@
  * not a fabricated verdict — root CLAUDE.md rule 8) — this module never
  * synthesizes a kind-0 event when the relays don't answer.
  */
-import { subscribeEvents } from '@/dag/nostrAdapter';
+import { subscribeEvents } from '@/nostr/nostrAdapter';
 import type { NostrKind0Content, NostrKind0Fetcher } from '@solidarity/shared';
 
 import { DEFAULT_FETCH_TIMEOUT_MS, fetchLatestKind0, parseKind0Content, type SubscribeEventsFn } from './publish';

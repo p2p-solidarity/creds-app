@@ -18,7 +18,7 @@
 import { describe, expect, it } from 'bun:test';
 import { p256 } from '@noble/curves/nist.js';
 
-import type { NostrEvent } from '@/dag/nostrAdapter';
+import type { NostrEvent } from '@/nostr/nostrAdapter';
 import type { SubscribeEventsFn } from '@/nostr/publish';
 import { hexToBytes, signCompact, type Signer } from '@solidarity/shared';
 

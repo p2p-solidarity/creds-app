@@ -29,7 +29,7 @@
 import { beforeAll, beforeEach, describe, expect, it } from 'bun:test';
 
 import derivedVectors from '../../../../packages/shared/vectors/derive.json';
-import { verifyNostrEvent, type NostrEvent, type NostrFilter, type SubscriptionHandle } from '@/dag/nostrAdapter';
+import { verifyNostrEvent, type NostrEvent, type NostrFilter, type SubscriptionHandle } from '@/nostr/nostrAdapter';
 
 type Res<T> =
   | { readonly ok: true; readonly value: T }

@@ -20,7 +20,7 @@
  */
 import { describe, expect, it } from 'bun:test';
 
-import type { NostrEvent, NostrFilter, SubscriptionHandle } from '@/dag/nostrAdapter';
+import type { NostrEvent, NostrFilter, SubscriptionHandle } from '@/nostr/nostrAdapter';
 import { fetchKind0FromRelays, makeKind0Fetcher } from '@/nostr/fetchKind0';
 
 type SubscribeEventsFn = (

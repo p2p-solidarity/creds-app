@@ -1,8 +1,9 @@
-# `apps/expo` — Solidarity Expo client
+# `apps/expo` — creds.id app (Expo)
 
-Identity + business-card app. Port of `solidarity/` (SwiftUI). Aims for
-**1:1 visual + behavioural parity** with Swift v1.3.1 plus full Android
-support via Expo + Nitro Modules.
+The phone half of creds.id: an own-your-key link page (Page), verified badges
+(optional ZK), People and Verify, on iOS and Android via Expo + Nitro Modules.
+The look follows the creds.id web app (`../airmeishi-web`), not the deleted
+SwiftUI app — "Swift parity" comments in code are history.
 
 ## Quick start
 
@@ -12,7 +13,7 @@ cd apps/expo
 bunx expo prebuild --clean --platform ios --no-install
 bun run ios                                                  # launches simulator
 bun run typecheck                                            # 0 errors expected
-bun test                                                     # 78+ unit + parity
+bun run test                                                 # unit + parity
 bun run lint                                                 # 0 errors (cosmetic warnings ok)
 ```
 
@@ -69,7 +70,6 @@ you re-introduce bugs the aniseekr team already paid for.
 
 ### Rule 4. Colours from `Colors` token, never inline hex
 - `src/constants/Colors.ts` is the **single source** for brand hex.
-  Mirrors Swift `Color.Theme.*` names 1:1.
 - NativeWind classes (`bg-pageBg`, `text-text1`, `bg-accentRose`) read
   from `tailwind.config.js` which references `Colors`.
 - Hex literals are allowed **only** in `Colors.ts` and `contrast.ts`
@@ -116,22 +116,19 @@ apps/expo/
 ├── app/                       ← Expo Router screens (file-based)
 │   ├── _layout.tsx            ← MMKV init + i18n + deep-link wiring
 │   ├── index.tsx              ← onboarding gate (reads usePreferences)
-│   ├── (tabs)/                ← people/share/me
-│   ├── onboarding/            ← 7-step flow
-│   ├── settings/              ← hub + 6 sub-pages
-│   ├── people/[id].tsx        ← PersonDetail (with MauvePetalMotif watermark)
+│   ├── (tabs)/                ← people / me (Page) / verify
+│   ├── onboarding/            ← V2 flow
+│   ├── settings/              ← hub + sub-pages
+│   ├── people/[id].tsx        ← PersonDetail
 │   ├── cards/edit.tsx         ← BusinessCardForm
 │   ├── credentials/{index,[id],offer}.tsx
-│   ├── groups/{index,[id]}.tsx
-│   ├── shoutouts/{index,[id],new}.tsx
-│   ├── vault/{index,new}.tsx
+│   ├── groups/                ← frozen (06-plan), reached by invite link
 │   ├── passport/index.tsx
 │   ├── scan/index.tsx         ← vision-camera QR scanner
 │   └── oidc/consent.tsx
 ├── src/
 │   ├── components/
 │   │   ├── themed/            ← Themed{Text,Surface,Button} + contrast
-│   │   ├── brand/Wordmark.tsx ← Swift Wordmark.svg port
 │   │   ├── decor/             ← DecorativeBlobs / MauvePetalMotif / PaperStack
 │   │   ├── people/ContactRow + ContactsList
 │   │   ├── settings/SettingRow + ToggleRow
@@ -144,9 +141,7 @@ apps/expo/
 │   ├── cards/cardManager      ← business card CRUD (zustand)
 │   ├── credentials/store      ← VC library (zustand)
 │   ├── groups/store           ← group + member (zustand)
-│   ├── shoutouts/store        ← Sakura messaging (zustand)
-│   ├── vault/{store,storage}  ← encrypted file vault
-│   ├── sakura/client          ← messaging relay client + ECIES
+│   ├── vault/secretsKeychain  ← legacy vault root secret (wipe only)
 │   ├── oidc/{parseAuthRequest,proofVerifier}
 │   ├── passport/pipeline      ← MRZ → NFC → ZK orchestrator
 │   ├── deeplink/{parser,router}
@@ -156,7 +151,7 @@ apps/expo/
 │   ├── onboarding/{state,steps}
 │   ├── people/usePeopleScreen
 │   └── scan/{QrScanner,useCameraPermission}
-└── __tests__/{unit,parity}/   ← 13 suites, 78 passing
+└── __tests__/{unit,parity}/   ← feature, security and parity tests
 ```
 
 ## Why some files use `expo-file-system/legacy`

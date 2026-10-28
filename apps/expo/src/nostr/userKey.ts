@@ -64,8 +64,8 @@ import { schnorr } from '@noble/curves/secp256k1.js';
 // reasoning as `identity/rootKey.ts`.
 import type * as SecureStoreNS from 'expo-secure-store';
 
-import { computeNip01EventId, hexDecode, hexEncode, type Nip01UnsignedEvent } from '@/dag/node';
-import type { NostrEvent } from '@/dag/nostrAdapter';
+import { computeNip01EventId, hexDecode, hexEncode, type Nip01UnsignedEvent } from '@/nostr/dagNode';
+import type { NostrEvent } from '@/nostr/nostrAdapter';
 // Type-only, same reasoning as SecureStoreNS above — `react-native-mmkv`
 // also pulls in React Native's Flow-syntax entry point. See
 // `warmNostrKeyMirror` below for the runtime (lazy, cached) load.

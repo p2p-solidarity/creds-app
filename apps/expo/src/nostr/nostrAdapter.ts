@@ -25,7 +25,7 @@ import {
   hexEncode,
   nostrTagsFor,
   stableJSON,
-} from './node';
+} from './dagNode';
 
 export const NIP78_D_TAG = 'solidarity-dag-v1';
 

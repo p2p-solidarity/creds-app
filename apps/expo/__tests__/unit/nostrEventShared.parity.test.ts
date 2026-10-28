@@ -8,8 +8,8 @@
  */
 import { describe, expect, it } from 'bun:test';
 
-import { computeNip01EventId as appEventId } from '../../src/dag/node';
-import { verifyNostrEvent as appVerify } from '../../src/dag/nostrAdapter';
+import { computeNip01EventId as appEventId } from '../../src/nostr/dagNode';
+import { verifyNostrEvent as appVerify } from '../../src/nostr/nostrAdapter';
 import {
   computeNip01EventId as sharedEventId,
   hexToBytes,

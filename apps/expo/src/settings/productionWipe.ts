@@ -1,4 +1,5 @@
 import * as FileSystem from 'expo-file-system/legacy';
+import * as SecureStore from 'expo-secure-store';
 
 import { signOutAtproto } from '@/atproto';
 import {
@@ -37,16 +38,8 @@ import { preparePageDesign, usePageDesignStore } from '@/page/pageDesignStore';
 import { useProEntitlementStore } from '@/pro/entitlementStore';
 import { useProfileSnapshotStore } from '@/people/profileSnapshots';
 import { useProfileStore } from '@/profile/store';
-import {
-  deleteRecipientKeys,
-  quiesceRecipientKeyOperations,
-} from '@/sakura/recipientKeys';
-import { stopForegroundPolling } from '@/sakura/inbox';
-import { unregister } from '@/sakura/pushRegistration';
-import { useSealedRouteStore } from '@/sakura/sealedRouteStore';
 import { useVerifiedPageResult } from '@/scan/verifiedPageResult';
 import { useSharingSettings } from '@/sharing/settingsStore';
-import { useShoutoutStore } from '@/shoutouts/store';
 import { clearAllData, getMmkv } from '@/storage';
 import { deleteCacheDatabaseForLocalWipe } from '@/storage/cache';
 import {
@@ -60,8 +53,6 @@ import {
   deleteRootSecret,
   quiesceRootSecretOperations,
 } from '@/vault/secretsKeychain';
-import { deleteVaultDirectory } from '@/vault/storage';
-import { useVaultStore } from '@/vault/store';
 import { useWebSignPending } from '@/websign/pendingRequest';
 import { deleteIdentityForLocalWipe, useZkIdentity } from '@/zk';
 
@@ -109,8 +100,6 @@ function clearMemoryCaches(): void {
   useCredentialStore.getState().resetForLocalWipe();
   useIssuerMetadataStore.getState().resetForLocalWipe();
   useGroupStore.getState().resetForLocalWipe();
-  useVaultStore.getState().resetForLocalWipe();
-  useShoutoutStore.getState().resetForLocalWipe();
   useProfileStore.getState().resetForLocalWipe();
   useProfileSnapshotStore.getState().resetForLocalWipe();
   useIdentityData.getState().resetForLocalWipe();
@@ -127,7 +116,6 @@ function clearMemoryCaches(): void {
   useReceivedCard.getState().dismiss();
   useVerifiedPageResult.getState().dismiss();
   useWebSignPending.getState().clear();
-  useSealedRouteStore.getState().clear();
   clearImageMemoryCache();
   invalidateCachedNostrResult();
   invalidateCachedAtprotoResult();
@@ -141,7 +129,6 @@ function deleteProductionAppData(): Promise<LocalDeletionResult> {
         cacheDirectory: FileSystem.cacheDirectory,
         deletePath: (path) =>
           FileSystem.deleteAsync(path, { idempotent: true }),
-        deleteVaultFiles: deleteVaultDirectory,
         deleteCacheDatabase: deleteCacheDatabaseForLocalWipe,
       }),
     clearPersistentData: clearAllData,
@@ -151,12 +138,9 @@ function deleteProductionAppData(): Promise<LocalDeletionResult> {
 
 async function quiesceBackgroundWork(): Promise<LocalDeletionResult> {
   beginLocalDataWipe();
-  stopForegroundPolling();
   stopLaneManager();
   try {
     await Promise.all([
-      unregister(),
-      quiesceRecipientKeyOperations(),
       quiesceNostrKeyOperations(),
       quiesceRootKeyOperations(),
       quiesceSigningKeyOperations(),
@@ -168,6 +152,21 @@ async function quiesceBackgroundWork(): Promise<LocalDeletionResult> {
   } catch {
     return deletionFailed();
   }
+}
+
+/**
+ * The retired Shoutouts relay kept two private keys in the keychain. Their code
+ * is gone, but a device that once provisioned them must still lose them on wipe.
+ */
+const LEGACY_RECIPIENT_KEY_ALIASES = ['gg.solidarity.sakura.enc.v1', 'gg.solidarity.sakura.sig.ed25519.v1'];
+
+async function deleteLegacyRecipientKeys(): Promise<LocalDeletionResult> {
+  const results = await Promise.allSettled(
+    LEGACY_RECIPIENT_KEY_ALIASES.map((alias) =>
+      SecureStore.deleteItemAsync(alias, { keychainAccessible: SecureStore.WHEN_UNLOCKED }),
+    ),
+  );
+  return results.some((r) => r.status === 'rejected') ? deletionFailed() : deletionSucceeded();
 }
 
 function resetPreferencesAndPolicies(): void {
@@ -214,7 +213,7 @@ export async function wipeLocalDevice(): Promise<WipeEverythingResult> {
     masterEncryptionKey: deleteMasterKey,
     freshEncryptionKey: () => captureDeletion(rekeyEmptyMmkv),
     vaultRootSecret: deleteRootSecret,
-    recipientKeys: () => captureDeletion(deleteRecipientKeys),
+    recipientKeys: deleteLegacyRecipientKeys,
     zkIdentity: deleteIdentityForLocalWipe,
     nostrKey: () => captureDeletion(deleteNostrKey),
     atprotoSession: deleteAtprotoSession,

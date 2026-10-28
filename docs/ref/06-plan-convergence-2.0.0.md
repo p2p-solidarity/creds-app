@@ -32,6 +32,8 @@
 ## 2. 舊功能去留（grounded map 2026-08-26 · 北極星為尺）
 
 > map 中途電腦睡著，6 agent 只回 2（vault、websign/wallet-pass）；其餘刀口以 grep 逐條核實（行號在下）。**這版只以文件約束、不動 code。**
+>
+> **2026-10-28 執行（creds.id rebrand 清理）**：sakura＋shoutouts＋push rail、dag 沙盒（`nostrAdapter`/`node` 搬進 `src/nostr/`，後者改名 `dagNode.ts`）、`offline/`、整個 vault（UI、store、cloudSync、分片復原；只留 `secretsKeychain.ts` 供 wipe 刪舊鑰，`vault/` 目錄併入 `productionFiles` 清單）、所有 `/dev/*` 實驗室，以及 0 入口路由（`/share/qr`、`/settings/{solidarity-qr,web-editing,vc,oidc-request,disclosure}`、`/contacts/{manual,picker}`、`/cards`、`/cards/ocr`、`/credentials/issue`、`/id/{index,dashboard,groups,personal}`）全數刪除。「17 無入口路由這次不裁」已被推翻。groups 仍凍結（邀請連結可達）。盤點見 `notes-rebrand-audit-2026-10.md`。
 
 | 子系統 | 裁決 | 刀口/理由（file:line 已核） |
 |---|---|---|

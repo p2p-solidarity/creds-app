@@ -39,8 +39,6 @@
 import * as SecureStore from 'expo-secure-store';
 
 import {
-  aesGcmOpen,
-  aesGcmSeal,
   base64Decode,
   base64Encode,
   generateAesKey,
@@ -62,9 +60,7 @@ import {
   captureLocalDataEpoch,
   type LocalDataEpoch,
 } from '@/settings/localDataWipeBarrier';
-import * as FileSystem from 'expo-file-system/legacy';
 
-import type { VaultItem } from './store';
 
 /** Storage alias — distinct from the masterKey aliases used by MMKV/backup. */
 const ROOT_SECRET_ALIAS = 'gg.solidarity.vault.rootSecret.v1';
@@ -487,149 +483,6 @@ async function maybeUpgradeToHardware(
 /** Clear the in-memory copy. Triggers a fresh prompt on next access. */
 export function evictCachedRootSecret(): void {
   cachedSecret = null;
-}
-
-export interface RotationProgress {
-  readonly processed: number;
-  readonly total: number;
-  readonly currentItemId?: string;
-}
-
-export interface RotationResult {
-  readonly kind: 'ok' | 'partial' | 'err';
-  readonly resealedItemIds: readonly string[];
-  readonly failedItemIds: readonly string[];
-  readonly reason?: 'biometricDenied' | 'storageFailed';
-}
-
-/**
- * Rotate the root secret: generate a fresh key, re-seal every existing
- * vault file with the new key, then commit the new key.
- *
- * Best-effort: failures to re-seal individual items are recorded in the
- * result rather than aborting. Callers may inspect `failedItemIds` and
- * surface a retry. The new key is only persisted if at least one item
- * was successfully re-sealed (or if there are no items).
- */
-export function rotateRootSecret(
-  items: readonly VaultItem[],
-  onProgress?: (p: RotationProgress) => void
-): Promise<RotationResult> {
-  return trackRootSecretOperation(
-    rotateRootSecretAtEpoch(items, onProgress, captureLocalDataEpoch()),
-  );
-}
-
-async function rotateRootSecretAtEpoch(
-  items: readonly VaultItem[],
-  onProgress: ((p: RotationProgress) => void) | undefined,
-  writeEpoch: LocalDataEpoch,
-): Promise<RotationResult> {
-  if (!canCommitLocalData(writeEpoch)) {
-    return {
-      kind: 'err',
-      resealedItemIds: [],
-      failedItemIds: items.map((item) => item.id),
-      reason: 'storageFailed',
-    };
-  }
-  const current = await getOrCreateRootSecret('biometric');
-  if (current.kind === 'err') {
-    return {
-      kind: 'err',
-      resealedItemIds: [],
-      failedItemIds: items.map((i) => i.id),
-      reason: current.reason,
-    };
-  }
-
-  const next = generateAesKey();
-  const resealed: string[] = [];
-  const failed: string[] = [];
-
-  for (const [index, item] of items.entries()) {
-    if (!canCommitLocalData(writeEpoch)) {
-      return {
-        kind: 'err',
-        resealedItemIds: resealed,
-        failedItemIds: [...failed, ...items.slice(index).map((rest) => rest.id)],
-        reason: 'storageFailed',
-      };
-    }
-    onProgress?.({ processed: index, total: items.length, currentItemId: item.id });
-    try {
-      const sealedB64 = await FileSystem.readAsStringAsync(item.encryptedPath, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-      if (!canCommitLocalData(writeEpoch)) {
-        return {
-          kind: 'err',
-          resealedItemIds: resealed,
-          failedItemIds: [...failed, ...items.slice(index).map((rest) => rest.id)],
-          reason: 'storageFailed',
-        };
-      }
-      const plaintext = aesGcmOpen(current.bytes, base64Decode(sealedB64));
-      const resealedBytes = aesGcmSeal(next, plaintext);
-      await FileSystem.writeAsStringAsync(
-        item.encryptedPath,
-        base64Encode(resealedBytes),
-        { encoding: FileSystem.EncodingType.Base64 }
-      );
-      if (!canCommitLocalData(writeEpoch)) {
-        return {
-          kind: 'err',
-          resealedItemIds: resealed,
-          failedItemIds: [...failed, ...items.slice(index).map((rest) => rest.id)],
-          reason: 'storageFailed',
-        };
-      }
-      resealed.push(item.id);
-    } catch {
-      failed.push(item.id);
-    }
-  }
-  onProgress?.({ processed: items.length, total: items.length });
-
-  if (!canCommitLocalData(writeEpoch)) {
-    return {
-      kind: 'err',
-      resealedItemIds: resealed,
-      failedItemIds: failed,
-      reason: 'storageFailed',
-    };
-  }
-
-  if (items.length > 0 && resealed.length === 0) {
-    return { kind: 'err', resealedItemIds: [], failedItemIds: failed, reason: 'storageFailed' };
-  }
-
-  try {
-    const envelope = await wrapRoot(next, writeEpoch);
-    await writeEnvelope(envelope, 'biometric', writeEpoch);
-    if (!canCommitLocalData(writeEpoch)) {
-      return {
-        kind: 'err',
-        resealedItemIds: resealed,
-        failedItemIds: failed,
-        reason: 'storageFailed',
-      };
-    }
-    cachedSecret = next;
-  } catch {
-    return {
-      kind: 'err',
-      resealedItemIds: resealed,
-      failedItemIds: failed,
-      reason: 'storageFailed',
-    };
-  }
-
-  return {
-    kind: failed.length === 0 ? 'ok' : 'partial',
-    resealedItemIds: resealed,
-    failedItemIds: failed,
-  };
 }
 
 /** Permanently delete the vault root secret and both wrapping-key versions. */

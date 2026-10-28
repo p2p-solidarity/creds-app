@@ -15,7 +15,7 @@ import {
   hexEncode,
   signNode,
   verifyNode,
-} from '@/dag/node';
+} from '@/nostr/dagNode';
 import {
   NIP78_D_TAG,
   buildHeadPointerEvent,
@@ -23,7 +23,7 @@ import {
   subscribeEvents,
   type NostrEvent,
   verifyNostrEvent,
-} from '@/dag/nostrAdapter';
+} from '@/nostr/nostrAdapter';
 
 function makeKeypair(seed: number): { privkey: Uint8Array; pubkeyHex: string } {
   const privkey = new Uint8Array(32);

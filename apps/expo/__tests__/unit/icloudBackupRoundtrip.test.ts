@@ -196,6 +196,11 @@ let cloud: CloudProviderSurface;
 beforeAll(async () => {
   await mock.module('@solidarity/nitro-keystone', () => ({
     getCloudKit: () => FakeCloudKit,
+    // mock.module is process-global: keep the export set whole so a later suite
+    // that imports the secrets-vault lane still links against this mock.
+    getSecretsVault: () => {
+      throw new Error('secrets vault is not part of the backup roundtrip');
+    },
   }));
   await mock.module('react-native', () => ({
     ...((globalThis as unknown as { __AIRMEISHI_RN_MOCK__: Record<string, unknown> })

@@ -8,6 +8,9 @@ const DOCUMENT_ARTIFACTS = [
   'profile-avatar/',
   'images/',
   'wallet/',
+  // Retired encrypted file vault: no code writes here any more, but older
+  // installs may still hold its sealed blobs.
+  'vault/',
 ] as const;
 
 const CACHE_ARTIFACTS = [
@@ -21,9 +24,6 @@ export interface ProductionFilesDependencies {
   readonly documentDirectory: string | null;
   readonly cacheDirectory: string | null;
   readonly deletePath: (path: string) => Promise<void>;
-  readonly deleteVaultFiles: () =>
-    | LocalDeletionResult
-    | Promise<LocalDeletionResult>;
   readonly deleteCacheDatabase: () =>
     | LocalDeletionResult
     | Promise<LocalDeletionResult>;
@@ -50,7 +50,6 @@ export async function deleteProductionFiles(
       await dependencies.deletePath(path);
       return true;
     }),
-    Promise.resolve(dependencies.deleteVaultFiles()).then((result) => result.ok),
     Promise.resolve(dependencies.deleteCacheDatabase()).then(
       (result) => result.ok,
     ),

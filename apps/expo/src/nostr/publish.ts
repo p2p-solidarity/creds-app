@@ -60,7 +60,7 @@ import {
   type NostrEvent,
   type NostrFilter,
   type SubscriptionHandle,
-} from '@/dag/nostrAdapter';
+} from '@/nostr/nostrAdapter';
 
 import {
   buildPublicDisclosureDTag,
