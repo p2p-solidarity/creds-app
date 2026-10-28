@@ -41,6 +41,20 @@ const RAW = {
   /** The lantern's light — palette butter/200, the lit glass in the tower art. */
   splashLampLight: '#F2E1A6',
 
+  /** The brand sky behind the drawn worlds (creds-design tokens.json `color.sky`,
+   * airmeishi-web theme.css `--color-sky-*`): a warm core, a lilac band, a cream rim. */
+  worldSkyCore: '#FFE0CB',
+  worldSkyCoreDark: '#3C1800',
+  worldSkyMid: '#CDB6E0',
+  worldSkyMidDark: '#351E48',
+  worldSkyRim: '#F9F0DA',
+  worldSkyRimDark: '#1B1404',
+  /** Star tones of the world sky (web `.land-star.tone-0…3`). */
+  worldStarWhite: '#FFFFFF',
+  worldStarPeriwinkle: '#CCD3F4',
+  worldStarPink: '#F4CCE2',
+  worldStarButter: '#F2E1A6',
+
   /** Page background — Palette.cream (#fbf9f2) light / #060417 dark. */
   pageBg: '#FBF9F2',
   pageBgDark: '#060417',

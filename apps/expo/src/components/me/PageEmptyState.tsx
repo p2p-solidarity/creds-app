@@ -46,7 +46,7 @@ export function PageEmptyState({
 }: PageEmptyStateProps): ReactNode {
   return (
     <View
-      className="items-center bg-cardBg"
+      className="items-center"
       style={{
         borderWidth: 1.5,
         borderStyle: 'dashed',

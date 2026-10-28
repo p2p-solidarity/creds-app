@@ -124,12 +124,20 @@ export function zoomFadeIn(durationMs: number): EntryExitAnimationFunction {
 }
 
 /**
- * Idle life for the world illustrations (the web's drawn worlds float the same
- * way): a slow sine bob, a few px, forever. Ambient, not feedback — so it sits
- * outside the 300 ms UI band, and it never runs under Reduce Motion.
+ * Idle life for the world illustrations — the web's shared rhythm (airmeishi-web
+ * theme.css `idle-bob` / global.css `.land-planet`): each thing floats a few px
+ * and leans a degree or two on its own slow period, and stars breathe out of
+ * step. Ambient, not feedback — so it sits outside the 300 ms UI band, and it
+ * never runs under Reduce Motion.
  */
-export const IDLE_FLOAT = {
-  /** One way; the loop alternates. */
-  durationMs: 2800,
-  risePx: 6,
+export const IDLE = {
+  /** One way of a bob; the loop alternates. Companions take their own period. */
+  bobMs: 7000,
+  bobPx: 5,
+  swayDeg: 0.8,
+  /** One way of a star's breath (web `twinkle`, 4.8 s alternate). */
+  twinkleMs: 4800,
+  /** Entrance: the web's `fadeUp` (900 ms) with a stagger per layer. */
+  enterMs: 900,
+  enterStaggerMs: 120,
 } as const;
