@@ -28,10 +28,18 @@
 import { Appearance } from 'react-native';
 
 const RAW = {
-  /** Launch splash stays black in either system appearance. */
-  splashBg: '#000000',
-  /** Launch mark stays white in either system appearance. */
-  splashMark: '#FFFFFF',
+  /** Launch splash sky — the creds.id home hero's (cream by day, deep night by dark). */
+  splashBg: '#FBF9F2',
+  splashBgDark: '#060417',
+  /** The hero's three aurora blooms (airmeishi-web home.css `.door-aurora-*`). */
+  splashAuroraPeach: 'rgba(255,190,160,0.55)',
+  splashAuroraPeachDark: 'rgba(150,60,140,0.34)',
+  splashAuroraLilac: 'rgba(196,170,240,0.5)',
+  splashAuroraLilacDark: 'rgba(64,72,176,0.34)',
+  splashAuroraButter: 'rgba(250,226,160,0.4)',
+  splashAuroraButterDark: 'rgba(170,90,40,0.2)',
+  /** The lantern's light — palette butter/200, the lit glass in the tower art. */
+  splashLampLight: '#F2E1A6',
 
   /** Page background — Palette.cream (#fbf9f2) light / #060417 dark. */
   pageBg: '#FBF9F2',
