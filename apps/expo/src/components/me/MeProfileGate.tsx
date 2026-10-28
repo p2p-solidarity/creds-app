@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { ActivityIndicator, View } from 'react-native';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
 
-import { WelcomeFeatureArt } from '@/components/decor/CredsFeatureArt';
+import { WorldArt } from '@/components/decor/WorldArt';
 import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { fadeUpIn } from '@/feedback/motion';
@@ -67,7 +67,7 @@ export function MeProfileGate({ onCreatePage, onSetUpIdentity }: MeProfileGatePr
             <>
               {/* The art carries the "your page" idea; the line stays short. */}
               <View className="items-center">
-                <WelcomeFeatureArt size={96} />
+                <WorldArt name="page" size={140} />
               </View>
               <ThemedText variant="titleLarge" style={{ textAlign: 'center' }}>
                 {t(

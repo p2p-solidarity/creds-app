@@ -11,12 +11,12 @@
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
 
-import { EmptyListFeatureArt, WelcomeFeatureArt } from '@/components/decor/CredsFeatureArt';
+import { WorldArt } from '@/components/decor/WorldArt';
 import { ThemedButton, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 
 /** `.es-art` — 96pt square, 10pt below it. */
-const ART_SIZE = 96;
+const ART_SIZE = 120;
 
 export interface PageEmptyStateAction {
   readonly label: string;
@@ -55,9 +55,7 @@ export function PageEmptyState({
         paddingHorizontal: 18,
       }}>
       <View style={{ marginBottom: 10 }}>
-        {art === 'attestation'
-          ? <WelcomeFeatureArt size={ART_SIZE} />
-          : <EmptyListFeatureArt size={ART_SIZE} />}
+        <WorldArt name={art === 'attestation' ? 'verify' : 'page'} size={ART_SIZE} />
       </View>
       <ThemedText variant="bodyMedium" style={{ marginTop: 6, textAlign: 'center' }}>
         {title}

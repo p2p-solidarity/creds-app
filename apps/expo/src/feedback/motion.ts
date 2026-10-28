@@ -122,3 +122,14 @@ export function zoomFadeIn(durationMs: number): EntryExitAnimationFunction {
     };
   };
 }
+
+/**
+ * Idle life for the world illustrations (the web's drawn worlds float the same
+ * way): a slow sine bob, a few px, forever. Ambient, not feedback — so it sits
+ * outside the 300 ms UI band, and it never runs under Reduce Motion.
+ */
+export const IDLE_FLOAT = {
+  /** One way; the loop alternates. */
+  durationMs: 2800,
+  risePx: 6,
+} as const;
