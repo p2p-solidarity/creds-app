@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
 
-import { WorldArt } from '@/components/decor/WorldArt';
+import { WelcomeFeatureArt } from '@/components/decor/CredsFeatureArt';
 import { ThemedButton } from '@/components/themed';
 import { useTranslation } from '@/i18n';
 
@@ -38,7 +38,8 @@ export function WelcomeStep({
         </View>
       }>
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <WorldArt name="welcome" size={240} />
+        {/* Mock ob step 0: the w-feature-2 arc-pinwheel disc, not a logo. */}
+        <WelcomeFeatureArt size={200} />
       </View>
     </V2OnboardingScaffold>
   );

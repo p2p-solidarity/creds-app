@@ -1,7 +1,7 @@
 import { Platform, View } from 'react-native';
 import type { ReactNode } from 'react';
 
-import { WorldArt } from '@/components/decor/WorldArt';
+import { ReadyFeatureArt } from '@/components/decor/CredsFeatureArt';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
@@ -51,7 +51,8 @@ export function ReadyStep({
       }>
       <View style={{ flex: 1, gap: 14, paddingTop: 8 }}>
         <View className="flex-1 items-center justify-center gap-3">
-          <WorldArt name="ready" size={180} />
+          {/* Mock ob step 4: the w-feature-6 sparkle art above 「一切就緒」. */}
+          <ReadyFeatureArt size={140} />
           <ThemedText variant="headlineMedium">{t('ob.done.title')}</ThemedText>
         </View>
         <ThemedSurface variant="outlined" padded className="gap-4 rounded-xl">

@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { makeGestureAutoBackup } from '@/backup';
 import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
-import { WorldArt } from '@/components/decor/WorldArt';
+import { PeopleFeatureArt } from '@/components/decor/CredsFeatureArt';
 import { ContactsAddSheet } from '@/components/people/ContactsAddSheet';
 import { ContactsActivitySections } from '@/components/people/ContactsActivitySections';
 import {
@@ -631,9 +631,9 @@ function EmptyState({
       }}
     >
       <View
-        style={{ width: 200, height: 200, alignItems: 'center', justifyContent: 'center' }}
+        style={{ width: 160, height: 160, alignItems: 'center', justifyContent: 'center' }}
       >
-        <WorldArt name="people" size={200} />
+        <PeopleFeatureArt size={160} />
       </View>
       <ThemedText variant="titleLarge" style={{ textAlign: 'center' }}>
         {t('peopleList.emptyTitle')}
