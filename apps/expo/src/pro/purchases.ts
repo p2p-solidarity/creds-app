@@ -107,6 +107,11 @@ async function ensureConnection(): Promise<ProStoreClient | null> {
   return connectionPromise;
 }
 
+/** The connected store client, or null when the store is unreachable. */
+export function connectProStore(): Promise<ProStoreClient | null> {
+  return ensureConnection();
+}
+
 async function finishQuietly(store: ProStoreClient, purchase: Purchase): Promise<void> {
   try {
     // An unfinished subscription is re-delivered on every launch, and Play

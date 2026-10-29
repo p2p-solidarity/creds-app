@@ -13,6 +13,9 @@ import { DEFAULT_RELAYS } from '@/nostr/publish';
 import type { NostrEvent } from '@/nostr/nostrAdapter';
 import { useProfileStore } from '@/profile/store';
 import { usePreferences } from '@/settings/preferences';
+import { isProActive } from '@/pro/entitlement';
+import { selectProStatus, useProEntitlementStore } from '@/pro/entitlementStore';
+import { queueNotaryWitness } from '@/pro/license';
 import { publishWitness } from '@/witness/witness';
 import {
   CREDS_DEVICE_TRUST,
@@ -57,6 +60,12 @@ export async function confirmSocialClaim(event: NostrEvent): Promise<Result<Conf
   useZktlsProofs.getState().put(claim, event, verified.value.statement.observedAt);
 
   const [page, published] = await Promise.all([publishToNostr(DEFAULT_RELAYS), publishWitness(event, DEFAULT_RELAYS)]);
+  // Pro: one more witness, from the creds.id notary, in its next hourly batch.
+  const jws = useProfileStore.getState().jws;
+  const name = usePreferences.getState().publicPageRegisteredUsername;
+  if (isProActive(selectProStatus(useProEntitlementStore.getState())) && jws !== null && name !== '') {
+    void queueNotaryWitness({ jws, name });
+  }
   return ok({ published: page.ok && published.success });
 }
 
