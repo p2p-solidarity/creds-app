@@ -14,9 +14,6 @@ ws_stream_tungstenite = { version = "0.15", features = ["tokio_io"] }
 tokio = { version = "1.38", features = ["rt", "rt-multi-thread", "macros", "net", "io-util", "time", "sync"] }
 tokio-util = { version = "0.7", features = ["compat"] }
 serde_json = "1.0"
-http-body-util = "0.1"
-hyper = { version = "1.1", features = ["client", "http1"] }
-hyper-util = { version = "0.1", features = ["tokio"] }
 
 [profile.release]
 strip = true

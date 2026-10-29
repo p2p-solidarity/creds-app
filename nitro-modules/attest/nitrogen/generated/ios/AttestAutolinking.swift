@@ -59,4 +59,16 @@ public final class AttestAutolinking {
   public static func isSemaphoreRecyclable() -> Bool {
     return HybridSemaphore.self is any RecyclableView.Type
   }
+  
+  public static func createZktls() -> bridge.std__shared_ptr_HybridZktlsSpec_ {
+    let hybridObject = HybridZktls()
+    return { () -> bridge.std__shared_ptr_HybridZktlsSpec_ in
+      let __cxxWrapped = hybridObject.getCxxWrapper()
+      return __cxxWrapped.getCxxPart()
+    }()
+  }
+  
+  public static func isZktlsRecyclable() -> Bool {
+    return HybridZktls.self is any RecyclableView.Type
+  }
 }

@@ -20,6 +20,7 @@
 #include "JFunc_void_NfcReadProgress.hpp"
 #include "JHybridPassportZkSpec.hpp"
 #include "JHybridSemaphoreSpec.hpp"
+#include "JHybridZktlsSpec.hpp"
 #include <NitroModules/DefaultConstructableObject.hpp>
 
 namespace margelo::nitro::solidarity::attest {
@@ -73,6 +74,7 @@ void registerAllNatives() {
   margelo::nitro::solidarity::attest::JFunc_void_NfcReadProgress_cxx::registerNatives();
   margelo::nitro::solidarity::attest::JHybridPassportZkSpec::CxxPart::registerNatives();
   margelo::nitro::solidarity::attest::JHybridSemaphoreSpec::CxxPart::registerNatives();
+  margelo::nitro::solidarity::attest::JHybridZktlsSpec::CxxPart::registerNatives();
 
   // Register Nitro Hybrid Objects
   HybridObjectRegistry::registerHybridObjectConstructor(

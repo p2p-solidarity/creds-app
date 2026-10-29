@@ -46,10 +46,22 @@ Pod::Spec.new do |s|
     'android/src/main/assets/passportRevocationSnapshot.v3.json',
   ]
 
-  s.pod_target_xcconfig = {
+  pod_xcconfig = {
     'DEFINES_MODULE' => 'YES',
     'SWIFT_VERSION'  => '5.9',
   }
+
+  # zkTLS prover (zktls/): a static Rust lib in CredsZktls.xcframework, built by
+  # zktls/build-ios.sh or staged SHA-pinned by apps/expo/scripts/prepare-ios-workspace.sh.
+  # Absent → HybridZktls.swift compiles its `isAvailable = false` stub instead.
+  # The app target's LIBRARY_SEARCH_PATHS come from withRustXcframeworkSearchPath.
+  if File.exist?(File.join(__dir__, 'zktls', 'CredsZktls.xcframework'))
+    zktls_xcf = '${PODS_TARGET_SRCROOT}/zktls/CredsZktls.xcframework'
+    pod_xcconfig['SWIFT_INCLUDE_PATHS[sdk=iphonesimulator*]'] = "$(inherited) #{zktls_xcf}/ios-arm64-simulator/Headers/CredsZktls"
+    pod_xcconfig['SWIFT_INCLUDE_PATHS[sdk=iphoneos*]'] = "$(inherited) #{zktls_xcf}/ios-arm64/Headers/CredsZktls"
+    s.user_target_xcconfig = { 'OTHER_LDFLAGS' => '$(inherited) -lcreds_zktls' }
+  end
+  s.pod_target_xcconfig = pod_xcconfig
 
   # Vision ships with the iOS SDK. Swift's `import Vision` auto-links it, but
   # MrzVisionGuard.mm calls VNImageRequestHandler via the framework header, so

@@ -23,6 +23,7 @@ import type { MrzOcr } from './specs/MrzOcr.nitro';
 import type { NfcPassport } from './specs/NfcPassport.nitro';
 import type { PassportZk } from './specs/PassportZk.nitro';
 import type { Semaphore } from './specs/Semaphore.nitro';
+import type { Zktls } from './specs/Zktls.nitro';
 
 export type {
   MrzOcr,
@@ -48,6 +49,8 @@ export type {
   Semaphore,
   SemaphoreProof,
 } from './specs/Semaphore.nitro';
+
+export type { Zktls } from './specs/Zktls.nitro';
 
 let cachedMrzOcr: MrzOcr | null = null;
 
@@ -79,4 +82,21 @@ export function getSemaphore(): Semaphore {
   if (cachedSemaphore) return cachedSemaphore;
   cachedSemaphore = NitroModules.createHybridObject<Semaphore>('Semaphore');
   return cachedSemaphore;
+}
+
+let cachedZktls: Zktls | null | undefined;
+
+/**
+ * The zkTLS prover, or null where it is not registered (Android today, web
+ * preview, bun tests). Check `isAvailable` too: an iOS build without the
+ * prover library registers a stub.
+ */
+export function getZktls(): Zktls | null {
+  if (cachedZktls !== undefined) return cachedZktls;
+  try {
+    cachedZktls = NitroModules.createHybridObject<Zktls>('Zktls');
+  } catch {
+    cachedZktls = null;
+  }
+  return cachedZktls;
 }

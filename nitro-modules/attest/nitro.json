@@ -1,11 +1,18 @@
 {
   "$schema": "https://nitro.margelo.com/schemas/nitro.schema.json",
-  "cxxNamespace": ["solidarity", "attest"],
+  "cxxNamespace": [
+    "solidarity",
+    "attest"
+  ],
   "ios": {
     "iosModuleName": "Attest"
   },
   "android": {
-    "androidNamespace": ["gg", "solidarity", "attest"],
+    "androidNamespace": [
+      "gg",
+      "solidarity",
+      "attest"
+    ],
     "androidCxxLibName": "Attest"
   },
   "autolinking": {
@@ -47,6 +54,12 @@
       "android": {
         "language": "kotlin",
         "implementationClassName": "HybridSemaphore"
+      }
+    },
+    "Zktls": {
+      "ios": {
+        "language": "swift",
+        "implementationClassName": "HybridZktls"
       }
     }
   }

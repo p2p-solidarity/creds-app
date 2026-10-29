@@ -14,6 +14,7 @@
 #include "HybridNfcPassportSpecSwift.hpp"
 #include "HybridPassportZkSpecSwift.hpp"
 #include "HybridSemaphoreSpecSwift.hpp"
+#include "HybridZktlsSpecSwift.hpp"
 
 @interface AttestAutolinking : NSObject
 @end
@@ -49,6 +50,13 @@
     "Semaphore",
     []() -> std::shared_ptr<HybridObject> {
       std::shared_ptr<HybridSemaphoreSpec> hybridObject = Attest::AttestAutolinking::createSemaphore();
+      return hybridObject;
+    }
+  );
+  HybridObjectRegistry::registerHybridObjectConstructor(
+    "Zktls",
+    []() -> std::shared_ptr<HybridObject> {
+      std::shared_ptr<HybridZktlsSpec> hybridObject = Attest::AttestAutolinking::createZktls();
       return hybridObject;
     }
   );

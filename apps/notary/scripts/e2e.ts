@@ -1,11 +1,11 @@
 /**
  * Notary E2E against a deployed notary (docs/ref/10 §7 P2): for each target,
- * NIP-98 sign a session, run the CLI prover (container/src/bin/prove.rs)
+ * NIP-98 sign a session, run the CLI prover (nitro-modules/attest/zktls, the app's prover code)
  * through the notary, pick the signed evidence up, then verify it offline with
  * the shared verifier and the pinned dev root. Also probes the live gate:
  * a replayed session header and an evidence pickup by another npub must fail.
  *
- *   NOTARY_ORIGIN=https://creds-notary-dev.<sub>.workers.dev PROVER=<path to prove> bun scripts/e2e.ts
+ *   NOTARY_ORIGIN=https://creds-notary-dev.<sub>.workers.dev PROVER=<nitro-modules/attest/zktls target/release/prove> bun scripts/e2e.ts
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -52,18 +52,19 @@ async function prove(platform: ZktlsPlatform, handle: string, scalar: Uint8Array
 
   const started = performance.now();
   const run = Bun.spawnSync([prover as string], {
-    env: {
-      ...process.env,
-      NOTARY_URL: sessionUrl.replace(/^https:/u, 'wss:'),
-      NOTARY_AUTH: sessionAuth,
-      TARGET_HOST: target.value.server,
-      TARGET_PATH: target.value.request.split(' ')[1] as string,
-      FIND: field.start,
-      FIND_END: field.stop,
-    },
+    stdin: Buffer.from(
+      JSON.stringify({
+        notaryUrl: sessionUrl.replace(/^https:/u, 'wss:'),
+        authorization: sessionAuth,
+        host: target.value.server,
+        path: target.value.request.split(' ')[1],
+        fieldStart: field.start,
+        fieldStop: field.stop,
+      }),
+    ),
   });
   const proverOut = run.stdout.toString().trim();
-  if (run.exitCode !== 0) throw new Error(`prover failed: ${run.stderr.toString().trim()}`);
+  if (run.exitCode !== 0) throw new Error(`prover failed: ${proverOut}`);
 
   const evidenceUrl = notaryEvidenceUrl(origin as string, sid);
   let strangerPickup: number | null = null;
