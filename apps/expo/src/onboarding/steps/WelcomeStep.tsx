@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
 
-import { WelcomeFeatureArt } from '@/components/decor/CredsFeatureArt';
+import { CredsMark } from '@/components/brand/CredsMark';
 import { ThemedButton } from '@/components/themed';
 import { useTranslation } from '@/i18n';
 
@@ -38,8 +38,8 @@ export function WelcomeStep({
         </View>
       }>
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        {/* Mock ob step 0: the w-feature-2 arc-pinwheel disc, not a logo. */}
-        <WelcomeFeatureArt size={200} />
+        {/* The creds.id mark (Solidarity rebrand) — replaces the mock's arc-pinwheel. */}
+        <CredsMark size={132} float />
       </View>
     </V2OnboardingScaffold>
   );

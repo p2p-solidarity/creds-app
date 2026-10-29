@@ -1,13 +1,13 @@
 import { useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
-import { Image, TextInput, View, type LayoutChangeEvent } from 'react-native';
+import { Image, TextInput, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { animalImageSource } from '@/cards/animals';
 import { PressableScale } from '@/components/common/PressableScale';
-import { MauvePetalMotif } from '@/components/decor/MauvePetalMotif';
+import { CredsMark } from '@/components/brand/CredsMark';
 import { SfIcon } from '@/components/icons/SfIcon';
 import {
   contactSourceDescription,
@@ -248,17 +248,11 @@ function HeroCard({
   readonly sourceTag: string | undefined;
   readonly onEditNote: () => void;
 }): ReactNode {
-  const [cardWidth, setCardWidth] = useState(0);
   const note = contact?.notes?.trim();
-  const onLayout = (event: LayoutChangeEvent): void => {
-    const width = event.nativeEvent.layout.width;
-    if (Math.abs(width - cardWidth) > 0.5) setCardWidth(width);
-  };
 
   return (
     <ThemedSurface
       variant="card"
-      onLayout={onLayout}
       style={{ marginHorizontal: HORIZONTAL_PADDING, overflow: 'hidden' }}
     >
       <LinearGradient
@@ -268,11 +262,10 @@ function HeroCard({
         end={{ x: 0.65, y: 0.02 }}
         style={{ position: 'absolute', inset: 0 }}
       />
-      {cardWidth > 0 ? (
-        <View pointerEvents="none" style={{ position: 'absolute', inset: 0 }}>
-          <MauvePetalMotif cardWidth={cardWidth} cardHeight={230} />
-        </View>
-      ) : null}
+      {/* creds.id's name card signs its corner with the ring mark (web `.scard`). */}
+      <View pointerEvents="none" style={{ position: 'absolute', right: 14, bottom: 14, opacity: 0.5 }}>
+        <CredsMark size={22} />
+      </View>
 
       <View className="items-center px-4 py-5" style={{ gap: 12 }}>
         <AvatarCircle

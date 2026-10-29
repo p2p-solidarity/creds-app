@@ -2,7 +2,7 @@
  * ReceivedCardSheet — incoming Card preview and save ceremony.
  *
  * Bottom-sheet preview for an incoming BusinessCard handed to the app
- * by a deep link. Mirrors the Swift screen: SakuraIcon ring header,
+ * by a deep link. Mirrors the Swift screen: creds ring-mark header,
  * card-detail block (avatar + name + title + company + verification +
  * email + phone) and the v2 reciprocal-exchange CTAs.
  *
@@ -14,7 +14,7 @@ import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { SakuraIcon } from '@/components/brand/SakuraIcon';
+import { CredsMark } from '@/components/brand/CredsMark';
 import { PeerAvatar } from '@/components/cards/PeerAvatar';
 import { buildContactFromReceivedCard } from '@/cards/receivedCard';
 import type { NostrPointerClaim } from '@/cards/nostrPointerClaim';
@@ -181,7 +181,7 @@ function ReceivedCardContent({
                 borderColor: Colors.accentRose,
               }}
             />
-            <SakuraIcon size={40} color={Colors.accentRose} animating />
+            <CredsMark size={40} />
           </View>
 
           <View style={{ alignItems: 'center', rowGap: 8 }}>
@@ -276,7 +276,7 @@ function CardDetailBlock({
         >
           {t('receivedCard.details')}
         </Text>
-        <SakuraIcon size={24} color={Colors.accentRose} animating />
+        <CredsMark size={22} />
       </View>
 
       <View style={{ flexDirection: 'row', alignItems: 'center', columnGap: 12 }}>

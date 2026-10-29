@@ -11,7 +11,8 @@
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
 
-import { EmptyListFeatureArt, WelcomeFeatureArt } from '@/components/decor/CredsFeatureArt';
+import { CredsMark } from '@/components/brand/CredsMark';
+import { EmptyListFeatureArt } from '@/components/decor/CredsFeatureArt';
 import { ThemedButton, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 
@@ -56,7 +57,7 @@ export function PageEmptyState({
       }}>
       <View style={{ marginBottom: 10 }}>
         {art === 'attestation'
-          ? <WelcomeFeatureArt size={ART_SIZE} />
+          ? <CredsMark size={ART_SIZE * 0.66} />
           : <EmptyListFeatureArt size={ART_SIZE} />}
       </View>
       <ThemedText variant="bodyMedium" style={{ marginTop: 6, textAlign: 'center' }}>
