@@ -46,6 +46,7 @@
         "aps-environment": "production"
       },
       "infoPlist": {
+        "CFBundleDisplayName": "creds.id",
         "NSCameraUsageDescription": "creds.id uses the camera to scan QR codes and passport MRZ.",
         "NSContactsUsageDescription": "creds.id can save business card information to your Contacts.",
         "NFCReaderUsageDescription": "creds.id reads your passport's NFC chip to verify identity.",
@@ -160,6 +161,7 @@
       "./plugins/withPassportOpenAcSrsPhase.js",
       "./plugins/withIosBuildNumber.js",
       "./plugins/withAndroidReleaseSigning.js",
+      ["./plugins/withAndroidDisplayName.js", { "name": "creds.id" }],
       "expo-sqlite",
       "expo-asset",
       "expo-image",
