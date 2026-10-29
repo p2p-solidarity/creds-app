@@ -1,5 +1,5 @@
 import { Platform, View } from 'react-native';
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
@@ -14,7 +14,7 @@ import {
   hasRootKey,
   restoreRootKeyFromICloud,
 } from '@/identity';
-import { readMnemonicForPasskeyConnection } from '@/identity/rootKey';
+import { readMnemonicForPasskeyConnection, type RootKeyError } from '@/identity/rootKey';
 import { connectRootIdentityWithNativePasskey } from '@/identity/rootVaultSync';
 import { setRootVaultSyncState } from '@/identity/rootVaultSyncState';
 import { ensureSigningKey } from '@/keychain';
@@ -26,6 +26,15 @@ import {
 } from './optionalPasskeySetup';
 import { V2OnboardingScaffold } from './V2OnboardingScaffold';
 
+/**
+ * Keep the native keychain status in the error report (it is what told a
+ * Nitro promise race apart from a real keychain failure). Phrase-validation
+ * text is left out: the report is emailed and must never echo mnemonic words.
+ */
+function rootKeyFailure(error: RootKeyError): Error {
+  return new Error(error.kind === 'storageFailed' ? `${error.kind}: ${error.message}` : error.kind);
+}
+
 export function PasskeyStep({
   onBack,
   onCreated,
@@ -36,11 +45,15 @@ export function PasskeyStep({
   const { t } = useTranslation();
   const setPref = usePreferences((state) => state.set);
   const [working, setWorking] = useState(false);
+  // `working` is the render-time value, so a second tap before the re-render
+  // would start a second identity setup (two fresh mnemonics on a new install).
+  const inFlight = useRef(false);
 
   const completeIdentitySetup = async (
     choice: OptionalPasskeyChoice,
   ): Promise<void> => {
-    if (working) return;
+    if (inFlight.current) return;
+    inFlight.current = true;
     setWorking(true);
     try {
       const outcome = await runOptionalPasskeySetup(choice, {
@@ -48,13 +61,13 @@ export function PasskeyStep({
           let rootExists = await hasRootKey();
           if (!rootExists && Platform.OS === 'ios') {
             const restored = await restoreRootKeyFromICloud();
-            if (!restored.ok) throw new Error(restored.error.kind);
+            if (!restored.ok) throw rootKeyFailure(restored.error);
             rootExists = restored.value.kind !== 'notFound';
           }
 
           if (!rootExists) {
             const created = await createFromFreshMnemonic();
-            if (!created.ok) throw new Error(created.error.kind);
+            if (!created.ok) throw rootKeyFailure(created.error);
             // The publishing key comes from the same mnemonic, derived now while
             // it is in hand — otherwise the first publish reveals it again
             // (a red-line Face ID) right after the Page's own signing prompt.
@@ -65,7 +78,7 @@ export function PasskeyStep({
           // Recovery remains mandatory identity setup; Web Passkey sync does not.
           if (Platform.OS === 'ios') {
             const backedUp = await enableICloudBackup();
-            if (!backedUp.ok) throw new Error(backedUp.error.kind);
+            if (!backedUp.ok) throw rootKeyFailure(backedUp.error);
             setPref('rootKeySyncChoice', 'icloud');
           }
 
@@ -111,6 +124,7 @@ export function PasskeyStep({
         error,
       });
     } finally {
+      inFlight.current = false;
       setWorking(false);
     }
   };
