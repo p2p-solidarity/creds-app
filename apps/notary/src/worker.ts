@@ -1,189 +1,213 @@
 /**
- * creds.id notary — the Worker half (docs/ref/10 §3.1, §3.6, §3.8).
+ * creds.id Pro notary (docs/ref/10 §3.11) — one more witness for Pro users.
  *
- *   GET /v1/session?platform&handle&name&sid   WebSocket → TLSNotary verifier in the Container
- *   GET /v1/evidence?sid                       → { cert, evidence } for that finished session
+ *   POST /v1/witness  { page, license, name }   queue a Page for the next hourly batch
+ *   (cron, hourly)                               fetch each queued profile page itself,
+ *                                                sign a witness with the notary npub, publish
  *
- * Every call is NIP-98 signed by the owner's npub (shared `checkNotaryRequest`).
- * One Durable Object owns the Container, the replay set and the per-npub rate
- * limit, all in memory only — nothing about who verified what is stored.
- * The Container holds no keys and only reports what it witnessed; this side
- * re-checks those facts against the shared platform rules and signs them with
- * the month's key, whose root-signed cert travels with the evidence.
+ * No TLSNotary and no prover on any device: the notary fetches the public
+ * page with plain `fetch()`, checks it with the same shared platform rules
+ * the phones use, and signs the same NIP-78 witness format (device
+ * `{ platform: 'notary' }`), trusted by its pinned npub. Viewers trust it the
+ * way they trusted the old notary — it is creds.id saying "we looked".
+ *
+ * Who may queue: the request carries the Page (signed by its root did) and a
+ * Pro license for that did. The notary only ever witnesses what it fetched
+ * itself, so a replayed request can at worst re-check the owner's own links.
+ * One Durable Object holds the queue; nothing else is stored.
  */
 import { DurableObject } from 'cloudflare:workers';
-import { p256 } from '@noble/curves/nist.js';
-import { decodeJwtUnsafe, hexToBytes } from '@solidarity/shared';
-import { hexToNpub } from '@solidarity/shared/nostr';
 import {
-  checkEvidenceFacts,
-  checkNotaryRequest,
-  EVIDENCE_TYP,
-  NIP98_WINDOW_SECONDS,
-  signEvidence,
-  type NotaryCert,
-  type NotaryRequest,
-  type NotaryRequestError,
-} from '@solidarity/shared/zktls';
-
-import certs from '../keys/certs.json';
+  buildWitnessEvent,
+  checkSocialMarker,
+  CREDS_LICENSE_ISSUERS,
+  decodeJwtUnsafe,
+  bytesToHex,
+  hexToBytes,
+  hexToNpub,
+  npubToHex,
+  pageSocialClaim,
+  parseProfile,
+  signNostrEventWithScalar,
+  socialTargetForClaim,
+  verifyCompact,
+  verifyProLicense,
+  type NostrEvent,
+  type PageFetch,
+  type WitnessStatement,
+} from '@solidarity/shared';
+import { schnorr } from '@noble/curves/secp256k1.js';
 
 interface Env {
   NOTARY: DurableObjectNamespace<Notary>;
-  /** Secret: `{ "<monthly did:key>": "<private key hex>" }` from scripts/keys.ts. */
-  NOTARY_KEYS: string;
-  REQUIRE_REGISTERED: string;
+  /** Secret: hex secp256k1 scalar of the notary's witness npub (scripts/witness-key.ts). */
+  NOTARY_NSEC: string;
   DIRECTORY_ORIGIN: string;
 }
 
-const TLSN_VERSION = '0.1.0-alpha.15';
-const SESSIONS_PER_HOUR = 20;
-const PENDING_TTL_MS = 5 * 60_000;
+interface Queued {
+  readonly did: string;
+  readonly subject: string;
+  readonly name: string;
+  readonly claims: readonly string[];
+  /** Unix s: the license stops renewal after this. */
+  readonly licenseExp: number;
+  /** Unix s: next batch that should check it. */
+  readonly dueAt: number;
+}
 
-const STATUS: Record<NotaryRequestError, number> = {
-  invalid_auth: 401,
-  expired: 401,
-  replayed: 401,
-  url_mismatch: 401,
-  method_mismatch: 405,
-  not_found: 404,
-  invalid_request: 400,
-  not_allowed: 403,
-};
-
-type Session = Extract<NotaryRequest, { kind: 'session' }>;
+const RELAYS = ['wss://relay.damus.io', 'wss://nos.lol', 'wss://relay.primal.net'];
+const RENEW_SECONDS = 30 * 86_400;
+const MAX_QUEUE = 5000;
+const MAX_PER_BATCH = 200;
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 }
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-/** This month's signing key: a NOTARY_KEYS entry whose root-signed cert window covers `now`. */
-function currentKey(env: Env, now: number): { did: string; key: Uint8Array; cert: string } | null {
-  const keys = JSON.parse(env.NOTARY_KEYS) as Record<string, string>;
-  for (const cert of certs) {
-    const { payload } = decodeJwtUnsafe<NotaryCert>(cert);
-    const hex = keys[payload.did];
-    if (hex !== undefined && payload.nbf <= now && now <= payload.exp) {
-      return { did: payload.did, key: hexToBytes(hex), cert };
-    }
+const fetchPage: PageFetch = async (url) => {
+  try {
+    const res = await fetch(url, { redirect: 'follow', headers: { Accept: 'text/html' } });
+    return { ok: true, value: { status: res.status, body: res.status === 200 ? await res.text() : '' } };
+  } catch {
+    return { ok: false, error: 'network' };
   }
-  return null;
+};
+
+/** Publish to one relay over an outbound WebSocket; resolves on OK or after 5 s. */
+async function publishTo(relay: string, event: NostrEvent): Promise<boolean> {
+  try {
+    const res = await fetch(relay.replace(/^wss:/u, 'https:'), { headers: { Upgrade: 'websocket' } });
+    const ws = res.webSocket;
+    if (ws === null) return false;
+    ws.accept();
+    return await new Promise<boolean>((resolve) => {
+      const timer = setTimeout(() => {
+        ws.close();
+        resolve(false);
+      }, 5000);
+      ws.addEventListener('message', (m) => {
+        try {
+          const msg = JSON.parse(String(m.data)) as unknown[];
+          if (msg[0] === 'OK' && msg[1] === event.id) {
+            clearTimeout(timer);
+            ws.close();
+            resolve(msg[2] === true);
+          }
+        } catch {
+          // ignore other frames
+        }
+      });
+      ws.send(JSON.stringify(['EVENT', event]));
+    });
+  } catch {
+    return false;
+  }
 }
 
 export class Notary extends DurableObject<Env> {
-  private readonly seen = new Map<string, number>();
-  private readonly sessionsByNpub = new Map<string, number[]>();
-  private readonly pending = new Map<string, { session: Session; at: number }>();
-
   override async fetch(req: Request): Promise<Response> {
-    const now = Math.floor(Date.now() / 1000);
-    for (const [id, at] of this.seen) if (now - at > NIP98_WINDOW_SECONDS * 2) this.seen.delete(id);
-    for (const [sid, p] of this.pending) if (Date.now() - p.at > PENDING_TTL_MS) this.pending.delete(sid);
-
-    const gate = checkNotaryRequest({
-      authorization: req.headers.get('Authorization'),
-      method: req.method,
-      url: req.url,
-      now,
-      seen: new Set(this.seen.keys()),
-    });
-    if (!gate.ok) return json(STATUS[gate.error], { error: gate.error });
-    this.seen.set(gate.value.eventId, now);
-    return gate.value.kind === 'session' ? this.session(req, gate.value) : this.evidence(gate.value.pubkey, gate.value.sid);
-  }
-
-  private async session(req: Request, s: Session): Promise<Response> {
-    if (req.headers.get('Upgrade')?.toLowerCase() !== 'websocket') return json(426, { error: 'websocket_required' });
-    if (this.pending.has(s.sid)) return json(409, { error: 'sid_in_use' });
-
-    const recent = (this.sessionsByNpub.get(s.pubkey) ?? []).filter((t) => Date.now() - t < 3_600_000);
-    if (recent.length >= SESSIONS_PER_HOUR) return json(429, { error: 'rate_limited' });
-    if (this.env.REQUIRE_REGISTERED !== 'false' && !(await this.registered(s.name, s.pubkey))) {
-      return json(403, { error: 'not_registered' });
+    let body: { page?: unknown; license?: unknown; name?: unknown };
+    try {
+      body = await req.json();
+    } catch {
+      return json(400, { error: 'invalid_request' });
     }
-    this.sessionsByNpub.set(s.pubkey, [...recent, Date.now()]);
-    this.pending.set(s.sid, { session: s, at: Date.now() });
-
-    const container = await this.container();
-    if (container === null) return json(503, { error: 'notary_unavailable' });
-    const headers = new Headers(req.headers);
-    headers.delete('Authorization');
-    headers.set('X-Notary-Sid', s.sid);
-    headers.set('X-Notary-Server', s.server);
-    headers.set('X-Notary-Request', s.request);
-    return container.getTcpPort(8080).fetch(new Request('http://container/session', { headers }));
-  }
-
-  private async evidence(pubkey: string, sid: string): Promise<Response> {
-    const pending = this.pending.get(sid);
-    if (pending?.session.pubkey !== pubkey) return json(404, { error: 'unknown_session' });
-    const container = this.ctx.container;
-    if (!container?.running) return json(503, { error: 'notary_unavailable' });
-
-    // The verifier records its facts right after the prover closes; allow it a moment.
-    let res: Response | null = null;
-    for (let i = 0; i < 10 && (res === null || res.status === 404); i++) {
-      if (i > 0) await sleep(300);
-      res = await container.getTcpPort(8081).fetch(`http://container/facts/${sid}`);
+    if (typeof body.page !== 'string' || typeof body.license !== 'string' || typeof body.name !== 'string') {
+      return json(400, { error: 'invalid_request' });
     }
-    if (res === null || res.status === 404) return json(409, { error: 'session_not_finished' });
-    this.pending.delete(sid);
-    if (res.status !== 200) return json(422, { error: 'not_witnessed' });
 
-    const witnessed = await res.json<{ server: string; request: string; revealed: string }>();
-    const { platform, handle } = pending.session;
-    const facts = checkEvidenceFacts({ platform, handle, ...witnessed });
-    if (!facts.ok) return json(422, { error: 'outside_platform_rule' });
+    // The Page: root-signed record that names its npub and the claims to witness.
+    let payload: unknown = null;
+    try {
+      payload = decodeJwtUnsafe(body.page).payload;
+    } catch {
+      return json(400, { error: 'invalid_page' });
+    }
+    const record = parseProfile(payload);
+    if (!record.ok || !verifyCompact(body.page, record.value.did).ok) return json(400, { error: 'invalid_page' });
+    const subject = record.value.alsoKnownAs.find((a) => a.startsWith('nostr:npub1'))?.slice('nostr:'.length);
+    const subjectHex = subject === undefined ? null : npubToHex(subject);
+    if (subject === undefined || !subjectHex?.ok) return json(400, { error: 'no_npub' });
 
     const now = Math.floor(Date.now() / 1000);
-    const key = currentKey(this.env, now);
-    const npub = hexToNpub(pubkey);
-    if (key === null || !npub.ok) return json(503, { error: 'notary_unavailable' });
-    const evidence = await signEvidence(
-      { typ: EVIDENCE_TYP, platform, handle, ...witnessed, npub: npub.value, iat: now, tlsn: TLSN_VERSION },
-      key.did,
-      (digest) => Promise.resolve(p256.sign(digest, key.key, { prehash: false })),
-    );
-    return json(200, { cert: key.cert, evidence });
+    const license = verifyProLicense(body.license, { issuers: CREDS_LICENSE_ISSUERS, nowSeconds: now, sub: record.value.did });
+    if (!license.ok) return json(402, { error: 'license', detail: license.error });
+    if (!(await this.registered(body.name, subjectHex.value))) return json(403, { error: 'name_not_registered' });
+
+    const claims = record.value.alsoKnownAs.filter((c) => socialTargetForClaim(c) !== null);
+    if (claims.length === 0) return json(400, { error: 'no_claims' });
+    const size = (await this.ctx.storage.list({ prefix: 'q:' })).size;
+    if (size >= MAX_QUEUE) return json(503, { error: 'busy' });
+    const entry: Queued = { did: record.value.did, subject, name: body.name, claims, licenseExp: license.value.exp, dueAt: now };
+    await this.ctx.storage.put(`q:${subjectHex.value}`, entry);
+    return json(202, { queued: claims.length, nextBatch: Math.ceil(now / 3600) * 3600 });
   }
 
-  /** The npub must own `name` in the creds.id directory (nostr.json returns name → pubkey only). */
+  /** The hourly batch: check every due entry, publish witnesses, schedule renewals. */
+  async runBatch(): Promise<{ checked: number; witnessed: number }> {
+    const now = Math.floor(Date.now() / 1000);
+    const scalar = hexToBytes(this.env.NOTARY_NSEC);
+    const notaryHex = bytesToHex(schnorr.getPublicKey(scalar));
+    const notaryNpub = hexToNpub(notaryHex);
+    if (!notaryNpub.ok) return { checked: 0, witnessed: 0 };
+
+    let checked = 0;
+    let witnessed = 0;
+    for (const [key, entry] of await this.ctx.storage.list<Queued>({ prefix: 'q:' })) {
+      if (checked >= MAX_PER_BATCH) break;
+      if (entry.dueAt > now) continue;
+      if (entry.licenseExp <= now) {
+        await this.ctx.storage.delete(key);
+        continue;
+      }
+      checked += 1;
+      for (const claim of entry.claims) {
+        const target = socialTargetForClaim(claim);
+        if (target === null) continue;
+        const found = await checkSocialMarker(target, entry.name, fetchPage);
+        if (!found.ok) continue;
+        const statement: WitnessStatement = {
+          v: 1,
+          claim: pageSocialClaim(target.platform, target.handle),
+          name: entry.name,
+          subject: entry.subject,
+          witness: notaryNpub.value,
+          observedAt: Math.floor(Date.now() / 1000),
+        };
+        const signed = signNostrEventWithScalar(buildWitnessEvent(statement, { platform: 'notary' }), scalar, statement.observedAt);
+        if (!signed.ok) continue;
+        const accepted = await Promise.all(RELAYS.map((r) => publishTo(r, signed.value)));
+        if (accepted.some(Boolean)) witnessed += 1;
+      }
+      await this.ctx.storage.put(key, { ...entry, dueAt: now + RENEW_SECONDS });
+    }
+    return { checked, witnessed };
+  }
+
   private async registered(name: string, pubkey: string): Promise<boolean> {
+    if (!/^[a-z0-9]{3,30}$/u.test(name)) return false;
     try {
       const res = await fetch(`${this.env.DIRECTORY_ORIGIN}/.well-known/nostr.json?name=${name}`);
       if (!res.ok) return false;
-      const body = await res.json<{ names?: Record<string, string> }>();
+      const body: { names?: Record<string, unknown> } = await res.json();
       return body.names?.[name] === pubkey;
     } catch {
       return false;
     }
   }
-
-  private async container(): Promise<Container | null> {
-    const container = this.ctx.container;
-    if (container === undefined) return null;
-    if (!container.running) {
-      const images = (container as unknown as { images: Record<string, unknown> }).images;
-      container.start({ image: images['notary'], enableInternet: true, instance: 'standard-1' } as ContainerStartupOptions);
-    }
-    for (let i = 0; i < 60; i++) {
-      try {
-        const res = await container.getTcpPort(8081).fetch('http://container/healthz');
-        if (res.ok) return container;
-      } catch {
-        // still booting
-      }
-      await sleep(1000);
-    }
-    return null;
-  }
 }
+
+const notary = (env: Env) => env.NOTARY.get(env.NOTARY.idFromName('notary'));
 
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
-    if (new URL(req.url).pathname === '/healthz') return json(200, { ok: true });
-    return env.NOTARY.get(env.NOTARY.idFromName('notary')).fetch(req);
+    const url = new URL(req.url);
+    if (url.pathname !== '/v1/witness') return json(404, { error: 'not_found' });
+    if (req.method !== 'POST') return json(405, { error: 'method_not_allowed' });
+    return notary(env).fetch(req);
+  },
+  async scheduled(_event: ScheduledController, env: Env): Promise<void> {
+    await notary(env).runBatch();
   },
 } satisfies ExportedHandler<Env>;

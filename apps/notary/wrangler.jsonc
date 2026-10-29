@@ -1,27 +1,19 @@
-// creds.id notary — Gimmy's Cloudflare account (docs/ref/10 §3.1).
-// Production (`bun run deploy`) signs under the root pinned in
-// packages/shared/src/zktls/notary.ts; `dev` runs on a dev root and skips the
-// creds.id registration check.
+// creds.id Pro notary — Gimmy's Cloudflare account (docs/ref/10 §3.11).
+// No Container any more: the Worker fetches public profile pages itself in an
+// hourly batch and signs witnesses with the notary npub (NOTARY_NSEC secret,
+// scripts/witness-key.ts). One Durable Object holds the queue.
 {
   "name": "creds-notary",
   "main": "src/worker.ts",
   "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
   "account_id": "b9e60d05860dfe2eaf2db7f9930875c0",
   "workers_dev": true,
   "preview_urls": false,
   // No logs: the notary keeps no record of who verified what (§3.8).
   "observability": { "enabled": false },
-  "vars": { "REQUIRE_REGISTERED": "true", "DIRECTORY_ORIGIN": "https://creds.id" },
-  "containers": [{ "class_name": "Notary", "scheduling_policy": "durable_object", "images": { "notary": { "dockerfile": "./container/Dockerfile", "build_context": "./container" } } }],
+  "vars": { "DIRECTORY_ORIGIN": "https://creds.id" },
+  "triggers": { "crons": ["0 * * * *"] },
   "durable_objects": { "bindings": [{ "name": "NOTARY", "class_name": "Notary" }] },
-  "exports": { "Notary": { "type": "durable-object", "storage": "sqlite" } },
-  "env": {
-    "dev": {
-      "name": "creds-notary-dev",
-      "vars": { "REQUIRE_REGISTERED": "false", "DIRECTORY_ORIGIN": "https://creds.id" },
-      "containers": [{ "class_name": "Notary", "scheduling_policy": "durable_object", "images": { "notary": { "dockerfile": "./container/Dockerfile", "build_context": "./container" } } }],
-      "durable_objects": { "bindings": [{ "name": "NOTARY", "class_name": "Notary" }] },
-      "exports": { "Notary": { "type": "durable-object", "storage": "sqlite" } }
-    }
-  }
+  "exports": { "Notary": { "type": "durable-object", "storage": "sqlite" } }
 }
