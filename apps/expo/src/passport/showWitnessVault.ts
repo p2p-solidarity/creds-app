@@ -23,12 +23,14 @@ const WITNESS_KEY_PREFIX = 'passport.show-witness.v1:';
 const VK_SELF_PIN_KEY = 'passport.show-vk-self-pin.v1';
 
 /**
- * Build-time pin for the trusted `openac_show` vk (sha256 hex, lowercase).
- * Filled from the passport-noir release pipeline once the artifact hash is
- * published; until then the verifier relies on the enrollment self-pin and
- * fails closed when neither exists.
+ * Build-time pin for the trusted `openac_show` vk (sha256 hex, lowercase):
+ * passport-noir 0.4.0 `openac_show.json` + the pinned merged SRS, printed by
+ * `cargo run --release --example vk_sha256` in passport-noir/mopro-binding.
+ * Lets a viewer verify other people's passport bindings without having
+ * enrolled a passport itself. Bump with every openac_show change.
  */
-export const PASSPORT_SHOW_VK_BUILD_PIN_SHA256: string | null = null;
+export const PASSPORT_SHOW_VK_BUILD_PIN_SHA256: string | null =
+  'bc03240fa4c03c70623f4fb01236e32fc252ff7c40825edae50ba57f2fde7218';
 
 export async function savePassportShowWitness(
   credentialId: string,
