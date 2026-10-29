@@ -10,7 +10,6 @@ package com.margelo.nitro.gg.solidarity.keystone
 import androidx.annotation.Keep
 import com.facebook.jni.HybridData
 import com.facebook.proguard.annotations.DoNotStrip
-import dalvik.annotation.optimization.FastNative
 
 
 /**
@@ -59,7 +58,6 @@ class Func_void_CloudKitEvent_cxx: Func_void_CloudKitEvent {
   override fun invoke(event: CloudKitEvent): Unit
     = invoke_cxx(event)
 
-  @FastNative
   private external fun invoke_cxx(event: CloudKitEvent): Unit
 }
 

@@ -20,7 +20,7 @@ namespace margelo::nitro::solidarity::keystone {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "CloudKitShareInvite" and the the Kotlin data class "CloudKitShareInvite".
+   * The C++ JNI bridge between the C++ struct "CloudKitShareInvite" and the Kotlin data class "CloudKitShareInvite".
    */
   struct JCloudKitShareInvite final: public jni::JavaClass<JCloudKitShareInvite> {
   public:

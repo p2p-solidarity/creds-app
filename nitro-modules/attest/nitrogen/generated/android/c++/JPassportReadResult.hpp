@@ -24,7 +24,7 @@ namespace margelo::nitro::solidarity::attest {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "PassportReadResult" and the the Kotlin data class "PassportReadResult".
+   * The C++ JNI bridge between the C++ struct "PassportReadResult" and the Kotlin data class "PassportReadResult".
    */
   struct JPassportReadResult final: public jni::JavaClass<JPassportReadResult> {
   public:

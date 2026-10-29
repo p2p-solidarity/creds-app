@@ -18,7 +18,7 @@ namespace margelo::nitro::solidarity::attest {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "OpenAcV3WitnessBuildResult" and the the Kotlin data class "OpenAcV3WitnessBuildResult".
+   * The C++ JNI bridge between the C++ struct "OpenAcV3WitnessBuildResult" and the Kotlin data class "OpenAcV3WitnessBuildResult".
    */
   struct JOpenAcV3WitnessBuildResult final: public jni::JavaClass<JOpenAcV3WitnessBuildResult> {
   public:

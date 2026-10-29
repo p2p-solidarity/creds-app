@@ -10,7 +10,6 @@ package com.margelo.nitro.gg.solidarity.keystone
 import androidx.annotation.Keep
 import com.facebook.jni.HybridData
 import com.facebook.proguard.annotations.DoNotStrip
-import dalvik.annotation.optimization.FastNative
 
 
 /**
@@ -59,7 +58,6 @@ class Func_void_SpruceDidEvent_cxx: Func_void_SpruceDidEvent {
   override fun invoke(event: SpruceDidEvent): Unit
     = invoke_cxx(event)
 
-  @FastNative
   private external fun invoke_cxx(event: SpruceDidEvent): Unit
 }
 

@@ -10,6 +10,7 @@ package com.margelo.nitro.gg.solidarity.keystone
 import androidx.annotation.Keep
 import com.facebook.jni.HybridData
 import com.facebook.proguard.annotations.DoNotStrip
+import dalvik.annotation.optimization.FastNative
 import com.margelo.nitro.core.Promise
 import com.margelo.nitro.core.ArrayBuffer
 import com.margelo.nitro.core.HybridObject
@@ -85,6 +86,7 @@ abstract class HybridSpruceDidSpec: HybridObject() {
   @Keep
   protected open class CxxPart(javaPart: HybridSpruceDidSpec): HybridObject.CxxPart(javaPart) {
     // C++ JHybridSpruceDidSpec::CxxPart::initHybrid(...)
+    @FastNative
     external override fun initHybrid(): HybridData
   }
   override fun createCxxPart(): CxxPart {

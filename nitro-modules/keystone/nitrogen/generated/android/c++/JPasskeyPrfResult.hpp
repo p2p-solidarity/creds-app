@@ -18,7 +18,7 @@ namespace margelo::nitro::solidarity::keystone {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "PasskeyPrfResult" and the the Kotlin data class "PasskeyPrfResult".
+   * The C++ JNI bridge between the C++ struct "PasskeyPrfResult" and the Kotlin data class "PasskeyPrfResult".
    */
   struct JPasskeyPrfResult final: public jni::JavaClass<JPasskeyPrfResult> {
   public:

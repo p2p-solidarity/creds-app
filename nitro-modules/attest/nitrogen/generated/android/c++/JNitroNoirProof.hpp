@@ -18,7 +18,7 @@ namespace margelo::nitro::solidarity::attest {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "NitroNoirProof" and the the Kotlin data class "NitroNoirProof".
+   * The C++ JNI bridge between the C++ struct "NitroNoirProof" and the Kotlin data class "NitroNoirProof".
    */
   struct JNitroNoirProof final: public jni::JavaClass<JNitroNoirProof> {
   public:

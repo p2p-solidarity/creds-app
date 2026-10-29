@@ -13,8 +13,8 @@ const { withDangerousMod } = require('@expo/config-plugins');
 const PACKAGE_NAME = 'react-native-vision-camera-resizer';
 const SOURCE_RESOURCE = '"VisionCameraResizerShaders" => ["ios/Metal/ResizerKernels.metal"],';
 const PRECOMPILED_RESOURCE = '"VisionCameraResizerShaders" => ["ios/Metal/default.metallib"],';
-const EXPECTED_SOURCE_SHA256 = 'e5088501fc626fa61fa17f76d0c11d7084ff80e23297281c76d511a046e86b0b';
-const EXPECTED_LIBRARY_SHA256 = '996f3c2e8c1b71b65c79235d15a65af1390dae45d1fe8bd17dd24a806148c9ef';
+const EXPECTED_SOURCE_SHA256 = '7b7a7145ced739d2be3fd2338c2921c49a8656e524dd8ac6e1d524da39ced43c';
+const EXPECTED_LIBRARY_SHA256 = '3f1f5568927c7e3db807b2b909018046e0d5ea732f8efd11e33127c4c1df69ac';
 
 function sha256(filePath) {
   return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');

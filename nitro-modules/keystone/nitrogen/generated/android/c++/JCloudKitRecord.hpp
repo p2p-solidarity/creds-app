@@ -18,7 +18,7 @@ namespace margelo::nitro::solidarity::keystone {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "CloudKitRecord" and the the Kotlin data class "CloudKitRecord".
+   * The C++ JNI bridge between the C++ struct "CloudKitRecord" and the Kotlin data class "CloudKitRecord".
    */
   struct JCloudKitRecord final: public jni::JavaClass<JCloudKitRecord> {
   public:

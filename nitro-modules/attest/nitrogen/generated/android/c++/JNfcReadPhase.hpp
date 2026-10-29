@@ -15,7 +15,7 @@ namespace margelo::nitro::solidarity::attest {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ enum "NfcReadPhase" and the the Kotlin enum "NfcReadPhase".
+   * The C++ JNI bridge between the C++ enum "NfcReadPhase" and the Kotlin enum "NfcReadPhase".
    */
   struct JNfcReadPhase final: public jni::JavaClass<JNfcReadPhase> {
   public:

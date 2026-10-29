@@ -17,7 +17,7 @@ namespace margelo::nitro::solidarity::attest {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "ParsedMrz" and the the Kotlin data class "ParsedMrz".
+   * The C++ JNI bridge between the C++ struct "ParsedMrz" and the Kotlin data class "ParsedMrz".
    */
   struct JParsedMrz final: public jni::JavaClass<JParsedMrz> {
   public:

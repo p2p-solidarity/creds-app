@@ -21,6 +21,6 @@
     "react-native-vision-camera": "*"
   },
   "devDependencies": {
-    "react-native-nitro-modules": "^0.35.7"
+    "react-native-nitro-modules": "^0.37.1"
   }
 }

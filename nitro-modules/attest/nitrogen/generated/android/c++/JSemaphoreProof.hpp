@@ -17,7 +17,7 @@ namespace margelo::nitro::solidarity::attest {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "SemaphoreProof" and the the Kotlin data class "SemaphoreProof".
+   * The C++ JNI bridge between the C++ struct "SemaphoreProof" and the Kotlin data class "SemaphoreProof".
    */
   struct JSemaphoreProof final: public jni::JavaClass<JSemaphoreProof> {
   public:

@@ -15,10 +15,14 @@ Object.defineProperty(globalThis, '__DEV__', {
   writable: true,
 });
 
+// Nitro refuses to load when the native proxy's version differs from its own
+// package.json, so the stub reports whatever version is installed.
+const nitroVersion = (require('react-native-nitro-modules/package.json') as { version: string }).version;
+
 Object.defineProperty(globalThis, 'NitroModulesProxy', {
   configurable: true,
   value: {
-    version: '0.35.7',
+    version: nitroVersion,
     createHybridObject: (): never => {
       throw new Error('NitroModulesProxy is unavailable in bun tests');
     },

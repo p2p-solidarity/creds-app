@@ -20,7 +20,7 @@ namespace margelo::nitro::solidarity::attest {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "MrzScanResult" and the the Kotlin data class "MrzScanResult".
+   * The C++ JNI bridge between the C++ struct "MrzScanResult" and the Kotlin data class "MrzScanResult".
    */
   struct JMrzScanResult final: public jni::JavaClass<JMrzScanResult> {
   public:

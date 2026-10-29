@@ -20,7 +20,7 @@ namespace margelo::nitro::solidarity::attest {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ struct "NfcReadProgress" and the the Kotlin data class "NfcReadProgress".
+   * The C++ JNI bridge between the C++ struct "NfcReadProgress" and the Kotlin data class "NfcReadProgress".
    */
   struct JNfcReadProgress final: public jni::JavaClass<JNfcReadProgress> {
   public:

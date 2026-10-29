@@ -15,7 +15,7 @@ namespace margelo::nitro::solidarity::keystone {
   using namespace facebook;
 
   /**
-   * The C++ JNI bridge between the C++ enum "CloudKitEventKind" and the the Kotlin enum "CloudKitEventKind".
+   * The C++ JNI bridge between the C++ enum "CloudKitEventKind" and the Kotlin enum "CloudKitEventKind".
    */
   struct JCloudKitEventKind final: public jni::JavaClass<JCloudKitEventKind> {
   public:

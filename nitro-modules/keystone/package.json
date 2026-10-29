@@ -17,6 +17,6 @@
     "react-native-nitro-modules": "*"
   },
   "devDependencies": {
-    "react-native-nitro-modules": "^0.35.7"
+    "react-native-nitro-modules": "^0.37.1"
   }
 }

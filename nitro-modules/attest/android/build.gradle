@@ -199,7 +199,7 @@ dependencies {
   // CameraX core — required because VisionCamera frames are wrapped
   // ImageProxy instances; we need the ImageProxy type to read mediaImage
   // out of them. Pinned to the same version VisionCamera v5 ships.
-  implementation "androidx.camera:camera-core:1.7.0-alpha01"
+  implementation "androidx.camera:camera-core:1.7.0-alpha03"
 
   // ─── NfcPassport ─────────────────────────────────────────────────────────
 

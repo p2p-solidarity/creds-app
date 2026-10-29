@@ -10,6 +10,7 @@ package com.margelo.nitro.gg.solidarity.attest
 import androidx.annotation.Keep
 import com.facebook.jni.HybridData
 import com.facebook.proguard.annotations.DoNotStrip
+import dalvik.annotation.optimization.FastNative
 import com.margelo.nitro.core.Promise
 import com.margelo.nitro.core.ArrayBuffer
 import com.margelo.nitro.core.HybridObject
@@ -96,6 +97,7 @@ abstract class HybridSemaphoreSpec: HybridObject() {
   @Keep
   protected open class CxxPart(javaPart: HybridSemaphoreSpec): HybridObject.CxxPart(javaPart) {
     // C++ JHybridSemaphoreSpec::CxxPart::initHybrid(...)
+    @FastNative
     external override fun initHybrid(): HybridData
   }
   override fun createCxxPart(): CxxPart {

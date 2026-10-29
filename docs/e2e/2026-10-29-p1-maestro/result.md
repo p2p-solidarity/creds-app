@@ -41,11 +41,26 @@ worker + relay.
 - A LogBox "Open debugger to view warnings" toast covers the footer button → closed when visible.
   (The underlying warning was not investigated.)
 
-### Intermittent hang at 稍後再說 — not fixed
-1 of 6 runs stayed on 「正在設定…」 for > 90 s (`create-identity-hang.png`). Native log: seven keychain
-reads (`SecItemCopyMatching`), then no write; the app sat at ~1 % CPU, i.e. an await that never
-resolved — most likely between `restoreRootKeyFromICloud` → `notFound` and `createFromFreshMnemonic`
-persisting via `expo-secure-store`. That run was also the one where Metro lazily served
-`expo-secure-store/build/SecureStore.bundle` mid-flow, so a dev-only lazy-bundle race is the leading
-suspect — **unconfirmed**. The identity path has no timeout, so if it does happen in a release build
-the user is stuck on a spinner. Needs its own diagnosis (identity/keychain = size L).
+### Intermittent failure at 稍後再說 — diagnosed, not fixed
+1 of 6 runs looked stuck on 「正在設定…」 (`create-identity-hang.png`). Diagnosed the same day
+(probe-free Maestro loop, ~100 runs): it is **not a hang and not dev-only**.
+
+- Rate: 4/28 and 7/29 probe-free runs. With fetch-based JS probes on every await: 0/41 — the probes
+  shift JS-thread timing and hide it (a race).
+- Symptom: the spinner, then the error sheet 「無法完成身分設定」. Report via 複製詳細資訊 →
+  `Error: storageFailed` thrown at `if (!restored.ok)` in `PasskeyStep.prepareLocalIdentity`.
+- Failure-path-only probe: `restore synced read failed: Timeouted: Promise<std::string> was destroyed!`
+  — the keystone `getSynchronizableItem` read.
+- Root cause: `react-native-nitro-modules` **0.35.7 `ios/core/Promise.swift` has no locking**.
+  `Promise.async` resolves on a Swift-concurrency thread while the generated bridge attaches
+  `.then`/`.catch` on the JS thread. A sub-millisecond keychain read can resolve between `then`
+  reading `state == nil` and appending its listener → the listener is never called → the C++
+  `Promise<std::string>` captured in it is destroyed pending and rejects with the message above.
+  The C++ `Promise` is mutex-guarded; only the Swift one races. Upstream 0.37.x adds an `NSLock`
+  around `resolve`/`reject`/`then`/`catch` — the same fix.
+- Scope: any Nitro `Promise.async` on iOS whose body finishes fast, in Debug **and** Release
+  (native code, not Metro). Onboarding is just where a fresh-install keychain miss makes it common.
+
+Ruled out on the way: Metro lazy `import()` (the stall is after the keystone read is issued),
+a touch-to-wake lost wakeup (a tap does not unstick it — it is already an error sheet), blocked
+`getSecretsVault()` (no init / locks).
