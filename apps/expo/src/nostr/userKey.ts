@@ -286,11 +286,30 @@ async function provisionFromRootMnemonicAtEpoch(
   const revealed = await activeMnemonicRevealer();
   if (!revealed.ok) return revealed;
 
+  return provisionFromMnemonicAtEpoch(revealed.value, writeEpoch);
+}
+
+/**
+ * Path (a′): derive from a mnemonic the caller ALREADY holds — onboarding's
+ * freshly minted root (`createFromFreshMnemonic` returns it once, before it is
+ * ever stored behind Face ID). Same derivation and persistence as path (a),
+ * minus the reveal prompt, so a new identity reaches its first publish with
+ * one Face ID instead of two. Never call it with a mnemonic fetched just for
+ * this: fetching IS the red-line reveal path (a) exists for.
+ */
+export function provisionFromFreshRootMnemonic(mnemonic: string): Promise<Result<string, string>> {
+  return trackKeyWrite(provisionFromMnemonicAtEpoch(mnemonic, captureLocalDataEpoch()));
+}
+
+async function provisionFromMnemonicAtEpoch(
+  mnemonic: string,
+  writeEpoch: LocalDataEpoch,
+): Promise<Result<string, string>> {
   if (!canCommitLocalData(writeEpoch)) return err('localDataWipeInProgress');
 
   let scalar: Uint8Array;
   try {
-    scalar = deriveSecp256k1Scalar(revealed.value, HKDF_INFO_NOSTR);
+    scalar = deriveSecp256k1Scalar(mnemonic, HKDF_INFO_NOSTR);
   } catch (e) {
     return err(storageErrorMessage(e));
   }

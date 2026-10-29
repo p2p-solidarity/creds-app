@@ -7,6 +7,7 @@ import { Colors } from '@/constants/Colors';
 import { showError } from '@/feedback/appAlert';
 import { haptic } from '@/feedback/haptics';
 import { useTranslation } from '@/i18n';
+import { provisionFromFreshRootMnemonic } from '@/nostr/userKey';
 import {
   createFromFreshMnemonic,
   enableICloudBackup,
@@ -54,6 +55,11 @@ export function PasskeyStep({
           if (!rootExists) {
             const created = await createFromFreshMnemonic();
             if (!created.ok) throw new Error(created.error.kind);
+            // The publishing key comes from the same mnemonic, derived now while
+            // it is in hand — otherwise the first publish reveals it again
+            // (a red-line Face ID) right after the Page's own signing prompt.
+            // A failure here is not fatal: the first publish provisions lazily.
+            await provisionFromFreshRootMnemonic(created.value.mnemonic);
           }
 
           // Recovery remains mandatory identity setup; Web Passkey sync does not.
@@ -70,7 +76,7 @@ export function PasskeyStep({
           if (!mnemonic.ok) throw new Error(mnemonic.error.kind);
           return connectRootIdentityWithNativePasskey({
             mnemonic: mnemonic.value,
-            userName: 'Solidarity',
+            userName: 'creds.id',
           });
         },
       });

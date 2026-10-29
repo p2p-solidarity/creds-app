@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import { KeyboardAwareScrollView, KeyboardStickyView } from 'react-native-keyboard-controller';
 import Animated, { FadeIn, ReduceMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -57,7 +57,7 @@ export function V2OnboardingScaffold({
           flexGrow: 1,
           paddingHorizontal: 24,
           paddingTop: 12,
-          paddingBottom: insets.bottom + 24,
+          paddingBottom: footer ? 24 : insets.bottom + 24,
           gap: 24,
         }}>
         {onBack ? (
@@ -91,9 +91,18 @@ export function V2OnboardingScaffold({
           ) : null}
 
           <View style={{ flex: 1 }}>{children}</View>
-          {footer ? <View>{footer}</View> : null}
         </Animated.View>
       </KeyboardAwareScrollView>
+
+      {/* The step's action lives in one fixed bar on every step — same place,
+          riding above the keyboard — instead of wherever the content ends. */}
+      {footer ? (
+        <KeyboardStickyView
+          offset={{ closed: 0, opened: insets.bottom }}
+          style={{ paddingHorizontal: 24, paddingTop: 12, paddingBottom: insets.bottom + 16 }}>
+          {footer}
+        </KeyboardStickyView>
+      ) : null}
     </View>
   );
 }

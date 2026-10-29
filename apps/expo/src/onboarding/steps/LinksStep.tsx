@@ -19,6 +19,7 @@ import { isHttpsLinkUrl, normalizeLinkUrl } from '@/profile/linkUrl';
 import { useProfileStore } from '@/profile/store';
 import { usePreferences } from '@/settings/preferences';
 import { publishChosenPageName } from '@/nip05/publishChosenPageName';
+import { getNostrPubkey, npubEncode } from '@/nostr/userKey';
 
 import { V2OnboardingScaffold } from './V2OnboardingScaffold';
 
@@ -70,15 +71,19 @@ export function LinksStep({
     try {
       const existing = record?.links ?? [];
       const links = mergeLinks(existing, additions);
-      const saved = await saveProfile({
-        displayName: record?.displayName.trim() || username,
-        bio: record?.bio ?? '',
-        links,
-        linkVisibility: [
-          ...visibility,
-          ...Array.from({ length: links.length - existing.length }, () => 'public' as const),
-        ],
-      });
+      const saveOptions = await npubClaimSaveOptions(record?.alsoKnownAs ?? []);
+      const saved = await saveProfile(
+        {
+          displayName: record?.displayName.trim() || username,
+          bio: record?.bio ?? '',
+          links,
+          linkVisibility: [
+            ...visibility,
+            ...Array.from({ length: links.length - existing.length }, () => 'public' as const),
+          ],
+        },
+        saveOptions,
+      );
       if (!saved.ok) throw new Error(saved.error);
 
       const publishedName = await publishChosenPageName(username);
@@ -140,7 +145,15 @@ export function LinksStep({
                 void saveLinks([{ label: label.trim(), url: preparedUrl }]);
               }}
             />
-          ) : undefined
+          ) : (
+            <ThemedButton
+              label={t('ob.links.empty')}
+              variant="secondary"
+              fullWidth
+              loading={saving}
+              onPress={() => { void saveLinks([]); }}
+            />
+          )
         }>
         {phase === 'choose' ? (
           <View style={{ gap: 12, paddingTop: 20 }}>
@@ -155,13 +168,6 @@ export function LinksStep({
               title={t('ob.links.manual')}
               subtitle={t('ob.links.manual.sub')}
               onPress={() => { setPhase('manual'); }}
-            />
-            <ThemedButton
-              label={t('ob.links.empty')}
-              variant="secondary"
-              fullWidth
-              loading={saving}
-              onPress={() => { void saveLinks([]); }}
             />
           </View>
         ) : (
@@ -238,4 +244,19 @@ function ChoiceCard({
       </ThemedSurface>
     </PressableScale>
   );
+}
+
+/**
+ * Sign this device's `nostr:<npub>` claim into the first save: publishing then
+ * finds it already there and does not re-sign — one Face ID for the whole step.
+ * No key yet (a restored identity) → no override; the publish adds it later.
+ */
+async function npubClaimSaveOptions(
+  alsoKnownAs: readonly string[],
+): Promise<{ readonly alsoKnownAs?: readonly string[] }> {
+  const pubkey = await getNostrPubkey();
+  if (!pubkey.ok) return {};
+  const npub = npubEncode(pubkey.value);
+  if (!npub.ok || alsoKnownAs.includes(`nostr:${npub.value}`)) return {};
+  return { alsoKnownAs: [...alsoKnownAs, `nostr:${npub.value}`] };
 }
