@@ -38,14 +38,15 @@ import { linkDisplay, linkSecondaryLabel } from '@/profile/linkPresentation';
 import { visibilityAt, type LinkVisibility } from '@/profile/projection';
 import { useProfileStore } from '@/profile/store';
 import { SealPill } from '@/components/badges/SealPill';
-import { getZktls } from '@solidarity/nitro-attest';
 import { socialTargetForLink, type SocialTarget } from '@solidarity/shared';
+import { deviceAttestSupported } from '@/witness/deviceKey';
 import { proofAge, useZktlsProofs } from '@/zktls/store';
 import {
-  CREDS_NOTARY_ROOTS,
+  CREDS_DEVICE_TRUST,
   normalizeAtprotoHandle,
   pageSocialClaim,
-  verifyPageSocialProof,
+  verifyWitness,
+  type NostrEvent as SharedNostrEvent,
   type ProfileLink,
   type ProfileRecord,
 } from '@solidarity/shared';
@@ -100,7 +101,7 @@ export function ProfileLinksList({
   const [reordering, setReordering] = useState(false);
   const websiteEvidence = useWebsiteLinkEvidence(record, jws);
   const zktlsStates = useZktlsClaimStates(record);
-  const canProve = useMemo(() => getZktls()?.isAvailable === true, []);
+  const canProve = useMemo(() => deviceAttestSupported(), []);
   useSyncExternalStore(
     subscribeBadgeStatusCache,
     getBadgeStatusCacheRevision,
@@ -458,8 +459,8 @@ function linkVerificationPill(
 }
 
 /**
- * zkTLS claim → pill state. A stored proof counts only if it STILL verifies
- * against this revision of the Page (claim and npub both present); older than
+ * Link claim → pill state. A stored self-check counts only if it STILL
+ * verifies against this revision of the Page (claim and npub both present); older than
  * 90 days it asks for a recheck while the background renewal catches up.
  */
 function useZktlsClaimStates(record: ProfileRecord | null): ReadonlyMap<string, 'verified' | 'stale'> {
@@ -468,7 +469,9 @@ function useZktlsClaimStates(record: ProfileRecord | null): ReadonlyMap<string, 
     const states = new Map<string, 'verified' | 'stale'>();
     if (record === null) return states;
     for (const [claim, entry] of Object.entries(proofs)) {
-      if (!verifyPageSocialProof(record, entry.proof, { roots: CREDS_NOTARY_ROOTS }).ok) continue;
+      const w = verifyWitness(entry.event as SharedNostrEvent, CREDS_DEVICE_TRUST);
+      if (!w.ok || !w.value.self || w.value.statement.claim !== claim) continue;
+      if (!record.alsoKnownAs.includes(claim) || !record.alsoKnownAs.includes(`nostr:${w.value.statement.subject}`)) continue;
       states.set(claim, proofAge(entry) === 'lapsed' ? 'stale' : 'verified');
     }
     return states;

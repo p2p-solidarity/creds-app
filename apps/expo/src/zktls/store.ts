@@ -1,30 +1,31 @@
 /**
- * zkTLS proofs this device holds for its own Page (docs/ref/10 §2 step ④,
- * D5). One entry per Page claim (`x:@alice`), each a full `SocialProof` that
- * already verified end to end when it was stored.
+ * The owner's own link checks (docs/ref/10 §3.11, cold start). One entry
+ * per Page claim (`x:@alice`): the self-witness event this phone signed,
+ * which verified when it was stored. Public data (published to Nostr), so
+ * MMKV plaintext is fine.
  *
- * Age drives the badge (D5): < 30 days green; 30–90 days still green while
- * the background renewal retries; > 90 days the check lapses and the row
- * falls back to "needs recheck". The proof itself is public data (it is
- * published to Nostr), so MMKV plaintext is fine.
+ * Age drives the badge: < 30 days green; 30–90 days still green while the
+ * background renewal retries; > 90 days the check lapses.
  *
- * Persisted at MMKV `zktls:proofs:v1`; hydrated once from the root layout
- * (Rule 10: in-memory default first, no await on first paint).
+ * Persisted at MMKV `witness:self:v1` (the notary-era `zktls:proofs:v1`
+ * entries are dropped — their evidence no longer counts); hydrated once from
+ * the root layout (Rule 10).
  */
 import { create } from 'zustand';
 
+import type { NostrEvent } from '@/nostr/nostrAdapter';
 import { canCommitLocalData, captureLocalDataEpoch } from '@/settings/localDataWipeBarrier';
 import { getMmkv } from '@/storage/mmkv';
-import { pageSocialClaim, type SocialProof } from '@solidarity/shared';
 
-const KEY = 'zktls:proofs:v1';
+const KEY = 'witness:self:v1';
+const LEGACY_KEY = 'zktls:proofs:v1';
 
 export const RENEW_AFTER_MS = 30 * 86_400_000;
 export const LAPSE_AFTER_MS = 90 * 86_400_000;
 
 export interface StoredProof {
-  readonly proof: SocialProof;
-  /** Epoch ms the chain was witnessed (oldest piece). */
+  readonly event: NostrEvent;
+  /** Epoch ms this phone checked the page. */
   readonly verifiedAt: number;
   /** Set once a background renewal failed and the owner was told; cleared on success. */
   readonly renewalFailedNotified?: boolean;
@@ -40,7 +41,7 @@ export function proofAge(entry: StoredProof, nowMs: number = Date.now()): ProofA
 
 interface ZktlsProofState {
   readonly proofs: Readonly<Record<string, StoredProof>>;
-  readonly put: (proof: SocialProof, verifiedAtSeconds: number) => void;
+  readonly put: (claim: string, event: NostrEvent, verifiedAtSeconds: number) => void;
   readonly markRenewalFailed: (claim: string) => void;
   readonly remove: (claim: string) => void;
   readonly resetForLocalWipe: () => void;
@@ -56,10 +57,9 @@ function persist(proofs: Readonly<Record<string, StoredProof>>): void {
 
 export const useZktlsProofs = create<ZktlsProofState>((set, get) => ({
   proofs: {},
-  put: (proof, verifiedAtSeconds) => {
+  put: (claim, event, verifiedAtSeconds) => {
     const epoch = captureLocalDataEpoch();
-    const claim = pageSocialClaim(proof.platform, proof.handle);
-    const next = { ...get().proofs, [claim]: { proof, verifiedAt: verifiedAtSeconds * 1000 } };
+    const next = { ...get().proofs, [claim]: { event, verifiedAt: verifiedAtSeconds * 1000 } };
     if (!canCommitLocalData(epoch)) return;
     set({ proofs: next });
     persist(next);
@@ -83,7 +83,9 @@ export const useZktlsProofs = create<ZktlsProofState>((set, get) => ({
 
 export function hydrateZktlsProofs(): void {
   try {
-    const raw = getMmkv().getString(KEY);
+    const mmkv = getMmkv();
+    mmkv.remove(LEGACY_KEY);
+    const raw = mmkv.getString(KEY);
     if (raw === undefined) return;
     const parsed: unknown = JSON.parse(raw);
     if (parsed !== null && typeof parsed === 'object') {

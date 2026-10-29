@@ -1,24 +1,27 @@
 /**
- * What happens around a proof (docs/ref/10 §2 step ④, D5):
+ * What happens around a link check (docs/ref/10 §3.11):
  *
  *   confirmSocialClaim  the owner taps 「加上綠勾」: the Page is re-signed with
  *                       the claim (the flow's one Face ID), then the Page and
- *                       the proof are published.
- *   renewDueProofs      on foreground, proofs older than 30 days are re-proven
- *                       silently (npub-signed, no Face ID) and republished;
- *                       the Page is not touched. A failure is told once.
+ *                       the self-witness are published.
+ *   renewDueProofs      on foreground, checks older than 30 days are redone
+ *                       silently (npub + device key, no Face ID) and
+ *                       republished; the Page is not touched. A failure is
+ *                       told once.
  */
-import { DEFAULT_RELAYS, publishSocialProof } from '@/nostr/publish';
+import { DEFAULT_RELAYS } from '@/nostr/publish';
+import type { NostrEvent } from '@/nostr/nostrAdapter';
 import { useProfileStore } from '@/profile/store';
 import { usePreferences } from '@/settings/preferences';
+import { publishWitness } from '@/witness/witness';
 import {
-  CREDS_NOTARY_ROOTS,
+  CREDS_DEVICE_TRUST,
   err,
   ok,
-  pageSocialClaim,
-  verifySocialProof,
+  socialTargetForClaim,
+  verifyWitness,
+  type NostrEvent as SharedNostrEvent,
   type Result,
-  type SocialProof,
 } from '@solidarity/shared';
 
 import { currentNpub, proveSocialTarget } from './engine';
@@ -27,19 +30,19 @@ import { proofAge, useZktlsProofs } from './store';
 export type ConfirmFailure = 'noProfile' | 'noNostrKey' | 'signDenied' | 'invalidProof';
 
 export interface ConfirmOutcome {
-  /** False when the Page or proof did not reach a relay quorum; the claim is still saved locally. */
+  /** False when the Page or the check did not reach a relay quorum; the claim is still saved locally. */
   readonly published: boolean;
 }
 
-export async function confirmSocialClaim(proof: SocialProof): Promise<Result<ConfirmOutcome, ConfirmFailure>> {
+export async function confirmSocialClaim(event: NostrEvent): Promise<Result<ConfirmOutcome, ConfirmFailure>> {
   const { record, linkVisibility, saveProfile, publishToNostr } = useProfileStore.getState();
   if (record === null) return err('noProfile');
   const npub = await currentNpub();
   if (!npub.ok) return err('noNostrKey');
-  const verified = verifySocialProof(proof, npub.value, { roots: CREDS_NOTARY_ROOTS });
-  if (!verified.ok) return err('invalidProof');
+  const verified = verifyWitness(event as SharedNostrEvent, CREDS_DEVICE_TRUST);
+  if (!verified.ok || verified.value.statement.subject !== npub.value || !verified.value.self) return err('invalidProof');
 
-  const claim = pageSocialClaim(proof.platform, proof.handle);
+  const claim = verified.value.statement.claim;
   const npubClaim = `nostr:${npub.value}`;
   const alsoKnownAs = [...record.alsoKnownAs];
   for (const entry of [npubClaim, claim]) if (!alsoKnownAs.includes(entry)) alsoKnownAs.push(entry);
@@ -51,13 +54,10 @@ export async function confirmSocialClaim(proof: SocialProof): Promise<Result<Con
     );
     if (!saved.ok) return err('signDenied');
   }
-  useZktlsProofs.getState().put(proof, verified.value.verifiedAt);
+  useZktlsProofs.getState().put(claim, event, verified.value.statement.observedAt);
 
-  const [page, published] = await Promise.all([
-    publishToNostr(DEFAULT_RELAYS),
-    publishSocialProof({ proof, relays: DEFAULT_RELAYS }),
-  ]);
-  return ok({ published: page.ok && published.ok && published.value.success });
+  const [page, published] = await Promise.all([publishToNostr(DEFAULT_RELAYS), publishWitness(event, DEFAULT_RELAYS)]);
+  return ok({ published: page.ok && published.success });
 }
 
 const RENEWAL_THROTTLE_MS = 60 * 60_000;
@@ -65,7 +65,7 @@ let lastRenewalRun = 0;
 let renewing = false;
 
 /**
- * Re-prove every claim past 30 days that the Page still makes. Returns the
+ * Re-check every claim past 30 days that the Page still makes. Returns the
  * claims whose renewal failed for the first time (the caller tells the owner
  * once); quiet otherwise.
  */
@@ -79,20 +79,17 @@ export async function renewDueProofs(nowMs: number = Date.now()): Promise<readon
     const name = usePreferences.getState().publicPageRegisteredUsername;
     if (record === null || name === '') return [];
     for (const [claim, entry] of Object.entries(useZktlsProofs.getState().proofs)) {
-      if (!record.alsoKnownAs.includes(claim)) {
+      const target = socialTargetForClaim(claim);
+      if (!record.alsoKnownAs.includes(claim) || target === null) {
         useZktlsProofs.getState().remove(claim);
         continue;
       }
       if (proofAge(entry, nowMs) === 'fresh') continue;
-      const renewed = await proveSocialTarget({ platform: entry.proof.platform, handle: entry.proof.handle }, name);
+      const renewed = await proveSocialTarget(target, name);
       if (renewed.ok) {
-        const npub = await currentNpub();
-        const verified = npub.ok ? verifySocialProof(renewed.value, npub.value, { roots: CREDS_NOTARY_ROOTS }) : null;
-        if (verified?.ok) {
-          useZktlsProofs.getState().put(renewed.value, verified.value.verifiedAt);
-          await publishSocialProof({ proof: renewed.value, relays: DEFAULT_RELAYS });
-          continue;
-        }
+        useZktlsProofs.getState().put(claim, renewed.value, renewed.value.created_at);
+        await publishWitness(renewed.value, DEFAULT_RELAYS);
+        continue;
       }
       if (!entry.renewalFailedNotified) {
         useZktlsProofs.getState().markRenewalFailed(claim);

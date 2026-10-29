@@ -24,6 +24,7 @@ import { PageLivePreview } from '@/components/me/PageLivePreview';
 import { ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { appAlert } from '@/feedback/appAlert';
+import { WitnessSection } from '@/components/scan/WitnessSection';
 import { useTranslation } from '@/i18n';
 import type { VerifiedHandleBinding } from '@/scan/verifiedPageHandler';
 import type { ProfileRecord } from '@solidarity/shared';
@@ -46,6 +47,8 @@ export function VerifiedProfileView({ record, handleBinding }: VerifiedProfileVi
       </View>
 
       {handleBinding ? <HandleBindingBadge binding={handleBinding} /> : null}
+
+      <WitnessSection record={record} />
 
       {record.page ? (
         <View style={{ gap: 8 }}>

@@ -3,7 +3,7 @@
  *
  *   intro    → 「複製並打開 X」copies creds.id/@name and opens the bio editor
  *   waiting  → returning to the app (foreground) starts the proof by itself
- *   proving  → on-device TLSNotary through the creds.id notary (a few seconds)
+ *   proving  → this phone fetches the public page and signs with its attested key
  *   found    → confirm card; 「加上綠勾」re-signs the Page (the one Face ID)
  *   done / error — every failure names one next action (Rule 8: no fake check)
  *
@@ -31,14 +31,15 @@ import { usePreferences } from '@/settings/preferences';
 import { proveSocialTarget, type ProofFailure } from '@/zktls/engine';
 import { confirmSocialClaim } from '@/zktls/flow';
 import { bioEditUrl, publicProfileUrl } from '@/zktls/links';
-import { ZKTLS_PLATFORMS, type SocialProof, type SocialTarget, type ZktlsSocialPlatform } from '@solidarity/shared';
+import type { NostrEvent } from '@/nostr/nostrAdapter';
+import { ZKTLS_PLATFORMS, type SocialTarget, type ZktlsSocialPlatform } from '@solidarity/shared';
 
 type Screen =
   | { readonly kind: 'intro' }
   | { readonly kind: 'waiting' }
   | { readonly kind: 'proving'; readonly attempt: number }
-  | { readonly kind: 'found'; readonly proof: SocialProof }
-  | { readonly kind: 'saving'; readonly proof: SocialProof }
+  | { readonly kind: 'found'; readonly proof: NostrEvent }
+  | { readonly kind: 'saving'; readonly proof: NostrEvent }
   | { readonly kind: 'done'; readonly published: boolean }
   | { readonly kind: 'error'; readonly failure: ProofFailure | 'signDenied' | 'noName' };
 
@@ -116,7 +117,7 @@ export default function VerifySocialScreen(): ReactNode {
     });
   };
 
-  const confirm = async (proof: SocialProof) => {
+  const confirm = async (proof: NostrEvent) => {
     setScreen({ kind: 'saving', proof });
     const result = await confirmSocialClaim(proof);
     setScreen(result.ok ? { kind: 'done', published: result.value.published } : { kind: 'error', failure: 'signDenied' });
@@ -301,9 +302,11 @@ function MarkerCard({
 }
 
 const FAILURE_KEY: Record<ProofFailure | 'signDenied' | 'noName', string> = {
-  unavailable: 'zktls.error.unavailable',
+  unsupported: 'zktls.error.unsupported',
+  serverUnavailable: 'zktls.error.serverUnavailable',
+  deviceRejected: 'zktls.error.deviceRejected',
+  network: 'zktls.error.network',
   noNostrKey: 'zktls.error.noNostrKey',
-  notary: 'zktls.error.notary',
   notFound: 'zktls.error.notFound',
   blocked: 'zktls.error.blocked',
   markerMissing: 'zktls.error.markerMissing',
@@ -331,7 +334,7 @@ function ErrorBody({
         <ThemedButton label={t('zktls.claimName')} variant="primary" fullWidth onPress={() => { router.push('/settings/username'); }} />
       ) : failure === 'noNostrKey' ? (
         <ThemedButton label={t('zktls.setupNostr')} variant="primary" fullWidth onPress={() => { router.push('/verify/nostr'); }} />
-      ) : onRetry !== null && failure !== 'unavailable' ? (
+      ) : onRetry !== null && failure !== 'unsupported' && failure !== 'deviceRejected' ? (
         <ThemedButton label={t('zktls.retry')} variant="primary" fullWidth onPress={onRetry} />
       ) : null}
     </View>

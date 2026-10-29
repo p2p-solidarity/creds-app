@@ -167,7 +167,7 @@ async function publishWithTransportRetry(
   return { relay, accepted: r.accepted, message: r.message, elapsedMs: r.elapsedMs };
 }
 
-async function publishToRelays(
+export async function publishToRelays(
   event: NostrEvent,
   relays: readonly string[],
   publishFn: PublishEventFn,
