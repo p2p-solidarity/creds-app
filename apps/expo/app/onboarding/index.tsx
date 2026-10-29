@@ -104,7 +104,6 @@ export default function OnboardingFlow(): ReactNode {
         <LinksStep
           onBack={() => { goTo('passkey'); }}
           onDone={next}
-          onNameTaken={() => { goTo('username'); }}
         />
       );
       break;
@@ -115,6 +114,7 @@ export default function OnboardingFlow(): ReactNode {
           onBack={() => { goTo('links'); }}
           onFirstCheck={finishToFirstCheck}
           onBrowse={finishToPage}
+          onPickAnotherName={() => { goTo('username'); }}
         />
       );
       break;

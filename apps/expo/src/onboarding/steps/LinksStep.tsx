@@ -1,7 +1,8 @@
 import { useState, type ReactNode } from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import type { ProfileLink } from '@solidarity/shared';
 
+import { SignSeal, type SignSealState } from '@/components/brand/SignSeal';
 import { PressableScale } from '@/components/common/PressableScale';
 import { LinkPageImportSheet } from '@/components/profile/LinkPageImportSheet';
 import { SfIcon } from '@/components/icons/SfIcon';
@@ -18,12 +19,21 @@ import { useTranslation } from '@/i18n';
 import { isHttpsLinkUrl, normalizeLinkUrl } from '@/profile/linkUrl';
 import { useProfileStore } from '@/profile/store';
 import { usePreferences } from '@/settings/preferences';
-import { publishChosenPageName } from '@/nip05/publishChosenPageName';
-import { getNostrPubkey, npubEncode } from '@/nostr/userKey';
+import { startPublicPagePublish } from '@/nip05/backgroundPublish';
+import { getNostrPubkey, hasNostrKey, npubEncode, provisionFromRootMnemonic } from '@/nostr/userKey';
 
 import { V2OnboardingScaffold } from './V2OnboardingScaffold';
 
 type LinksPhase = 'choose' | 'manual';
+
+/** How long the signing explanation shows before Face ID is asked for. */
+const SIGN_LEAD_MS = 450;
+/** How long the sealed mark holds before the Ready step. */
+const SIGNED_HOLD_MS = 650;
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 function mergeLinks(
   existing: readonly ProfileLink[],
@@ -43,23 +53,21 @@ function mergeLinks(
 export function LinksStep({
   onBack,
   onDone,
-  onNameTaken,
 }: {
   readonly onBack: () => void;
   readonly onDone: () => void;
-  readonly onNameTaken: () => void;
 }): ReactNode {
   const { t } = useTranslation();
   const username = usePreferences((state) => state.publicPageUsername);
   const record = useProfileStore((state) => state.record);
   const visibility = useProfileStore((state) => state.linkVisibility);
   const saveProfile = useProfileStore((state) => state.saveProfile);
-  const setPreference = usePreferences((state) => state.set);
   const [phase, setPhase] = useState<LinksPhase>('choose');
   const [importOpen, setImportOpen] = useState(false);
   const [label, setLabel] = useState('');
   const [url, setUrl] = useState('');
   const [saving, setSaving] = useState(false);
+  const [seal, setSeal] = useState<SignSealState | null>(null);
   const preparedUrl = normalizeLinkUrl(url);
   const urlError = preparedUrl.length === 0 || isHttpsLinkUrl(preparedUrl)
     ? null
@@ -68,9 +76,16 @@ export function LinksStep({
   const saveLinks = async (additions: readonly ProfileLink[]): Promise<void> => {
     if (saving) return;
     setSaving(true);
+    setImportOpen(false);
+    setSeal('waiting');
     try {
+      // Let the explanation land before the OS sheet covers the middle of the screen.
+      await wait(SIGN_LEAD_MS);
       const existing = record?.links ?? [];
       const links = mergeLinks(existing, additions);
+      // A restored identity has no publishing key yet: derive it now, under this
+      // same explanation, so the background publish never raises Face ID later.
+      if (!(await hasNostrKey())) await provisionFromRootMnemonic();
       const saveOptions = await npubClaimSaveOptions(record?.alsoKnownAs ?? []);
       const saved = await saveProfile(
         {
@@ -86,35 +101,13 @@ export function LinksStep({
       );
       if (!saved.ok) throw new Error(saved.error);
 
-      const publishedName = await publishChosenPageName(username);
-      switch (publishedName.status) {
-        case 'ready':
-          setPreference('publicPageRegisteredUsername', publishedName.name);
-          setPreference('publicPageBindingReady', true);
-          setPreference('publicPagePublishError', '');
-          setPreference('publicPageRetryAt', null);
-          break;
-        case 'registered':
-          setPreference('publicPageRegisteredUsername', publishedName.name);
-          setPreference('publicPageBindingReady', false);
-          setPreference('publicPagePublishError', publishedName.reason);
-          break;
-        case 'nameTaken':
-          setPreference('publicPagePublishError', 'name_taken');
-          haptic('error');
-          onNameTaken();
-          return;
-        case 'renameTooSoon':
-          setPreference('publicPagePublishError', 'rename_too_soon');
-          setPreference('publicPageRetryAt', publishedName.retryAt ?? null);
-          break;
-        case 'localOnly':
-          setPreference('publicPagePublishError', publishedName.reason);
-          break;
-      }
+      setSeal('signed');
       haptic('success');
+      void startPublicPagePublish(username);
+      await wait(SIGNED_HOLD_MS);
       onDone();
     } catch (error) {
+      setSeal(null);
       haptic('error');
       showError({
         context: 'Onboarding › Links',
@@ -125,6 +118,20 @@ export function LinksStep({
       setSaving(false);
     }
   };
+
+  if (seal !== null) {
+    return (
+      <V2OnboardingScaffold
+        stepIndex={3}
+        title={t(seal === 'signed' ? 'ob.sign.done' : Platform.OS === 'ios' ? 'ob.sign.title.ios' : 'ob.sign.title')}
+        subtitle={t('ob.sign.sub')}>
+        {/* Lower half: the OS Face ID sheet sits mid-screen and would cover it. */}
+        <View className="flex-1 items-center justify-end" style={{ paddingBottom: 72 }}>
+          <SignSeal size={132} state={seal} />
+        </View>
+      </V2OnboardingScaffold>
+    );
+  }
 
   return (
     <>
