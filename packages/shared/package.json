@@ -11,7 +11,9 @@
     "./crypto": "./src/crypto/index.ts",
     "./handles": "./src/handles/index.ts",
     "./identity": "./src/identity/index.ts",
-    "./qr": "./src/qr/index.ts"
+    "./qr": "./src/qr/index.ts",
+    "./nostr": "./src/nostr/index.ts",
+    "./zktls": "./src/zktls/index.ts"
   },
   "scripts": {
     "lint": "eslint .",
