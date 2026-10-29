@@ -192,6 +192,82 @@ TLSNotary 對「沒揭露的部分」沒有證明成本（alpha.13 #1006），�
 - **JS 字串跳脫**：另外接受 `\'`（合法 JS）；其他未知跳脫一律拒絕。
 - **頻率**：退回舊路徑最多多一次 session，仍在每小時 20 次內。
 
+### 3.11 本地優先：四層背書，notary 退役（2026-10-30 plan，取代 §3.4 的三層見證與 §3.1 的 notary）
+
+**為什麼改**（Kidney，2026-10-30）：
+- 伺服器要盡量輕。notary 讓每個綠勾都要信任我們的伺服器，和北極星「公司倒了還能運作」衝突；Container 雖然閒置會停（最多約 US$28／月），但按連結數和重驗頻率成長。
+- 從用戶自己的裝置去抓公開頁，不會集中被平台封鎖，也不受 Cloudflare 出口規則影響。
+- 公開資料不需要 ZK：zkTLS 的 ZK 只是對見證者隱藏內容，簡介本來就公開。真正的問題是「誰背書」。
+- 擁有者自己簽的 zkTLS 不算證據：TLS 金鑰在擁有者手上，可以捏造內容。只用 TEE 也不夠：Secure Enclave 簽的是 App 交給它的任何東西，抓頁面和解析都在 App 程序裡。要再加 Apple／Google 的平台證明（attestation），證明「這把金鑰屬於沒被改過的 creds App、在真的手機上」。
+
+**四層背書**（徽章永遠顯示看的人能拿到的最強一層）
+
+| 層 | 誰背書 | 適用 | 要信任誰 | 伺服器 |
+|---|---|---|---|---|
+| 1. 平台自己簽 | 平台的簽章 | Bluesky（帳號紀錄）、Nostr | 平台金鑰 | 不需要（已上線） |
+| 2. 發證單位晶片簽 | 政府 | 護照（同 My Number 卡、自然人憑證） | 發證國 | 不需要（已上線） |
+| 3. **裝置證明（新）** | Apple App Attest／Android Key Attestation 背書的硬體金鑰 | X、Telegram、GitHub、網站（之後 Threads） | Apple／Google ＋ 該手機沒被越獄或解鎖 | 不需要；網頁也能離線驗 |
+| 4. **看的人自己抓（新）** | 看的人的手機 | 同上，App 內即時查看 | 只信自己的連線 | 不需要 |
+
+**第 3 層：裝置證明**
+1. **建立裝置金鑰**（每支手機一次）：
+   - iOS：`DCAppAttestService` 在 Secure Enclave 產生金鑰，`attestKey(challenge = SHA256(npub))` 取得 attestation 物件（x5c 憑證鏈到 Apple App Attestation Root CA，RP ID = SHA256(`<TeamID>.kidneyweakx.airmeishi`)，aaguid 必須是正式環境 `appattest`）。
+   - Android：KeyStore 產生硬體金鑰並設 `setAttestationChallenge(SHA256(npub))`，憑證鏈到 Google Hardware Attestation Root；`attestationSecurityLevel` 必須是 TrustedEnvironment 或 StrongBox，`attestationApplicationId` 必須是我們的套件名稱＋簽章摘要，`verifiedBootState = Verified` 且 `deviceLocked = true`。
+   - challenge 用 npub，把裝置金鑰綁到擁有者身分，不需要伺服器發 challenge。
+2. **產生證明**：擁有者的 App 直接用系統網路抓公開頁（`URLSession`／`OkHttp`，不用 TLSNotary），用 shared 的平台規則（`parseXProfile` 等）取出欄位、確認標記，再用裝置金鑰簽 `{platform, handle, name, npub, 揭露內容, 時間}`（iOS 是 assertion，Android 是 KeyStore 簽章）。最後外層再用 npub 做 nostr 簽章並發佈。
+3. **驗證**（shared，App 與網頁共用，純 TS、離線）：裝置憑證鏈到釘選的 Apple／Google 根 → 金鑰屬於我們的 App 且符合上面的條件 → 簽章蓋過的內容 → 揭露內容通過平台規則 → npub 與 Page 綁定（§3.5 的名稱證據改成 Page 自己宣告的 npub＋creds.id 名稱，由驗證端直接查）。
+4. **重驗**：擁有者的 App 每 30 天在背景重抓重簽，免費，不經伺服器。
+
+**第 4 層：看的人自己抓**：看的人的 App 打開別人的 Page 或掃 QR 時，自己抓對方的公開頁，用同一套規則檢查，顯示「你的手機剛剛驗證」。當面交換也走這條，不需要兩支手機跑 TLSNotary（原 P2.5 刪除）。
+
+**p2p 見證：別人的手機替你背書**（Kidney，2026-10-30：「見證方要做到別人手機」）
+- 看的人的 App 做完第 4 層、檢查通過後，可以按「幫 @對方 見證」，發佈一則見證：內容是 `{platform, handle, 對方 npub, 看到的揭露內容, 時間}`，用見證者自己的 npub 簽，再加見證者手機的裝置證明（第 3 層的同一把硬體金鑰）。
+- 裝置證明在這裡的用途是**防分身**：每一則見證都要對應一支真手機上沒被改過的 App，擁有者想灌見證就得準備很多支真手機。
+- 當面交換（掃 QR）是最自然的時機：兩支手機互相檢查對方的連結，各自提示「幫對方見證」，互相背書。
+- **只在使用者主動按下時才發佈**（grill 決議，2026-10-30）：見證是公開的，等於公開「我認識這個人」；只瀏覽 Page、或掃了 QR 但沒按，都不發佈。
+- **2.0.0 一次到位**（grill 決議，2026-10-30）：第 3 層裝置證明、第 4 層看的人自己抓、「幫他見證」與網頁上的見證顯示都在 2.0.0 上線，不先出只有 App 內檢查的版本。
+- **notary 整套移除**（grill 決議，2026-10-30）：2.0.0 出貨前刪掉 notary Worker／Container（停用並刪除部署）、TLSNotary prover（Rust crate、xcframework、CI 的 `zktls-v0.2.0` 固定版本）、notary 簽章證據與 t.co 跳轉；保留平台規則與 `parseXProfile`（第 3、4 層都用）。不留隱藏備援。
+- **不做 zk-email**（grill 決議，2026-10-30）：DKIM 信件 ZK 證明是唯一「任何人都能驗、不需信任誰」的社群證明，但取原始信、DKIM 換鑰、每個平台的信件格式會讓複雜度不斷上升，和拿掉 notary 的理由相同。
+- **護照讓 nostr 身分成為可信的真人（免 KYC）**（Kidney，2026-10-30）：護照 ZK 證明綁在持有者的 DID，Page 再宣告 npub，所以見證者的 npub 背後是一個持有有效護照的真人，而且不揭露任何護照資料。這種見證標示「已用護照驗證的見證者」，分量高於只有裝置證明的見證。Android 退回 SD-JWT（`trustLevel: 'white'`）的不算護照 ZK。現況：護照證明沒有 nullifier，同一本護照可以撐起多個 npub。
+- **2.0.0 加護照 nullifier**（grill 決議，2026-10-30）：passport-noir 目前沒有任何 nullifier（`circuits/` 全部查過），要在 OpenAC v3 的 show 電路新增一個以用途為範圍的 nullifier 公開輸出，網頁才能算「N 位不同的真人見證」。連帶工作：重新產生 proving key 與 SRS（CI 的 SRS 固定版本要一起換）、護照全流程實機重驗。屬於安全路徑，L。
+- **nullifier 全域一個範圍：一本護照只對應一個護照見證 npub**（grill 決議，2026-10-30）：同一個人換再多 npub，網頁都只算一位真人；他用過的見證 npub 會因此被公開連在一起（見證本來就是公開表態）。換 npub 時，新的 Page 取代舊的綁定，舊 npub 的護照標示失效。
+- **晶片簽章不強制，照實揭露**（grill 決議，2026-10-30）：護照證明只檢查資料上的發證國簽章，沒用晶片私鑰（Active／Chip Authentication），所以掃過晶片的人（飯店、機場）拿到資料副本也能做出同樣的證明與 nullifier。2.0.0 不強制晶片簽章，徽章詳情照實寫出這點；冒用者頂多冒充一位護照見證者，而 nullifier 只對應一個 npub，本人發一次新的 Page 綁定就能取回。之後再評估（需先實測台灣、日本護照是否支援 AA／CA）。
+- **網頁的 Android 撤銷檢查走快取轉發**（grill 決議，2026-10-30）：creds.id 加一支 Pages Function，把 Google 公開的 `android.googleapis.com/attestation/status` 原封不動轉給瀏覽器，快取一天；比對與驗證全在瀏覽器做，函式不判斷任何證明。函式掛掉時網頁顯示「暫時無法確認撤銷狀態」，其他驗證照常。
+- **預設值**（提出後未被反對，2026-10-30）：見證保留 90 天，過期不計；人數以裝置計，同一支手機換 npub 只算一次（有護照 nullifier 時以 nullifier 計）；擁有者 App 每 30 天在背景重抓重簽；沒有硬體 attestation 的舊 Android 只能在 App 內檢查，不能見證也不能自證。
+- **待提供（非決策）**：Play Console 的 **app signing 金鑰 SHA-256**，用來釘選 Android `attestationApplicationId` 的簽章摘要（同 passkey assetlinks 的缺口）。
+- 顯示：網頁訪客看到「N 支手機見證，最近一次 X 天前」；App 裡看的人另外看到見證者中有沒有自己的聯絡人（「你的聯絡人 Bob 見證過」）。
+- 擁有者自己的裝置證明（上面第 3 層）保留給**冷啟動**：還沒有人見證時，網頁仍有一個由真機簽出的勾勾；有人見證後，見證的分量更高。
+- 擁有者不能替自己見證：見證者 npub 不得等於 Page 的 npub，裝置金鑰也不得與擁有者自己證明用的是同一把。
+
+**伺服器剩下什麼**：creds.id 名稱目錄（已有）、Page 的邊緣快取（§3.12 網頁速度）。notary Worker＋Container、TLSNotary prover（`zktls-v0.2.0`）在第 3 層上線後退役。
+
+**限制（照實寫進徽章詳情）**
+- 越獄或已 root 的手機配合攔截工具，仍可能在送進 TEE 前竄改內容；平台證明只能把門檻提高，不能完全排除。徽章寫「由 creds App 在真機上驗證」，不寫「無法偽造」。
+- App Attest 的計數器遞增檢查需要保存狀態，離線驗證端做不到；同一份證明可以被重複出示，但內容綁了時間與 npub，重複出示不會變成別人的證明。
+- 模擬器不支援 App Attest，只能在實機測。
+- 沒有硬體 attestation 的舊 Android 拿不到第 3 層，只剩第 4 層（網頁顯示「下載 App 驗證」）。
+- Android 撤銷清單在 Google 的公開網址，需要連網；App 直接查，網頁見 grill 結果。
+
+**速度**：不再跑 TLSNotary，只是一般 HTTPS 抓頁加一次硬體簽章。實測（2026-10-30，Mac 直連）：x.com 0.46–0.50 s、GitHub 0.07–0.77 s、t.me 0.8 s（首次 2.5 s）；現行 TLSNotary 經 notary 是 4.5–7 s（container 冷啟動 15 s）。裝置金鑰的 attestation 只在每支手機第一次做（要連 Apple，約 1 s）。嚴格說這已經不是 zkTLS，是「裝置證明」。
+
+**grill：自行查證後已解決的問題**
+- **拿別人的 attestation 物件來用？** 沒用：沒有那把私鑰就簽不出新內容。attestation 的 challenge 是 SHA256(npub)，驗證端要求它等於證明裡、也等於 Page 宣告的 npub，所以裝置金鑰不能借給別的身分。
+- **開發版金鑰**：正式驗證只接受 App Attest 正式環境（`appattest`）與 Android 鎖定開機；開發版（`appattestdevelop`）只在 dev 驗證模式接受，E2E 用這個。
+- **Android 的 Play 簽章**：`attestationApplicationId` 裡是安裝檔的簽章摘要，也就是 **Play app signing 金鑰**，不是上傳金鑰；目前手上沒有這個摘要（同 passkey assetlinks 的缺口），要先從 Play Console 取得再釘選。
+- **Android 短效憑證（RKP）與撤銷**：在證明宣告的時間點檢查憑證有效期，且該時間不得晚於現在；超過 90 天的證明本來就顯示過期，回填舊時間占不到便宜。撤銷清單在 App 直接查。
+- **隱私**：不要求 Android ID attestation（不放裝置序號）；App Attest 金鑰只在本 App 內穩定，公開後能把同一人的證明串起來，但它們本來就以 npub 串在一起。
+- **RSA**：Google 舊根是 RSA-4096，Hermes 沒有 WebCrypto，用 BigInt 自行實作 RSA PKCS#1 v1.5 驗章（tdd），不引入依賴 WebCrypto 的函式庫。
+
+**實作量**：iOS／Android 各一個原生模組（App Attest、Key Attestation）；shared 新增 CBOR、DER／X.509、Android 擴充欄位解析與憑證鏈驗證（安全接縫，tdd）；RSA 驗章用 BigInt 純 TS 實作；passport-noir 新增 nullifier（電路、proving key、SRS）；見證的發佈、讀取與網頁顯示。屬於 L，分階段、每階段一次實機 E2E。
+
+### 3.12 網頁速度（2026-10-30 診斷）
+
+`/@gimmy` 載入實測 13–20 秒。原因：`fetchLatestEvent` 用 `Promise.all` 等**所有**中繼站回 EOSE 或 4 秒逾時；只要一個中繼站卡住（damus 偶發首連失敗），每一步就等滿 4 秒，而一頁要串名稱 → 指標 → Page → 徽章 → 每個連結的證明好幾步。修法（依效果排序）：
+1. `/@name` 的 Pages Function 本來就解析名稱，順便把最新的已簽 Page JWS 放進 HTML，用 Cloudflare 快取約 60 秒；瀏覽器照樣驗簽章，快取無法偽造。中繼站改在背景更新。
+2. 第一個中繼站回應後，最多再等約 300 ms 就繼續，不等全部。
+3. 每個連結的見證合成一次查詢（多個 `#d`），不再一條連結一條連線。
+4. 瀏覽器記住上次驗證過的 Page，再次造訪時立刻顯示。
+
 ---
 
 ## 4. 一個身分、一張卡、一種 QR
