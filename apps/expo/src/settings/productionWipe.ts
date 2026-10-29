@@ -55,6 +55,7 @@ import {
 } from '@/vault/secretsKeychain';
 import { useWebSignPending } from '@/websign/pendingRequest';
 import { deleteIdentityForLocalWipe, useZkIdentity } from '@/zk';
+import { useZktlsProofs } from '@/zktls/store';
 
 import { usePreferences } from './preferences';
 import { clearProductionAppData } from './productionAppData';
@@ -100,6 +101,7 @@ function clearMemoryCaches(): void {
   useCredentialStore.getState().resetForLocalWipe();
   useIssuerMetadataStore.getState().resetForLocalWipe();
   useGroupStore.getState().resetForLocalWipe();
+  useZktlsProofs.getState().resetForLocalWipe();
   useProfileStore.getState().resetForLocalWipe();
   useProfileSnapshotStore.getState().resetForLocalWipe();
   useIdentityData.getState().resetForLocalWipe();

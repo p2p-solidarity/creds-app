@@ -29,7 +29,8 @@ type ThemeKey =
   | 'heroGradientStart' | 'heroGradientEnd'
   | 'gradientCream' | 'blobCenter'
   | 'overlayBg' | 'popupSurface'
-  | 'cardSurface' | 'cardBorder';
+  | 'cardSurface' | 'cardBorder'
+  | 'terminalGreenText' | 'warningText';
 
 export type ThemeColors = Readonly<Record<ThemeKey, string>> & {
   readonly invertedButtonBg: string;
@@ -58,6 +59,7 @@ const KEYS: readonly ThemeKey[] = [
   'gradientCream', 'blobCenter',
   'overlayBg', 'popupSurface',
   'cardSurface', 'cardBorder',
+  'terminalGreenText', 'warningText',
 ];
 
 export function useThemeColors(): ThemeColors {

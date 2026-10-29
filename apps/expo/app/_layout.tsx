@@ -72,6 +72,10 @@ import { hydrateProfileSnapshots } from '@/people/profileSnapshots';
 import { prepareProEntitlement } from '@/pro/entitlementStore';
 import { initProPurchases } from '@/pro/purchases';
 import { hydrateProfile } from '@/profile/store';
+import { pushToast } from '@/feedback/toast';
+import { translate } from '@/i18n';
+import { renewDueProofs } from '@/zktls/flow';
+import { hydrateZktlsProofs } from '@/zktls/store';
 import { hydratePreferences, usePreferences } from '@/settings/preferences';
 import { initMmkv, ManifestStorage } from '@/storage';
 import { PRIMARY_TAB_HREFS } from '@/navigation/primaryTabs';
@@ -200,6 +204,7 @@ export default function RootLayout() {
         hydratePreferences();
         hydrateSensitiveActionPolicy();
         hydrateProfile();
+        hydrateZktlsProofs();
         hydrateProfileSnapshots();
         // Awaited, not fired-and-forgotten: every Pro gate reads this store
         // synchronously, so a late hydration would flash "locked" at someone
@@ -308,6 +313,24 @@ export default function RootLayout() {
       if (state === 'active' && usePreferences.getState().hasCompletedOnboarding) {
         maybeRefreshVerifiedContacts();
       }
+    });
+    return () => {
+      sub.remove();
+    };
+  }, [hasCompletedOnboarding, ready]);
+
+  // zkTLS badges (docs/ref/10 D5): proofs past 30 days are re-proven silently
+  // on foreground (npub-signed, no Face ID); a failed renewal is told once.
+  useEffect(() => {
+    if (!ready || !hasCompletedOnboarding) return;
+    const renew = () => {
+      void renewDueProofs().then((failed) => {
+        if (failed.length > 0) pushToast(translate('zktls.renewFailed'), 'error');
+      });
+    };
+    renew();
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') renew();
     });
     return () => {
       sub.remove();

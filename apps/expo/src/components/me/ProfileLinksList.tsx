@@ -15,6 +15,7 @@ import {
   type ReactNode,
 } from 'react';
 import { Linking, View } from 'react-native';
+import { router } from 'expo-router';
 
 import {
   getBadgeStatusCacheRevision,
@@ -26,7 +27,7 @@ import {
 import { PressableScale } from '@/components/common/PressableScale';
 import { BrandIcon } from '@/components/icons/BrandIcon';
 import { SfIcon } from '@/components/icons/SfIcon';
-import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
+import { ThemedButton, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { useThemeColors } from '@/constants/useThemeColors';
 import { appAlert } from '@/feedback/appAlert';
@@ -36,8 +37,15 @@ import { verifyHttpsOwnership, type HttpsOwnershipEvidence } from '@/profile/htt
 import { linkDisplay, linkSecondaryLabel } from '@/profile/linkPresentation';
 import { visibilityAt, type LinkVisibility } from '@/profile/projection';
 import { useProfileStore } from '@/profile/store';
+import { SealPill } from '@/components/badges/SealPill';
+import { getZktls } from '@solidarity/nitro-attest';
+import { socialTargetForLink, type SocialTarget } from '@/zktls/links';
+import { proofAge, useZktlsProofs } from '@/zktls/store';
 import {
+  CREDS_NOTARY_ROOTS,
   normalizeAtprotoHandle,
+  pageSocialClaim,
+  verifyPageSocialProof,
   type ProfileLink,
   type ProfileRecord,
 } from '@solidarity/shared';
@@ -91,6 +99,8 @@ export function ProfileLinksList({
   const [orderedVisibility, setOrderedVisibility] = useState(linkVisibility);
   const [reordering, setReordering] = useState(false);
   const websiteEvidence = useWebsiteLinkEvidence(record, jws);
+  const zktlsStates = useZktlsClaimStates(record);
+  const canProve = useMemo(() => getZktls()?.isAvailable === true, []);
   useSyncExternalStore(
     subscribeBadgeStatusCache,
     getBadgeStatusCacheRevision,
@@ -148,7 +158,11 @@ export function ProfileLinksList({
   }, [linkVisibility, links, orderedLinks, orderedVisibility, record, reordering, saveProfile, t]);
 
   const pillFor = (link: ProfileLink): RowVerificationPill | null =>
-    record === null ? null : linkVerificationPill(link, websiteEvidence, record);
+    record === null ? null : linkVerificationPill(link, websiteEvidence, zktlsStates, record);
+
+  // A link the zkTLS engine can prove, with no pill yet, offers 「驗證」(docs/ref/10 §2).
+  const verifyTargetFor = (link: ProfileLink): SocialTarget | null =>
+    canProve && record !== null && pillFor(link) === null ? socialTargetForLink(link.url) : null;
 
   // The Page tab's only add button. It lives where the links group ends — in
   // the empty state or under the last row — and opens one sheet for links,
@@ -185,6 +199,7 @@ export function ProfileLinksList({
         entries={sections.publicLinks}
         disabled={reordering}
         pillFor={pillFor}
+        verifyTargetFor={verifyTargetFor}
         onEdit={onEdit}
         onOpenLink={openLink}
         onReorder={persistReorder}
@@ -194,6 +209,7 @@ export function ProfileLinksList({
         entries={sections.cardOnlyLinks}
         disabled={reordering}
         pillFor={pillFor}
+        verifyTargetFor={verifyTargetFor}
         onEdit={onEdit}
         onOpenLink={openLink}
         onReorder={persistReorder}
@@ -228,6 +244,7 @@ function LinkRowsSection({
   entries,
   disabled,
   pillFor,
+  verifyTargetFor,
   onEdit,
   onOpenLink,
   onReorder,
@@ -236,6 +253,7 @@ function LinkRowsSection({
   readonly entries: readonly PageLinkEntry[];
   readonly disabled: boolean;
   readonly pillFor: (link: ProfileLink) => RowVerificationPill | null;
+  readonly verifyTargetFor: (link: ProfileLink) => SocialTarget | null;
   readonly onEdit: () => void;
   readonly onOpenLink: (link: ProfileLink) => void;
   readonly onReorder: (sourceIndex: number, destinationIndex: number) => void;
@@ -258,6 +276,7 @@ function LinkRowsSection({
       <View style={{ gap: ROW_GAP }}>
         {entries.map(({ link, sourceIndex }, sectionIndex) => {
           const status = pillFor(link);
+          const verifyTarget = status === null ? verifyTargetFor(link) : null;
           return (
             <DraggableRow
               key={`${String(sourceIndex)}-${link.label}-${link.url}`}
@@ -322,7 +341,13 @@ function LinkRowsSection({
                       </ThemedText>
                     ) : null}
                   </View>
-                  {status ? <VerificationPill status={status} /> : null}
+                  {status ? (
+                    <SealPill
+                      state={status}
+                      label={t(status === 'verified' ? 'mePage.verified' : 'mePage.needsRecheck')}
+                    />
+                  ) : null}
+                  {verifyTarget ? <VerifyChip target={verifyTarget} /> : null}
                   <SfIcon name="chevron.right" size={13} color={Colors.text3} />
                 </PressableScale>
               </Animated.View>
@@ -379,6 +404,7 @@ function useWebsiteLinkEvidence(
 function linkVerificationPill(
   link: ProfileLink,
   websiteEvidence: readonly HttpsOwnershipEvidence[],
+  zktlsStates: ReadonlyMap<string, 'verified' | 'stale'>,
   record: ProfileRecord,
   nowMs: number = Date.now(),
 ): RowVerificationPill | null {
@@ -422,25 +448,55 @@ function linkVerificationPill(
     if (websiteEvidence.some((item) => item.origin === url.origin)) {
       states.push('verified');
     }
+    const target = socialTargetForLink(link.url);
+    const zktls = target === null ? undefined : zktlsStates.get(pageSocialClaim(target.platform, target.handle));
+    if (zktls !== undefined) states.push(zktls);
   } catch {
     return null;
   }
   return verificationPillForStates(states);
 }
 
-function VerificationPill({ status }: { readonly status: RowVerificationPill }): ReactNode {
+/**
+ * zkTLS claim → pill state. A stored proof counts only if it STILL verifies
+ * against this revision of the Page (claim and npub both present); older than
+ * 90 days it asks for a recheck while the background renewal catches up.
+ */
+function useZktlsClaimStates(record: ProfileRecord | null): ReadonlyMap<string, 'verified' | 'stale'> {
+  const proofs = useZktlsProofs((state) => state.proofs);
+  return useMemo(() => {
+    const states = new Map<string, 'verified' | 'stale'>();
+    if (record === null) return states;
+    for (const [claim, entry] of Object.entries(proofs)) {
+      if (!verifyPageSocialProof(record, entry.proof, { roots: CREDS_NOTARY_ROOTS }).ok) continue;
+      states.set(claim, proofAge(entry) === 'lapsed' ? 'stale' : 'verified');
+    }
+    return states;
+  }, [proofs, record]);
+}
+
+function VerifyChip({ target }: { readonly target: SocialTarget }): ReactNode {
   const { t } = useTranslation();
-  const verified = status === 'verified';
-  const color = verified ? Colors.terminalGreen : Colors.warning;
+  const c = useThemeColors();
   return (
-    <ThemedSurface
-      variant="inset"
-      className="flex-row items-center gap-1 px-2 py-1"
-      style={{ borderWidth: 1, borderColor: color }}>
-      <SfIcon name={verified ? 'checkmark.seal.fill' : 'clock'} size={12} color={color} />
-      <ThemedText variant="caption" numberOfLines={1} style={{ color }}>
-        {t(verified ? 'mePage.verified' : 'mePage.needsRecheck')}
+    <PressableScale
+      haptic="tap"
+      onPress={() => {
+        router.push({ pathname: '/verify/social', params: { platform: target.platform, handle: target.handle } });
+      }}
+      accessibilityRole="button"
+      accessibilityLabel={t('zktls.verifyLink')}
+      hitSlop={8}
+      style={{
+        paddingVertical: 5,
+        paddingHorizontal: 11,
+        borderRadius: 999,
+        borderWidth: 1,
+        borderColor: c.primaryBlue,
+      }}>
+      <ThemedText variant="caption" style={{ color: c.primaryBlue }}>
+        {t('zktls.verifyLink')}
       </ThemedText>
-    </ThemedSurface>
+    </PressableScale>
   );
 }

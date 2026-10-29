@@ -141,6 +141,8 @@ const RAW = {
    *  creds-design mock uses for `--terminalGreenBg`; pair it with
    *  `terminalGreenText`, which is the contrast-safe foreground. */
   terminalGreenBg: 'rgba(76,175,81,0.16)',
+  /** 40% green ring around the tinted seal (creds.id `.seal-ok`). */
+  terminalGreenBorder: 'rgba(76,175,81,0.40)',
   /** Feature accent purple. */
   featureAccent: '#5856D6',
 
