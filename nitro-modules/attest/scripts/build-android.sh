@@ -23,9 +23,8 @@
 #     ships). Default path: $WORKSPACE/../bb-fork/aztec/barretenberg/cpp.
 #     Built per-ABI under build-ndk-arm64-android/lib and
 #     build-ndk-x86_64-android/lib via:
-#       cd $BB_FORK_DIR
-#       cmake --preset ndk-arm64-android && cmake --build build-ndk-arm64-android --target bb-external
-#       cmake --preset ndk-x86_64-android && cmake --build build-ndk-x86_64-android --target bb-external
+#       ./scripts/build-bb-android.sh arm64-v8a
+#       ./scripts/build-bb-android.sh x86_64
 #     barretenberg-rs picks up our local .a via BB_LIB_DIR per-ABI;
 #     this script wires that up.
 #
@@ -97,7 +96,7 @@ for arch in "${ARCH_LIST[@]}"; do
   bb_dir="$(bb_lib_dir_for_arch "$arch")"
   if [[ ! -f "$bb_dir/libbb-external.a" ]]; then
     echo "Missing $bb_dir/libbb-external.a" >&2
-    echo "Build it first: cd $BB_FORK_DIR && cmake --preset ndk-${arch//linux-android/}-android && cmake --build build-ndk-${arch//linux-android/}-android --target bb-external" >&2
+    echo "Build it first: $SCRIPT_DIR/build-bb-android.sh <arm64-v8a|x86_64>" >&2
     exit 3
   fi
   echo ">> [$arch] BB_LIB_DIR=$bb_dir"
@@ -138,15 +137,19 @@ if [[ ! -d "$SRC_BINDINGS" ]]; then
 fi
 
 echo ">> Copying .so files into $JNI_DEST"
-mkdir -p "$JNI_DEST"
-rm -rf "$JNI_DEST"/*
-cp -R "$SRC_BINDINGS/jniLibs/"* "$JNI_DEST/"
+# Replace only this build's libs: jniLibs also holds semaphore / circom .so
+# files from other builds (all gitignored, so a wipe is unrecoverable here).
+for abi_src in "$SRC_BINDINGS/jniLibs/"*/; do
+  abi="$(basename "$abi_src")"
+  mkdir -p "$JNI_DEST/$abi"
+  cp "$abi_src"*.so "$JNI_DEST/$abi/"
+done
 
 echo ">> Copying UniFFI Kotlin bindings into $KT_DEST"
 mkdir -p "$KT_DEST"
 cp "$SRC_BINDINGS/uniffi/mopro/mopro.kt" "$KT_DEST/mopro.kt"
 
-# Bundle the passport-noir 0.3.0 OpenAC v3 circuit JSONs (one per circuit) plus
+# Bundle the passport-noir OpenAC v3 circuit JSONs (one per circuit) plus
 # a SINGLE merged SRS as Android assets so HybridPassportZk can resolve JS
 # aliases to real paths. barretenberg's SRS is a prefix, so one blob sized to
 # the largest circuit serves all three (~256MB→128MB in the APK).

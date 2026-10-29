@@ -121,7 +121,7 @@ final class HybridPassportZk: HybridPassportZkSpec {
     return try bundledResourcePath(
       resource: resource,
       extension: "json",
-      description: "passport-noir 0.3.0 \(resource) circuit"
+      description: "passport-noir \(resource) circuit"
     )
   }
 
@@ -136,7 +136,7 @@ final class HybridPassportZk: HybridPassportZkSpec {
     return try bundledResourcePath(
       resource: resource,
       extension: "bin",
-      description: "passport-noir 0.3.0 merged \(resource).bin SRS"
+      description: "passport-noir merged \(resource).bin SRS"
     )
   }
 

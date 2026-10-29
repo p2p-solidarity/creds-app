@@ -2,6 +2,25 @@
 
 ## libc++ ABI namespace mismatch — Aztec prebuilt vs NDK r25+
 
+### Resolution (2026-10-30)
+
+Fixed by option 1 below: `scripts/build-android.sh` links a `libbb-external.a`
+built from aztec-packages `v4.2.0-aztecnr-rc.2` with NDK clang
+(`scripts/build-bb-android.sh arm64-v8a|x86_64`, a plain NDK toolchain-file
+configure of target `bb-external`, ~6 min per ABI on M-series). Findings that
+rule out the shortcuts:
+
+- barretenberg-rs 4.2.0's `build.rs` matches `aarch64-linux-android` against
+  its `linux` arm first, so without `BB_LIB_DIR` it downloads the **Linux**
+  archive for Android (6.0.0 reorders this).
+- Upstream's real Android archives (4.2.0 and 6.0.0) are built with
+  `zig c++` and still leave ~140 `std::__1` symbols undefined: they need
+  Zig's libc++, never NDK's `__ndk1` `libc++_shared.so`. Upgrading bb does
+  not fix Android.
+- bb 6.x also needs a newer Noir than `zkmopro/noir-rs` v1.0.0-beta.19
+  (its latest tag), recompiled circuits and new vk pins — not worth it for
+  this bug.
+
 ### Symptom
 
 On Android, `nitro.zk.generateNoirProof(...)` (or any UniFFI call that

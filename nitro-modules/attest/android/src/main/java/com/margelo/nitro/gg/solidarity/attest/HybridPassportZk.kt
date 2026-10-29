@@ -187,7 +187,7 @@ class HybridPassportZk : HybridPassportZkSpec() {
 
     /**
      * Resolve a JS-supplied circuit path. Empty → extract the bundled
-     * passport-noir 0.3.0 passport adapter into `filesDir/passport_zk/`.
+     * passport-noir passport adapter into `filesDir/passport_zk/`.
      * Known aliases resolve to bundled assets; unknown values pass through
      * as external filesystem paths. UniFFI's
      * `generate_noir_proof` reads from `std::fs`, so the asset has to live
@@ -208,11 +208,11 @@ class HybridPassportZk : HybridPassportZkSpec() {
     }
 
     /**
-     * Idempotent asset → filesDir copy. The cache key is uncompressed size
-     * (`InputStream.available()` returns uncompressed bytes for asset
-     * streams regardless of AGP compression). When the user reinstalls a
-     * new APK with refreshed circuits, `extractedSize != bundledSize` and
-     * the file gets rewritten.
+     * Idempotent asset → filesDir copy. The cache is valid while its size
+     * matches the bundled asset (`InputStream.available()` returns
+     * uncompressed bytes for asset streams regardless of AGP compression)
+     * AND it was written after the installed APK — a circuit update that
+     * keeps the byte count must not leave the old circuit in place.
      */
     private fun extractAsset(assetName: String): File {
       val ctx: Context = NitroModules.applicationContext
@@ -223,7 +223,8 @@ class HybridPassportZk : HybridPassportZkSpec() {
         parentFile?.mkdirs()
       }
       val bundledSize = ctx.assets.open(assetName).use { it.available().toLong() }
-      if (dest.exists() && dest.length() == bundledSize) {
+      val apkUpdatedAt = ctx.packageManager.getPackageInfo(ctx.packageName, 0).lastUpdateTime
+      if (dest.exists() && dest.length() == bundledSize && dest.lastModified() >= apkUpdatedAt) {
         Log.d(TAG, "extractAsset: $assetName already cached (${dest.length()}B)")
         return dest
       }
