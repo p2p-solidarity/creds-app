@@ -116,7 +116,7 @@
 | 文件 | 過時之處 | 現況 |
 |---|---|---|
 | creds-design `docs/2026-08-18-airmeishi-app-convergence.md` 列 10 | 「✅ 交換走 QR」 | 形狀 ✅ 但 §3.3 訂閱憑據整層缺（本文件 §3） |
-| 同上 列 18 | 「🔴 格式不是 CRD1」；並引用 `profileQrCapacity` | CRD1 已於 08-19（`472b417`）落地 app＋shared；`profileQrCapacity` 不是 src 模組——只有同名測試檔 `__tests__/unit/profileQrCapacity.test.ts`（測的是 `me/profileShareQr.ts` 的容量門） |
+| 同上 列 18 | 「🔴 格式不是 CRD1」；並引用 `profileQrCapacity` | CRD1 已於 08-19（`472b417`）落地 app＋shared；`profileQrCapacity` 不是 src 模組——容量門在 `me/profileShareQr.ts`（同名測試檔已於 2026-09-28 測試清理時刪除） |
 | 同上 列 19 | 「airmeishi-web 是 static mock」 | 已是真 SPA（§5）；缺的是 creds 四條路由，不是「整個 web」 |
 | `docs/ref/01/03/04`＋`.superpowers/sdd/progress.md` | 全部停在 1.3.3 合併點（`d0143eb`）之前 | 之後的 creds-v3 重建（Present/Page/Contacts/CRD1/NIP-05/evidence pack）完全未入帳；progress.md 對 CRD1 這一片安全面**零審查紀錄** |
 | `docs/ref/03` §6 處置表 | 無 `sakura/` 列 | Sakura（Shoutouts relay＋push routing）可達且被 vault shard 依賴，處置未定 |

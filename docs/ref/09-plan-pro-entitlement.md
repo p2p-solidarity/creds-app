@@ -12,7 +12,7 @@ created yet — the code uses the placeholder SKU below until they are.
 | D2 | Pro v1 = **advanced sections** (shop / booking / leave-card), **custom fonts + background colour**, **brand-off + own footer**. Nothing else is advertised. | Apple rejects paywalls that sell absent features. Custom domain needs the bridge; Organization has no implementation. |
 | D3 | **IAP on both iOS and Android** via `expo-iap` 5.6.2 (OpenIAP; StoreKit 2 + Play Billing 9.1). | Post-Epic link-out is US-storefront only; Taiwan/global still require IAP. Play Billing ≥8 mandatory since 2026-08-31. |
 | D4 | Receipt verification + license minting go in **our own worker** (`airmeishi-backend`, `solidarity-id` on creds.id), not RevenueCat. | RevenueCat cannot bind a purchase to a did:key, so the bridge is needed either way; the worker already signs Apple ES256 JWTs (`apns.ts`), verifies did-signed JWS (`nip05/jws.ts`), and has D1. RevenueCat stays the fallback if Play verification turns out painful. |
-| D5 | Price is **always the store's `displayPrice`** — never a hardcoded currency. | TW accounts are billed in NT$; a misstated price breaks Guideline 3.1.2. Pinned by `proSurface.test.ts`. |
+| D5 | Price is **always the store's `displayPrice`** — never a hardcoded currency. | TW accounts are billed in NT$; a misstated price breaks Guideline 3.1.2. (The source-grep `proSurface.test.ts` that pinned this was deleted in the 2026-09-28 test cleanup.) |
 
 ## Entitlement rules (encoded in `apps/expo/src/pro/entitlement.ts`)
 
