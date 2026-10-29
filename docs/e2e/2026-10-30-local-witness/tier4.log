@@ -1,0 +1,6 @@
+x:@kidneyweakx marker creds.id/@kidneyx -> {"ok":true} 627ms
+x:@kidneyweakx marker creds.id/@gimmy -> {"ok":false,"error":"markerMissing"} 461ms
+github:@kidneyweakx marker creds.id/@kidneyx -> {"ok":false,"error":"markerMissing"} 714ms
+telegram:@durov marker creds.id/@kidneyx -> {"ok":false,"error":"markerMissing"} 1470ms
+relay witness events 0 summary {"self":false,"others":0,"latestAt":null}
+total 8297 ms
