@@ -33,4 +33,4 @@ Also: the verifier on the three payloads of a saved real page → slim ✓, full
 - A positive **website-field marker** proof: needs `creds.id/@kidneyx` in the X website field
   (today it holds `kidneyweakx.com`; selection of that slot is proven above).
 - The app on a device against the production notary (needs the owner's registered npub).
-- Production notary, creds-web deploy and the `zktls-v0.2.0` prover release (held for approval).
+- Rolled out 2026-10-29: production `creds-notary` (version 6bcc48ec), creds-web `f5b699b`, prover release `zktls-v0.2.0` (sha256 36414ac1…, staged into a fresh tree from the public URL and checked).

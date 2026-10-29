@@ -33,9 +33,9 @@ SEMAPHORE_SWIFT_SHA256="${AIRMEISHI_SEMAPHORE_SWIFT_SHA256-}"
 # zktls/build-ios.sh; CI stages the zip that script writes, attached to the
 # creds-app release `zktls-v<crate version>`. Bump the tag and SHA together;
 # an empty SHA builds without the prover (isAvailable=false), never a fake one.
-ZKTLS_VERSION="${AIRMEISHI_ZKTLS_VERSION:-zktls-v0.1.0}"
+ZKTLS_VERSION="${AIRMEISHI_ZKTLS_VERSION:-zktls-v0.2.0}"
 ZKTLS_ZIP_URL="${AIRMEISHI_ZKTLS_ZIP_URL:-https://github.com/p2p-solidarity/creds-app/releases/download/${ZKTLS_VERSION}/CredsZktls.xcframework.zip}"
-ZKTLS_SHA256="${AIRMEISHI_ZKTLS_SHA256-ad67d108863182e33689d98ee3aa9a22771f3a9f1043a9db222abb3011f597c1}"
+ZKTLS_SHA256="${AIRMEISHI_ZKTLS_SHA256-36414ac10444fca1635c3c5cd1447d26c1c9491e7d0ebcd823e7ef7253143529}"
 # SHA-pinned Node build staged when the PATH node's CPU arch differs from
 # bun's (see ensure_bundle_node_matches_bun). Pins from
 # https://nodejs.org/dist/${MATCHED_NODE_VERSION}/SHASUMS256.txt — update both
