@@ -1,0 +1,26 @@
+// creds.id notary — Gimmy's Cloudflare account (docs/ref/10 §3.1).
+// Production needs the offline root ceremony (§3.6) before its first deploy;
+// `dev` runs on a dev root and skips the creds.id registration check.
+{
+  "name": "creds-notary",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-10-01",
+  "account_id": "b9e60d05860dfe2eaf2db7f9930875c0",
+  "workers_dev": true,
+  "preview_urls": false,
+  // No logs: the notary keeps no record of who verified what (§3.8).
+  "observability": { "enabled": false },
+  "vars": { "REQUIRE_REGISTERED": "true", "DIRECTORY_ORIGIN": "https://creds.id" },
+  "containers": [{ "class_name": "Notary", "scheduling_policy": "durable_object", "images": { "notary": { "dockerfile": "./container/Dockerfile", "build_context": "./container" } } }],
+  "durable_objects": { "bindings": [{ "name": "NOTARY", "class_name": "Notary" }] },
+  "exports": { "Notary": { "type": "durable-object", "storage": "sqlite" } },
+  "env": {
+    "dev": {
+      "name": "creds-notary-dev",
+      "vars": { "REQUIRE_REGISTERED": "false", "DIRECTORY_ORIGIN": "https://creds.id" },
+      "containers": [{ "class_name": "Notary", "scheduling_policy": "durable_object", "images": { "notary": { "dockerfile": "./container/Dockerfile", "build_context": "./container" } } }],
+      "durable_objects": { "bindings": [{ "name": "NOTARY", "class_name": "Notary" }] },
+      "exports": { "Notary": { "type": "durable-object", "storage": "sqlite" } }
+    }
+  }
+}

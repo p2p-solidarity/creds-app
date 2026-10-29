@@ -1,0 +1,19 @@
+{
+  "name": "@solidarity/notary",
+  "version": "0.1.0",
+  "private": true,
+  "description": "creds.id zkTLS notary: Worker (NIP-98 gate, signing) + Container (TLSNotary verifier). docs/ref/10 §3.1, §3.6, §3.8.",
+  "type": "module",
+  "scripts": {
+    "keys": "bun scripts/keys.ts",
+    "deploy:dev": "bunx wrangler@4.155.0 deploy --env dev",
+    "e2e": "bun scripts/e2e.ts"
+  },
+  "dependencies": {
+    "@noble/curves": "^2.4.0",
+    "@solidarity/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261029.1"
+  }
+}
