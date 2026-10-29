@@ -170,14 +170,16 @@ TLSNotary 對「沒揭露的部分」沒有證明成本（alpha.13 #1006），�
 現況：`__tests__/unit` 162 檔、約 3.55 萬行，大約是 `src` 的一半，超過全域規則「測試要遠少於產品碼」。
 
 - **保留**：`rootKey`、`didKeyCredential`、`httpsOwnership`（SSRF 防護）、`atprotoDpop`／`atprotoPkce`／`atprotoDiscovery`、`proofVerifierHolderBinding`、`passportShowVerifier`、`sensitiveActionPolicy`、`motionWorklet`（抓過 release crash），以及 parity 與 `packages/shared/test` 的密碼學向量。
-- **刪除**：
-  - 功能已刪或本 plan 要棄用的：`sakuraBlob`×2、`groupE2E`／`groupStore`／`groupRecovery`、`leaveCardInbox`、`shamir`、`cloudSyncEngine`／`cloudSyncModel`、`ethereumRpc`、`oidcParse`／`oidcRequestQr`；chunk QR 棄用時一起刪 `qrChunking`／`qrCompression`／`qrEnvelopeWire`／`solidarityQrPayload`／`crd1Envelope`。
-  - 只測 zustand store 黏合層的：`profileStore`、`pageDesignStore`、`sharingSettingsStore`、`issuerStore` 等。
-  - 讀原始碼文字來斷言的：`routeActionIntegrity`、`iosBuildEnv` 等。
+- **P1 實際執行（2026-10-29）**——逐檔核對後修正了原清單：
+  - 刪：2026-09-28 那次清理留下未 commit 的 57 個檔（surface／讀原始碼／UI 文案測試）；`sakuraBlob`×2、`shamir`（功能已刪）；`groupE2E`／`groupStore`／`groupRecovery`（groups 凍結、P5 刪）；`sharingSettingsStore`（純持久化）；`routeActionIntegrity`（掃原始碼，`typedRoutes` 已由 tsc 檢查路由）；`qrCodeManager` 裡讀原始碼的那一條。
+  - **改判保留**：`profileStore`（root 簽章、Face ID 被拒、私人連結不上 relay 的投影＝安全邊界）、`pageDesignStore`（清除資料時不復活）、`proEntitlementStore`（金流）、`issuerStore`（只收 https）、`oidcParse`（OAuth discovery https＋host 驗證，threat model）、`oidcRequestQr`、`iosBuildEnv`（每條對應一次真實的 Xcode Cloud 壞掉）、`cloudSyncEngine`／`cloudSyncModel`（備份保留）、`leaveCardInbox`（功能仍在）、`ethereumRpc`（ENS 程式碼移除時再刪）。
+  - chunk QR 棄用（P4）時再刪 `qrChunking`／`qrCompression`／`qrEnvelopeWire`／`solidarityQrPayload`／`crd1Envelope`。
+  - 結果：unit 162→154 檔、1667→1590 個測試、13.6→11.7 秒；parity 78 不變。
 - **新增**：
   - 證據驗證器用 `tdd`（解析＋密碼學邊界）：偽造 notary 簽章、月度憑證非 root 所簽、證據時間落在憑證有效期外、kid 在撤銷清單內、server 不是平台網域、bio 不含標記、請求 handle 與宣稱不符、名稱證據的 npub 與綁定 event 不符、綁定 event 的 DID 與 Page 不符（複製攻擊）——全部要拒。
   - notary Worker 的請求閘門用 `tdd`：NIP-98 簽章無效／過期／重放、npub 未註冊、host 不在白名單、非 GET 或非個人頁路徑、私有 IP——全部要拒。
-  - Maestro 5 條 flow（每條 user story 一條），模擬器 dev client 跑，截圖存 `docs/e2e/`。掃 QR 用 deep link 注入；NFC 護照只能實機手測。
+  - Maestro 5 條 flow（每條 user story 一條），放在 `apps/expo/.maestro/`，模擬器 Debug build 跑，截圖存 `docs/e2e/`。掃 QR 用 deep link 注入；NFC 護照只能實機手測。
+  - **限制**：onboarding 最後一步會把名字註冊到正式 creds.id 目錄並發佈到公開 relay（`NIP05_SERVICE_ORIGIN` 寫死）。flow 要走完整條，需要先讓 dev build 能指向本機 creds.id worker（wrangler dev）與本機 relay；在那之前 flow 停在 Links 步驟。
   - 網頁 viewer 用 Playwright 開固定測試頁，確認徽章狀態。
 
 ---

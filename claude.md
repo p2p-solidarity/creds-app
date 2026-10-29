@@ -5,14 +5,14 @@
 ## Where truth lives (read in this order)
 
 1. `apps/expo/CLAUDE.md` — the coding rulebook. Mandatory before editing anything under `apps/expo/`.
-2. `docs/ref/06-plan-convergence-2.0.0.md` — the live **batch** plan (2.0.0 north star, Q1–Q6 decisions, old-feature keep/cut, execution plan), `docs/ref/07-plan-web-standalone.md` — the web-standalone phases 1–3, and `docs/ref/08-plan-passkey-root-sync.md` — the live **zero-friction App↔Web root sync** plan (WebAuthn PRF unlock, opaque ciphertext-only service, web key UI removed; supersedes 07's local-only web vault UX). `docs/ref/09-plan-pro-entitlement.md` — Pro subscription (IAP via expo-iap, entitlement rules, store-config checklist, unbuilt license bridge). `.superpowers/sdd/progress.md` — review ledger when present (records real security bugs already caught — read before touching security code).
+2. `docs/ref/06-plan-convergence-2.0.0.md` — the live **batch** plan (2.0.0 north star, Q1–Q6 decisions, old-feature keep/cut, execution plan), `docs/ref/07-plan-web-standalone.md` — the web-standalone phases 1–3, and `docs/ref/08-plan-passkey-root-sync.md` — the live **zero-friction App↔Web root sync** plan (WebAuthn PRF unlock, opaque ciphertext-only service, web key UI removed; supersedes 07's local-only web vault UX). `docs/ref/09-plan-pro-entitlement.md` — Pro subscription (IAP via expo-iap, entitlement rules, store-config checklist, unbuilt license bridge). `docs/ref/10-plan-simplify-and-verify.md` — the live **simplification + zkTLS social verification** plan (5 user stories, TLSNotary, one card / two QR forms, test slimming; voids 06 Q2). `.superpowers/sdd/progress.md` — review ledger when present (records real security bugs already caught — read before touching security code).
 3. `docs/ref/01–05` — spec reference, not plans: 01+03 = 1.3.3 "Verified Page" product spec (§6 of 03 is the kept/evolved/frozen/deleted table); 05 = QR/exchange wire SSOT (06 defers to it). 04 is the superseded 1.3.3 plan — history only.
 4. **STALE — do not trust**: `README.md`, `spec.md`, `architecture.png` describe the deleted SwiftUI app and pre-pivot architecture (MultipeerConnectivity and CloudKit group sync are deleted; Semaphore/ZK groups frozen). Deleted pre-2.0.0 plans/specs are distilled in `docs/ref/notes-archive-pre-2.0.0.md`.
 
 ## Workflow — every coding task
 
 1. Invoke the `flow` skill first: size the task S/M/L and follow its process. UI work also reads `.claude/skills/ui-polish/SKILL.md`.
-2. Verify before claiming done (from repo root): `bun run typecheck && bun run lint && bun run test` (unit + parity).
+2. Verify (global Rule 0): finish the feature → run it once for real (simulator / device / browser) and keep the evidence (screenshot, log, or `docs/e2e/<date>-<slug>/result.md`) → then run `bun run typecheck && bun run lint && bun run test` (unit + parity) once from repo root.
 3. Monorepo (bun workspaces): `apps/expo` = the app; `packages/shared` = pure-TS crypto/types consumed everywhere; `packages/parity-fixtures` = **frozen** golden vectors (the Swift source that generated them is deleted — never edit or regenerate); `nitro-modules/*` = native bridges (Swift/Kotlin behind TS specs).
 
 ## Security — hard rules (current TS terms)
