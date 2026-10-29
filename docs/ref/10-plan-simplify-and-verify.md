@@ -82,7 +82,7 @@
 | **prover** | `nitro-modules/attest`（新增 HybridObject）| 搬 TLSNotary `tlsn-mobile` 的 Rust prover（UniFFI）。ArrayBuffer 參數照 CLAUDE.md 規則先同步複製。 |
 | **平台規則表** | `packages/shared/src/verify/platforms.ts` | 每個平台：URL 模板、要揭露的回應區段（meta tag／JSON path）、標記比對。純資料＋純函式。 |
 | **證據驗證器** | `packages/shared/src/verify/` | App 與網頁共用、純 TS：驗證據 JWS 的 notary 金鑰鏈（root → 月度憑證 → JWS）、server 是平台網域、bio 含標記、請求路徑等於宣稱的 handle，再沿名稱證據與 npub 綁定接到 DID（§3.5）。**不需要 tlsn WASM。** |
-| **notary** | Gimmy 帳號下的 Cloudflare Worker + Durable Object（每個 session 一個 DO） | Proxy 模式：WebSocket 接手機、`cloudflare:sockets` 轉發 TLS 密文、跑 verifier 的 WASM build。若 WASM verifier 編不出來或超出 128 MB／CPU 上限，退回 Cloudflare Containers，Worker 只負責轉接與簽章。與 kidney 帳號的 `solidarity-id` 是兩個獨立 Worker。 |
+| **notary** | Gimmy 帳號下的 **Cloudflare Container**（`durable_object` scheduling），前面一個 Worker 轉接 WebSocket 並負責簽章 | **P0 實測（docs/e2e/2026-10-29-zktls-spike）**：Worker 的 TCP socket 連不到 Cloudflare IP，而 x.com、t.co、LinkedIn 都在 Cloudflare 後面，所以 Worker 版 notary 不可行；原生 Rust verifier 放 Container 已端到端證明 X／Telegram／Threads／LinkedIn／GitHub（2–4.6 秒）。與 kidney 帳號的 `solidarity-id` 是兩個獨立 Worker。 |
 | **證據格式** | 我們自己的穩定 JWS（不存 TLSNotary presentation） | `{server, 請求行, bio 原文, 時間, 憑證鏈指紋, tlsnVersion, kid}`，由當月 notary 金鑰簽、附 root 簽的月度憑證。**不放進 Page**：由擁有者的 npub 獨立發佈（Nostr event，creds.id 同步收錄），以 DID 關聯；續驗只換證據、不重簽 Page。不進離線 QR。 |
 
 ### 3.2 為什麼只揭露 bio 區段
@@ -92,7 +92,7 @@ TLSNotary 對「沒揭露的部分」沒有證明成本（alpha.13 #1006），�
 - **Proxy**（預設）：notary 代為連線、轉發密文。官方數據：5G 約 1.6 秒，頻寬需求低。風險：notary 在資料中心，IG／LinkedIn 可能擋它的 IP。
 - **MPC**（備援）：手機自己連平台，不會被當成資料中心流量擋。代價：要先上傳約 30 MB 的 garbled circuit 資料，5G 約 10 秒。只在 Proxy 被擋時用，並提示用 Wi-Fi。
 - 每個平台的預設模式由 spike 結果決定，寫進平台規則表。
-- **注意（grill 後補）**：MPC 模式的 verifier 跑不進 Worker（約 30 MB garbled circuit 與大量運算），只能放 Containers。如果 notary 最後只有 Worker，被擋的平台（可能是 IG、LinkedIn）就沒有 notary 證據這一層：網頁訪客看到「請在 App 裡查看驗證」，App 遠端與當面兩層照常運作。要不要為此加開 Container，看 P0 ③ 實測哪些平台被擋再決定。
+- **P0 後更新**：notary 已定為 Container，MPC 備援可以放在同一個 Container 裡。P0 實測只有 IG 擋 Container 出口；LinkedIn 從 Container 是通的。被擋的平台在找到解法前沒有 notary 證據這一層：網頁訪客看到「請在 App 裡查看驗證」，App 遠端與當面兩層照常運作。
 
 ### 3.4 三層見證（grill 決議）
 
@@ -136,12 +136,12 @@ TLSNotary 對「沒揭露的部分」沒有證明成本（alpha.13 #1006），�
 | 平台 | 抓什麼 | bio 位置 | 回應大小 | 預估難度 |
 |---|---|---|---|---|
 | Telegram | `t.me/<name>` | `og:description` | 11 KB | 低 |
-| X | `x.com/<name>` | `<meta name="description">` | 177 KB | 中（t.co 改寫待確認） |
+| X | `x.com/<name>` → `t.co/<id>` | `<meta name="description">`；bio 裡的網址一律變成 t.co，所以要再證明 t.co 頁的 `<title>` 是 `creds.id/@name`（兩跳，P0 已實測） | 186 KB + 1.4 KB | 中 |
 | GitHub | `github.com/<name>`（或 `api.github.com/users/<name>`） | bio／blog 欄位 | 待測 | 低 |
 | 網站 | `https://<domain>/` | 頁面裡的標記連結 | 依網站 | 低 |
 | Threads | `threads.com/@<name>` | `og:description` | 614 KB | 中 |
 | LinkedIn | `linkedin.com/in/<name>` | `description`（headline + About） | 681 KB | 高（登入牆、擋 IP） |
-| IG | `instagram.com/<name>/` | 內嵌 JSON | 693 KB | 高（擋 IP、JSON 改版） |
+| IG | `instagram.com/<name>/` | 內嵌 JSON | 693 KB | 高：Container 出口被導去登入頁（P0）；只有 Worker socket 拿得到。待試「Container 經 Worker `connect()` 轉接」，在那之前沒有 notary 層 |
 | YouTube | 頻道頁 | 不在 meta，藏在約 1.3 MB 的頁面資料 | 1.3 MB | 最後做 |
 
 ---
@@ -203,7 +203,7 @@ TLSNotary 對「沒揭露的部分」沒有證明成本（alpha.13 #1006），�
 | # | 問題 | 決議 | 細節 |
 |---|---|---|---|
 | Q1 | notary 金鑰放哪、怎麼輪替、舊證據能不能驗 | 兩層金鑰：root 離線（YubiKey），月度金鑰為 Worker secret、cron 輪替；證據自帶憑證，永遠可離線驗 | §3.6 |
-| — | notary 部署在哪 | Gimmy 帳號下的 Worker + DO；不行再退 Containers | §3.1 |
+| — | notary 部署在哪 | Gimmy 帳號下的 Worker + DO；不行再退 Containers → **P0 結果：Container**（Worker 連不到 Cloudflare 後面的 X） | §3.1 |
 | — | 見證能不能搬到本地 | 三層見證：當面由對方手機、App 遠端自己重抓，只有網頁／離線用 notary | §3.4、D3 |
 | Q2 | TLSNotary alpha 的版本相容 | 長期證據用自己的穩定 JWS；tlsn 跟季度更新一起升級，Worker 保留目前版＋前一版 | §3.7 |
 | Q3 | 移除標記與舊綠勾 | 推翻 D5：標記留在 bio，30 天背景續驗，90 天沒續上降灰 | D5 |
