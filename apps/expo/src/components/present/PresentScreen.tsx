@@ -471,7 +471,7 @@ function CardFieldToggle({
   const { t } = useTranslation();
   const colors = useThemeColors();
   return (
-    <View style={blockRowStyle(colors.mutedSurface)}>
+    <View style={blockRowStyle(colors)}>
       <View className="flex-1" style={{ gap: 1 }}>
         <ThemedText variant="bodyMedium">
           {t(`present.field.${field.field}`)}

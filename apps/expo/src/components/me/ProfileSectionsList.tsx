@@ -140,7 +140,7 @@ export function ProfileSectionsList({
         <>
           {/* The links block always sits first and cannot be reordered or
               switched off, so the mock gives it no controls at all. */}
-          <View style={fieldRowStyle(c.mutedSurface)}>
+          <View style={fieldRowStyle(c)}>
             <View style={iconTileStyle(c.chipSurface)}>
               <SfIcon name="link" size={ICON_TILE_GLYPH} color={Colors.primaryBlue} />
             </View>
@@ -242,7 +242,7 @@ function PagePreviewDisclosure({
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
         accessibilityLabel={t('pageDesign.preview')}
-        style={blockRowStyle(c.mutedSurface)}>
+        style={blockRowStyle(c)}>
         <ThemedText variant="bodyMedium" style={{ flex: 1 }}>
           {t('pageDesign.preview')}
         </ThemedText>
@@ -297,7 +297,7 @@ function BlockRow({
       index={index}
       stride={BLOCK_ROW_STRIDE}
       style={{
-        ...blockRowStyle(c.mutedSurface),
+        ...blockRowStyle(c),
         gap: 8,
         paddingVertical: 0,
         paddingLeft: 0,

@@ -214,7 +214,7 @@ export function ProfileBadgeChips({
               claim: presentation.label,
               status: t(visibilityLabelKey(visibility)),
             })}
-            style={fieldRowStyle(c.mutedSurface)}>
+            style={fieldRowStyle(c)}>
             <View style={iconTileStyle(c.chipSurface)}>
               <SfIcon name={presentation.icon} size={ICON_TILE_GLYPH} color={Colors.primaryBlue} />
             </View>

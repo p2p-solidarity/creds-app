@@ -220,7 +220,7 @@ export function ProfileLinksList({
           onPress={onEdit}
           accessibilityRole="button"
           accessibilityLabel={t('mePage.reviewHidden')}
-          style={{ ...fieldRowStyle(c.mutedSurface), minHeight: 52 }}>
+          style={{ ...fieldRowStyle(c), minHeight: 52 }}>
           <SfIcon name="eye.slash" size={16} color={Colors.text3} />
           <View className="flex-1" style={{ gap: 1 }}>
             <ThemedText variant="bodyMedium">{t('mePage.reviewHidden')}</ThemedText>
@@ -284,7 +284,7 @@ function LinkRowsSection({
               index={sectionIndex}
               stride={FIELD_ROW_STRIDE}
               style={{
-                ...fieldRowStyle(c.mutedSurface),
+                ...fieldRowStyle(c),
                 gap: 0,
                 paddingVertical: 0,
                 paddingHorizontal: 0,

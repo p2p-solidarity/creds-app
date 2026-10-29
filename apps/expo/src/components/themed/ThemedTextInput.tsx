@@ -52,6 +52,10 @@ interface KindConfig {
   readonly secret?: boolean;
 }
 
+
+/** creds.id `.field-input`: 16pt side padding, `--radius-field`. */
+const FIELD_PAD_X = 16;
+const FIELD_RADIUS = 2;
 const KIND_CONFIG: Readonly<Record<TextInputKind, KindConfig>> = {
   text: {},
   url: {
@@ -232,12 +236,12 @@ export function ThemedTextInput({
           }}
           accessibilityLabel={accessibilityLabel ?? label}
           testID={testID}
-          className="bg-searchBg text-text1"
+          className="bg-cardBg text-text1"
           style={{
-            paddingHorizontal: 14,
-            paddingLeft: 14 + effectivePrefixWidth,
+            paddingHorizontal: FIELD_PAD_X,
+            paddingLeft: FIELD_PAD_X + effectivePrefixWidth,
             paddingRight:
-              14 + trailingWidth + (inlineSuffix ? INLINE_SUFFIX_WIDTH : 0),
+              FIELD_PAD_X + trailingWidth + (inlineSuffix ? INLINE_SUFFIX_WIDTH : 0),
             paddingVertical: 12,
             minHeight: multiline ? MULTILINE_MIN_HEIGHT : MIN_HEIGHT,
             fontSize: 15,
@@ -245,6 +249,7 @@ export function ThemedTextInput({
             textAlignVertical: multiline ? 'top' : 'center',
             borderWidth: 1,
             borderColor,
+            borderRadius: FIELD_RADIUS,
           }}
         />
         {inlineSuffix ? (
@@ -252,7 +257,7 @@ export function ThemedTextInput({
             pointerEvents="none"
             style={{
               position: 'absolute',
-              right: 14 + trailingWidth,
+              right: FIELD_PAD_X + trailingWidth,
               width: INLINE_SUFFIX_WIDTH,
               top: 0,
               bottom: 0,
@@ -269,7 +274,7 @@ export function ThemedTextInput({
             pointerEvents="none"
             style={{
               position: 'absolute',
-              left: 14,
+              left: FIELD_PAD_X,
               top: 0,
               bottom: 0,
               justifyContent: 'center',

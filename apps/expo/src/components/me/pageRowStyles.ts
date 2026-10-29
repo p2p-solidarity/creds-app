@@ -1,11 +1,13 @@
 /**
- * Shared row metrics for the Page tab. The shapes come from the mock
- * (`creds-design/verified-linkinbio-mock-v3.html` §`#s-page`: borderless rows
- * on `mutedSurface` at r=2, grouped by space, round brand-tinted icon tile),
- * but the densities deliberately run tighter than the mock's 64/56/40pt —
- * compacted 2026-08-30 on a direct product call, so don't "restore" them.
+ * Shared row metrics for the Page tab. The surface follows creds.id's builder
+ * (`airmeishi-web` `.lrow`: card rows on a hairline divider, 36pt round
+ * brand-tinted tile, 12pt gutter — the web wins over the old mock's borderless
+ * `mutedSurface` rows), but the densities deliberately run tighter than the
+ * web's 64pt — compacted 2026-08-30 on a direct product call, so don't
+ * "restore" them.
  */
 import type { ViewStyle } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import { normalizeAtprotoHandle } from '@solidarity/shared';
 
@@ -14,7 +16,7 @@ export const ROW_GAP = 6;
 /** `--radiusCard` for app rows. The public page uses its own per-template radius. */
 export const ROW_RADIUS = 2;
 /** `.f-ico` — round icon tile and the glyph it frames. */
-export const ICON_TILE_SIZE = 34;
+export const ICON_TILE_SIZE = 36;
 export const ICON_TILE_GLYPH = 18;
 /** Row heights. The drag strides below must stay derived from these — the
  * reorder math reads a row's travel as height + gap, so a height edited
@@ -74,21 +76,29 @@ export function verificationPillForStates(
 }
 
 /** `.field` — link/field row, 10pt gutter between icon / text / trailing glyph. */
-export function fieldRowStyle(surface: string): ViewStyle {
+/** The two theme colours a row surface needs (pass `useThemeColors()`). */
+export interface RowSurfaceColors {
+  readonly cardBg: string;
+  readonly divider: string;
+}
+
+export function fieldRowStyle(c: RowSurfaceColors): ViewStyle {
   return {
     minHeight: FIELD_ROW_HEIGHT,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: ROW_RADIUS,
-    backgroundColor: surface,
+    backgroundColor: c.cardBg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: c.divider,
   };
 }
 
 /** `.blk` — the same surface at block-row density. */
-export function blockRowStyle(surface: string): ViewStyle {
+export function blockRowStyle(c: RowSurfaceColors): ViewStyle {
   return {
     minHeight: BLOCK_ROW_HEIGHT,
     flexDirection: 'row',
@@ -97,7 +107,9 @@ export function blockRowStyle(surface: string): ViewStyle {
     paddingVertical: 8,
     paddingHorizontal: 10,
     borderRadius: ROW_RADIUS,
-    backgroundColor: surface,
+    backgroundColor: c.cardBg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: c.divider,
   };
 }
 

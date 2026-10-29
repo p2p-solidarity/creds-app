@@ -1,16 +1,15 @@
 /**
- * ThemedButton — single CTA primitive, 5 variants matching
- * solidarity/Views/Common/ThemedButtonStyles.swift verbatim.
+ * ThemedButton — single CTA primitive, the app twin of creds.id's `.btn`
+ * (airmeishi-web global.css; the web wins when they disagree).
  *
- *   primary       → bg=textPrimary (ink), fg=pageBg, 1pt 30% textPrimary stroke
- *   inverted      → bg=white, fg=black, NO border
- *   secondary     → bg=cardSurface, fg=textPrimary, 1pt divider stroke
+ *   primary       → `.btn`        ink fill, cream label
+ *   inverted      → bg=white, fg=black, NO border (on dark imagery)
+ *   secondary     → `.btn-ghost`  card fill, 1pt divider stroke
  *   dottedOutline → bg=clear, fg=primaryBlue, dashed primaryBlue stroke
  *   destructive   → bg=clear, fg=destructive, 1pt destructive stroke
  *
- * Every variant uses `clipShape(Rectangle())` → SQUARE corners (no borderRadius).
- * Font is 16pt medium (primary/inverted/destructive) or 16pt regular
- * (secondary/dottedOutline). 24h/14v padding. Pressed scale = 0.98.
+ * Every variant: 6pt corners (`--radius-button`), 16pt medium label (13pt at
+ * `sm`, like `.btn-sm`), 14v/24h padding, pressed scale 0.97.
  *
  * Haptic policy (aniseekr CLAUDE rule 7):
  *   primary/inverted/destructive → heavyImpact (Swift)
@@ -47,15 +46,18 @@ export type ButtonVariant =
 
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
+/** creds.id `--radius-button`. */
+const BUTTON_RADIUS = 6;
+
 /** Vertical padding per Swift (.padding(.vertical, 14)). Height = padding * 2 + line. */
 const SIZE_PADDING_Y: Readonly<Record<ButtonSize, number>> = {
-  sm: 10,
+  sm: 8,
   md: 14,
   lg: 18,
 };
 /** Horizontal padding per Swift (.padding(.horizontal, 24)). */
 const SIZE_PADDING_X: Readonly<Record<ButtonSize, number>> = {
-  sm: 16,
+  sm: 14,
   md: 24,
   lg: 28,
 };
@@ -109,7 +111,7 @@ export function ThemedButton({
   const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
   const handlePressIn = () => {
-    scale.value = withSpring(0.98, { damping: 100, stiffness: 600 });
+    scale.value = withSpring(0.97, { damping: 100, stiffness: 600 });
   };
   const handlePressOut = () => {
     scale.value = withSpring(1, { damping: 100, stiffness: 600 });
@@ -120,8 +122,8 @@ export function ThemedButton({
     onPress?.(e);
   };
 
-  // Swift uses `.clipShape(Rectangle())` — square corners on every variant.
   const containerStyle = {
+    borderRadius: BUTTON_RADIUS,
     backgroundColor: cfg.bg,
     paddingHorizontal: SIZE_PADDING_X[size],
     paddingVertical: SIZE_PADDING_Y[size],
@@ -159,7 +161,7 @@ export function ThemedButton({
               numberOfLines={1}
               adjustsFontSizeToFit
               minimumFontScale={0.85}
-              style={{ color: cfg.fg, fontSize: 16, fontFamily: textFont(cfg.weight) }}>
+              style={{ color: cfg.fg, fontSize: size === 'sm' ? 13 : 16, fontFamily: textFont(cfg.weight) }}>
               {label}
             </Text>
           </>
@@ -192,7 +194,7 @@ function variantConfig(variant: ButtonVariant, theme: ThemeColors): VariantStyle
         fg: theme.text1,
         borderColor: theme.divider,
         borderWidth: 1,
-        weight: '400',
+        weight: '500',
       };
     case 'dottedOutline':
       return {
@@ -201,7 +203,7 @@ function variantConfig(variant: ButtonVariant, theme: ThemeColors): VariantStyle
         borderColor: theme.primaryBlue,
         borderWidth: 1,
         dashed: true,
-        weight: '400',
+        weight: '500',
       };
     case 'destructive':
       return {

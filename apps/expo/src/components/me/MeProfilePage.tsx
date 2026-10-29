@@ -149,7 +149,7 @@ export function MeProfilePage({
           onPress={() => { router.push('/settings/passkeys'); }}
           accessibilityRole="button"
           accessibilityLabel={t('webEditing.title')}
-          style={blockRowStyle(colors.mutedSurface)}>
+          style={blockRowStyle(colors)}>
           <SfIcon name="desktopcomputer" size={18} color={colors.text2} />
           <ThemedText variant="bodyMedium" style={{ flex: 1 }}>
             {t('webEditing.title')}
