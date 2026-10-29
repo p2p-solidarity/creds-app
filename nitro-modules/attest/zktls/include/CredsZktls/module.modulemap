@@ -1,4 +1,0 @@
-module CredsZktls {
-  header "creds_zktls.h"
-  export *
-}

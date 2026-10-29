@@ -24,8 +24,6 @@ namespace margelo::nitro::solidarity::attest { class HybridNfcPassportSpec; }
 namespace margelo::nitro::solidarity::attest { class HybridPassportZkSpec; }
 // Forward declaration of `HybridSemaphoreSpec` to properly resolve imports.
 namespace margelo::nitro::solidarity::attest { class HybridSemaphoreSpec; }
-// Forward declaration of `HybridZktlsSpec` to properly resolve imports.
-namespace margelo::nitro::solidarity::attest { class HybridZktlsSpec; }
 // Forward declaration of `MrzScanResult` to properly resolve imports.
 namespace margelo::nitro::solidarity::attest { struct MrzScanResult; }
 // Forward declaration of `NfcReadOptions` to properly resolve imports.
@@ -60,8 +58,6 @@ namespace Attest { class HybridNfcPassportSpec_cxx; }
 namespace Attest { class HybridPassportZkSpec_cxx; }
 // Forward declaration of `HybridSemaphoreSpec_cxx` to properly resolve imports.
 namespace Attest { class HybridSemaphoreSpec_cxx; }
-// Forward declaration of `HybridZktlsSpec_cxx` to properly resolve imports.
-namespace Attest { class HybridZktlsSpec_cxx; }
 
 // Include C++ defined types
 #include "DataGroupsBundle.hpp"
@@ -70,7 +66,6 @@ namespace Attest { class HybridZktlsSpec_cxx; }
 #include "HybridNfcPassportSpec.hpp"
 #include "HybridPassportZkSpec.hpp"
 #include "HybridSemaphoreSpec.hpp"
-#include "HybridZktlsSpec.hpp"
 #include "MrzScanResult.hpp"
 #include "NfcReadOptions.hpp"
 #include "NfcReadPhase.hpp"
@@ -696,17 +691,5 @@ namespace margelo::nitro::solidarity::attest::bridge::swift {
   inline Result_std__shared_ptr_Promise_SemaphoreProof___ create_Result_std__shared_ptr_Promise_SemaphoreProof___(const std::exception_ptr& error) noexcept {
     return Result<std::shared_ptr<Promise<SemaphoreProof>>>::withError(error);
   }
-  
-  // pragma MARK: std::shared_ptr<HybridZktlsSpec>
-  /**
-   * Specialized version of `std::shared_ptr<HybridZktlsSpec>`.
-   */
-  using std__shared_ptr_HybridZktlsSpec_ = std::shared_ptr<HybridZktlsSpec>;
-  std::shared_ptr<HybridZktlsSpec> create_std__shared_ptr_HybridZktlsSpec_(void* NON_NULL swiftUnsafePointer) noexcept;
-  void* NON_NULL get_std__shared_ptr_HybridZktlsSpec_(std__shared_ptr_HybridZktlsSpec_ cppType);
-  
-  // pragma MARK: std::weak_ptr<HybridZktlsSpec>
-  using std__weak_ptr_HybridZktlsSpec_ = std::weak_ptr<HybridZktlsSpec>;
-  inline std__weak_ptr_HybridZktlsSpec_ weakify_std__shared_ptr_HybridZktlsSpec_(const std::shared_ptr<HybridZktlsSpec>& strong) noexcept { return strong; }
 
 } // namespace margelo::nitro::solidarity::attest::bridge::swift

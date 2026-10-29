@@ -38,14 +38,12 @@ target_sources(
   ../nitrogen/generated/shared/c++/HybridNfcPassportSpec.cpp
   ../nitrogen/generated/shared/c++/HybridPassportZkSpec.cpp
   ../nitrogen/generated/shared/c++/HybridSemaphoreSpec.cpp
-  ../nitrogen/generated/shared/c++/HybridZktlsSpec.cpp
   # Android-specific Nitrogen C++ sources
   ../nitrogen/generated/android/c++/JHybridDeviceAttestSpec.cpp
   ../nitrogen/generated/android/c++/JHybridMrzOcrSpec.cpp
   ../nitrogen/generated/android/c++/JHybridNfcPassportSpec.cpp
   ../nitrogen/generated/android/c++/JHybridPassportZkSpec.cpp
   ../nitrogen/generated/android/c++/JHybridSemaphoreSpec.cpp
-  ../nitrogen/generated/android/c++/JHybridZktlsSpec.cpp
 )
 
 # From node_modules/react-native/ReactAndroid/cmake-utils/folly-flags.cmake

@@ -56,12 +56,6 @@
         "implementationClassName": "HybridSemaphore"
       }
     },
-    "Zktls": {
-      "ios": {
-        "language": "swift",
-        "implementationClassName": "HybridZktls"
-      }
-    },
     "DeviceAttest": {
       "ios": {
         "language": "swift",

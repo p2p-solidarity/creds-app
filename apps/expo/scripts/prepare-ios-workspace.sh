@@ -29,13 +29,6 @@ PASSPORT_OPENAC_SRS_SHA256="${AIRMEISHI_PASSPORT_OPENAC_SRS_SHA256-7d368f9342b99
 SEMAPHORE_SWIFT_REF="${AIRMEISHI_SEMAPHORE_SWIFT_REF:-850680a5adcc258d6861005b55a4925bd08a48eb}"
 SEMAPHORE_SWIFT_ZIP_URL="${AIRMEISHI_SEMAPHORE_SWIFT_ZIP_URL:-https://github.com/zkmopro/SemaphoreSwift/archive/${SEMAPHORE_SWIFT_REF}.zip}"
 SEMAPHORE_SWIFT_SHA256="${AIRMEISHI_SEMAPHORE_SWIFT_SHA256-}"
-# zkTLS prover (nitro-modules/attest/zktls, docs/ref/10 §3.1). Built locally by
-# zktls/build-ios.sh; CI stages the zip that script writes, attached to the
-# creds-app release `zktls-v<crate version>`. Bump the tag and SHA together;
-# an empty SHA builds without the prover (isAvailable=false), never a fake one.
-ZKTLS_VERSION="${AIRMEISHI_ZKTLS_VERSION:-zktls-v0.2.0}"
-ZKTLS_ZIP_URL="${AIRMEISHI_ZKTLS_ZIP_URL:-https://github.com/p2p-solidarity/creds-app/releases/download/${ZKTLS_VERSION}/CredsZktls.xcframework.zip}"
-ZKTLS_SHA256="${AIRMEISHI_ZKTLS_SHA256-36414ac10444fca1635c3c5cd1447d26c1c9491e7d0ebcd823e7ef7253143529}"
 # SHA-pinned Node build staged when the PATH node's CPU arch differs from
 # bun's (see ensure_bundle_node_matches_bun). Pins from
 # https://nodejs.org/dist/${MATCHED_NODE_VERSION}/SHASUMS256.txt — update both
@@ -242,34 +235,6 @@ ensure_semaphore_bindings_xcframework() {
   write_xcframework_stamp "$xcf" "$SEMAPHORE_SWIFT_REF"
 }
 
-ensure_zktls_xcframework() {
-  local xcf="$REPO_ROOT/nitro-modules/attest/zktls/CredsZktls.xcframework"
-
-  # A local build-ios.sh artifact (no stamp) is used as is: the C ABI is two
-  # functions declared in the committed header, so there is no generated
-  # binding to drift from (unlike semaphore).
-  if xcframework_has_static_module "$xcf" CredsZktls creds_zktls.h libcreds_zktls.a; then
-    green "OK CredsZktls.xcframework present"
-    return 0
-  fi
-  if [[ -z "$ZKTLS_SHA256" ]]; then
-    printf '\033[33m%s\033[0m\n' "!! No pinned CredsZktls release yet — building without the zkTLS prover (link verification shows as unavailable)"
-    return 0
-  fi
-
-  stage_xcframework_from_zip \
-    "CredsZktls xcframework ($ZKTLS_VERSION)" \
-    "$ZKTLS_ZIP_URL" \
-    "$ZKTLS_SHA256" \
-    "CredsZktls.xcframework" \
-    "$xcf" \
-    "creds-zktls.zip"
-
-  xcframework_has_static_module "$xcf" CredsZktls creds_zktls.h libcreds_zktls.a \
-    || die "CredsZktls.xcframework is incomplete at $xcf"
-  write_xcframework_stamp "$xcf" "$ZKTLS_VERSION"
-}
-
 # Stage the OpenAC v3 merged SRS proving key. Local passport-noir build
 # artifacts win; a fresh checkout (Xcode Cloud) downloads the SHA-pinned
 # release copy into that same local path first. Staging itself stays in
@@ -308,7 +273,6 @@ stage_ios_native_bindings() {
 
   ensure_passport_mopro_xcframework
   ensure_semaphore_bindings_xcframework
-  ensure_zktls_xcframework
   ensure_passport_openac_srs
 }
 

@@ -22,8 +22,6 @@ namespace margelo::nitro::solidarity::attest { class HybridNfcPassportSpec; }
 namespace margelo::nitro::solidarity::attest { class HybridPassportZkSpec; }
 // Forward declaration of `HybridSemaphoreSpec` to properly resolve imports.
 namespace margelo::nitro::solidarity::attest { class HybridSemaphoreSpec; }
-// Forward declaration of `HybridZktlsSpec` to properly resolve imports.
-namespace margelo::nitro::solidarity::attest { class HybridZktlsSpec; }
 // Forward declaration of `MrzScanResult` to properly resolve imports.
 namespace margelo::nitro::solidarity::attest { struct MrzScanResult; }
 // Forward declaration of `NfcReadOptions` to properly resolve imports.
@@ -54,7 +52,6 @@ namespace margelo::nitro::solidarity::attest { struct SemaphoreProof; }
 #include "HybridNfcPassportSpec.hpp"
 #include "HybridPassportZkSpec.hpp"
 #include "HybridSemaphoreSpec.hpp"
-#include "HybridZktlsSpec.hpp"
 #include "MrzScanResult.hpp"
 #include "NfcReadOptions.hpp"
 #include "NfcReadPhase.hpp"
@@ -99,8 +96,6 @@ namespace Attest { class HybridNfcPassportSpec_cxx; }
 namespace Attest { class HybridPassportZkSpec_cxx; }
 // Forward declaration of `HybridSemaphoreSpec_cxx` to properly resolve imports.
 namespace Attest { class HybridSemaphoreSpec_cxx; }
-// Forward declaration of `HybridZktlsSpec_cxx` to properly resolve imports.
-namespace Attest { class HybridZktlsSpec_cxx; }
 
 // Include Swift defined types
 #if __has_include("Attest-Swift.h")

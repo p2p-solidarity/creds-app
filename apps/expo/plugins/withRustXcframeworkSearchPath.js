@@ -48,11 +48,6 @@ const HOOK_BODY = `
                           'MoproiOSBindings', 'MoproBindings.xcframework')
     semaphore_xcf = File.join(airmeishi_root, 'nitro-modules', 'attest',
                               'semaphore', 'mopro', 'SemaphoreBindings.xcframework')
-    # The zkTLS prover is optional at build time (Attest.podspec only links it
-    # when present), so its slices join the search path only when it exists.
-    zktls_xcf = File.join(airmeishi_root, 'nitro-modules', 'attest', 'zktls', 'CredsZktls.xcframework')
-    zktls_sim = File.exist?(zktls_xcf) ? " \\"#{zktls_xcf}/ios-arm64-simulator\\"" : ''
-    zktls_dev = File.exist?(zktls_xcf) ? " \\"#{zktls_xcf}/ios-arm64\\"" : ''
 
     installer.aggregate_targets.each do |aggregate_target|
       aggregate_target.user_build_configurations.each_key do |configuration_name|
@@ -61,9 +56,9 @@ const HOOK_BODY = `
 
         injected_keys = {
           'LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]' =>
-            "$(inherited) \\"#{mopro_xcf}/ios-arm64-simulator\\" \\"#{semaphore_xcf}/ios-arm64-simulator\\"#{zktls_sim}",
+            "$(inherited) \\"#{mopro_xcf}/ios-arm64-simulator\\" \\"#{semaphore_xcf}/ios-arm64-simulator\\"",
           'LIBRARY_SEARCH_PATHS[sdk=iphoneos*]' =>
-            "$(inherited) \\"#{mopro_xcf}/ios-arm64\\" \\"#{semaphore_xcf}/ios-arm64\\"#{zktls_dev}",
+            "$(inherited) \\"#{mopro_xcf}/ios-arm64\\" \\"#{semaphore_xcf}/ios-arm64\\"",
         }
 
         existing = File.read(xcconfig_path)
