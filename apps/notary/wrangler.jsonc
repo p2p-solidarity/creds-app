@@ -1,6 +1,7 @@
 // creds.id notary — Gimmy's Cloudflare account (docs/ref/10 §3.1).
-// Production needs the offline root ceremony (§3.6) before its first deploy;
-// `dev` runs on a dev root and skips the creds.id registration check.
+// Production (`bun run deploy`) signs under the root pinned in
+// packages/shared/src/zktls/notary.ts; `dev` runs on a dev root and skips the
+// creds.id registration check.
 {
   "name": "creds-notary",
   "main": "src/worker.ts",
