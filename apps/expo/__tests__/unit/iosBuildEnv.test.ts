@@ -964,6 +964,8 @@ rm -rf "$work"
         AIRMEISHI_PASSPORT_NOIR_DIR: passportNoirDir,
         AIRMEISHI_REPO_ROOT: fixtureRoot,
         AIRMEISHI_SEMAPHORE_SWIFT_ZIP_URL: 'https://example.invalid/semaphore.zip',
+        // The curl stub cannot serve the pinned prover; an empty pin builds without it.
+        AIRMEISHI_ZKTLS_SHA256: '',
         COMMAND_LOG: logPath,
         PATH: `${fakeBin}:${process.env['PATH'] ?? ''}`,
       },
@@ -1070,6 +1072,8 @@ rm -rf "$work"
         AIRMEISHI_PASSPORT_OPENAC_SRS_SHA256: '',
         AIRMEISHI_REPO_ROOT: fixtureRoot,
         AIRMEISHI_SEMAPHORE_SWIFT_ZIP_URL: 'https://example.invalid/semaphore.zip',
+        // The curl stub cannot serve the pinned prover; an empty pin builds without it.
+        AIRMEISHI_ZKTLS_SHA256: '',
         COMMAND_LOG: logPath,
         PATH: `${fakeBin}:${process.env['PATH'] ?? ''}`,
       },
