@@ -15,6 +15,7 @@ import { npubToHex } from '../nostr/npub';
 import { err, ok, type Result } from '../types/result';
 import { verifyNotaryBundle, type NotaryBundle, type VerifiedEvidence } from './evidence';
 import { bioCarriesMarker, type ZktlsPlatform } from './platforms';
+import { isMarkerUrl, parseXProfile } from './xProfile';
 
 /** Platforms a Page can carry a zkTLS claim for (the others are proof plumbing). */
 export type ZktlsSocialPlatform = Extract<ZktlsPlatform, 'x' | 'telegram' | 'github' | 'website'>;
@@ -72,13 +73,18 @@ function markerReached(proof: SocialProof, profile: VerifiedEvidence, links: rea
     case 'telegram':
     case 'github':
       return bioCarriesMarker(profile.revealedValue, proof.name);
-    case 'x':
+    case 'x': {
+      if (profile.platform === 'x-profile') {
+        const urls = parseXProfile(profile.revealedValue, proof.handle);
+        return urls.ok && urls.value.some((u) => isMarkerUrl(u, proof.name));
+      }
       return links.some(
         (l) =>
           l.platform === 'x-link' &&
           bioLinksTco(profile.revealedValue, l.handle) &&
           bioCarriesMarker(l.revealedValue, proof.name),
       );
+    }
   }
 }
 
@@ -102,7 +108,10 @@ export function verifySocialProof(
   }
   const all = [profile.value, name.value, ...links];
 
-  if (profile.value.platform !== proof.platform || profile.value.handle !== proof.handle) {
+  // An X claim is proven by the bio meta (+ t.co hops) or by the embedded profile payload.
+  const profilePlatformOk =
+    profile.value.platform === proof.platform || (proof.platform === 'x' && profile.value.platform === 'x-profile');
+  if (!profilePlatformOk || profile.value.handle !== proof.handle) {
     return err('profile evidence is for another handle');
   }
   if (name.value.platform !== 'creds-name' || name.value.handle !== proof.name) {

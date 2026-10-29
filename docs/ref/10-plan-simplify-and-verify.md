@@ -145,6 +145,53 @@ TLSNotary 對「沒揭露的部分」沒有證明成本（alpha.13 #1006），�
 | IG | `instagram.com/<name>/` | 內嵌 JSON | 693 KB | 高：Container 出口被導去登入頁（P0）；只有 Worker socket 拿得到。待試「Container 經 Worker `connect()` 轉接」，在那之前沒有 notary 層 |
 | YouTube | 頻道頁 | 不在 meta，藏在約 1.3 MB 的頁面資料 | 1.3 MB | 最後做 |
 
+### 3.10 X：個人頁「網站」欄位（2026-10-29 plan）
+
+**目標**：X 的標記放在**簡介或「網站」欄位**都能驗證；一次 notary 見證，不再跳 t.co。
+
+**實測（x.com/kidneyweakx，未登入，iPhone UA）**：頁面裡內嵌 X 自己的 GraphQL 結果，形狀是 JS 字串
+`value:"{\"data\":{\"user_result_by_screen_name\":…}"`，出現 3 次：
+
+| 順序 | 大小（跳脫後） | 內容 |
+|---|---|---|
+| 1 | 707 B | 精簡個人資料：`core.screen_name`、`profile_bio.entities.description.urls[].expanded_url`（簡介裡的連結，**已展開**，例：`https://creds.id/@kidneyx`）；**沒有網站欄位** |
+| 2 | 2185 B | 完整個人資料：同上，另有 `profile_bio.entities.url.urls[].expanded_url`（網站欄位） |
+| 3 | 25 KB | 時間軸，沒有 `core.screen_name` |
+
+這段 JSON 自帶 `screen_name`，所以驗證端可以**整段解析**後確認擁有者，不用靠位元組樣式猜邊界。
+
+**設計**
+1. **新證據平台 `x-profile`**（`platforms.ts`；只是證據種類，不是 Page claim，claim 仍是 `x:@handle`）：
+   `x.com/<handle>`，揭露範圍起點 `{\"data\":{\"user_result_by_screen_name\":`，終點是這個 JS 字串的結尾（第一個**沒被跳脫**的 `"`）。
+2. **prover（`nitro-modules/attest/zktls/src/lib.rs`）**：`ProveRequest` 加兩個可省略欄位：
+   `fieldStopUnescaped`（終點略過 `\` 跳脫）、`fieldContains`（從起點的各次出現裡，挑**第一個包含此字串**的範圍；App 傳 `creds.id/@<name>`）。
+   範圍挑選抽成純函式並寫 Rust 單元測試。舊欄位行為不變（Telegram／GitHub／名稱證據照舊）。重編 xcframework → creds-app release `zktls-v0.2.0`（pre-release）→ 更新 `prepare-ios-workspace.sh` 的版本與 SHA。
+3. **shared 驗證器（tdd）**：
+   - `checkEvidenceFacts`（notary 簽章前與驗證端都跑）對 `x-profile`：揭露位元組以起點開頭、中間沒有未跳脫的 `"`；JS 字串解跳脫（只接受 `\" \\ \/ \n \r \t \b \f \uXXXX \xXX`，其他一律拒絕）→ `JSON.parse` → `data.user_result_by_screen_name.result.core.screen_name` 與 handle（不分大小寫）相同，否則拒絕。
+   - 標記只認 `result.profile_bio.entities.{description,url}.urls[].expanded_url`，且必須完全等於 `https?://(www.)?creds.id/@<name>`（可有結尾 `/`）。其他位置（置頂推文、highlights、display_url）一律不算。
+   - `verifySocialProof`：claim 是 `x` 時，profile 證據可以是 `x`（舊：簡介 meta＋t.co）或 `x-profile`（新，不需要 links）。
+   - 證據 `revealed` 上限 4096 → 8192（完整個人資料約 2.2 KB，留空間給長簡介／認證標籤）。
+   - 版本 shared 2.0.7。
+4. **notary**：Container 不改（已要求剛好一段揭露、回應 ≤ 2 MiB）；Worker 吃新 shared 後重新部署 dev 與正式。
+5. **App（`zktls/engine.ts`）**：X 先跑 `x-profile`（`fieldContains = creds.id/@<name>`）；如果 X 不再內嵌這段資料（`fieldMissing`），退回舊的簡介＋t.co 路徑。X 的說明文案改成「貼進個人簡介或『網站』欄位」。
+6. **網頁**：重新 vendor shared 2.0.7（舊 viewer 的證據 schema 不認得 `x-profile`，會顯示未驗證），部署 creds.id。
+
+**順序**：shared（tdd）→ prover（Rust 測試＋CLI）→ notary dev 部署 → CLI prover 對 dev notary 實測 x.com/kidneyweakx → notary 正式部署 → 網頁 vendor＋部署 → xcframework release＋pin → App engine＋文案 → commit／push。
+
+**E2E 能做到的**：CLI prover（就是 App 的 prover 程式碼）經 dev notary 見證 x.com/kidneyweakx，用 dev root 離線驗證；簡介標記走完整個 `x-profile` 驗證；網站欄位用 `fieldContains=kidneyweakx.com` 證明挑到完整資料那一段。
+**做不到、要擁有者做的**：網站欄位的正向驗證要把 X 網站欄位改成 `creds.id/@kidneyx`；手機上用正式 notary 跑一次（需要已註冊名稱的 npub）。
+
+**grill 結果（2026-10-29，沒有需要使用者決定的產品問題）**
+- **別人能不能偽造起點？** 不能。起點需要「`{` 後面直接接 `\"`」；別人的推文、名稱、簡介在這段資料裡都被再跳脫一層（`"` → `\\\"`、`\` → `\\\\`），在 HTML meta 裡 `"` 變 `&quot;`，都湊不出這個序列。就算湊出來，驗證端還要整段 JSON 解析成功、`screen_name` 等於 handle、標記在指定路徑，三者都過才算。
+- **擁有者自己能不能動手腳？** 揭露範圍只能有一段、從起點開始；內部引號全被跳脫，所以截短的範圍不會是完整 JSON（`JSON.parse` 拒絕）。請求行仍要是 `GET /<handle>`。
+- **選錯那一段**：`fieldContains` 讓 prover 挑第一個含標記的段落；標記在簡介 → 挑到 707 B 的精簡段（證據小），只在網站欄位 → 挑到完整段。哪一段都可以，驗證端只看內容。
+- **X 改格式**（不再內嵌、改用 `\/`、換路徑）→ prover `fieldMissing` 或驗證失敗，一律失敗不會誤過；App 退回簡介＋t.co 舊路徑，所以舊路徑程式保留。
+- **大小**：完整段約 2.2 KB；上限 8192。整份 SocialProof 約 6 KB，在中繼站事件大小內。
+- **相容**：已裝的 App（prover v0.1.0）照舊走 `x`；舊網頁 viewer 不認得 `x-profile`，所以網頁要在 App 發佈新證明之前更新（順序已排）。
+- **大小寫**：`screen_name` 與 handle 不分大小寫比對；改名後舊 handle 會 301 → prover 狀態錯誤。
+- **JS 字串跳脫**：另外接受 `\'`（合法 JS）；其他未知跳脫一律拒絕。
+- **頻率**：退回舊路徑最多多一次 session，仍在每小時 20 次內。
+
 ---
 
 ## 4. 一個身分、一張卡、一種 QR

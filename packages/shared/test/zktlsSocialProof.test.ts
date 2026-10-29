@@ -133,6 +133,84 @@ describe('verifySocialProof', () => {
   });
 });
 
+/**
+ * x.com embeds its own GraphQL result as a JS string: JSON text, escaped once more
+ * (`"` → `\"`). These fixtures are built the same way so the verifier sees real bytes.
+ */
+const X_PROFILE_START = '{\\"data\\":{\\"user_result_by_screen_name\\":';
+type XUrls = readonly { expanded_url: string; display_url?: string }[];
+function xProfilePayload(p: { screenName?: string; bioUrls?: XUrls; siteUrls?: XUrls; extra?: Record<string, unknown> } = {}): string {
+  const result = {
+    __typename: 'User',
+    core: { screen_name: p.screenName ?? 'alice' },
+    ...p.extra,
+    profile_bio: {
+      description: 'builder',
+      entities: {
+        description: { urls: (p.bioUrls ?? []).map((u) => ({ display_url: u.expanded_url.replace(/^https?:\/\//u, ''), ...u, url: 'https://t.co/AbC123' })) },
+        ...(p.siteUrls ? { url: { urls: p.siteUrls.map((u) => ({ display_url: u.expanded_url.replace(/^https?:\/\//u, ''), ...u, url: 'https://t.co/Site12' })) } } : {}),
+      },
+    },
+    rest_id: '1',
+  };
+  const json = JSON.stringify({ data: { user_result_by_screen_name: { id: 'VXNlcjox', result } } });
+  return JSON.stringify(json).slice(1, -1);
+}
+const xProfile = (revealed: string, handle = 'alice') =>
+  evidence({ platform: 'x-profile', handle, server: 'x.com', request: `GET /${handle} HTTP/1.1`, revealed });
+async function xProfileProof(revealed: string, over: Partial<SocialProof> = {}): Promise<SocialProof> {
+  return { v: 1, platform: 'x', handle: 'alice', name: 'alice', profile: await xProfile(revealed), links: [], nameEvidence: await nameEvidence(), ...over };
+}
+
+describe('X profile evidence (bio links and the website field, one hop)', () => {
+  test('fixtures start exactly where the prover anchors', () => {
+    expect(xProfilePayload().startsWith(X_PROFILE_START)).toBe(true);
+  });
+
+  test('accepts the marker as a bio link, with no t.co hop', async () => {
+    const proof = await xProfileProof(xProfilePayload({ bioUrls: [{ expanded_url: 'https://creds.id/@alice' }] }));
+    expect(verifySocialProof(proof, ALICE, opts).ok).toBe(true);
+  });
+
+  test('accepts the marker in the profile website field', async () => {
+    const proof = await xProfileProof(xProfilePayload({ siteUrls: [{ expanded_url: 'http://creds.id/@alice' }] }));
+    expect(verifySocialProof(proof, ALICE, opts).ok).toBe(true);
+  });
+
+  test('accepts www and a trailing slash, and a differently cased screen name', async () => {
+    const revealed = xProfilePayload({ screenName: 'Alice', siteUrls: [{ expanded_url: 'https://www.creds.id/@alice/' }] });
+    expect(verifySocialProof(await xProfileProof(revealed), ALICE, opts).ok).toBe(true);
+  });
+
+  test('rejects another name, a look-alike host or a longer path', async () => {
+    for (const url of ['https://creds.id/@alicex', 'https://notcreds.id/@alice', 'https://creds.id.evil.com/@alice', 'https://creds.id/@alice/x', 'creds.id/@alice']) {
+      const proof = await xProfileProof(xProfilePayload({ siteUrls: [{ expanded_url: url }] }));
+      expect(verifySocialProof(proof, ALICE, opts).ok).toBe(false);
+    }
+  });
+
+  test('rejects a link whose shown text is the marker but which leads elsewhere', async () => {
+    const proof = await xProfileProof(xProfilePayload({ siteUrls: [{ expanded_url: 'https://evil.example', display_url: 'creds.id/@alice' }] }));
+    expect(verifySocialProof(proof, ALICE, opts).ok).toBe(false);
+  });
+
+  test('rejects the marker anywhere outside the bio links and website field', async () => {
+    const pinned = { legacy: { pinned_tweet: { entities: { urls: [{ expanded_url: 'https://creds.id/@alice' }] } } }, highlights_info: { url: { urls: [{ expanded_url: 'https://creds.id/@alice' }] } } };
+    const proof = await xProfileProof(xProfilePayload({ extra: pinned }));
+    expect(verifySocialProof(proof, ALICE, opts).ok).toBe(false);
+  });
+
+  test('rejects a profile payload that belongs to another account', async () => {
+    const proof = await xProfileProof(xProfilePayload({ screenName: 'mallory', siteUrls: [{ expanded_url: 'https://creds.id/@alice' }] }));
+    expect(verifySocialProof(proof, ALICE, opts).ok).toBe(false);
+  });
+
+  test('X profile evidence cannot stand in for another platform’s claim', async () => {
+    const profile = await xProfile(xProfilePayload({ siteUrls: [{ expanded_url: 'https://creds.id/@alice' }] }));
+    expect(verifySocialProof(await telegramProof({ handle: 'alice', profile }), ALICE, opts).ok).toBe(false);
+  });
+});
+
 describe('verifyPageSocialProof', () => {
   const page = (alsoKnownAs: string[]) => ({ alsoKnownAs });
 

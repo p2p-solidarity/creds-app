@@ -134,6 +134,40 @@ describe('checkEvidenceFacts', () => {
   });
 });
 
+describe('checkEvidenceFacts — X profile payload', () => {
+  const base = { platform: 'x-profile' as const, handle: 'alice', server: 'x.com', request: 'GET /alice HTTP/1.1' };
+  const payload = (screenName = 'alice') =>
+    JSON.stringify(JSON.stringify({ data: { user_result_by_screen_name: { result: { core: { screen_name: screenName }, profile_bio: { entities: {} } } } } })).slice(1, -1);
+
+  test('accepts the whole embedded payload of the claimed account', () => {
+    expect(checkEvidenceFacts({ ...base, revealed: payload() }).ok).toBe(true);
+  });
+
+  test('rejects bytes that do not start at the payload', () => {
+    expect(checkEvidenceFacts({ ...base, revealed: `x${payload()}` }).ok).toBe(false);
+  });
+
+  test('rejects a range that runs past the end of the JS string', () => {
+    expect(checkEvidenceFacts({ ...base, revealed: `${payload()}"},$R[2]={` }).ok).toBe(false);
+  });
+
+  test('rejects a truncated payload, an unknown escape or trailing bytes', () => {
+    const p = payload();
+    expect(checkEvidenceFacts({ ...base, revealed: p.slice(0, -4) }).ok).toBe(false);
+    expect(checkEvidenceFacts({ ...base, revealed: p.replace('alice', 'ali\\qce') }).ok).toBe(false);
+    expect(checkEvidenceFacts({ ...base, revealed: `${p}1` }).ok).toBe(false);
+  });
+
+  test('rejects a payload for another screen name', () => {
+    expect(checkEvidenceFacts({ ...base, revealed: payload('mallory') }).ok).toBe(false);
+  });
+
+  test('reads seroval-style \\x escapes', () => {
+    const p = payload().replace('\\"core', '\\"bio\\":\\"\\x3Cb\\x3E\\",\\"core');
+    expect(checkEvidenceFacts({ ...base, revealed: p }).ok).toBe(true);
+  });
+});
+
 describe('bioCarriesMarker', () => {
   test('matches creds.id/@name only on a name boundary', () => {
     expect(bioCarriesMarker('find me at creds.id/@alice.', 'alice')).toBe(true);

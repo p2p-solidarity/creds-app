@@ -20,11 +20,12 @@ import { signCompact, verifyCompact, type Signer } from '../jws';
 import { npubToHex } from '../nostr/npub';
 import { err, ok, type Result } from '../types/result';
 import { profileTarget, ZKTLS_PLATFORMS, type ZktlsPlatform } from './platforms';
+import { parseXProfile } from './xProfile';
 
 export const EVIDENCE_TYP = 'creds.zktls.evidence/v1';
 export const NOTARY_CERT_TYP = 'creds.notary.cert/v1';
 
-const platformSchema = z.enum(['x', 'x-link', 'telegram', 'github', 'website', 'creds-name']);
+const platformSchema = z.enum(['x', 'x-link', 'x-profile', 'telegram', 'github', 'website', 'creds-name']);
 
 const evidenceSchema = z
   .object({
@@ -33,7 +34,7 @@ const evidenceSchema = z
     handle: z.string(),
     server: z.string(),
     request: z.string(),
-    revealed: z.string().max(4096),
+    revealed: z.string().max(8192),
     npub: z.string(),
     iat: z.number().int().positive(),
     tlsn: z.string().max(64),
@@ -93,6 +94,11 @@ export function checkEvidenceFacts(facts: EvidenceFacts): Result<string, string>
   }
   const { start, stop } = rule.field(facts.handle);
   if (!facts.revealed.startsWith(start)) return err('revealed bytes are not anchored on the owner field');
+  if (facts.platform === 'x-profile') {
+    // The anchor is part of the payload: the value is all of it, parsed whole.
+    const links = parseXProfile(facts.revealed, facts.handle);
+    return links.ok ? ok(facts.revealed) : links;
+  }
   const value = facts.revealed.slice(start.length);
   if (value.includes(stop)) return err('revealed bytes run past the owner field');
   return ok(value);

@@ -12,14 +12,20 @@
  */
 import { err, ok, type Result } from '../types/result';
 
-export type ZktlsPlatform = 'x' | 'x-link' | 'telegram' | 'github' | 'website' | 'creds-name';
+export type ZktlsPlatform = 'x' | 'x-link' | 'x-profile' | 'telegram' | 'github' | 'website' | 'creds-name';
 
 export interface PlatformRule {
   readonly handlePattern: RegExp;
   readonly host: (handle: string) => string;
   readonly path: (handle: string) => string;
-  /** Owner-controlled field; `null` = the revealed bytes are the marker alone (websites). */
-  readonly field: ((handle: string) => { readonly start: string; readonly stop: string }) | null;
+  /**
+   * Owner-controlled field; `null` = the revealed bytes are the marker alone (websites).
+   * `stopUnescaped`: the field is a JS string literal, so it ends at the first `stop`
+   * byte that is not backslash-escaped.
+   */
+  readonly field:
+    | ((handle: string) => { readonly start: string; readonly stop: string; readonly stopUnescaped?: true })
+    | null;
 }
 
 export const ZKTLS_PLATFORMS: Readonly<Record<ZktlsPlatform, PlatformRule>> = {
@@ -36,6 +42,16 @@ export const ZKTLS_PLATFORMS: Readonly<Record<ZktlsPlatform, PlatformRule>> = {
     host: () => 't.co',
     path: (h) => `/${h}`,
     field: () => ({ start: '<title>', stop: '<' }),
+  },
+  // Logged-out x.com also embeds its own GraphQL profile as a JS string; it names the
+  // account (`core.screen_name`) and carries the bio links and the website field
+  // already expanded, so one witness covers both (docs/ref/10 §3.10). Checked by
+  // parsing the whole payload (`xProfile.ts`), not by byte pattern.
+  'x-profile': {
+    handlePattern: /^[A-Za-z0-9_]{1,15}$/u,
+    host: () => 'x.com',
+    path: (h) => `/${h}`,
+    field: () => ({ start: '{\\"data\\":{\\"user_result_by_screen_name\\":', stop: '"', stopUnescaped: true }),
   },
   telegram: {
     handlePattern: /^[A-Za-z0-9_]{5,32}$/u,

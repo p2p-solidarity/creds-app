@@ -13,8 +13,10 @@ import { join } from 'node:path';
 import { buildNip98Authorization, bytesToHex } from '@solidarity/shared';
 import { signNostrEventWithScalar, type UnsignedNostrEvent } from '@solidarity/shared/nostr';
 import {
+  isMarkerUrl,
   notaryEvidenceUrl,
   notarySessionUrl,
+  parseXProfile,
   profileTarget,
   verifyNotaryBundle,
   ZKTLS_PLATFORMS,
@@ -26,8 +28,12 @@ const prover = process.env['PROVER'];
 if (!origin || !prover) throw new Error('NOTARY_ORIGIN and PROVER are required');
 const root = readFileSync(join(import.meta.dir, '..', 'keys', 'dev.root'), 'utf8').trim();
 
-const TARGETS: { platform: ZktlsPlatform; handle: string }[] = [
+// `contains` picks which embedded X profile payload the prover reveals (docs/ref/10 §3.10):
+// the bio marker selects the slim one, the website-field value the full one.
+const TARGETS: { platform: ZktlsPlatform; handle: string; contains?: string }[] = [
   { platform: 'x', handle: 'jack' },
+  { platform: 'x-profile', handle: 'kidneyweakx', contains: 'creds.id/@kidneyx' },
+  { platform: 'x-profile', handle: 'kidneyweakx', contains: 'kidneyweakx.com' },
   { platform: 'telegram', handle: 'durov' },
   { platform: 'creds-name', handle: 'gimmy' },
 ];
@@ -42,7 +48,7 @@ async function auth(url: string, scalar: Uint8Array): Promise<string> {
   return header.value;
 }
 
-async function prove(platform: ZktlsPlatform, handle: string, scalar: Uint8Array, stranger?: Uint8Array) {
+async function prove(platform: ZktlsPlatform, handle: string, scalar: Uint8Array, stranger?: Uint8Array, contains?: string) {
   const sid = bytesToHex(crypto.getRandomValues(new Uint8Array(16)));
   const sessionUrl = notarySessionUrl(origin as string, { platform, handle, name: 'e2e', sid });
   const target = profileTarget(platform, handle);
@@ -60,6 +66,8 @@ async function prove(platform: ZktlsPlatform, handle: string, scalar: Uint8Array
         path: target.value.request.split(' ')[1],
         fieldStart: field.start,
         fieldStop: field.stop,
+        fieldStopUnescaped: field.stopUnescaped === true,
+        ...(contains ? { fieldContains: contains } : {}),
       }),
     ),
   });
@@ -83,9 +91,9 @@ const scalar = crypto.getRandomValues(new Uint8Array(32));
 const stranger = crypto.getRandomValues(new Uint8Array(32));
 let failures = 0;
 
-for (const { platform, handle } of TARGETS) {
+for (const { platform, handle, contains } of TARGETS) {
   try {
-    const r = await prove(platform, handle, scalar, platform === 'telegram' ? stranger : undefined);
+    const r = await prove(platform, handle, scalar, platform === 'telegram' ? stranger : undefined, contains);
     if (!r.verified.ok) {
       failures++;
       console.log(`FAIL ${platform}/${handle}: offline verify ${r.verified.error}`);
@@ -94,6 +102,10 @@ for (const { platform, handle } of TARGETS) {
     const v = r.verified.value;
     console.log(`OK   ${platform}/${handle} in ${r.elapsed} ms (prover ${r.proverOut}); bundle ${r.bundleBytes} B; key ${v.notaryKey.slice(0, 20)}…`);
     console.log(`     revealed: ${v.revealedValue.slice(0, 120)}`);
+    if (platform === 'x-profile') {
+      const links = parseXProfile(v.revealedValue, handle);
+      console.log(`     profile links: ${links.ok ? links.value.join(', ') : links.error}; creds.id/@kidneyx marker: ${links.ok && links.value.some((u) => isMarkerUrl(u, 'kidneyx'))}`);
+    }
 
     if (platform === 'telegram') {
       const replay = await fetch(r.sessionUrl, { headers: { Authorization: r.sessionAuth } });
