@@ -129,10 +129,10 @@ export default function VerifySocialScreen(): ReactNode {
 
         {screen.kind === 'intro' || screen.kind === 'waiting' ? (
           <>
-            <MarkerCard marker={marker} platformName={platformName} website={target.platform === 'website'} />
+            <MarkerCard marker={marker} platformName={platformName} platform={target.platform} />
             {screen.kind === 'waiting' ? (
               <ThemedText variant="bodySmall" tone="secondary">
-                {t('zktls.waiting', { platform: platformName })}
+                {t(target.platform === 'x' ? 'zktls.waitingX' : 'zktls.waiting', { platform: platformName })}
               </ThemedText>
             ) : null}
             <ThemedButton
@@ -263,18 +263,20 @@ function TargetRow({ target }: { readonly target: SocialTarget }): ReactNode {
 function MarkerCard({
   marker,
   platformName,
-  website,
+  platform,
 }: {
   readonly marker: string;
   readonly platformName: string;
-  readonly website: boolean;
+  readonly platform: ZktlsSocialPlatform;
 }): ReactNode {
   const { t } = useTranslation();
   const c = useThemeColors();
   return (
     <View style={{ gap: 10 }}>
       <ThemedText variant="bodySmall" tone="secondary">
-        {website ? t('zktls.instructionsWebsite') : t('zktls.instructions', { platform: platformName })}
+        {platform === 'website'
+          ? t('zktls.instructionsWebsite')
+          : t(platform === 'x' ? 'zktls.instructionsX' : 'zktls.instructions', { platform: platformName })}
       </ThemedText>
       <View
         style={{

@@ -6,8 +6,10 @@
  *
  * Each notary call is NIP-98 signed with the npub key (no Face ID), so this
  * runs unattended for the 30-day renewal too. Pieces run in parallel where
- * they can: the platform page and the name evidence together; X's t.co hops
- * after its bio, because the bio names them.
+ * they can: the platform page and the name evidence together. X is proven
+ * from the profile payload x.com embeds (bio links and the website field,
+ * already expanded — §3.10); only if that payload is gone does it fall back
+ * to the bio meta plus its t.co hops.
  */
 import { getZktls } from '@solidarity/nitro-attest';
 import {
@@ -84,7 +86,12 @@ async function nip98(url: string): Promise<Result<string, ProofFailure>> {
 }
 
 /** One notary-witnessed page: prove on device, then pick the signed evidence up. */
-async function witness(platform: ZktlsPlatform, handle: string, name: string): Promise<Result<NotaryBundle, ProofFailure>> {
+async function witness(
+  platform: ZktlsPlatform,
+  handle: string,
+  name: string,
+  fieldContains?: string,
+): Promise<Result<NotaryBundle, ProofFailure>> {
   const prover = getZktls();
   if (!prover?.isAvailable) return err('unavailable');
   const target = profileTarget(platform, handle);
@@ -107,6 +114,8 @@ async function witness(platform: ZktlsPlatform, handle: string, name: string): P
           path: target.value.request.split(' ')[1],
           fieldStart: field.start,
           fieldStop: field.stop,
+          fieldStopUnescaped: field.stopUnescaped === true,
+          ...(fieldContains === undefined ? {} : { fieldContains }),
         }),
       ),
     ) as ProverResult;
@@ -147,15 +156,21 @@ export async function proveSocialTarget(target: SocialTarget, name: string): Pro
   const npub = await currentNpub();
   if (!npub.ok) return npub;
 
-  const [profile, nameEvidence] = await Promise.all([
-    witness(target.platform, target.handle, name),
+  const [first, nameEvidence] = await Promise.all([
+    target.platform === 'x'
+      ? witness('x-profile', target.handle, name, `creds.id/@${name}`)
+      : witness(target.platform, target.handle, name),
     witness('creds-name', name, name),
   ]);
-  if (!profile.ok) return profile;
   if (!nameEvidence.ok) return nameEvidence;
+  // No embedded profile holding the marker (X changed the page, or the marker is missing):
+  // the bio meta + t.co route below still proves a bio marker, or reports it missing.
+  const viaBio = target.platform === 'x' && !first.ok && first.error === 'blocked';
+  const profile = viaBio ? await witness('x', target.handle, name) : first;
+  if (!profile.ok) return profile;
 
   const links: NotaryBundle[] = [];
-  if (target.platform === 'x') {
+  if (viaBio) {
     const bio = revealedBio(profile.value) ?? '';
     const ids = [...new Set([...bio.matchAll(TCO_RE)].map((m) => m[1] ?? '').filter((id) => id !== ''))].slice(0, MAX_TCO_HOPS);
     if (ids.length === 0) return err('markerMissing');
