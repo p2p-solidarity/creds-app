@@ -22,6 +22,9 @@ export const CREDS_ANDROID_SIGNATURE_DIGESTS_HEX: readonly string[] = [
   'be3844b19f74375e9b6f9c8ac9349fcff5347ee45f556f8c27172e901f3e2de8', // upload key
 ];
 
+/** Where Pro Pages queue for the creds.id notary's hourly witness batch. */
+export const CREDS_NOTARY_ORIGIN = 'https://creds-notary.gimmychang.workers.dev';
+
 /**
  * Hex pubkey(s) of the creds.id Pro notary's Nostr key. Empty until the
  * notary key is provisioned (`apps/notary/scripts/witness-key.ts`): until

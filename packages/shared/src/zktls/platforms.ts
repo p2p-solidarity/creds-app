@@ -1,25 +1,20 @@
 /**
- * zkTLS platform rules (docs/ref/10 §3.9) — which public page proves a
- * handle, and which owner-controlled field of that page the prover reveals.
- *
- * One table drives all three parties: the app prover builds the request and
- * picks the reveal range from it, the notary refuses any session outside it,
- * and verifiers re-check the revealed bytes against it. A rule's `field` is
- * the exact markup that opens the owner-controlled value; the revealed bytes
- * must start there and stop before `stop`, so a marker pasted into someone
- * else's reply, README or pinned post can never stand in for the owner's own
- * field. Markup changes on a platform make proofs fail closed, never pass.
+ * Platform rules (docs/ref/10 §3.9, §3.11) — which public page shows a
+ * handle's owner field, and the exact markup around it. One table drives
+ * every checker: the owner's phone, a viewer's phone and the Pro notary all
+ * read the page themselves and accept the marker only inside that field, so a
+ * marker pasted into someone else's reply, README or pinned post never counts.
+ * Markup changes on a platform make checks fail closed, never pass.
  */
-import { err, ok, type Result } from '../types/result';
 
-export type ZktlsPlatform = 'x' | 'x-link' | 'x-profile' | 'telegram' | 'github' | 'website' | 'creds-name';
+export type ZktlsPlatform = 'x' | 'x-link' | 'x-profile' | 'telegram' | 'github' | 'website';
 
 export interface PlatformRule {
   readonly handlePattern: RegExp;
   readonly host: (handle: string) => string;
   readonly path: (handle: string) => string;
   /**
-   * Owner-controlled field; `null` = the revealed bytes are the marker alone (websites).
+   * Owner-controlled field; `null` = the marker may sit anywhere on the page (websites).
    * `stopUnescaped`: the field is a JS string literal, so it ends at the first `stop`
    * byte that is not backslash-escaped.
    */
@@ -66,19 +61,12 @@ export const ZKTLS_PLATFORMS: Readonly<Record<ZktlsPlatform, PlatformRule>> = {
     path: (h) => `/${h}`,
     field: () => ({ start: 'rel="nofollow me" class="Link--primary wb-break-all" href="', stop: '"' }),
   },
-  // The whole homepage is owner-controlled, so the marker alone is revealed.
+  // The whole homepage is owner-controlled, so the marker may sit anywhere on it.
   website: {
     handlePattern: /^(?=.{4,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/u,
     host: (h) => h,
     path: () => '/',
     field: null,
-  },
-  // creds.id's NIP-05 directory: proves name → npub at proof time (grill Q4).
-  'creds-name': {
-    handlePattern: /^[a-z0-9]{3,30}$/u,
-    host: () => 'creds.id',
-    path: (h) => `/.well-known/nostr.json?name=${h}`,
-    field: (h) => ({ start: `"names":{"${h}":"`, stop: '"' }),
   },
 };
 
@@ -91,25 +79,6 @@ export function isAllowedWebsiteHost(host: string): boolean {
     if (host === reserved || host.endsWith(`.${reserved}`)) return false;
   }
   return !host.endsWith('.localhost') && !host.endsWith('.local') && !host.endsWith('.internal');
-}
-
-export function isZktlsPlatform(value: unknown): value is ZktlsPlatform {
-  return typeof value === 'string' && Object.hasOwn(ZKTLS_PLATFORMS, value);
-}
-
-export function requestLineFor(platform: ZktlsPlatform, handle: string): string {
-  return `GET ${ZKTLS_PLATFORMS[platform].path(handle)} HTTP/1.1`;
-}
-
-/** The only page a proof for `handle` may fetch: its host and exact request line. */
-export function profileTarget(
-  platform: ZktlsPlatform,
-  handle: string,
-): Result<{ readonly server: string; readonly request: string }, string> {
-  const rule = ZKTLS_PLATFORMS[platform];
-  if (!rule.handlePattern.test(handle)) return err('handle does not match the platform pattern');
-  if (platform === 'website' && !isAllowedWebsiteHost(handle)) return err('website host is not allowed');
-  return ok({ server: rule.host(handle), request: requestLineFor(platform, handle) });
 }
 
 const MARKER_DOMAIN = 'creds.id/@';

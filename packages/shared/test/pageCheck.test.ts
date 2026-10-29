@@ -90,3 +90,50 @@ describe('checkSocialMarker', () => {
     expect(await checkSocialMarker(target, 'kidneyx', fetcher({ 'https://github.com/kidneyweakx': { ok: false, error: 'network' } }))).toEqual({ ok: false, error: 'network' });
   });
 });
+
+/**
+ * X embeds its own GraphQL profile as a JS string (JSON escaped once more).
+ * Ported from the notary-era evidence tests: the same attacks must fail when
+ * a phone reads the page itself.
+ */
+type XUrls = readonly { expanded_url: string; display_url?: string }[];
+function xPage(p: { screenName?: string; bioUrls?: XUrls; siteUrls?: XUrls; extra?: Record<string, unknown> } = {}): string {
+  const result = {
+    __typename: 'User',
+    core: { screen_name: p.screenName ?? 'alice' },
+    ...p.extra,
+    profile_bio: {
+      description: 'builder',
+      entities: {
+        description: { urls: (p.bioUrls ?? []).map((u) => ({ display_url: u.expanded_url.replace(/^https?:\/\//u, ''), ...u, url: 'https://t.co/AbC123' })) },
+        ...(p.siteUrls ? { url: { urls: p.siteUrls.map((u) => ({ display_url: u.expanded_url.replace(/^https?:\/\//u, ''), ...u, url: 'https://t.co/Site12' })) } } : {}),
+      },
+    },
+    rest_id: '1',
+  };
+  const json = JSON.stringify({ data: { user_result_by_screen_name: { id: 'VXNlcjox', result } } });
+  return `<script>window.x={value:"${JSON.stringify(json).slice(1, -1)}"}</script>`;
+}
+
+describe('X embedded profile', () => {
+  test('the marker as a bio link or in the website field passes', () => {
+    expect(markerInPage('x', 'alice', 'alice', xPage({ bioUrls: [{ expanded_url: 'https://creds.id/@alice' }] }))).toBe('found');
+    expect(markerInPage('x', 'alice', 'alice', xPage({ siteUrls: [{ expanded_url: 'http://creds.id/@alice' }] }))).toBe('found');
+    expect(markerInPage('x', 'alice', 'alice', xPage({ screenName: 'Alice', siteUrls: [{ expanded_url: 'https://www.creds.id/@alice/' }] }))).toBe('found');
+  });
+
+  test('another name, a look-alike host or a longer path does not', () => {
+    for (const url of ['https://creds.id/@alicex', 'https://notcreds.id/@alice', 'https://creds.id.evil.com/@alice', 'https://creds.id/@alice/x', 'creds.id/@alice']) {
+      expect(markerInPage('x', 'alice', 'alice', xPage({ siteUrls: [{ expanded_url: url }] }))).toBe('missing');
+    }
+  });
+
+  test('a link whose shown text is the marker but leads elsewhere does not', () => {
+    expect(markerInPage('x', 'alice', 'alice', xPage({ siteUrls: [{ expanded_url: 'https://evil.example', display_url: 'creds.id/@alice' }] }))).toBe('missing');
+  });
+
+  test('the marker outside the bio links and website field does not', () => {
+    const pinned = { legacy: { pinned_tweet: { entities: { urls: [{ expanded_url: 'https://creds.id/@alice' }] } } } };
+    expect(markerInPage('x', 'alice', 'alice', xPage({ extra: pinned }))).toBe('missing');
+  });
+});

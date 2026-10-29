@@ -67,9 +67,7 @@ import {
   err,
   isNip05Identifier,
   ok,
-  pageSocialClaim,
   type Result,
-  type SocialProof,
 } from '@solidarity/shared';
 
 import { getNostrPubkey, signNostrEvent, type UnsignedNostrEvent } from './userKey';
@@ -250,35 +248,6 @@ export async function publishPublicDisclosure(
   const dTag = buildPublicDisclosureDTag(opts.slot);
   if (!dTag.ok) return err(`publishPublicDisclosure: ${dTag.error.detail}`);
   return publishNip78Record(opts, dTag.value, 'publishPublicDisclosure');
-}
-
-/** NIP-78 slot prefix for zkTLS social proofs: `creds.zktls:x:@alice` (docs/ref/10 §3.1). */
-export const SOCIAL_PROOF_D_TAG_PREFIX = 'creds.zktls:';
-
-export interface PublishSocialProofOptions {
-  readonly proof: SocialProof;
-  readonly relays: readonly string[];
-  readonly timeoutMs?: number;
-  readonly publishEventFn?: PublishEventFn;
-}
-
-/**
- * Publish one zkTLS proof under its own parameterized NIP-78 slot, signed by
- * the npub the evidence is bound to. Separate from the Page on purpose: the
- * 30-day renewal replaces this event without re-signing the Page (no Face ID).
- */
-export async function publishSocialProof(opts: PublishSocialProofOptions): Promise<Result<PublishReport, string>> {
-  const dTag = `${SOCIAL_PROOF_D_TAG_PREFIX}${pageSocialClaim(opts.proof.platform, opts.proof.handle)}`;
-  return publishNip78Record(
-    {
-      jws: JSON.stringify(opts.proof),
-      relays: opts.relays,
-      ...(opts.timeoutMs !== undefined ? { timeoutMs: opts.timeoutMs } : {}),
-      ...(opts.publishEventFn !== undefined ? { publishEventFn: opts.publishEventFn } : {}),
-    },
-    dTag,
-    'publishSocialProof'
-  );
 }
 
 // ── Direction 2: merge did:key into kind-0 `alsoKnownAs` ──────────────────

@@ -1,10 +1,9 @@
 /**
  * Local page check (docs/ref/10 §3.11 tiers 3–4): the owner's phone, a
  * viewer's phone, or the Pro notary fetches a public profile itself and checks
- * the owner's own field for `creds.id/@<name>` with the same platform rules
- * the notary evidence used. No TLS transcript: the trust comes from who
- * fetched (a device-attested app, or the reader's own phone), not from the
- * fetch itself.
+ * the owner's own field for `creds.id/@<name>` with the shared platform
+ * rules. No TLS transcript: the trust comes from who fetched (a
+ * device-attested app, or the reader's own phone), not from the fetch itself.
  */
 import { err, ok, type Result } from '../types/result';
 import type { SocialTarget } from './links';
