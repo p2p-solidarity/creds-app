@@ -31,6 +31,7 @@ import { showError } from '@/feedback/appAlert';
 import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
 import { uuid, type Contact } from '@solidarity/shared';
+import { textFont } from '@/constants/fonts';
 
 export interface ManualContactEntrySheetProps {
   readonly visible: boolean;
@@ -211,7 +212,7 @@ function ManualContactEntryContent({
             <Text
               style={{
                 fontSize: 12,
-                fontFamily: 'Menlo',
+                fontFamily: textFont(),
                 color: Colors.destructive,
                 paddingTop: 4,
               }}>
@@ -296,7 +297,7 @@ function FieldRow({
 }: FieldRowProps): ReactNode {
   return (
     <View style={{ rowGap: 6 }}>
-      <Text className="text-text3" style={{ fontSize: 12, fontWeight: '700', fontFamily: 'Menlo' }}>
+      <Text className="text-text3" style={{ fontSize: 12, fontFamily: textFont('700') }}>
         {label}
       </Text>
       <View

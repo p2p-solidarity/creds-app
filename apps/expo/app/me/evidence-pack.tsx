@@ -48,6 +48,7 @@ import type {
   VerifyAtprotoBindingResult,
   VerifyNostrBindingResult,
 } from '@solidarity/shared';
+import { MONO } from '@/constants/fonts';
 
 type PackState =
   | { readonly kind: 'idle' }
@@ -191,14 +192,14 @@ export default function EvidencePackScreen(): ReactNode {
 
           {estimate ? (
             estimate.ok ? (
-              <ThemedText variant="caption" tone="tertiary" style={{ fontFamily: 'Menlo' }}>
+              <ThemedText variant="caption" tone="tertiary">
                 {t('evidencePack.sizeLine', {
                   chars: estimate.chars,
                   version: estimate.qrVersion,
                 })}
               </ThemedText>
             ) : (
-              <ThemedText variant="caption" style={{ color: Colors.warningText, fontFamily: 'Menlo' }}>
+              <ThemedText variant="caption" style={{ color: Colors.warningText }}>
                 {t('evidencePack.overCapacity', { chars: estimate.chars })}
               </ThemedText>
             )
@@ -235,7 +236,7 @@ export default function EvidencePackScreen(): ReactNode {
                   accessibilityLabel={t('evidencePack.qrLabel')}
                 />
               </View>
-              <ThemedText variant="caption" tone="tertiary" style={{ fontFamily: 'Menlo' }}>
+              <ThemedText variant="caption" tone="tertiary">
                 {t('evidencePack.metaLine', { chars: pack.chars, version: pack.qrVersion })}
               </ThemedText>
               <ThemedText variant="caption" tone="tertiary">
@@ -268,7 +269,7 @@ function IdentityRow({
         {name}
         {username ? `  @${username}` : ''}
       </ThemedText>
-      <ThemedText variant="caption" tone="tertiary" numberOfLines={1} style={{ fontFamily: 'Menlo' }}>
+      <ThemedText variant="caption" tone="tertiary" numberOfLines={1} style={{ fontFamily: MONO }}>
         {did}
       </ThemedText>
       <ThemedText variant="caption" tone="tertiary">

@@ -30,6 +30,7 @@ import Svg, { Circle, Defs, LinearGradient as SvgLg, Stop } from 'react-native-s
 import { SfIcon } from '@/components/icons/SfIcon';
 import { Colors } from '@/constants/Colors';
 import { haptic } from '@/feedback/haptics';
+import { MONO } from '@/constants/fonts';
 
 export type RippleButtonState = 'idle' | 'processing' | 'success' | 'syncNeeded';
 
@@ -287,7 +288,7 @@ function renderCenterContent({
           <Text
             style={{
               color: '#FFF',
-              fontFamily: 'Menlo',
+              fontFamily: MONO,
               fontSize: 12,
               paddingHorizontal: 8,
               paddingVertical: 4,

@@ -64,7 +64,7 @@ module.exports = {
         sm3: '3px',
       },
       fontFamily: {
-        sans: ['System'],
+        sans: ['Inter-Regular'],
       },
     },
   },

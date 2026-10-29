@@ -24,6 +24,7 @@ import Animated, {
 
 import { Colors } from '@/constants/Colors';
 import { ON_DARK } from '@/components/themed';
+import { MONO } from '@/constants/fonts';
 
 export type RippleButtonState = 'idle' | 'processing';
 
@@ -202,7 +203,7 @@ const styles = StyleSheet.create({
     color: ON_DARK,
     opacity: 0.85,
     fontSize: 13,
-    fontFamily: 'Menlo',
+    fontFamily: MONO,
     marginTop: 6,
   },
 });

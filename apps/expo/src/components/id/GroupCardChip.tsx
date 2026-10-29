@@ -15,8 +15,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { SfIcon } from '@/components/icons/SfIcon';
 import { Colors } from '@/constants/Colors';
+import { textFont } from '@/constants/fonts';
 
-const MONO_FONT = 'Menlo';
 
 export type GroupChipStatus = 'active' | 'outdated' | 'pending' | 'notMember';
 
@@ -159,8 +159,7 @@ export function GroupCardChip({
           style={{
             color: Colors.text1,
             fontSize: 12,
-            fontFamily: MONO_FONT,
-            fontWeight: '700',
+            fontFamily: textFont('700'),
           }}
         >
           {membership.name}

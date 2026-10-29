@@ -30,8 +30,8 @@ import {
   useIdentitySnapshot,
   useZkIdentity,
 } from '@/zk';
+import { MONO } from '@/constants/fonts';
 
-const MONO_FONT = 'Menlo';
 
 /* ------------------------------------------------------------------ */
 /* Section frame helpers                                              */
@@ -41,7 +41,6 @@ export function SectionHeader({ title }: { readonly title: string }): ReactNode 
   return (
     <Text
       className="text-text2 text-[12px] font-bold"
-      style={{ fontFamily: MONO_FONT }}
     >
       {title}
     </Text>
@@ -84,7 +83,7 @@ function LabeledRow({
         numberOfLines={1}
         ellipsizeMode="middle"
         className={`${tone === 'secondary' ? 'text-text2' : 'text-text1'} text-[13px] flex-1 text-right`}
-        style={mono ? { fontFamily: MONO_FONT } : undefined}
+        style={mono ? { fontFamily: MONO } : undefined}
       >
         {value}
       </Text>
@@ -193,7 +192,7 @@ export function MerkleTreeSection({
             <Text
               selectable
               className="text-text1 text-[12px] p-2 bg-searchBg rounded-lg"
-              style={{ fontFamily: MONO_FONT }}
+              style={{ fontFamily: MONO }}
             >
               {root}
             </Text>
@@ -301,7 +300,7 @@ export function IdentityInfoSection({
           <Text
             selectable
             className="text-text1 text-[12px]"
-            style={{ fontFamily: MONO_FONT }}
+            style={{ fontFamily: MONO }}
           >
             {userId}
           </Text>
@@ -325,7 +324,7 @@ export function IdentityInfoSection({
               numberOfLines={2}
               ellipsizeMode="middle"
               className="text-text1 text-[12px]"
-              style={{ fontFamily: MONO_FONT }}
+              style={{ fontFamily: MONO }}
             >
               {commitment}
             </Text>

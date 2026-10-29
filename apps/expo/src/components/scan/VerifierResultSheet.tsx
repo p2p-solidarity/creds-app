@@ -15,6 +15,7 @@ import { SfIcon } from '@/components/icons/SfIcon';
 import { SolidarityPlaceholderCard } from '@/components/passport/SolidarityPlaceholderCard';
 import { ThemedButton, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
+import { MONO } from '@/constants/fonts';
 
 export interface VerifierResult {
   readonly valid: boolean;
@@ -101,7 +102,7 @@ function SheetBody({
             <ThemedText
               variant="bodySmall"
               tone="secondary"
-              style={{ fontFamily: 'Menlo' }}
+              style={{ fontFamily: MONO }}
               selectable
             >
               {result.issuerDid}

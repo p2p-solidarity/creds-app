@@ -284,7 +284,6 @@ function QrPreview({
           <ThemedText
             variant="caption"
             tone="tertiary"
-            style={{ fontFamily: 'Menlo' }}
           >
             {t('shareSettings.createCardFirst')}
           </ThemedText>
@@ -312,13 +311,13 @@ function FieldToggles({
         <ThemedText
           variant="caption"
           tone="tertiary"
-          style={{ fontFamily: 'Menlo', fontWeight: '700' }}
+          style={{ fontWeight: '700' }}
         >
           {t('shareSettings.shareFields')}
         </ThemedText>
         <ThemedText
           tone="tertiary"
-          style={{ fontFamily: 'Menlo', fontSize: 10 }}
+          style={{ fontSize: 10 }}
         >
           {t('shareSettings.vcLegendHint')}
         </ThemedText>
@@ -383,7 +382,7 @@ function ProofToggles({
       <ThemedText
         variant="caption"
         tone="tertiary"
-        style={{ fontFamily: 'Menlo', fontWeight: '700', paddingBottom: 8 }}
+        style={{ fontWeight: '700', paddingBottom: 8 }}
       >
         {t('shareSettings.proofs')}
       </ThemedText>

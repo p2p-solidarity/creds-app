@@ -60,6 +60,7 @@ import { verifyVpToken } from '@/oidc';
 import { useTranslation } from '@/i18n';
 import { usePreferences } from '@/settings/preferences';
 import { isDeveloperOnlyScanPayload } from '@/scan/technicalFlowGate';
+import { MONO } from '@/constants/fonts';
 
 const SCAN_WINDOW_SIZE = 260;
 
@@ -394,7 +395,7 @@ function ScannedResultView({
             selectable
             numberOfLines={6}
             className="text-text2 text-[13px]"
-            style={{ fontFamily: 'Menlo' }}
+            style={{ fontFamily: MONO }}
           >
             {result}
           </Text>

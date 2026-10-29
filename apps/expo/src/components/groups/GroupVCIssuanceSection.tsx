@@ -17,7 +17,6 @@ import { Colors } from '@/constants/Colors';
 import { useTranslation } from '@/i18n';
 import type { GroupModel } from '@/groups/store';
 
-const MONO_FONT = 'Menlo';
 
 export interface GroupVCIssuanceSectionProps {
   readonly group: GroupModel;
@@ -43,7 +42,6 @@ export function GroupVCIssuanceSection({
         leadingIcon={<SfIcon name="lock.fill" size={14} color={Colors.text3} />}
       />
       <Text
-        style={{ fontFamily: MONO_FONT }}
         className="text-text3 text-[12px]"
       >
         {t('groupIssue.unavailableReason')}

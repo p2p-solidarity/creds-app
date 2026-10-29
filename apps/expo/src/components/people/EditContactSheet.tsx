@@ -32,6 +32,7 @@ import { showError } from '@/feedback/appAlert';
 import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
 import type { Contact } from '@solidarity/shared';
+import { textFont } from '@/constants/fonts';
 
 export interface EditContactSheetProps {
   readonly visible: boolean;
@@ -204,7 +205,7 @@ function EditContactSheetContent({
             <Text
               style={{
                 fontSize: 12,
-                fontFamily: 'Menlo',
+                fontFamily: textFont(),
                 color: Colors.destructive,
                 paddingTop: 4,
               }}
@@ -292,7 +293,7 @@ function FieldRow({
     <View style={{ rowGap: 6 }}>
       <Text
         className="text-text3"
-        style={{ fontSize: 12, fontWeight: '700', fontFamily: 'Menlo' }}
+        style={{ fontSize: 12, fontFamily: textFont('700') }}
       >
         {label}
       </Text>

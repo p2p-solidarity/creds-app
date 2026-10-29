@@ -24,7 +24,6 @@ import {
   type GroupModel,
 } from '@/groups/store';
 
-const MONO_FONT = 'Menlo';
 
 export interface YourGroupsSectionProps {
   readonly onOpen: (group: GroupModel) => void;
@@ -44,7 +43,6 @@ export function YourGroupsSection({
     <View className="gap-4">
       <Text
         className="text-text1 text-[12px] font-bold px-5 pt-2"
-        style={{ fontFamily: MONO_FONT }}
       >
         Your Groups
       </Text>
@@ -110,7 +108,6 @@ function Subsection({
     <View className="gap-3 mt-1">
       <Text
         className="text-text2 text-[12px] font-bold px-5"
-        style={{ fontFamily: MONO_FONT }}
       >
         {title}
       </Text>

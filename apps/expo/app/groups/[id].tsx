@@ -53,7 +53,6 @@ import {
   type GroupModel,
 } from '@/groups/store';
 
-const MONO_FONT = 'Menlo';
 
 function NavBar({
   title,
@@ -100,7 +99,6 @@ function AdminTools({
     <View className="gap-3">
       <Text
         className="text-text2 text-[12px] font-bold pl-1"
-        style={{ fontFamily: MONO_FONT }}
       >
         {t('groupDetail.adminTools')}
       </Text>

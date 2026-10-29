@@ -18,8 +18,8 @@ import { View } from 'react-native';
 
 import { ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
+import { MONO } from '@/constants/fonts';
 
-const MONO_FONT = 'Menlo';
 
 export function IDSectionContainer({ children }: { readonly children: ReactNode }): ReactNode {
   return (
@@ -65,7 +65,7 @@ export function IDLabeledRow({
         selectable={selectable}
         numberOfLines={1}
         ellipsizeMode="middle"
-        style={mono ? { fontFamily: MONO_FONT } : undefined}
+        style={mono ? { fontFamily: MONO } : undefined}
         className="flex-1 text-right">
         {value}
       </ThemedText>
@@ -85,7 +85,7 @@ export function IDBlockText({ value, maxLines }: IDBlockTextProps): ReactNode {
       tone="secondary"
       selectable
       numberOfLines={maxLines}
-      style={{ fontFamily: MONO_FONT }}>
+      style={{ fontFamily: MONO }}>
       {value}
     </ThemedText>
   );

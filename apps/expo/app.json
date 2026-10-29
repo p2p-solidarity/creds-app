@@ -138,7 +138,7 @@
           "ios": {
             "deploymentTarget": "17.0",
             "useFrameworks": "static",
-          "enableSceneSupport": true
+            "enableSceneSupport": true
           },
           "android": {
             "minSdkVersion": 29,
@@ -166,7 +166,20 @@
       "expo-sharing",
       "expo-web-browser",
       "expo-iap",
-      "expo-status-bar"
+      "expo-status-bar",
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/Inter-Regular.ttf",
+            "./assets/fonts/Inter-Medium.ttf",
+            "./assets/fonts/Inter-SemiBold.ttf",
+            "./assets/fonts/Inter-Bold.ttf",
+            "./assets/fonts/DMSans-SemiBold.ttf",
+            "./assets/fonts/DMSans-Bold.ttf"
+          ]
+        }
+      ]
     ],
     "runtimeVersion": "2.0.0",
     "updates": {

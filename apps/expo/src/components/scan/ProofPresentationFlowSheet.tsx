@@ -33,6 +33,7 @@ import { requireSensitiveAction } from '@/keychain';
 import { parseOidcRequest, type ParsedOidcRequest } from '@/oidc';
 import { buildVpToken } from '@/oidc/presenter';
 import { submitAuthorizationResponse } from '@/oidc/submitResponse';
+import { MONO } from '@/constants/fonts';
 
 type Step = 'review' | 'signing' | 'submitted';
 type ParseState =
@@ -175,7 +176,7 @@ function ReviewStep({
         <ThemedText
           variant="caption"
           tone="secondary"
-          style={{ fontFamily: 'Menlo', fontWeight: '700' }}
+          style={{ fontWeight: '700' }}
         >
           — VERIFIER
         </ThemedText>
@@ -183,7 +184,7 @@ function ReviewStep({
           <SfIcon name="building.2" size={16} color={Colors.terminalGreen} />
           <ThemedText
             variant="titleMedium"
-            style={{ color: Colors.terminalGreen, fontFamily: 'Menlo' }}
+            style={{ color: Colors.terminalGreen }}
             numberOfLines={1}
           >
             {verifierDomain}
@@ -196,7 +197,7 @@ function ReviewStep({
             <ThemedText
               variant="caption"
               tone="secondary"
-              style={{ fontFamily: 'Menlo', fontWeight: '700' }}
+              style={{ fontWeight: '700' }}
             >
               — REQUESTED CLAIMS
             </ThemedText>
@@ -248,7 +249,6 @@ function SigningStep(): ReactNode {
       <ActivityIndicator size="large" color={Colors.terminalGreen} />
       <ThemedText
         variant="titleMedium"
-        style={{ fontFamily: 'Menlo' }}
       >
         Signing Proof
       </ThemedText>
@@ -277,7 +277,6 @@ function SubmittedStep({
       <SfIcon name="checkmark.seal.fill" size={48} color={Colors.terminalGreen} />
       <ThemedText
         variant="titleLarge"
-        style={{ fontFamily: 'Menlo' }}
       >
         Proof Submitted
       </ThemedText>
@@ -287,7 +286,7 @@ function SubmittedStep({
       <ThemedText
         variant="caption"
         tone="tertiary"
-        style={{ fontFamily: 'Menlo', textAlign: 'center', paddingHorizontal: 12 }}
+        style={{ fontFamily: MONO, textAlign: 'center', paddingHorizontal: 12 }}
         numberOfLines={2}
       >
         {`${submittedToken.slice(0, 80)}…`}

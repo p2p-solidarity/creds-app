@@ -45,6 +45,7 @@ import {
   type SigningKeyCandidate,
 } from '@/keychain';
 import { usePreferences } from '@/settings/preferences';
+import { MONO } from '@/constants/fonts';
 
 type RootDidState =
   | { readonly kind: 'loading' }
@@ -189,7 +190,7 @@ function DIDListSheet() {
                       <ThemedText
                         variant="caption"
                         tone="secondary"
-                        style={{ flex: 1, fontFamily: 'Menlo' }}
+                        style={{ flex: 1, fontFamily: MONO }}
                         numberOfLines={1}>
                         {candidate.labelHex.slice(0, 16)}
                       </ThemedText>
@@ -257,11 +258,11 @@ function DidCard({ did }: { did: string }) {
           }}>
           <SfIcon name="key.horizontal" size={14} color={Colors.text1} />
         </View>
-        <ThemedText variant="label" tone="secondary" style={{ fontFamily: 'Menlo' }}>
+        <ThemedText variant="label" tone="secondary">
           {method.toUpperCase()}
         </ThemedText>
       </View>
-      <ThemedText variant="caption" style={{ fontFamily: 'Menlo' }} numberOfLines={3} selectable>
+      <ThemedText variant="caption" style={{ fontFamily: MONO }} numberOfLines={3} selectable>
         {did}
       </ThemedText>
     </ThemedSurface>

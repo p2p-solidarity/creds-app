@@ -52,7 +52,7 @@ export function CopyableAddress({
         tone="secondary"
         numberOfLines={1}
         ellipsizeMode="middle"
-        style={{ fontFamily: 'Menlo', flexShrink: 1 }}>
+        style={{ flexShrink: 1 }}>
         {displayAddress}
       </ThemedText>
       <SfIcon name="doc.on.doc" size={11} color={Colors.text2} />

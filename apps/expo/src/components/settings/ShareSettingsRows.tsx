@@ -92,7 +92,6 @@ export function FieldRow({
           <ThemedText
             style={{
               color: statusColor,
-              fontFamily: 'Menlo',
               fontSize: 10,
               fontWeight: '500',
               marginTop: 2,
@@ -166,7 +165,6 @@ export function ProofRow({
         <ThemedText
           style={{
             color: badgeColor,
-            fontFamily: 'Menlo',
             fontSize: 10,
             fontWeight: '700',
             marginTop: 2,
@@ -202,7 +200,7 @@ export function LegendItem({
       />
       <ThemedText
         tone="tertiary"
-        style={{ fontFamily: 'Menlo', fontSize: 10 }}
+        style={{ fontSize: 10 }}
       >
         {label}
       </ThemedText>

@@ -32,8 +32,8 @@ import {
   type CredentialOffer,
 } from '@/oidc/credentialIssuance';
 import { usePreferences } from '@/settings/preferences';
+import { MONO } from '@/constants/fonts';
 
-const MONO = Platform.OS === 'ios' ? 'Menlo' : 'monospace';
 
 // MARK: - Parsed offer
 

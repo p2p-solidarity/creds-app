@@ -41,6 +41,7 @@ import { ThemedButton } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { useTranslation } from '@/i18n';
 import { useCameraPermission } from '@/scan/useCameraPermission';
+import { MONO } from '@/constants/fonts';
 
 export interface PassportMRZDraft {
   readonly passportNumber: string;
@@ -842,7 +843,7 @@ const styles = StyleSheet.create({
   },
   confirmationTitle: { color: Colors.text1, fontSize: 17, fontWeight: '600' },
   infoLabel: { color: Colors.text3, fontSize: 12, fontWeight: '600', width: 100 },
-  infoValue: { color: Colors.text1, fontSize: 12, fontFamily: 'Menlo' },
+  infoValue: { color: Colors.text1, fontSize: 12, fontFamily: MONO },
   permissionScreen: {
     flex: 1,
     alignItems: 'center',

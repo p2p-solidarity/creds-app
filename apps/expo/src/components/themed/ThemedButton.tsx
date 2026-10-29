@@ -33,6 +33,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 
+import { textFont } from '@/constants/fonts';
 import { useThemeColors, type ThemeColors } from '@/constants/useThemeColors';
 import { haptic as fireHaptic, type HapticKind } from '@/feedback/haptics';
 import { ON_DARK, ON_LIGHT } from './contrast';
@@ -158,7 +159,7 @@ export function ThemedButton({
               numberOfLines={1}
               adjustsFontSizeToFit
               minimumFontScale={0.85}
-              style={{ color: cfg.fg, fontSize: 16, fontWeight: cfg.weight }}>
+              style={{ color: cfg.fg, fontSize: 16, fontFamily: textFont(cfg.weight) }}>
               {label}
             </Text>
           </>

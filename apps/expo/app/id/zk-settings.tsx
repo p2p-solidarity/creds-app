@@ -36,6 +36,7 @@ import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
 import { requireSensitiveAction } from '@/keychain/biometricGatekeeper';
 import { useProofsSupported, useZkIdentity, useZkIdentityCommitment } from '@/zk';
+import { MONO } from '@/constants/fonts';
 
 export default function ZkSettings(): React.JSX.Element {
   const commitment = useZkIdentityCommitment();
@@ -165,7 +166,7 @@ function CommitmentRow({ commitment }: { readonly commitment: string }): React.J
         selectable
         numberOfLines={2}
         ellipsizeMode="middle"
-        style={{ fontFamily: 'Menlo' }}>
+        style={{ fontFamily: MONO }}>
         {shortCommitment(commitment)}
       </ThemedText>
     </ThemedSurface>

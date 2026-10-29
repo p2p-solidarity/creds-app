@@ -57,6 +57,7 @@ import {
 } from '@/websign/appSigner';
 import { useWebSignPending } from '@/websign/pendingRequest';
 import { WEB_SIGN_MAX_AGE_SECONDS, type ProfileLink } from '@solidarity/shared';
+import { MONO } from '@/constants/fonts';
 
 type ReviewState =
   | { readonly kind: 'ready'; readonly review: WebSignReview }
@@ -625,7 +626,7 @@ function ErrorPanel({
         <ThemedText variant="bodySmall" tone="secondary">
           {t('websign.errorBody')}
         </ThemedText>
-        <ThemedText variant="caption" tone="tertiary" selectable style={{ fontFamily: 'Menlo' }}>
+        <ThemedText variant="caption" tone="tertiary" selectable style={{ fontFamily: MONO }}>
           {detail}
         </ThemedText>
       </ThemedSurface>

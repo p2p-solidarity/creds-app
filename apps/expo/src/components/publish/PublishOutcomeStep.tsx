@@ -129,7 +129,7 @@ function RelayReportSection({
                   variant="caption"
                   tone="secondary"
                   numberOfLines={1}
-                  style={{ flex: 1, fontFamily: 'Menlo' }}>
+                  style={{ flex: 1 }}>
                   {result.relay}
                 </ThemedText>
               </View>
@@ -138,7 +138,7 @@ function RelayReportSection({
                   variant="caption"
                   tone="tertiary"
                   numberOfLines={2}
-                  style={{ marginLeft: 22, fontFamily: 'Menlo' }}>
+                  style={{ marginLeft: 22 }}>
                   {result.message}
                 </ThemedText>
               ) : null}

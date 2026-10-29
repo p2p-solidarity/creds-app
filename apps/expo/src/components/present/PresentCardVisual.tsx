@@ -222,7 +222,7 @@ export function PresentCardVisual(props: PresentCardVisualProps): ReactNode {
                 variant="caption"
                 numberOfLines={1}
                 ellipsizeMode="middle"
-                style={{ ...ETCH_TEXT, fontFamily: 'Menlo', opacity: 0.82, marginTop: 1 }}>
+                style={{ ...ETCH_TEXT, opacity: 0.82, marginTop: 1 }}>
                 {props.displayUrl}
               </ThemedText>
               {/* `.m-row` — pinned to the bottom edge of the card. */}
@@ -258,7 +258,7 @@ export function PresentCardVisual(props: PresentCardVisualProps): ReactNode {
                 padding: 18,
               }}>
               <CardSheen enabled={props.enableGlow} />
-              <ThemedText variant="caption" style={{ ...ETCH_TEXT, fontFamily: 'Menlo', letterSpacing: 2.2 }}>
+              <ThemedText variant="caption" style={{ ...ETCH_TEXT, letterSpacing: 2.2 }}>
                 CREDS.ID
               </ThemedText>
               <View style={{ opacity: 0.6 }}>
@@ -268,7 +268,7 @@ export function PresentCardVisual(props: PresentCardVisualProps): ReactNode {
                 variant="caption"
                 numberOfLines={1}
                 ellipsizeMode="middle"
-                style={{ ...ETCH_TEXT, fontFamily: 'Menlo', opacity: 0.6 }}>
+                style={{ ...ETCH_TEXT, opacity: 0.6 }}>
                 {props.displayUrl}
               </ThemedText>
             </LinearGradient>

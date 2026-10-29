@@ -33,6 +33,7 @@ import type {
   ContactSource,
   VerificationStatus,
 } from '@solidarity/shared';
+import { displayFont } from '@/constants/fonts';
 
 export interface ReceivedCardSheetProps {
   readonly visible: boolean;
@@ -366,9 +367,8 @@ function InitialAvatar({ name }: { readonly name: string }): ReactNode {
     >
       <Text
         style={{
-          fontFamily: 'Menlo',
+          fontFamily: displayFont('700'),
           fontSize: 22,
-          fontWeight: '700',
           color: Colors.text1,
         }}
       >

@@ -15,6 +15,7 @@ import { resolveProfileAvatarSource } from '@/profile/avatar';
 import type { ProfileRecord } from '@solidarity/shared';
 
 import type { PageLivePreviewVariant, PagePalette, PreviewMetrics } from './pagePreviewTheme';
+import { MONO } from '@/constants/fonts';
 
 export interface PagePreviewChromeProps {
   readonly palette: PagePalette;
@@ -87,7 +88,6 @@ export function PagePreviewHeader({
           style={{
             color: palette.subtle,
             opacity: palette.subtleOpacity,
-            fontFamily: 'Menlo',
             marginTop: 2,
             textAlign: 'center',
           }}>
@@ -144,7 +144,7 @@ export function PagePreviewFooter({
       style={{
         color: palette.subtle,
         opacity: palette.subtleOpacity,
-        fontFamily: appearance.footerText ? fontFamily : 'Menlo',
+        fontFamily: appearance.footerText ? fontFamily : MONO,
         marginTop: metrics.footerGap,
         textAlign: 'center',
       }}>

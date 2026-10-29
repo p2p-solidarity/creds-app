@@ -41,7 +41,6 @@ import {
 } from '@/groups/store';
 import { useIdentitySnapshot } from '@/zk';
 
-const MONO_FONT = 'Menlo';
 
 function NavBar({
   title,
@@ -221,7 +220,6 @@ export default function CreateGroup(): React.JSX.Element {
             </View>
             <Text
               className="text-text3 text-[12px] pt-2"
-              style={{ fontFamily: MONO_FONT }}
             >
               {t('groupNew.nameHelper')}
             </Text>
@@ -231,14 +229,12 @@ export default function CreateGroup(): React.JSX.Element {
           <View>
             <Text
               className="text-text3 text-[12px] font-bold pb-2"
-              style={{ fontFamily: MONO_FONT }}
             >
               {t('groupNew.typeHeader')}
             </Text>
             <GroupTypeSegment value={isPrivate} onChange={setIsPrivate} />
             <Text
               className="text-text3 text-[12px] pt-2"
-              style={{ fontFamily: MONO_FONT }}
             >
               {isPrivate
                 ? t('groupNew.privateHelper')

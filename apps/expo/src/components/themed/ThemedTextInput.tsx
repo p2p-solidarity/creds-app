@@ -35,6 +35,7 @@ import type { SFSymbol } from 'expo-symbols';
 import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { Colors } from '@/constants/Colors';
+import { MONO, textFont } from '@/constants/fonts';
 import { useTranslation } from '@/i18n';
 
 import { ThemedText } from './ThemedText';
@@ -240,7 +241,7 @@ export function ThemedTextInput({
             paddingVertical: 12,
             minHeight: multiline ? MULTILINE_MIN_HEIGHT : MIN_HEIGHT,
             fontSize: 15,
-            fontFamily: cfg.mono ? 'Menlo' : undefined,
+            fontFamily: cfg.mono ? MONO : textFont(),
             textAlignVertical: multiline ? 'top' : 'center',
             borderWidth: 1,
             borderColor,

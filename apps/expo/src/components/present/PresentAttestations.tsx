@@ -229,7 +229,6 @@ function IdentityProofCard({
               variant="caption"
               tone="secondary"
               tabularNums
-              style={{ fontFamily: 'Menlo' }}
             >
               {t('present.expiry', { expiry })}
             </ThemedText>

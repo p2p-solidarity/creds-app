@@ -23,6 +23,7 @@ import { ScrollView, Text, View } from 'react-native';
 
 import { ThemedButton } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
+import { MONO } from '@/constants/fonts';
 
 // --- Global uncaught-JS-error handler, installed once when this module loads
 // (the import in app/_layout.tsx pulls it in at boot). Logs with a greppable
@@ -95,7 +96,7 @@ export class AppErrorBoundary extends Component<Props, State> {
           style={{ flex: 1, marginBottom: 16 }}
           contentContainerStyle={{ paddingBottom: 12 }}
         >
-          <Text selectable style={{ color: Colors.text3, fontSize: 11, fontFamily: 'Menlo' }}>
+          <Text selectable style={{ color: Colors.text3, fontSize: 11, fontFamily: MONO }}>
             {componentStack || error.stack || '(no stack)'}
           </Text>
         </ScrollView>

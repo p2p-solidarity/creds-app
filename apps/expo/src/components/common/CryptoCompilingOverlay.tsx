@@ -26,6 +26,7 @@ import Animated, {
 import { Colors } from '@/constants/Colors';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { haptic } from '@/feedback/haptics';
+import { MONO } from '@/constants/fonts';
 
 type Stage = 'init' | 'proving' | 'done';
 
@@ -150,7 +151,7 @@ export function CryptoCompilingOverlay({
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Text
               style={{
-                fontFamily: 'Menlo',
+                fontFamily: MONO,
                 fontSize: 24,
                 fontWeight: '700',
                 color: STATUS_COLOR[stage],
@@ -188,7 +189,7 @@ export function CryptoCompilingOverlay({
                     key={`${String(i)}-${h.slice(0, 6)}`}
                     numberOfLines={1}
                     style={{
-                      fontFamily: 'Menlo',
+                      fontFamily: MONO,
                       fontSize: 14,
                       color: Colors.text3,
                     }}
@@ -204,7 +205,7 @@ export function CryptoCompilingOverlay({
             <Animated.Text
               style={[
                 {
-                  fontFamily: 'Menlo',
+                  fontFamily: MONO,
                   fontSize: 48,
                   fontWeight: '900',
                   color: Colors.terminalGreen,

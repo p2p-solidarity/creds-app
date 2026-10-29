@@ -44,6 +44,7 @@ import type {
   PassportProofResult,
 } from '@/passport/pipeline';
 import { DEFAULT_DISCLOSURE_POLICY } from '@/passport/zkInputs';
+import { MONO, textFont } from '@/constants/fonts';
 
 export function NfcStep({
   busy,
@@ -361,7 +362,7 @@ function ChipSnapshotCard({
         </View>
         <View style={{ gap: 2 }}>
           <Text className="text-text3" style={{ fontSize: 10 }}>Document</Text>
-          <Text className="text-text1" style={{ fontSize: 15, fontFamily: 'Menlo' }}>
+          <Text className="text-text1" style={{ fontSize: 15, fontFamily: MONO }}>
             {chip.maskedDocNumber}
           </Text>
         </View>
@@ -375,16 +376,16 @@ function ChipSnapshotCard({
 
       <View style={{ flexDirection: 'row', gap: 4 }}>
         <Text className="text-text3" style={{ fontSize: 10, fontWeight: '600' }}>DGs:</Text>
-        <Text className="text-text3" style={{ fontSize: 10, fontFamily: 'Menlo' }}>
+        <Text className="text-text3" style={{ fontSize: 10, fontFamily: MONO }}>
           {chip.dataGroupsRead.join(', ')}
         </Text>
       </View>
 
       <View style={{ gap: 2 }}>
-        <Text className="text-text3" style={{ fontSize: 10, fontFamily: 'Menlo' }}>
+        <Text className="text-text3" style={{ fontSize: 10, fontFamily: MONO }}>
           {`Doc hash: ${chip.documentHash.slice(0, 16)}...`}
         </Text>
-        <Text className="text-text3" style={{ fontSize: 10, fontFamily: 'Menlo' }}>
+        <Text className="text-text3" style={{ fontSize: 10, fontFamily: MONO }}>
           {`MRZ digest: ${chip.mrzDigest.slice(0, 16)}...`}
         </Text>
       </View>
@@ -592,8 +593,7 @@ function ProofResultCard({
           style={{
             color: accent,
             fontSize: 10,
-            fontFamily: 'Menlo',
-            fontWeight: '700',
+            fontFamily: textFont('700'),
             paddingHorizontal: 6,
             paddingVertical: 2,
             backgroundColor: `${accent}26`,
@@ -603,7 +603,7 @@ function ProofResultCard({
           {trustDisplay.level}
         </Text>
       </View>
-      <Text className="text-text3" style={{ fontSize: 10, fontFamily: 'Menlo' }}>
+      <Text className="text-text3" style={{ fontSize: 10, fontFamily: MONO }}>
         {`Type: ${proof.proofType}`}
       </Text>
       {proof.disclosure ? <DisclosureRows disclosure={proof.disclosure} /> : null}
@@ -654,7 +654,7 @@ function DisclosureRows({ disclosure }: { disclosure: NonNullable<PassportProofR
       />
       <Text
         className="text-text3"
-        style={{ fontSize: 10, fontFamily: 'Menlo', paddingTop: 2 }}
+        style={{ fontSize: 10, fontFamily: MONO, paddingTop: 2 }}
       >
         {`MRZ hash: ${disclosure.mrzHashHex.slice(0, 16)}…`}
       </Text>
@@ -681,7 +681,7 @@ function DisclosureRow({
       </Text>
       <Text
         className={hidden ? 'text-text3' : 'text-text2'}
-        style={{ fontSize: 10, fontFamily: 'Menlo', flex: 1 }}
+        style={{ fontSize: 10, fontFamily: MONO, flex: 1 }}
       >
         {value}
       </Text>

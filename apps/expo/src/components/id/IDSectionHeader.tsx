@@ -13,7 +13,6 @@
 import type { ReactNode } from 'react';
 import { ThemedText } from '@/components/themed';
 
-const MONO_FONT = 'Menlo';
 
 export type IDSectionHeaderTone = 'tertiary' | 'secondary';
 
@@ -24,7 +23,7 @@ export interface IDSectionHeaderProps {
 
 export function IDSectionHeader({ title, tone = 'tertiary' }: IDSectionHeaderProps): ReactNode {
   return (
-    <ThemedText variant="label" tone={tone} style={{ fontFamily: MONO_FONT }}>
+    <ThemedText variant="label" tone={tone}>
       {title}
     </ThemedText>
   );

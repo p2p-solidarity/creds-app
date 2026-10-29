@@ -14,7 +14,6 @@ import { ThemedButton } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import type { GroupMember } from '@/groups/store';
 
-const MONO_FONT = 'Menlo';
 
 export interface MembersSectionProps {
   readonly members: readonly GroupMember[];
@@ -61,7 +60,6 @@ export function MembersSection({
             <View className="gap-2">
               <Text
                 className="text-accentRose text-[12px] font-bold pl-1"
-                style={{ fontFamily: MONO_FONT }}
               >
                 Pending Requests
               </Text>
@@ -97,7 +95,6 @@ export function MembersSection({
               {pending.length > 0 ? (
                 <Text
                   className="text-text2 text-[12px] font-bold pl-1"
-                  style={{ fontFamily: MONO_FONT }}
                 >
                   Active Members
                 </Text>

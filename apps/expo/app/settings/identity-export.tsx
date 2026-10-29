@@ -37,6 +37,7 @@ import {
   revealMnemonicForExport,
 } from '@/identity';
 import { usePreferences } from '@/settings/preferences';
+import { MONO } from '@/constants/fonts';
 
 export default function IdentityExportSettings() {
   const insets = useSafeAreaInsets();
@@ -181,7 +182,7 @@ export default function IdentityExportSettings() {
                   {revealedWords.map((word, i) => (
                     <View key={`${word}-${String(i)}`} style={{ width: '30%', flexDirection: 'row', gap: 4 }}>
                       <ThemedText variant="caption" tone="secondary">{`${String(i + 1)}.`}</ThemedText>
-                      <ThemedText variant="bodySmall" style={{ fontFamily: 'Menlo' }}>
+                      <ThemedText variant="bodySmall" style={{ fontFamily: MONO }}>
                         {word}
                       </ThemedText>
                     </View>
@@ -231,7 +232,7 @@ export default function IdentityExportSettings() {
                   paddingHorizontal: 14,
                   paddingVertical: 12,
                   fontSize: 14,
-                  fontFamily: 'Menlo',
+                  fontFamily: MONO,
                   minHeight: 88,
                   borderWidth: 1,
                   borderColor: importError ? Colors.destructive : Colors.divider,

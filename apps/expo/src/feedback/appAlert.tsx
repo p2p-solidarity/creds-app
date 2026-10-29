@@ -50,6 +50,7 @@ import {
   type ErrorReportInput,
   type ResolvedErrorReport,
 } from '@/feedback/errorReport';
+import { MONO } from '@/constants/fonts';
 
 export type AlertButtonStyle = 'default' | 'cancel' | 'destructive';
 
@@ -385,7 +386,7 @@ const styles = StyleSheet.create({
     maxHeight: 180,
   },
   detailText: {
-    fontFamily: 'Menlo',
+    fontFamily: MONO,
     lineHeight: 17,
   },
   sheetActions: {
