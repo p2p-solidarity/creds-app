@@ -15,6 +15,7 @@
 #include <fbjni/fbjni.h>
 #include <NitroModules/HybridObjectRegistry.hpp>
 
+#include "JHybridDeviceAttestSpec.hpp"
 #include "JHybridMrzOcrSpec.hpp"
 #include "JHybridNfcPassportSpec.hpp"
 #include "JFunc_void_NfcReadProgress.hpp"
@@ -63,12 +64,21 @@ struct JHybridSemaphoreSpecImpl: public jni::JavaClass<JHybridSemaphoreSpecImpl,
     return javaPart->getJHybridSemaphoreSpec();
   }
 };
+struct JHybridDeviceAttestSpecImpl: public jni::JavaClass<JHybridDeviceAttestSpecImpl, JHybridDeviceAttestSpec::JavaPart> {
+  static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/gg/solidarity/attest/HybridDeviceAttest;";
+  static std::shared_ptr<JHybridDeviceAttestSpec> create() {
+    static const auto constructorFn = javaClassStatic()->getConstructor<JHybridDeviceAttestSpecImpl::javaobject()>();
+    jni::local_ref<JHybridDeviceAttestSpec::JavaPart> javaPart = javaClassStatic()->newObject(constructorFn);
+    return javaPart->getJHybridDeviceAttestSpec();
+  }
+};
 
 void registerAllNatives() {
   using namespace margelo::nitro;
   using namespace margelo::nitro::solidarity::attest;
 
   // Register native JNI methods
+  margelo::nitro::solidarity::attest::JHybridDeviceAttestSpec::CxxPart::registerNatives();
   margelo::nitro::solidarity::attest::JHybridMrzOcrSpec::CxxPart::registerNatives();
   margelo::nitro::solidarity::attest::JHybridNfcPassportSpec::CxxPart::registerNatives();
   margelo::nitro::solidarity::attest::JFunc_void_NfcReadProgress_cxx::registerNatives();
@@ -99,6 +109,12 @@ void registerAllNatives() {
     "Semaphore",
     []() -> std::shared_ptr<HybridObject> {
       return JHybridSemaphoreSpecImpl::create();
+    }
+  );
+  HybridObjectRegistry::registerHybridObjectConstructor(
+    "DeviceAttest",
+    []() -> std::shared_ptr<HybridObject> {
+      return JHybridDeviceAttestSpecImpl::create();
     }
   );
 }

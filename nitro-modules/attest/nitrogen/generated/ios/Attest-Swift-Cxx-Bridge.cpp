@@ -9,6 +9,7 @@
 
 // Include C++ implementation defined types
 #include "Attest-Swift-Cxx-Umbrella.hpp"
+#include "HybridDeviceAttestSpecSwift.hpp"
 #include "HybridMrzOcrSpecSwift.hpp"
 #include "HybridNfcPassportSpecSwift.hpp"
 #include "HybridPassportZkSpecSwift.hpp"
@@ -19,6 +20,38 @@
 
 namespace margelo::nitro::solidarity::attest::bridge::swift {
 
+  // pragma MARK: std::function<void(const std::string& /* result */)>
+  Func_void_std__string create_Func_void_std__string(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = Attest::Func_void_std__string::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const std::string& result) mutable -> void {
+      swiftClosure.call(result);
+    };
+  }
+  
+  // pragma MARK: std::function<void(const std::exception_ptr& /* error */)>
+  Func_void_std__exception_ptr create_Func_void_std__exception_ptr(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = Attest::Func_void_std__exception_ptr::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const std::exception_ptr& error) mutable -> void {
+      swiftClosure.call(error);
+    };
+  }
+  
+  // pragma MARK: std::shared_ptr<HybridDeviceAttestSpec>
+  std::shared_ptr<HybridDeviceAttestSpec> create_std__shared_ptr_HybridDeviceAttestSpec_(void* NON_NULL swiftUnsafePointer) noexcept {
+    Attest::HybridDeviceAttestSpec_cxx swiftPart = Attest::HybridDeviceAttestSpec_cxx::fromUnsafe(swiftUnsafePointer);
+    return std::make_shared<margelo::nitro::solidarity::attest::HybridDeviceAttestSpecSwift>(swiftPart);
+  }
+  void* NON_NULL get_std__shared_ptr_HybridDeviceAttestSpec_(std__shared_ptr_HybridDeviceAttestSpec_ cppType) {
+    std::shared_ptr<margelo::nitro::solidarity::attest::HybridDeviceAttestSpecSwift> swiftWrapper = std::dynamic_pointer_cast<margelo::nitro::solidarity::attest::HybridDeviceAttestSpecSwift>(cppType);
+    #ifdef NITRO_DEBUG
+    if (swiftWrapper == nullptr) [[unlikely]] {
+      throw std::runtime_error("Class \"HybridDeviceAttestSpec\" is not implemented in Swift!");
+    }
+    #endif
+    Attest::HybridDeviceAttestSpec_cxx& swiftPart = swiftWrapper->getSwiftPart();
+    return swiftPart.toUnsafe();
+  }
+  
   // pragma MARK: std::shared_ptr<margelo::nitro::camera::HybridFrameSpec>
   std::shared_ptr<margelo::nitro::camera::HybridFrameSpec> create_std__shared_ptr_margelo__nitro__camera__HybridFrameSpec_(void* NON_NULL swiftUnsafePointer) noexcept {
     // Implemented in VisionCamera
@@ -50,14 +83,6 @@ namespace margelo::nitro::solidarity::attest::bridge::swift {
     auto swiftClosure = Attest::Func_void_PassportReadResult::fromUnsafe(swiftClosureWrapper);
     return [swiftClosure = std::move(swiftClosure)](const PassportReadResult& result) mutable -> void {
       swiftClosure.call(result);
-    };
-  }
-  
-  // pragma MARK: std::function<void(const std::exception_ptr& /* error */)>
-  Func_void_std__exception_ptr create_Func_void_std__exception_ptr(void* NON_NULL swiftClosureWrapper) noexcept {
-    auto swiftClosure = Attest::Func_void_std__exception_ptr::fromUnsafe(swiftClosureWrapper);
-    return [swiftClosure = std::move(swiftClosure)](const std::exception_ptr& error) mutable -> void {
-      swiftClosure.call(error);
     };
   }
   
@@ -131,14 +156,6 @@ namespace margelo::nitro::solidarity::attest::bridge::swift {
     #endif
     Attest::HybridPassportZkSpec_cxx& swiftPart = swiftWrapper->getSwiftPart();
     return swiftPart.toUnsafe();
-  }
-  
-  // pragma MARK: std::function<void(const std::string& /* result */)>
-  Func_void_std__string create_Func_void_std__string(void* NON_NULL swiftClosureWrapper) noexcept {
-    auto swiftClosure = Attest::Func_void_std__string::fromUnsafe(swiftClosureWrapper);
-    return [swiftClosure = std::move(swiftClosure)](const std::string& result) mutable -> void {
-      swiftClosure.call(result);
-    };
   }
   
   // pragma MARK: std::function<void()>

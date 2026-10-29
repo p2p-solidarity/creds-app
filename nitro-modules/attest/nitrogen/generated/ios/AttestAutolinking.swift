@@ -71,4 +71,16 @@ public final class AttestAutolinking {
   public static func isZktlsRecyclable() -> Bool {
     return HybridZktls.self is any RecyclableView.Type
   }
+  
+  public static func createDeviceAttest() -> bridge.std__shared_ptr_HybridDeviceAttestSpec_ {
+    let hybridObject = HybridDeviceAttest()
+    return { () -> bridge.std__shared_ptr_HybridDeviceAttestSpec_ in
+      let __cxxWrapped = hybridObject.getCxxWrapper()
+      return __cxxWrapped.getCxxPart()
+    }()
+  }
+  
+  public static func isDeviceAttestRecyclable() -> Bool {
+    return HybridDeviceAttest.self is any RecyclableView.Type
+  }
 }

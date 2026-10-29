@@ -61,6 +61,16 @@
         "language": "swift",
         "implementationClassName": "HybridZktls"
       }
+    },
+    "DeviceAttest": {
+      "ios": {
+        "language": "swift",
+        "implementationClassName": "HybridDeviceAttest"
+      },
+      "android": {
+        "language": "kotlin",
+        "implementationClassName": "HybridDeviceAttest"
+      }
     }
   }
 }

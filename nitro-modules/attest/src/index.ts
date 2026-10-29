@@ -11,6 +11,7 @@
  *     Android: jmrtd.
  *   - PassportZk — Noir ZK prove + verify (mopro / barretenberg).
  *   - Semaphore — group membership proofs (semaphore-rs via uniffi).
+ *   - DeviceAttest — App Attest / Android Key Attestation device keys.
  *
  * After `bunx nitrogen` + `pod install`, the generated HybridObject
  * adapters are auto-registered; each getter lazily creates its singleton so
@@ -19,6 +20,7 @@
  */
 import { NitroModules } from 'react-native-nitro-modules';
 
+import type { DeviceAttest } from './specs/DeviceAttest.nitro';
 import type { MrzOcr } from './specs/MrzOcr.nitro';
 import type { NfcPassport } from './specs/NfcPassport.nitro';
 import type { PassportZk } from './specs/PassportZk.nitro';
@@ -51,6 +53,7 @@ export type {
 } from './specs/Semaphore.nitro';
 
 export type { Zktls } from './specs/Zktls.nitro';
+export type { DeviceAttest } from './specs/DeviceAttest.nitro';
 
 let cachedMrzOcr: MrzOcr | null = null;
 
@@ -99,4 +102,17 @@ export function getZktls(): Zktls | null {
     cachedZktls = null;
   }
   return cachedZktls;
+}
+
+let cachedDeviceAttest: DeviceAttest | null | undefined;
+
+/** Hardware device keys, or null where the native module is not linked (web, bun tests). */
+export function getDeviceAttest(): DeviceAttest | null {
+  if (cachedDeviceAttest !== undefined) return cachedDeviceAttest;
+  try {
+    cachedDeviceAttest = NitroModules.createHybridObject<DeviceAttest>('DeviceAttest');
+  } catch {
+    cachedDeviceAttest = null;
+  }
+  return cachedDeviceAttest;
 }

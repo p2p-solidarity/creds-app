@@ -10,6 +10,8 @@
 // Forward declarations of C++ defined types
 // Forward declaration of `DataGroupsBundle` to properly resolve imports.
 namespace margelo::nitro::solidarity::attest { struct DataGroupsBundle; }
+// Forward declaration of `HybridDeviceAttestSpec` to properly resolve imports.
+namespace margelo::nitro::solidarity::attest { class HybridDeviceAttestSpec; }
 // Forward declaration of `HybridFrameSpec` to properly resolve imports.
 namespace margelo::nitro::camera { class HybridFrameSpec; }
 // Forward declaration of `HybridMrzOcrSpec` to properly resolve imports.
@@ -47,6 +49,7 @@ namespace margelo::nitro::solidarity::attest { struct SemaphoreProof; }
 
 // Include C++ defined types
 #include "DataGroupsBundle.hpp"
+#include "HybridDeviceAttestSpec.hpp"
 #include "HybridMrzOcrSpec.hpp"
 #include "HybridNfcPassportSpec.hpp"
 #include "HybridPassportZkSpec.hpp"
@@ -84,6 +87,8 @@ namespace margelo::nitro::solidarity::attest { struct SemaphoreProof; }
 #include <NitroModules/DateToChronoDate.hpp>
 
 // Forward declarations of Swift defined types
+// Forward declaration of `HybridDeviceAttestSpec_cxx` to properly resolve imports.
+namespace Attest { class HybridDeviceAttestSpec_cxx; }
 // Forward declaration of `HybridFrameSpec_cxx` to properly resolve imports.
 namespace VisionCamera { class HybridFrameSpec_cxx; }
 // Forward declaration of `HybridMrzOcrSpec_cxx` to properly resolve imports.
