@@ -30,12 +30,12 @@ SEMAPHORE_SWIFT_REF="${AIRMEISHI_SEMAPHORE_SWIFT_REF:-850680a5adcc258d6861005b55
 SEMAPHORE_SWIFT_ZIP_URL="${AIRMEISHI_SEMAPHORE_SWIFT_ZIP_URL:-https://github.com/zkmopro/SemaphoreSwift/archive/${SEMAPHORE_SWIFT_REF}.zip}"
 SEMAPHORE_SWIFT_SHA256="${AIRMEISHI_SEMAPHORE_SWIFT_SHA256-}"
 # zkTLS prover (nitro-modules/attest/zktls, docs/ref/10 §3.1). Built locally by
-# zktls/build-ios.sh; CI stages the zip that script writes, attached to an
-# airmeishi release. No SHA pinned yet = no release yet: the app then builds
-# without the prover (HybridZktls reports isAvailable=false), never a fake one.
+# zktls/build-ios.sh; CI stages the zip that script writes, attached to the
+# creds-app release `zktls-v<crate version>`. Bump the tag and SHA together;
+# an empty SHA builds without the prover (isAvailable=false), never a fake one.
 ZKTLS_VERSION="${AIRMEISHI_ZKTLS_VERSION:-zktls-v0.1.0}"
-ZKTLS_ZIP_URL="${AIRMEISHI_ZKTLS_ZIP_URL:-https://github.com/p2p-solidarity/airmeishi/releases/download/${ZKTLS_VERSION}/CredsZktls.xcframework.zip}"
-ZKTLS_SHA256="${AIRMEISHI_ZKTLS_SHA256-}"
+ZKTLS_ZIP_URL="${AIRMEISHI_ZKTLS_ZIP_URL:-https://github.com/p2p-solidarity/creds-app/releases/download/${ZKTLS_VERSION}/CredsZktls.xcframework.zip}"
+ZKTLS_SHA256="${AIRMEISHI_ZKTLS_SHA256-ad67d108863182e33689d98ee3aa9a22771f3a9f1043a9db222abb3011f597c1}"
 # SHA-pinned Node build staged when the PATH node's CPU arch differs from
 # bun's (see ensure_bundle_node_matches_bun). Pins from
 # https://nodejs.org/dist/${MATCHED_NODE_VERSION}/SHASUMS256.txt — update both
