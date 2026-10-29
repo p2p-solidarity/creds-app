@@ -116,6 +116,7 @@ TLSNotary 對「沒揭露的部分」沒有證明成本（alpha.13 #1006），�
 
 ### 3.6 notary 金鑰（grill Q1）
 - **兩層**：root notary key 離線保存（Kidney 的 YubiKey + 紙本備份），從不上 Cloudflare，公鑰寫死在 `packages/shared`。每年一次離線作業產生 12 把月度簽章金鑰，root 為每把簽 `{kid, pubkey, notBefore, notAfter}` 憑證，上傳成 Worker secret（`NOTARY_KEYS`，只放私鑰；公開的憑證在 `apps/notary/keys/certs.json`）；Worker 每次簽章依日期挑當月金鑰，不需要 cron。輪替不需要發 App。工具：`apps/notary/scripts/keys.ts`。
+- **實際（2026-10-29）**：正式 root 是在開發用 Mac 上用 `keys.ts` 產生的（Kidney 決定，為了先上線），12 把月度金鑰已簽到 2027-09；之後把 root 私鑰移到離線儲存並從 Mac 刪除。紀錄：`docs/e2e/2026-10-29-zktls-prod-launch/result.md`。
 - **舊證據永遠可驗**：證據自帶月度憑證，看的人只需寫死的 root 公鑰，離線即可驗。
 - **外洩**：月度金鑰外洩只能偽造該月份的證據。root 簽撤銷清單發佈到 creds.id 與 Nostr；App 連線時讀到，把該月證據在背景自動重證（前提是標記留在 bio，見 D5）。
 
