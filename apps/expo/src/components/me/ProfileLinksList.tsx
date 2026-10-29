@@ -39,7 +39,7 @@ import { visibilityAt, type LinkVisibility } from '@/profile/projection';
 import { useProfileStore } from '@/profile/store';
 import { SealPill } from '@/components/badges/SealPill';
 import { getZktls } from '@solidarity/nitro-attest';
-import { socialTargetForLink, type SocialTarget } from '@/zktls/links';
+import { socialTargetForLink, type SocialTarget } from '@solidarity/shared';
 import { proofAge, useZktlsProofs } from '@/zktls/store';
 import {
   CREDS_NOTARY_ROOTS,

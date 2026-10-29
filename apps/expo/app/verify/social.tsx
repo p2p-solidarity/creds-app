@@ -30,8 +30,8 @@ import { linkDisplay } from '@/profile/linkPresentation';
 import { usePreferences } from '@/settings/preferences';
 import { proveSocialTarget, type ProofFailure } from '@/zktls/engine';
 import { confirmSocialClaim } from '@/zktls/flow';
-import { bioEditUrl, publicProfileUrl, type SocialTarget } from '@/zktls/links';
-import { ZKTLS_PLATFORMS, type SocialProof, type ZktlsSocialPlatform } from '@solidarity/shared';
+import { bioEditUrl, publicProfileUrl } from '@/zktls/links';
+import { ZKTLS_PLATFORMS, type SocialProof, type SocialTarget, type ZktlsSocialPlatform } from '@solidarity/shared';
 
 type Screen =
   | { readonly kind: 'intro' }

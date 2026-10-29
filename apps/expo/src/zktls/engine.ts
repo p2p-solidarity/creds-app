@@ -26,12 +26,11 @@ import {
   type NotaryBundle,
   type Result,
   type SocialProof,
+  type SocialTarget,
   type ZktlsPlatform,
 } from '@solidarity/shared';
 
 import { getNostrPubkey, npubEncode, signNostrEvent } from '@/nostr/userKey';
-
-import type { SocialTarget } from './links';
 
 export type ProofFailure =
   /** This build has no prover (Android today, or an iOS build without the library). */
