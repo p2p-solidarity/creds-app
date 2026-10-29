@@ -26,6 +26,8 @@
  *                 profile publication (01-spec §4.3)
  *   webSign.ts    App<->Web per-action remote-signing envelopes
  *                 (request/response) + fail-closed verify (notes-1.3.3 §4)
+ *   deviceproof/  App Attest + Android Key Attestation verifiers and p2p
+ *                 witness statements (docs/ref/10 §3.11)
  *   zktls/        Notary-signed zkTLS evidence + platform rules (docs/ref/10)
  */
 export * from './badges';
@@ -33,6 +35,7 @@ export * from './canonical';
 export * from './challenge';
 export * from './crypto';
 export * from './derive';
+export * from './deviceproof';
 export * from './fragment';
 export * from './handles';
 export * from './identity';
