@@ -118,6 +118,7 @@ const SF_TO_MATERIAL: Partial<Record<SFSymbol, AndroidSymbol>> = {
   'eye.slash': 'visibility_off',
   'face.smiling': 'mood',
   faceid: 'face',
+  touchid: 'fingerprint',
   gearshape: 'settings',
   globe: 'public',
   'graduationcap.fill': 'school',
