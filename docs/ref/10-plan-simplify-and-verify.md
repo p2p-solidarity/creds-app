@@ -80,8 +80,8 @@
 | 元件 | 位置 | 說明 |
 |---|---|---|
 | **prover** | `nitro-modules/attest`（新增 HybridObject）| 搬 TLSNotary `tlsn-mobile` 的 Rust prover（UniFFI）。ArrayBuffer 參數照 CLAUDE.md 規則先同步複製。 |
-| **平台規則表** | `packages/shared/src/verify/platforms.ts` | 每個平台：URL 模板、要揭露的回應區段（meta tag／JSON path）、標記比對。純資料＋純函式。 |
-| **證據驗證器** | `packages/shared/src/verify/` | App 與網頁共用、純 TS：驗證據 JWS 的 notary 金鑰鏈（root → 月度憑證 → JWS）、server 是平台網域、bio 含標記、請求路徑等於宣稱的 handle，再沿名稱證據與 npub 綁定接到 DID（§3.5）。**不需要 tlsn WASM。** |
+| **平台規則表** | `packages/shared/src/zktls/platforms.ts` | 每個平台：URL 模板、要揭露的回應區段（meta tag／JSON path）、標記比對。純資料＋純函式。 |
+| **證據驗證器** | `packages/shared/src/zktls/`（`evidence.ts` 驗證據、`request.ts` 是 notary 的 NIP-98 閘門） | App 與網頁共用、純 TS：驗證據 JWS 的 notary 金鑰鏈（root → 月度憑證 → JWS）、server 是平台網域、bio 含標記、請求路徑等於宣稱的 handle，再沿名稱證據與 npub 綁定接到 DID（§3.5）。**不需要 tlsn WASM。** |
 | **notary** | Gimmy 帳號下的 **Cloudflare Container**（`durable_object` scheduling），前面一個 Worker 轉接 WebSocket 並負責簽章 | **P0 實測（docs/e2e/2026-10-29-zktls-spike）**：Worker 的 TCP socket 連不到 Cloudflare IP，而 x.com、t.co、LinkedIn 都在 Cloudflare 後面，所以 Worker 版 notary 不可行；原生 Rust verifier 放 Container 已端到端證明 X／Telegram／Threads／LinkedIn／GitHub（2–4.6 秒）。與 kidney 帳號的 `solidarity-id` 是兩個獨立 Worker。 |
 | **證據格式** | 我們自己的穩定 JWS（不存 TLSNotary presentation） | `{server, 請求行, bio 原文, 時間, 憑證鏈指紋, tlsnVersion, kid}`，由當月 notary 金鑰簽、附 root 簽的月度憑證。**不放進 Page**：由擁有者的 npub 獨立發佈（Nostr event，creds.id 同步收錄），以 DID 關聯；續驗只換證據、不重簽 Page。不進離線 QR。 |
 
@@ -115,7 +115,7 @@ TLSNotary 對「沒揭露的部分」沒有證明成本（alpha.13 #1006），�
 每一段都能離線驗；公司倒了舊徽章照樣成立。名字釋出後永久 tombstone（`airmeishi-backend/src/schedules/index.ts:12`，設計 G3），排除名字轉手。bio 不放 DID 指紋。
 
 ### 3.6 notary 金鑰（grill Q1）
-- **兩層**：root notary key 離線保存（Kidney 的 YubiKey + 紙本備份），從不上 Cloudflare，公鑰寫死在 `packages/shared`。每年一次離線作業產生 12 把月度簽章金鑰，root 為每把簽 `{kid, pubkey, notBefore, notAfter}` 憑證，上傳成 Worker secret；Worker cron 依日期切換當月金鑰。輪替不需要發 App。
+- **兩層**：root notary key 離線保存（Kidney 的 YubiKey + 紙本備份），從不上 Cloudflare，公鑰寫死在 `packages/shared`。每年一次離線作業產生 12 把月度簽章金鑰，root 為每把簽 `{kid, pubkey, notBefore, notAfter}` 憑證，上傳成 Worker secret（`NOTARY_KEYS`，只放私鑰；公開的憑證在 `apps/notary/keys/certs.json`）；Worker 每次簽章依日期挑當月金鑰，不需要 cron。輪替不需要發 App。工具：`apps/notary/scripts/keys.ts`。
 - **舊證據永遠可驗**：證據自帶月度憑證，看的人只需寫死的 root 公鑰，離線即可驗。
 - **外洩**：月度金鑰外洩只能偽造該月份的證據。root 簽撤銷清單發佈到 creds.id 與 Nostr；App 連線時讀到，把該月證據在背景自動重證（前提是標記留在 bio，見 D5）。
 
@@ -190,7 +190,7 @@ TLSNotary 對「沒揭露的部分」沒有證明成本（alpha.13 #1006），�
 |---|---|---|
 | **P0 spike**（丟棄式） | ① TLSNotary mobile prover 在 iOS 實機跑 Proxy 模式，對 X 和 Telegram 出證明；量耗時、流量。② verifier 編成 WASM 跑在 Worker + DO（128 MB、CPU 上限、`cloudflare:sockets`）；不行就試 Containers。③ 從 Cloudflare 出口連各平台會不會被擋。④ TLSNotary IO channel 能否接上 Pear（當面見證）。⑤ 用真帳號測 X 的 t.co 改寫。 | `docs/e2e/<date>-zktls-spike/result.md`：決定 Worker 或 Container、每個平台的模式與標記、當面見證是否可行 |
 | **P1** 測試瘦身＋Maestro 骨架 | §6 的刪除與 Maestro 第一條 flow | Maestro 跑過「建立」flow |
-| **P2** 驗證引擎 | prover Nitro 模組、shared 證據驗證器（tdd）、notary Worker（NIP-98 閘門 tdd、白名單、兩層金鑰、cron 輪替）、名稱證據、平台規則表（Telegram、X、GitHub、網站）、§2 的 UX、30 天背景續驗 | 實機：X 與 Telegram 從點擊到綠勾；網頁 viewer 看到同一個綠勾；App 遠端重抓顯示即時結果 |
+| **P2** 驗證引擎 | prover Nitro 模組、shared 證據驗證器（tdd）、notary Worker（NIP-98 閘門 tdd、白名單、兩層金鑰、依日期輪替）、名稱證據、平台規則表（Telegram、X、GitHub、網站）、§2 的 UX、30 天背景續驗 | 實機：X 與 Telegram 從點擊到綠勾；網頁 viewer 看到同一個綠勾；App 遠端重抓顯示即時結果。**P2a（2026-10-29）完成**：shared 驗證器＋閘門、`apps/notary`（Worker＋Container）部署為 dev，CLI prover E2E 通過 X／Telegram／名稱證據（`docs/e2e/2026-10-29-p2a-notary`）。剩 P2b App prover＋§2 UX、P2c 網頁徽章＋續驗、正式 root 儀式後的 production 部署 |
 | **P2.5** 當面見證 | Pear 上的 Proxy 模式 verifier（對方手機見證） | 兩支實機面對面交換，徽章顯示「剛剛由你的手機見證」 |
 | **P3** 其餘平台 | Threads、LinkedIn、IG（含 MPC 備援）、YouTube | 每個平台一次實機驗證紀錄 |
 | **P4** 一張卡 | §4：root 簽名、QR 兩種、刪名片 wire 與相關畫面、Pear 接手護照出示 | Maestro「出示」「收人」flow |
@@ -204,7 +204,7 @@ TLSNotary 對「沒揭露的部分」沒有證明成本（alpha.13 #1006），�
 
 | # | 問題 | 決議 | 細節 |
 |---|---|---|---|
-| Q1 | notary 金鑰放哪、怎麼輪替、舊證據能不能驗 | 兩層金鑰：root 離線（YubiKey），月度金鑰為 Worker secret、cron 輪替；證據自帶憑證，永遠可離線驗 | §3.6 |
+| Q1 | notary 金鑰放哪、怎麼輪替、舊證據能不能驗 | 兩層金鑰：root 離線（YubiKey），月度金鑰為 Worker secret、依日期自動切換；證據自帶憑證，永遠可離線驗 | §3.6 |
 | — | notary 部署在哪 | Gimmy 帳號下的 Worker + DO；不行再退 Containers → **P0 結果：Container**（Worker 連不到 Cloudflare 後面的 X） | §3.1 |
 | — | 見證能不能搬到本地 | 三層見證：當面由對方手機、App 遠端自己重抓，只有網頁／離線用 notary | §3.4、D3 |
 | Q2 | TLSNotary alpha 的版本相容 | 長期證據用自己的穩定 JWS；tlsn 跟季度更新一起升級，Worker 保留目前版＋前一版 | §3.7 |
@@ -215,3 +215,4 @@ TLSNotary 對「沒揭露的部分」沒有證明成本（alpha.13 #1006），�
 ### 仍待確認
 - 06 Q3 裁了「透明日誌」；本 plan 的撤銷清單只是 root 簽的一份清單，不是日誌，不衝突——但若之後想讓外洩可被第三方偵測，需要重開這題。
 - root notary key 的保管人與備份地點（目前假設 Kidney 的 YubiKey）。
+- **已知問題（P1 發現，2026-10-29，延後處理）**：onboarding Passkey「稍後再說」偶發卡在「正在設定…」（6 次 1 次）：keychain 讀完後沒寫入、CPU 閒置，卡在建立 root key 前後某個不會 resolve 的 await。疑似 dev 才有的 Metro 延遲載入 `expo-secure-store`，未證實；identity 路徑沒有逾時保護。細節見 `docs/e2e/2026-10-29-p1-maestro/result.md`。
