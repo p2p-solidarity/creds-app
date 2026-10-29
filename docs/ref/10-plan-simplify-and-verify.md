@@ -226,7 +226,12 @@ TLSNotary 對「沒揭露的部分」沒有證明成本（alpha.13 #1006），�
 - 當面交換（掃 QR）是最自然的時機：兩支手機互相檢查對方的連結，各自提示「幫對方見證」，互相背書。
 - **只在使用者主動按下時才發佈**（grill 決議，2026-10-30）：見證是公開的，等於公開「我認識這個人」；只瀏覽 Page、或掃了 QR 但沒按，都不發佈。
 - **2.0.0 一次到位**（grill 決議，2026-10-30）：第 3 層裝置證明、第 4 層看的人自己抓、「幫他見證」與網頁上的見證顯示都在 2.0.0 上線，不先出只有 App 內檢查的版本。
-- **notary 整套移除**（grill 決議，2026-10-30）：2.0.0 出貨前刪掉 notary Worker／Container（停用並刪除部署）、TLSNotary prover（Rust crate、xcframework、CI 的 `zktls-v0.2.0` 固定版本）、notary 簽章證據與 t.co 跳轉；保留平台規則與 `parseXProfile`（第 3、4 層都用）。不留隱藏備援。
+- ~~**notary 整套移除**~~（2026-10-30，同日改為下一條）：2.0.0 出貨前刪掉 notary Worker／Container（停用並刪除部署）、TLSNotary prover（Rust crate、xcframework、CI 的 `zktls-v0.2.0` 固定版本）、notary 簽章證據與 t.co 跳轉；保留平台規則與 `parseXProfile`（第 3、4 層都用）。不留隱藏備援。
+- **notary 改成 Pro 專屬**（Kidney，2026-10-30）：免費用戶走裝置證明＋p2p 見證；付費的 Pro 用戶可以多一位「creds.id 見證者」。費用由營收支撐，notary 不再是任何人的必經之路。notary 的見證用和 p2p 見證相同的格式（它自己的 npub 簽），只是見證者之一。機制見 grill 待決。
+- **Pro notary 自己抓頁面，不用 TLSNotary**（grill 決議，2026-10-30）：notary 直接抓公開頁、用 shared 平台規則檢查、以自己的 npub 簽一則見證；每小時批次處理一次佇列。對看的人的信任與 TLSNotary 相同（都是相信 creds.id），但任何裝置都不需要 prover：TLSNotary prover（Rust crate、xcframework、`zktls-v0.2.0` 固定版本）照原計畫從 App 移除。iOS 也不允許下載原生 prover（審核規範 2.5.2），WASM 版 prover 只在之後要證明「登入後才看得到的資料」時再評估。抓頁面先試 Worker `fetch()`（2026-10-30 的探測 Worker 被權限擋下，未測）；不通就沿用 Container 出口（P0 已證實 X／Telegram／Threads／GitHub 可達），改成 basic 規格並只在批次時喚醒。
+- **2.0.0 一起做 Pro 授權橋**（grill 決議，2026-10-30）：照 09-plan 的設計，`solidarity-id` Worker 向 App Store Server API／Google Play Developer API 查證購買，簽發綁定 DID 的授權 JWS；notary 只收附有效授權的批次請求，自己不連 Apple／Google。creds.id 網頁的 Pro 功能也靠這張授權防偽造。需要 Kidney 完成 09-plan 的 A11、A12、P7、P8 設定。
+- **Pro notary 的頻率**（預設，2026-10-30）：Pro 用戶所有可驗證的連結都可以請 notary 見證；送出後在下一次每小時批次處理，之後每 30 天自動重驗一次。
+- **電路要輕，網頁不跑電路**（Kidney，2026-10-30）：護照 nullifier 只加最小的部分（一個雜湊輸出），不增加網頁要做的事。網頁目前不驗護照 ZK（`verifyDisclosureBadge` 只顯示存在，不是 ZK 驗證），所以網頁上的「護照見證者」標示照實標成「未在網頁驗證，在 App 驗證」；網頁上的見證人數以裝置證明計，護照的不重複人數只在 App 裡算。
 - **不做 zk-email**（grill 決議，2026-10-30）：DKIM 信件 ZK 證明是唯一「任何人都能驗、不需信任誰」的社群證明，但取原始信、DKIM 換鑰、每個平台的信件格式會讓複雜度不斷上升，和拿掉 notary 的理由相同。
 - **護照讓 nostr 身分成為可信的真人（免 KYC）**（Kidney，2026-10-30）：護照 ZK 證明綁在持有者的 DID，Page 再宣告 npub，所以見證者的 npub 背後是一個持有有效護照的真人，而且不揭露任何護照資料。這種見證標示「已用護照驗證的見證者」，分量高於只有裝置證明的見證。Android 退回 SD-JWT（`trustLevel: 'white'`）的不算護照 ZK。現況：護照證明沒有 nullifier，同一本護照可以撐起多個 npub。
 - **2.0.0 加護照 nullifier**（grill 決議，2026-10-30）：passport-noir 目前沒有任何 nullifier（`circuits/` 全部查過），要在 OpenAC v3 的 show 電路新增一個以用途為範圍的 nullifier 公開輸出，網頁才能算「N 位不同的真人見證」。連帶工作：重新產生 proving key 與 SRS（CI 的 SRS 固定版本要一起換）、護照全流程實機重驗。屬於安全路徑，L。
@@ -235,6 +240,7 @@ TLSNotary 對「沒揭露的部分」沒有證明成本（alpha.13 #1006），�
 - **網頁的 Android 撤銷檢查走快取轉發**（grill 決議，2026-10-30）：creds.id 加一支 Pages Function，把 Google 公開的 `android.googleapis.com/attestation/status` 原封不動轉給瀏覽器，快取一天；比對與驗證全在瀏覽器做，函式不判斷任何證明。函式掛掉時網頁顯示「暫時無法確認撤銷狀態」，其他驗證照常。
 - **預設值**（提出後未被反對，2026-10-30）：見證保留 90 天，過期不計；人數以裝置計，同一支手機換 npub 只算一次（有護照 nullifier 時以 nullifier 計）；擁有者 App 每 30 天在背景重抓重簽；沒有硬體 attestation 的舊 Android 只能在 App 內檢查，不能見證也不能自證。
 - **待提供（非決策）**：Play Console 的 **app signing 金鑰 SHA-256**，用來釘選 Android `attestationApplicationId` 的簽章摘要（同 passkey assetlinks 的缺口）。
+- **待提供（非決策）**：09-plan 授權橋的商店設定（A11 App Store Server API 金鑰、A12 伺服器通知網址、P7 Play 服務帳號、P8 即時通知 Pub/Sub），金鑰只放 Worker secret。
 - 顯示：網頁訪客看到「N 支手機見證，最近一次 X 天前」；App 裡看的人另外看到見證者中有沒有自己的聯絡人（「你的聯絡人 Bob 見證過」）。
 - 擁有者自己的裝置證明（上面第 3 層）保留給**冷啟動**：還沒有人見證時，網頁仍有一個由真機簽出的勾勾；有人見證後，見證的分量更高。
 - 擁有者不能替自己見證：見證者 npub 不得等於 Page 的 npub，裝置金鑰也不得與擁有者自己證明用的是同一把。
