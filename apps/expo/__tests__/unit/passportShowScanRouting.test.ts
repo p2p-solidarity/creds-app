@@ -52,6 +52,8 @@ function fixtureEnvelopeJson(): { envelopeJson: string; vkSha256: string } {
     84n,
     87n,
     78n,
+    555n,
+    666n,
   ];
   if (fields.length !== PASSPORT_SHOW_PUBLIC_INPUT_FIELD_COUNT) {
     throw new Error('fixture field count drifted');
@@ -74,6 +76,8 @@ function fixtureEnvelopeJson(): { envelopeJson: string; vkSha256: string } {
     linkTag: '999',
     outIsOlder: true,
     outNationality: 'TWN',
+    nullifierScope: '555',
+    nullifier: '666',
   };
   return {
     envelopeJson: buildPassportShowEnvelopeJson({

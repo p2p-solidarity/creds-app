@@ -1912,5 +1912,6 @@
   "witness.publicNote": "見證是公開的：代表你用自己的手機確認過這個人的連結。",
   "witness.published": "已發佈見證",
   "witness.noName": "這個頁面沒有指回自己的 creds.id 名稱，無法檢查它的連結。",
-  "witness.count": "{{count}} 支手機見證"
+  "witness.count": "{{count}} 支手機見證",
+  "witness.passportCount": "{{count}} 位見證者已用護照驗證（在 App 驗證）"
 }

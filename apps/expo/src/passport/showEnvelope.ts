@@ -48,6 +48,9 @@ export interface PassportShowPublicInputs {
   readonly outIsOlder: boolean;
   /** ICAO alpha-3 when disclosed, null when the sentinel zeros are pinned. */
   readonly outNationality: string | null;
+  /** Passport nullifier scope + value (decimal fields; "0" = none). */
+  readonly nullifierScope: string;
+  readonly nullifier: string;
 }
 
 export interface PassportShowChallenge {
@@ -245,6 +248,8 @@ function parsePublicInputs(value: unknown): PassportShowPublicInputs | null {
     'commitmentX',
     'commitmentY',
     'linkTag',
+    'nullifierScope',
+    'nullifier',
   ]);
   const bools = pickBooleans(record, [
     'linkMode',
@@ -287,6 +292,8 @@ function parsePublicInputs(value: unknown): PassportShowPublicInputs | null {
     linkTag: strings.linkTag,
     outIsOlder: bools.outIsOlder,
     outNationality,
+    nullifierScope: strings.nullifierScope,
+    nullifier: strings.nullifier,
   };
 }
 

@@ -43,6 +43,8 @@ describe('passport show scan result mapping', () => {
           linkTag: '3',
           outIsOlder: true,
           outNationality: 'TWN',
+          nullifierScope: '0',
+          nullifier: '0',
         },
         freshness: 'challenge',
         holderDid: 'did:key:attacker-controlled',

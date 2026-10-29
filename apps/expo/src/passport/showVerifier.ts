@@ -7,7 +7,7 @@
  *      recorded at this device's own enrollment (same circuit ⇒ same vk;
  *      trust-on-first-use). Never verifies against an unpinned vk.
  *   2. Public inputs are read from the PROOF BYTES (UltraHonk prepends the
- *      49 public-input fields); the envelope's `publicInputs` are display
+ *      51 public-input fields); the envelope's `publicInputs` are display
  *      data and must match the proof exactly.
  *   3. Freshness: verifier-issued challenge nonce, or the time-bucket
  *      window (current + previous bucket).
@@ -31,9 +31,9 @@ import { PASSPORT_NOIR_VERSION } from '@/passport/openacV3';
  * credential_type, nonce_hash[32], link_mode, link_scope, epoch,
  * current_year/month/day, age_threshold, disclose_nationality,
  * disclose_age, out_commitment_x/y, out_link_tag, out_is_older,
- * out_nationality[3].
+ * out_nationality[3], nullifier_scope, out_nullifier (passport-noir 0.4.0).
  */
-export const PASSPORT_SHOW_PUBLIC_INPUT_FIELD_COUNT = 49;
+export const PASSPORT_SHOW_PUBLIC_INPUT_FIELD_COUNT = 51;
 
 /** openac_core::commit::DOMAIN_PASSPORT (= 0x01) as a decimal field. */
 export const PASSPORT_SHOW_DOMAIN_PASSPORT = '1';
@@ -76,6 +76,8 @@ export interface PassportShowProofPublicInputs {
   readonly linkTag: string;
   readonly outIsOlder: boolean;
   readonly outNationalityBytes: readonly [number, number, number];
+  readonly nullifierScope: string;
+  readonly nullifier: string;
 }
 
 /**
@@ -161,6 +163,8 @@ export function extractPassportShowProofPublicInputs(
     linkTag: field(44).toString(10),
     outIsOlder,
     outNationalityBytes: [nat0, nat1, nat2],
+    nullifierScope: field(49).toString(10),
+    nullifier: field(50).toString(10),
   };
 }
 
@@ -187,6 +191,11 @@ export interface VerifyPassportShowPresentationArgs {
   readonly expectedScope: string;
   readonly freshness: PassportShowFreshnessExpectation;
   readonly now: Date;
+  /**
+   * How old the proof's `current_*` date may be. Defaults to ±48 h (a live
+   * presentation); a published npub binding is long-lived and passes more.
+   */
+  readonly maxAgeMs?: number;
 }
 
 export type PassportShowVerifyFailureReason =
@@ -257,7 +266,8 @@ export async function verifyPassportShowPresentation(
     fromProof.month - 1,
     fromProof.day
   );
-  if (Math.abs(args.now.getTime() - presentedAt) > TODAY_TOLERANCE_MS) {
+  const ageMs = args.now.getTime() - presentedAt;
+  if (ageMs < -TODAY_TOLERANCE_MS || ageMs > (args.maxAgeMs ?? TODAY_TOLERANCE_MS)) {
     return fail('stale-presentation-date');
   }
 
@@ -309,7 +319,9 @@ function envelopeMatchesProof(
     claimed.commitmentY === proof.commitmentY &&
     claimed.linkTag === proof.linkTag &&
     claimed.outIsOlder === proof.outIsOlder &&
-    claimedNationality === proofNationality
+    claimedNationality === proofNationality &&
+    claimed.nullifierScope === proof.nullifierScope &&
+    claimed.nullifier === proof.nullifier
   );
 }
 

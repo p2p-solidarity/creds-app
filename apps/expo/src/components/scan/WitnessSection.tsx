@@ -17,6 +17,7 @@ import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
 import { DEFAULT_RELAYS } from '@/nostr/publish';
 import { getNostrPubkey, npubDecode } from '@/nostr/userKey';
+import { countPassportHolders } from '@/passport/npubBinding';
 import { deviceAttestSupported } from '@/witness/deviceKey';
 import {
   checkOnThisPhone,
@@ -52,6 +53,7 @@ export function WitnessSection({ record }: { readonly record: ProfileRecord }): 
   const [checks, setChecks] = useState<Readonly<Record<string, Check>>>({});
   const [witnessing, setWitnessing] = useState<string | null>(null);
   const [witnessed, setWitnessed] = useState<ReadonlySet<string>>(new Set());
+  const [passports, setPassports] = useState<Load<number>>({ kind: 'loading' });
   const claimKey = claims.map((c) => c.claim).join('|');
 
   useEffect(() => {
@@ -76,11 +78,23 @@ export function WitnessSection({ record }: { readonly record: ProfileRecord }): 
       setIdentity({ kind: 'ready', value: page });
       setChecks(Object.fromEntries(claims.map((c) => [c.claim, 'checking' as const])));
       void fetchWitnessSummaries({ ...page, claims: claims.map((c) => c.claim) }, DEFAULT_RELAYS)
-        .then((s) => {
-          if (live) setSummaries({ kind: 'ready', value: s });
+        .then(async (s) => {
+          if (!live) return;
+          setSummaries({ kind: 'ready', value: s });
+          const authors = new Set<string>();
+          for (const summary of s.values()) {
+            for (const w of summary.others) {
+              const hex = npubDecode(w.statement.witness);
+              if (hex.ok) authors.add(hex.value);
+            }
+          }
+          const count = await countPassportHolders([...authors], DEFAULT_RELAYS);
+          if (live) setPassports({ kind: 'ready', value: count });
         })
         .catch(() => {
-          if (live) setSummaries({ kind: 'error' });
+          if (!live) return;
+          setSummaries((prev) => (prev.kind === 'ready' ? prev : { kind: 'error' }));
+          setPassports({ kind: 'error' });
         });
       for (const { claim, target } of claims) {
         void checkOnThisPhone(target, name).then((r) => {
@@ -171,6 +185,9 @@ export function WitnessSection({ record }: { readonly record: ProfileRecord }): 
           </ThemedSurface>
         );
       })}
+      {passports.kind === 'ready' && passports.value > 0 ? (
+        <SealPill state="verified" label={t('witness.passportCount', { count: passports.value })} />
+      ) : null}
       {canWitness ? (
         <ThemedText variant="caption" tone="tertiary">
           {t('witness.publicNote')}

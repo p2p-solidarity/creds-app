@@ -133,6 +133,8 @@ const REQUIRED_SHOW_INPUT_KEYS = [
   'out_link_tag',
   'out_is_older',
   'out_nationality',
+  'nullifier_scope',
+  'out_nullifier',
 ] as const;
 
 export function swapPassportShowInputs(args: {
@@ -215,6 +217,8 @@ function publicInputsFromSwap(args: {
     linkTag: first('out_link_tag'),
     outIsOlder: args.outIsOlder,
     outNationality: args.nationality,
+    nullifierScope: first('nullifier_scope'),
+    nullifier: first('out_nullifier'),
   };
 }
 

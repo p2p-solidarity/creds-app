@@ -56,6 +56,8 @@ function showInputsFixture(overrides: Record<string, string[]> = {}): Record<str
     out_link_tag: ['999'],
     out_is_older: ['1'],
     out_nationality: ['84', '87', '78'],
+    nullifier_scope: ['555'],
+    out_nullifier: ['666'],
     ...overrides,
   };
 }
@@ -203,6 +205,8 @@ describe('passport show presentation — input swap', () => {
       linkTag: '999',
       outIsOlder: true,
       outNationality: 'TWN',
+      nullifierScope: '555',
+      nullifier: '666',
     });
   });
 
@@ -311,6 +315,8 @@ describe('passport show presentation — envelope', () => {
     linkTag: '999',
     outIsOlder: true,
     outNationality: 'TWN',
+    nullifierScope: '555',
+    nullifier: '666',
   } as const;
 
   it('round-trips and carries no prepare proofs', () => {

@@ -115,7 +115,7 @@ function openAcV3Plan() {
 
 describe('passport OpenAC v3.1 / passport-noir 0.3.0 contract', () => {
   it('pins the latest passport-noir version and v3 circuit sequence', () => {
-    expect(PASSPORT_NOIR_VERSION).toBe('0.3.0');
+    expect(PASSPORT_NOIR_VERSION).toBe('0.4.0');
     expect(PASSPORT_V3_PROOF_TYPE).toBe('passport_v3');
     expect(PASSPORT_REVOCATION_SNAPSHOT_SCHEMA).toBe('gg.solidarity.passport.revocation.v1');
     expect(PASSPORT_OPENAC_V3_REQUIRED_DATA_GROUPS).toEqual(['SOD', 'DG1']);
@@ -129,7 +129,7 @@ describe('passport OpenAC v3.1 / passport-noir 0.3.0 contract', () => {
 
   it('builds a proof plan that calls the 0.3.0 circuits explicitly', () => {
     const plan = openAcV3Plan();
-    expect(plan.version).toBe('0.3.0');
+    expect(plan.version).toBe('0.4.0');
     expect(plan.proofType).toBe('passport_v3');
     expect(plan.circuits.map((c) => c.circuitPath)).toEqual([
       'dsc_chain',
@@ -207,7 +207,7 @@ describe('passport OpenAC v3.1 / passport-noir 0.3.0 contract', () => {
       };
     };
     expect(parsed.proofType).toBe('passport_v3');
-    expect(parsed.passportNoirVersion).toBe('0.3.0');
+    expect(parsed.passportNoirVersion).toBe('0.4.0');
     expect(parsed.proofs.map((proof) => proof.circuit)).toEqual([
       'dsc_chain',
       'passport_adapter',
@@ -295,7 +295,7 @@ describe('passport OpenAC v3.1 / passport-noir 0.3.0 contract', () => {
     };
 
     expect(parsed.schema).toBe('gg.solidarity.passport.openac-v3.witness-request.v1');
-    expect(parsed.passportNoirVersion).toBe('0.3.0');
+    expect(parsed.passportNoirVersion).toBe('0.4.0');
     expect(parsed.dataGroups['sod']).toBeDefined();
     expect(parsed.dataGroups['dg1']).toBeDefined();
     expect(parsed.dataGroups['dg15']).toBeDefined();
@@ -425,7 +425,7 @@ describe('passport OpenAC v3.1 / passport-noir 0.3.0 contract', () => {
             expect(requestJson).toContain('openac-v3.witness-request.v1');
             return {
               schema: 'gg.solidarity.passport.openac-v3.witness-build-result.v1',
-              passportNoirVersion: '0.3.0',
+              passportNoirVersion: '0.4.0',
               ready: true,
               bundleJson,
             };
@@ -459,7 +459,7 @@ describe('passport OpenAC v3.1 / passport-noir 0.3.0 contract', () => {
             requests.push(JSON.parse(requestJson));
             return {
               schema: 'gg.solidarity.passport.openac-v3.witness-build-result.v1',
-              passportNoirVersion: '0.3.0',
+              passportNoirVersion: '0.4.0',
               ready: true,
               bundleJson,
             };
@@ -502,7 +502,7 @@ describe('passport OpenAC v3.1 / passport-noir 0.3.0 contract', () => {
             requests.push(JSON.parse(requestJson));
             return {
               schema: 'gg.solidarity.passport.openac-v3.witness-build-result.v1',
-              passportNoirVersion: '0.3.0',
+              passportNoirVersion: '0.4.0',
               ready: true,
               bundleJson,
             };
@@ -558,7 +558,7 @@ describe('passport OpenAC v3.1 / passport-noir 0.3.0 contract', () => {
         builder: {
           buildOpenAcV3WitnessBundle: async () => ({
             schema: 'gg.solidarity.passport.openac-v3.witness-build-result.v1',
-            passportNoirVersion: '0.3.0',
+            passportNoirVersion: '0.4.0',
             ready: false,
             reason: 'missing-active-auth-witness',
           }),

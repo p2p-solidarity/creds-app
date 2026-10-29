@@ -1,7 +1,13 @@
 import type { PassportReadResult } from '@solidarity/nitro-attest';
 import { base64Encode } from '@solidarity/shared';
 
-export const PASSPORT_NOIR_VERSION = '0.3.0' as const;
+export const PASSPORT_NOIR_VERSION = '0.4.0' as const;
+/**
+ * The one global passport-nullifier scope (docs/ref/10 §3.11): every proof
+ * this app makes carries the same nullifier for the same passport, so a
+ * verifier counts distinct passports behind witnesses.
+ */
+export const PASSPORT_NULLIFIER_SCOPE = 'creds.passport.nullifier.v1' as const;
 export const PASSPORT_V3_PROOF_TYPE = 'passport_v3' as const;
 export const PASSPORT_REVOCATION_SNAPSHOT_SCHEMA =
   'gg.solidarity.passport.revocation.v1' as const;
@@ -513,6 +519,7 @@ export function buildPassportOpenAcV3WitnessRequestJson(
     devicePublicKeyRawB64: base64Encode(args.devicePublicKeyRaw),
     nonceHashB64: base64Encode(args.nonceHash),
     linkScope: args.linkScope,
+    nullifierScope: PASSPORT_NULLIFIER_SCOPE,
     requireAA: args.requireAA,
     ...(args.activeAuth
       ? {

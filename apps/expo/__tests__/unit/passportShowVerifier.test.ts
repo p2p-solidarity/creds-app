@@ -76,6 +76,8 @@ function buildFixture(overrides: ProofFixture = {}): {
     999n, // out_link_tag
     outIsOlder ? 1n : 0n,
     ...nationalityBytes.map((b) => BigInt(b)),
+    555n, // nullifier_scope
+    666n, // out_nullifier
   ];
   expect(fields.length).toBe(PASSPORT_SHOW_PUBLIC_INPUT_FIELD_COUNT);
 
@@ -99,6 +101,8 @@ function buildFixture(overrides: ProofFixture = {}): {
     outNationality: discloseNationality
       ? String.fromCharCode(...nationalityBytes)
       : null,
+    nullifierScope: '555',
+    nullifier: '666',
   };
   return { proofBytes, publicInputs };
 }
@@ -129,7 +133,7 @@ describe('passport show verifier — scope field', () => {
 });
 
 describe('passport show verifier — public input extraction', () => {
-  it('round-trips the 49-field public input block', () => {
+  it('round-trips the 51-field public input block', () => {
     const { proofBytes } = buildFixture();
     const decoded = extractPassportShowProofPublicInputs(proofBytes);
     expect(decoded).not.toBe(null);
