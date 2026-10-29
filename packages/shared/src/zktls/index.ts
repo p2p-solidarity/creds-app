@@ -5,3 +5,4 @@ export * from './platforms';
 export * from './request';
 export * from './socialProof';
 export * from './xProfile';
+export * from './pageCheck';

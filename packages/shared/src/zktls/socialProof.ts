@@ -14,7 +14,7 @@
 import { npubToHex } from '../nostr/npub';
 import { err, ok, type Result } from '../types/result';
 import { verifyNotaryBundle, type NotaryBundle, type VerifiedEvidence } from './evidence';
-import { bioCarriesMarker, type ZktlsPlatform } from './platforms';
+import { bioCarriesMarker, ZKTLS_PLATFORMS, type ZktlsPlatform } from './platforms';
 import { isMarkerUrl, parseXProfile } from './xProfile';
 
 /** Platforms a Page can carry a zkTLS claim for (the others are proof plumbing). */
@@ -53,6 +53,15 @@ export interface SocialProofOptions {
 /** The `alsoKnownAs` entry a Page signs for a verified handle. */
 export function pageSocialClaim(platform: ZktlsSocialPlatform, handle: string): string {
   return platform === 'website' ? `website:${handle}` : `${platform}:@${handle}`;
+}
+
+/** The inverse of `pageSocialClaim`: `x:@alice` → the target, or null. */
+export function socialTargetForClaim(claim: string): { readonly platform: ZktlsSocialPlatform; readonly handle: string } | null {
+  const m = /^(x|telegram|github):@(.+)$|^website:(.+)$/u.exec(claim);
+  if (m === null) return null;
+  const platform: ZktlsSocialPlatform = m[3] !== undefined ? 'website' : (m[1] as ZktlsSocialPlatform);
+  const handle = m[3] ?? m[2] ?? '';
+  return ZKTLS_PLATFORMS[platform].handlePattern.test(handle) ? { platform, handle } : null;
 }
 
 /** `t.co/<id>` as a whole token in an X bio. */

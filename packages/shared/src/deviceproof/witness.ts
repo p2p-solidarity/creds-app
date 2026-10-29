@@ -169,3 +169,50 @@ export function verifyWitness(event: NostrEvent, trust: DeviceProofTrust): Resul
     self: statement.witness === statement.subject,
   });
 }
+
+/** Witnesses older than this no longer count (docs/ref/10 §3.11 defaults). */
+export const WITNESS_LAPSE_SECONDS = 90 * 86_400;
+/** Clock skew tolerated on `observedAt`. */
+const FUTURE_SKEW_SECONDS = 300;
+
+export interface WitnessSummary {
+  /** The owner's own device-attested check (cold start), newest. */
+  readonly self: VerifiedWitness | null;
+  /** Other people's witnesses, newest per witness npub. */
+  readonly others: readonly VerifiedWitness[];
+  /** Newest `observedAt` across both (unix s), or null. */
+  readonly latestAt: number | null;
+}
+
+/**
+ * Every valid, current witness of one Page claim. The subject npub and name
+ * come from the Page the caller already verified; witnesses for anything else
+ * are dropped. The owner cannot witness themselves twice: a witness signed by
+ * the same device key as the owner's own check is not counted.
+ */
+export function summarizeWitnesses(
+  events: readonly NostrEvent[],
+  page: { readonly subject: string; readonly claim: string; readonly name: string },
+  trust: DeviceProofTrust,
+  nowSeconds: number,
+): WitnessSummary {
+  const valid: VerifiedWitness[] = [];
+  for (const event of events) {
+    const w = verifyWitness(event, trust);
+    if (!w.ok) continue;
+    const s = w.value.statement;
+    if (s.subject !== page.subject || s.claim !== page.claim || s.name !== page.name) continue;
+    if (s.observedAt > nowSeconds + FUTURE_SKEW_SECONDS || nowSeconds - s.observedAt > WITNESS_LAPSE_SECONDS) continue;
+    valid.push(w.value);
+  }
+  valid.sort((a, b) => b.statement.observedAt - a.statement.observedAt);
+  const self = valid.find((w) => w.self) ?? null;
+  const ownerKeys = new Set(valid.filter((w) => w.self).map((w) => w.deviceKey));
+  const seen = new Set<string>();
+  const others = valid.filter((w) => {
+    if (w.self || ownerKeys.has(w.deviceKey) || seen.has(w.statement.witness)) return false;
+    seen.add(w.statement.witness);
+    return true;
+  });
+  return { self, others, latestAt: valid[0]?.statement.observedAt ?? null };
+}
