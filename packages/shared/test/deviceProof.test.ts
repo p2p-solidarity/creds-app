@@ -282,6 +282,7 @@ describe('verifyWitness', () => {
   // phone in phase 2 (docs/ref/10 §3.11) and added here then. These cover every refusal.
   const WITNESS_KEY = sha256(new TextEncoder().encode('witness test key'));
   const SUBJECT_KEY = sha256(new TextEncoder().encode('subject test key'));
+  const NOTARY_KEY = sha256(new TextEncoder().encode('notary test key'));
   const npubOf = (scalar: Uint8Array): string => {
     const r = hexToNpub(Buffer.from(schnorr.getPublicKey(scalar)).toString('hex'));
     if (!r.ok) throw new Error(r.error);
@@ -294,6 +295,7 @@ describe('verifyWitness', () => {
     androidPackage: 'com.google.android.attestation',
     androidSignatureDigests: [base64Decode('EDk47kU35Z6O55L2VFBPuDRvxrNG0LvEQV/DOfz8jsE=')],
     googleRoots: GOOGLE_ROOTS,
+    notaryPubkeys: [Buffer.from(schnorr.getPublicKey(NOTARY_KEY)).toString('hex')],
   };
   const statement = (over: Partial<WitnessStatement> = {}): WitnessStatement => ({
     v: 1,
@@ -311,6 +313,13 @@ describe('verifyWitness', () => {
     if (!r.ok) throw new Error(r.error);
     return r.value;
   };
+
+  test('a notary witness counts only from the pinned notary key', () => {
+    const fromNotary = signed(statement({ witness: npubOf(NOTARY_KEY) }), NOTARY_KEY, { platform: 'notary' });
+    const verified = verifyWitness(fromNotary, trust);
+    expect(verified.ok && verified.value.platform).toBe('notary');
+    expect(verifyWitness(signed(statement(), WITNESS_KEY, { platform: 'notary' }), trust).ok).toBe(false);
+  });
 
   test('witness events are NIP-78 app data', () => {
     expect(buildWitnessEvent(statement(), iosDevice).kind).toBe(WITNESS_EVENT_KIND);

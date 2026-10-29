@@ -22,6 +22,13 @@ export const CREDS_ANDROID_SIGNATURE_DIGESTS_HEX: readonly string[] = [
   'be3844b19f74375e9b6f9c8ac9349fcff5347ee45f556f8c27172e901f3e2de8', // upload key
 ];
 
+/**
+ * Hex pubkey(s) of the creds.id Pro notary's Nostr key. Empty until the
+ * notary key is provisioned (`apps/notary/scripts/witness-key.ts`): until
+ * then no notary witness counts.
+ */
+export const CREDS_NOTARY_WITNESS_PUBKEYS: readonly string[] = [];
+
 export const CREDS_DEVICE_TRUST: DeviceProofTrust = {
   appleAppId: CREDS_APPLE_APP_ID,
   appleEnvironment: 'production',
@@ -29,4 +36,5 @@ export const CREDS_DEVICE_TRUST: DeviceProofTrust = {
   androidPackage: CREDS_ANDROID_PACKAGE,
   androidSignatureDigests: CREDS_ANDROID_SIGNATURE_DIGESTS_HEX.map(hexToBytes),
   googleRoots: [base64Decode(GOOGLE_RSA_ROOT_B64), base64Decode(GOOGLE_EC_ROOT_B64)],
+  notaryPubkeys: CREDS_NOTARY_WITNESS_PUBKEYS,
 };

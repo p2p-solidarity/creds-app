@@ -14,6 +14,7 @@
     "./identity": "./src/identity/index.ts",
     "./qr": "./src/qr/index.ts",
     "./nostr": "./src/nostr/index.ts",
+    "./pro": "./src/pro/index.ts",
     "./zktls": "./src/zktls/index.ts"
   },
   "scripts": {

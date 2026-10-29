@@ -46,11 +46,14 @@ export type WitnessStatement = z.infer<typeof statementSchema>;
 
 export type DeviceProof =
   | { readonly platform: 'ios'; readonly attestation: string; readonly keyId: string; readonly assertion: string }
-  | { readonly platform: 'android'; readonly chain: readonly string[]; readonly signature: string };
+  | { readonly platform: 'android'; readonly chain: readonly string[]; readonly signature: string }
+  /** The Pro notary (creds.id) fetched the page itself; trusted by its pinned npub, not a device. */
+  | { readonly platform: 'notary' };
 
 const deviceSchema = z.union([
   z.object({ platform: z.literal('ios'), attestation: z.string(), keyId: z.string(), assertion: z.string() }).strict(),
   z.object({ platform: z.literal('android'), chain: z.array(z.string()).min(2).max(8), signature: z.string() }).strict(),
+  z.object({ platform: z.literal('notary') }).strict(),
 ]);
 const contentSchema = z.object({ statement: z.string().max(2048), device: deviceSchema }).strict();
 
@@ -63,12 +66,14 @@ export interface DeviceProofTrust {
   readonly androidSignatureDigests: readonly Uint8Array[];
   readonly googleRoots: readonly Uint8Array[];
   readonly revokedSerials?: ReadonlySet<string>;
+  /** Hex pubkeys of the creds.id Pro notary; a `notary` witness from anyone else is refused. */
+  readonly notaryPubkeys: readonly string[];
 }
 
 export interface VerifiedWitness {
   readonly statement: WitnessStatement;
   readonly platform: DeviceProof['platform'];
-  /** SHA-256 of the device public key (hex) — identifies the key, not the phone. */
+  /** SHA-256 of the device public key (hex) — identifies the key, not the phone. Empty for the notary. */
   readonly deviceKey: string;
   /** The owner proving their own claim. */
   readonly self: boolean;
@@ -101,6 +106,9 @@ function verifyDevice(
   at: number,
   trust: DeviceProofTrust,
 ): Result<Uint8Array, string> {
+  if (device.platform === 'notary') {
+    return trust.notaryPubkeys.includes(witnessHex.toLowerCase()) ? ok(new Uint8Array()) : err('not the creds.id notary');
+  }
   const challenge = deviceKeyChallenge(witnessHex);
   try {
     if (device.platform === 'ios') {
@@ -165,7 +173,7 @@ export function verifyWitness(event: NostrEvent, trust: DeviceProofTrust): Resul
   return ok({
     statement,
     platform: content.device.platform,
-    deviceKey: bytesToHex(sha256(device.value)),
+    deviceKey: content.device.platform === 'notary' ? '' : bytesToHex(sha256(device.value)),
     self: statement.witness === statement.subject,
   });
 }
@@ -210,7 +218,7 @@ export function summarizeWitnesses(
   const ownerKeys = new Set(valid.filter((w) => w.self).map((w) => w.deviceKey));
   const seen = new Set<string>();
   const others = valid.filter((w) => {
-    if (w.self || ownerKeys.has(w.deviceKey) || seen.has(w.statement.witness)) return false;
+    if (w.self || (w.deviceKey !== '' && ownerKeys.has(w.deviceKey)) || seen.has(w.statement.witness)) return false;
     seen.add(w.statement.witness);
     return true;
   });
