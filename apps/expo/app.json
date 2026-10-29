@@ -123,6 +123,7 @@
             "backgroundColor": "#060417"
           },
           "android": {
+            "image": "./assets/splash-android-transparent.png",
             "backgroundColor": "#FBF9F2",
             "dark": {
               "backgroundColor": "#060417"
