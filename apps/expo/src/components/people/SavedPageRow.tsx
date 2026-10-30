@@ -1,101 +1,46 @@
 /**
- * VerifiedPagesSection — People tab entry point back to locally-saved
- * pages: Verified Pages (Task A2.3b, the fast-follow to A2.3/commit
- * 1afb4a2) AND declared link-page imports (Task A2.4, US-19). A2.3 shipped
- * `useProfileSnapshotStore` and the `/people/profile/[did]` detail screen
- * but nothing in People linked back to them after saving — this section
- * closes that gap, and A2.4 extends it to the unverified `kind: 'declared'`
- * branch of the same store.
- *
- * Renders nothing when there are no snapshots of either kind. The Contacts
- * screen owns its empty state and its Add Contact sheet, so an empty section
- * here would only duplicate the same message.
- *
- * Reads `useSortedProfileSnapshots()`, which is backed by the in-memory
- * zustand store hydrated synchronously at boot (`hydrateProfileSnapshots()`
- * in `app/_layout.tsx`) — no awaits on this render path. Ordering: verified
- * entries first, then declared (see the selector's own doc) — a
- * cryptographically-verified page always outranks an unverified claim.
- *
- * Row visual language borrows from `TrustGraphContactRow` (round initial
- * avatar, name + secondary line, bottom divider between rows) rather than
- * inventing a new row shape. The Contacts screen puts this section at the
- * top of the list, so a page saved from the scan sheet is visible the moment
- * the sheet closes (it was unmounted on 2026-08-19, which left 「存入聯絡人」
- * saving into a store nothing displayed). A declared row
- * additionally carries a visible 「未驗證」 chip
- * (CLAUDE.md rule 8 — never let an unverified claim look verified) and its
- * OWN route (`/people/declared/[id]`, not `/people/profile/[did]` — a
- * declared entry has no did to key that route on).
+ * SavedPageRow — a locally-saved Page in the People A–Z list, sorted in with
+ * the contacts (a saved Page is a person too). Verified Pages open
+ * `/people/profile/[did]`; declared link-page imports open
+ * `/people/declared/[id]` and carry a visible 「未驗證」 chip (CLAUDE.md rule 8 —
+ * never let an unverified claim look verified).
  */
 import { BrandIcon } from '@/components/icons/BrandIcon';
-import Animated, { useReducedMotion } from 'react-native-reanimated';
-import { fadeUpIn } from '@/feedback/motion';
-import { hostnameOf, linkDisplay } from '@/profile/linkPresentation';
+import { linkDisplay } from '@/profile/linkPresentation';
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
 
 import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
+import { snapshotDisplayName } from '@/components/people/ContactsList';
 import { PageAvatar } from '@/components/people/PageAvatar';
 import { ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { useTranslation } from '@/i18n';
-import {
-  useSortedProfileSnapshots,
-  type DeclaredSnapshot,
-  type ProfileSnapshot,
-  type VerifiedSnapshot,
+import type {
+  DeclaredSnapshot,
+  ProfileSnapshot,
+  VerifiedSnapshot,
 } from '@/people/profileSnapshots';
 import { verifiedAtRelative } from '@/people/relativeVerifiedAt';
 
-export function VerifiedPagesSection(): ReactNode {
-  const { t } = useTranslation();
-  const snapshots = useSortedProfileSnapshots();
-  const reduceMotion = useReducedMotion();
-
-  if (snapshots.length === 0) return null;
-
-  return (
-    <View className="pb-4" style={{ gap: 6 }}>
-      <ThemedText variant="label" tone="secondary">
-        {t('peopleList.savedPagesHeader')}
-      </ThemedText>
-      <View>
-        {snapshots.map((snapshot, index) => (
-          <Animated.View key={snapshot.kind === 'verified' ? snapshot.did : snapshot.id} entering={fadeUpIn(index, reduceMotion)}>
-            <SnapshotRow
-              snapshot={snapshot}
-              isLast={index === snapshots.length - 1}
-            />
-          </Animated.View>
-        ))}
-      </View>
-    </View>
-  );
-}
-
-function SnapshotRow({
+export function SavedPageRow({
   snapshot,
-  isLast,
 }: {
   readonly snapshot: ProfileSnapshot;
-  readonly isLast: boolean;
 }): ReactNode {
   return snapshot.kind === 'verified' ? (
-    <VerifiedPageRow snapshot={snapshot} isLast={isLast} />
+    <VerifiedPageRow snapshot={snapshot} />
   ) : (
-    <DeclaredPageRow snapshot={snapshot} isLast={isLast} />
+    <DeclaredPageRow snapshot={snapshot} />
   );
 }
 
 function VerifiedPageRow({
   snapshot,
-  isLast,
 }: {
   readonly snapshot: VerifiedSnapshot;
-  readonly isLast: boolean;
 }): ReactNode {
   const { t } = useTranslation();
 
@@ -109,7 +54,7 @@ function VerifiedPageRow({
       accessibilityLabel={snapshot.record.displayName}
       className="flex-row items-center gap-3 py-3"
       style={{
-        borderBottomWidth: isLast ? 0 : 0.5,
+        borderBottomWidth: 0.5,
         borderBottomColor: Colors.divider,
       }}
     >
@@ -129,13 +74,11 @@ function VerifiedPageRow({
 
 function DeclaredPageRow({
   snapshot,
-  isLast,
 }: {
   readonly snapshot: DeclaredSnapshot;
-  readonly isLast: boolean;
 }): ReactNode {
   const { t } = useTranslation();
-  const displayTitle = snapshot.title && snapshot.title.trim().length > 0 ? snapshot.title : hostnameOf(snapshot.sourceUrl);
+  const displayTitle = snapshotDisplayName(snapshot);
 
   return (
     <PressableScale
@@ -147,7 +90,7 @@ function DeclaredPageRow({
       accessibilityLabel={displayTitle}
       className="flex-row items-center gap-3 py-3"
       style={{
-        borderBottomWidth: isLast ? 0 : 0.5,
+        borderBottomWidth: 0.5,
         borderBottomColor: Colors.divider,
       }}
     >

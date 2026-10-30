@@ -30,7 +30,7 @@ import { DeleteContactsSheet } from '@/components/people/DeleteContactsSheet';
 import { ManualContactEntrySheet } from '@/components/people/ManualContactEntrySheet';
 import { PeopleSearchField } from '@/components/people/PeopleSearchField';
 import { TrustGraphContactRow } from '@/components/people/TrustGraphContactRow';
-import { VerifiedPagesSection } from '@/components/people/VerifiedPagesSection';
+import { SavedPageRow } from '@/components/people/SavedPageRow';
 import { LinkPageImportSheet, type LinkPageImportResult } from '@/components/profile/LinkPageImportSheet';
 import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
@@ -59,7 +59,8 @@ export default function PeopleTab() {
   const removeContact = useContactStore((s) => s.remove);
   const loadDetail = useContactStore((s) => s.loadDetail);
   const upsertDeclared = useProfileSnapshotStore((s) => s.upsertDeclared);
-  const savedPageCount = useSortedProfileSnapshots().length;
+  const savedPages = useSortedProfileSnapshots();
+  const savedPageCount = savedPages.length;
   const pullRefresh = usePagesPullRefresh(savedPageCount);
   const backupEnabled = usePreferences((s) => s.backupEnabled);
   const insets = useSafeAreaInsets();
@@ -78,15 +79,18 @@ export default function PeopleTab() {
 
   const contactSections = useMemo(() => groupContactsByInitial(contacts, ''), [contacts]);
   const orderedContacts = useMemo(
-    () => contactSections.flatMap((section) => section.contacts),
+    () => contactSections.flatMap((section) =>
+      section.entries.flatMap((entry) => (entry.kind === 'contact' ? [entry.contact] : []))),
     [contactSections],
   );
   const filteredSections = useMemo(
-    () => groupContactsByInitial(contacts, searchQuery),
-    [contacts, searchQuery],
+    // Selecting acts on contacts only (delete / export vCard), so saved Pages
+    // leave the list while selecting.
+    () => groupContactsByInitial(contacts, searchQuery, editMode ? [] : savedPages),
+    [contacts, searchQuery, editMode, savedPages],
   );
   const filteredCount = useMemo(
-    () => filteredSections.reduce((count, section) => count + section.contacts.length, 0),
+    () => filteredSections.reduce((count, section) => count + section.entries.length, 0),
     [filteredSections],
   );
   const searching = searchQuery.trim().length > 0;
@@ -279,12 +283,11 @@ export default function PeopleTab() {
         <ContactsLoadError onRetry={retry} />
       ) : loading ? (
         <LoadingState />
-      ) : contacts.length === 0 ? (
+      ) : contacts.length === 0 && savedPageCount === 0 ? (
         <EmptyContactsContent
           onImportPhone={() => { router.push('/contacts/import-phone'); }}
           onAdd={() => { setAddSheetOpen(true); }}
           activity={editMode ? null : <ContactsActivitySections onContactAdded={refresh} />}
-          hasSavedPages={savedPageCount > 0}
           refreshControl={pullRefresh}
         />
       ) : (
@@ -318,7 +321,6 @@ export default function PeopleTab() {
                 keyboardShouldPersistTaps="handled"
                 refreshControl={editMode ? undefined : pullRefresh}
                 extraData={{ editMode, selectedIds }}
-                ListHeaderComponent={editMode || searching ? null : <VerifiedPagesSection />}
                 renderItem={({ item, index }) => (
                   // Always wrapped, so a recycled cell keeps the same tree;
                   // `entering` only runs on mount, never on recycle.
@@ -326,6 +328,8 @@ export default function PeopleTab() {
                     entering={index < ENTRANCE_ROWS ? fadeUpIn(index, reduceMotion) : undefined}>
                     {item.kind === 'header' ? (
                       <ContactSectionHeader title={item.title} />
+                    ) : item.kind === 'page' ? (
+                      <SavedPageRow snapshot={item.snapshot} />
                     ) : (
                       <PeopleRow
                         contact={item.contact}
@@ -635,26 +639,17 @@ function EmptyContactsContent({
   onImportPhone,
   onAdd,
   activity,
-  hasSavedPages,
   refreshControl,
 }: {
   readonly onImportPhone: () => void;
   readonly onAdd: () => void;
   readonly activity: ReactNode;
-  /** Saved Pages are people too: with any, the list is not empty. */
-  readonly hasSavedPages: boolean;
   readonly refreshControl: ReactElement<RefreshControlProps> | undefined;
 }) {
   return (
     <ScrollView contentContainerStyle={{ flexGrow: 1 }} refreshControl={refreshControl}>
       {activity}
-      {hasSavedPages ? (
-        <View className="px-4">
-          <VerifiedPagesSection />
-        </View>
-      ) : (
-        <EmptyState onImportPhone={onImportPhone} onAdd={onAdd} />
-      )}
+      <EmptyState onImportPhone={onImportPhone} onAdd={onAdd} />
     </ScrollView>
   );
 }
