@@ -28,6 +28,14 @@
 import { Appearance } from 'react-native';
 
 const RAW = {
+  /** creds.id `--shadow-*` (airmeishi-web theme.css) as RN `boxShadow` strings — read through
+   *  `shadow()` in `radius.ts`, never inline. Avatar well, lifted card, sheet. */
+  shadowAvatar: '0 2px 12px rgba(38, 34, 28, 0.12)',
+  shadowAvatarDark: '0 2px 12px rgba(0, 0, 0, 0.5)',
+  shadowLift: '0 10px 24px -16px rgba(38, 34, 28, 0.35)',
+  shadowLiftDark: '0 10px 24px -16px rgba(0, 0, 0, 0.6)',
+  shadowSheet: '0 30px 70px -30px rgba(38, 34, 28, 0.5)',
+  shadowSheetDark: '0 30px 70px -35px rgba(0, 0, 0, 0.75)',
   /** Launch splash ground — the native splash's colour (app.json), cream by day, night by dark. */
   splashBg: '#FBF9F2',
   splashBgDark: '#060417',
