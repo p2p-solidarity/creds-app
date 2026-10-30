@@ -25,6 +25,7 @@
  * the same override `signingKey.ts` honours.
  */
 import type { SpruceDid } from '@solidarity/nitro-keystone';
+import { Platform } from 'react-native';
 
 /** The identity key alias — shared with `signingKey.ts`. */
 export const SIGNING_KEY_ALIAS = 'solidarity.master.v2';
@@ -68,16 +69,15 @@ async function driver(): Promise<SpruceDid | null> {
   }
 }
 
-async function isIosRuntime(): Promise<boolean> {
+function isIosRuntime(): boolean {
   const override = (globalThis as { __SPRUCE_DID_TEST_PLATFORM__?: string })
     .__SPRUCE_DID_TEST_PLATFORM__;
   if (override) return override === 'ios';
-  try {
-    const { Platform } = await import('react-native');
-    return Platform.OS === 'ios';
-  } catch {
-    return false;
-  }
+  // Static named import only: `await import('react-native')` makes Metro
+  // importAll the barrel, which runs every lazy getter — RN 0.88's
+  // PushNotificationIOS getter throws natively-null NativeEventEmitter, and
+  // Metro reports a module-init throw as fatal before any catch runs.
+  return Platform.OS === 'ios';
 }
 
 /** Resolved once per process from the native driver (a key's ACL is fixed). */
@@ -113,7 +113,7 @@ export async function nativeSignSession(): Promise<NativeSignSession | null> {
     }
     // Android auth-bound keys need a per-signature BiometricPrompt
     // CryptoObject; no context can be shared, so they keep the native prompt.
-    if (!(await isIosRuntime())) return null;
+    if (!isIosRuntime()) return null;
     return {
       prime: (promptMessage) => primeSignSession.call(d, promptMessage),
       reset: () => {

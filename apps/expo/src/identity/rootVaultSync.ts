@@ -14,6 +14,7 @@ import {
   type Result,
   type RootVaultRecordV1,
 } from '@solidarity/shared';
+import { Platform } from 'react-native';
 
 import { passkeyAaguid, passkeyProvider } from './passkeyAaguid';
 import { getPasskeyRegistry, type PasskeyRow } from './passkeyRegistry';
@@ -344,7 +345,6 @@ async function connectNative(input: {
     }
 
     if (input.retryOnly) return { ok: false, error: { kind: 'storageFailed' } };
-    const { Platform } = await import('react-native');
     const device = Platform.OS === 'ios'
       ? (Platform.constants.interfaceIdiom === 'pad' ? 'iPad' : 'iPhone')
       : Platform.OS === 'android' ? Platform.constants.Model : Platform.OS;
