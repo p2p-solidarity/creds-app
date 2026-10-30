@@ -46,17 +46,11 @@ namespace margelo::nitro::solidarity::attest {
       jni::local_ref<jni::JString> chipUid = this->getFieldValue(fieldChipUid);
       static const auto fieldPassiveAuthValid = clazz->getField<jboolean>("passiveAuthValid");
       jboolean passiveAuthValid = this->getFieldValue(fieldPassiveAuthValid);
-      static const auto fieldOpenAcV3WitnessBundleJson = clazz->getField<jni::JString>("openAcV3WitnessBundleJson");
-      jni::local_ref<jni::JString> openAcV3WitnessBundleJson = this->getFieldValue(fieldOpenAcV3WitnessBundleJson);
-      static const auto fieldActiveAuthJson = clazz->getField<jni::JString>("activeAuthJson");
-      jni::local_ref<jni::JString> activeAuthJson = this->getFieldValue(fieldActiveAuthJson);
       return PassportReadResult(
         mrz->toCpp(),
         dataGroups->toCpp(),
         chipUid != nullptr ? std::make_optional(chipUid->toStdString()) : std::nullopt,
-        static_cast<bool>(passiveAuthValid),
-        openAcV3WitnessBundleJson != nullptr ? std::make_optional(openAcV3WitnessBundleJson->toStdString()) : std::nullopt,
-        activeAuthJson != nullptr ? std::make_optional(activeAuthJson->toStdString()) : std::nullopt
+        static_cast<bool>(passiveAuthValid)
       );
     }
 
@@ -66,7 +60,7 @@ namespace margelo::nitro::solidarity::attest {
      */
     [[maybe_unused]]
     static jni::local_ref<JPassportReadResult::javaobject> fromCpp(const PassportReadResult& value) {
-      using JSignature = JPassportReadResult(jni::alias_ref<JParsedMrz>, jni::alias_ref<JDataGroupsBundle>, jni::alias_ref<jni::JString>, jboolean, jni::alias_ref<jni::JString>, jni::alias_ref<jni::JString>);
+      using JSignature = JPassportReadResult(jni::alias_ref<JParsedMrz>, jni::alias_ref<JDataGroupsBundle>, jni::alias_ref<jni::JString>, jboolean);
       static const auto clazz = javaClassStatic();
       static const auto create = clazz->getStaticMethod<JSignature>("fromCpp");
       return create(
@@ -74,9 +68,7 @@ namespace margelo::nitro::solidarity::attest {
         JParsedMrz::fromCpp(value.mrz),
         JDataGroupsBundle::fromCpp(value.dataGroups),
         value.chipUid.has_value() ? jni::make_jstring(value.chipUid.value()) : nullptr,
-        value.passiveAuthValid,
-        value.openAcV3WitnessBundleJson.has_value() ? jni::make_jstring(value.openAcV3WitnessBundleJson.value()) : nullptr,
-        value.activeAuthJson.has_value() ? jni::make_jstring(value.activeAuthJson.value()) : nullptr
+        value.passiveAuthValid
       );
     }
   };

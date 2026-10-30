@@ -12,7 +12,6 @@
 #include "HybridDeviceAttestSpecSwift.hpp"
 #include "HybridMrzOcrSpecSwift.hpp"
 #include "HybridNfcPassportSpecSwift.hpp"
-#include "HybridPassportZkSpecSwift.hpp"
 #include "HybridSemaphoreSpecSwift.hpp"
 #include <NitroModules/NitroDefines.hpp>
 #include <VisionCamera/VisionCamera-Swift-Cxx-Bridge.hpp>
@@ -109,22 +108,6 @@ namespace margelo::nitro::solidarity::attest::bridge::swift {
     return swiftPart.toUnsafe();
   }
   
-  // pragma MARK: std::function<void(const NitroNoirProof& /* result */)>
-  Func_void_NitroNoirProof create_Func_void_NitroNoirProof(void* NON_NULL swiftClosureWrapper) noexcept {
-    auto swiftClosure = Attest::Func_void_NitroNoirProof::fromUnsafe(swiftClosureWrapper);
-    return [swiftClosure = std::move(swiftClosure)](const NitroNoirProof& result) mutable -> void {
-      swiftClosure.call(result);
-    };
-  }
-  
-  // pragma MARK: std::function<void(const std::shared_ptr<ArrayBuffer>& /* result */)>
-  Func_void_std__shared_ptr_ArrayBuffer_ create_Func_void_std__shared_ptr_ArrayBuffer_(void* NON_NULL swiftClosureWrapper) noexcept {
-    auto swiftClosure = Attest::Func_void_std__shared_ptr_ArrayBuffer_::fromUnsafe(swiftClosureWrapper);
-    return [swiftClosure = std::move(swiftClosure)](const std::shared_ptr<ArrayBuffer>& result) mutable -> void {
-      swiftClosure.call(ArrayBufferHolder(result));
-    };
-  }
-  
   // pragma MARK: std::function<void(bool /* result */)>
   Func_void_bool create_Func_void_bool(void* NON_NULL swiftClosureWrapper) noexcept {
     auto swiftClosure = Attest::Func_void_bool::fromUnsafe(swiftClosureWrapper);
@@ -133,35 +116,19 @@ namespace margelo::nitro::solidarity::attest::bridge::swift {
     };
   }
   
-  // pragma MARK: std::function<void(const OpenAcV3WitnessBuildResult& /* result */)>
-  Func_void_OpenAcV3WitnessBuildResult create_Func_void_OpenAcV3WitnessBuildResult(void* NON_NULL swiftClosureWrapper) noexcept {
-    auto swiftClosure = Attest::Func_void_OpenAcV3WitnessBuildResult::fromUnsafe(swiftClosureWrapper);
-    return [swiftClosure = std::move(swiftClosure)](const OpenAcV3WitnessBuildResult& result) mutable -> void {
-      swiftClosure.call(result);
-    };
-  }
-  
-  // pragma MARK: std::shared_ptr<HybridPassportZkSpec>
-  std::shared_ptr<HybridPassportZkSpec> create_std__shared_ptr_HybridPassportZkSpec_(void* NON_NULL swiftUnsafePointer) noexcept {
-    Attest::HybridPassportZkSpec_cxx swiftPart = Attest::HybridPassportZkSpec_cxx::fromUnsafe(swiftUnsafePointer);
-    return std::make_shared<margelo::nitro::solidarity::attest::HybridPassportZkSpecSwift>(swiftPart);
-  }
-  void* NON_NULL get_std__shared_ptr_HybridPassportZkSpec_(std__shared_ptr_HybridPassportZkSpec_ cppType) {
-    std::shared_ptr<margelo::nitro::solidarity::attest::HybridPassportZkSpecSwift> swiftWrapper = std::dynamic_pointer_cast<margelo::nitro::solidarity::attest::HybridPassportZkSpecSwift>(cppType);
-    #ifdef NITRO_DEBUG
-    if (swiftWrapper == nullptr) [[unlikely]] {
-      throw std::runtime_error("Class \"HybridPassportZkSpec\" is not implemented in Swift!");
-    }
-    #endif
-    Attest::HybridPassportZkSpec_cxx& swiftPart = swiftWrapper->getSwiftPart();
-    return swiftPart.toUnsafe();
-  }
-  
   // pragma MARK: std::function<void()>
   Func_void create_Func_void(void* NON_NULL swiftClosureWrapper) noexcept {
     auto swiftClosure = Attest::Func_void::fromUnsafe(swiftClosureWrapper);
     return [swiftClosure = std::move(swiftClosure)]() mutable -> void {
       swiftClosure.call();
+    };
+  }
+  
+  // pragma MARK: std::function<void(const std::shared_ptr<ArrayBuffer>& /* result */)>
+  Func_void_std__shared_ptr_ArrayBuffer_ create_Func_void_std__shared_ptr_ArrayBuffer_(void* NON_NULL swiftClosureWrapper) noexcept {
+    auto swiftClosure = Attest::Func_void_std__shared_ptr_ArrayBuffer_::fromUnsafe(swiftClosureWrapper);
+    return [swiftClosure = std::move(swiftClosure)](const std::shared_ptr<ArrayBuffer>& result) mutable -> void {
+      swiftClosure.call(ArrayBufferHolder(result));
     };
   }
   

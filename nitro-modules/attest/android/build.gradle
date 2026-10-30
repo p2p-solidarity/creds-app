@@ -8,12 +8,11 @@
  * the nitrogen autolinking gradle, defines the Kotlin/C++ build, and
  * declares the union of the four modules' runtime deps.
  *
- * The Rust cdylibs are loaded via System.loadLibrary at runtime once the
- * build scripts land the .so files under src/main/jniLibs/<abi>/:
- *   - `libpassport_zk_mopro.so`  ← scripts/build-android.sh
- *   - `libsemaphore_bindings.so` ← semaphore/rust/build-android.sh
- * Without those, the Kotlin Hybrids throw UnsupportedOperationException but
- * the module still configures cleanly.
+ * The Semaphore Rust cdylib (`libsemaphore_bindings.so`) is loaded via JNA
+ * once semaphore/rust/build-android.sh lands it under src/main/jniLibs/<abi>/.
+ * Without it, HybridSemaphore throws UnsupportedOperationException but the
+ * module still configures cleanly. (The passport ZK cdylib is gone,
+ * docs/ref/11 P2.)
  */
 buildscript {
   repositories {
@@ -167,17 +166,15 @@ dependencies {
   // NitroModules core — provides HybridObject base, ArrayBuffer, Promise.
   implementation project(":react-native-nitro-modules")
 
-  // Coroutines for the off-thread NFC read loop, proof generation and
-  // Promise.async.
+  // Coroutines for the off-thread NFC read loop and Promise.async.
   implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1"
 
-  // JNA backs BOTH uniffi Kotlin binding sets (uniffi.mopro.* loading
-  // `libpassport_zk_mopro.so` and uniffi.semaphore_bindings.* loading
-  // `libsemaphore_bindings.so`). `@aar` is required because JNA ships a
+  // JNA backs the uniffi Kotlin bindings (uniffi.semaphore_bindings.*
+  // loading `libsemaphore_bindings.so`). `@aar` is required because JNA ships a
   // regular jar + an aar with the native libs (libjnidispatch.so); without
   // the aar `Native.load()` fails at runtime with
   // `UnsatisfiedLinkError: jnidispatch`. Version pinned to what
-  // mopro-ffi 0.3.x's generated bindings expect (UniFFI Kotlin runtime).
+  // the uniffi-generated bindings expect (UniFFI Kotlin runtime).
   implementation "net.java.dev.jna:jna:5.13.0@aar"
 
   // ─── MrzOcr ──────────────────────────────────────────────────────────────

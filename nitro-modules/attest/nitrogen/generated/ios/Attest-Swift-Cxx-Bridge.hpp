@@ -20,8 +20,6 @@ namespace margelo::nitro::camera { class HybridFrameSpec; }
 namespace margelo::nitro::solidarity::attest { class HybridMrzOcrSpec; }
 // Forward declaration of `HybridNfcPassportSpec` to properly resolve imports.
 namespace margelo::nitro::solidarity::attest { class HybridNfcPassportSpec; }
-// Forward declaration of `HybridPassportZkSpec` to properly resolve imports.
-namespace margelo::nitro::solidarity::attest { class HybridPassportZkSpec; }
 // Forward declaration of `HybridSemaphoreSpec` to properly resolve imports.
 namespace margelo::nitro::solidarity::attest { class HybridSemaphoreSpec; }
 // Forward declaration of `MrzScanResult` to properly resolve imports.
@@ -32,10 +30,6 @@ namespace margelo::nitro::solidarity::attest { struct NfcReadOptions; }
 namespace margelo::nitro::solidarity::attest { enum class NfcReadPhase; }
 // Forward declaration of `NfcReadProgress` to properly resolve imports.
 namespace margelo::nitro::solidarity::attest { struct NfcReadProgress; }
-// Forward declaration of `NitroNoirProof` to properly resolve imports.
-namespace margelo::nitro::solidarity::attest { struct NitroNoirProof; }
-// Forward declaration of `OpenAcV3WitnessBuildResult` to properly resolve imports.
-namespace margelo::nitro::solidarity::attest { struct OpenAcV3WitnessBuildResult; }
 // Forward declaration of `ParsedMrz` to properly resolve imports.
 namespace margelo::nitro::solidarity::attest { struct ParsedMrz; }
 // Forward declaration of `PassportMrzDraft` to properly resolve imports.
@@ -54,8 +48,6 @@ namespace VisionCamera { class HybridFrameSpec_cxx; }
 namespace Attest { class HybridMrzOcrSpec_cxx; }
 // Forward declaration of `HybridNfcPassportSpec_cxx` to properly resolve imports.
 namespace Attest { class HybridNfcPassportSpec_cxx; }
-// Forward declaration of `HybridPassportZkSpec_cxx` to properly resolve imports.
-namespace Attest { class HybridPassportZkSpec_cxx; }
 // Forward declaration of `HybridSemaphoreSpec_cxx` to properly resolve imports.
 namespace Attest { class HybridSemaphoreSpec_cxx; }
 
@@ -64,14 +56,11 @@ namespace Attest { class HybridSemaphoreSpec_cxx; }
 #include "HybridDeviceAttestSpec.hpp"
 #include "HybridMrzOcrSpec.hpp"
 #include "HybridNfcPassportSpec.hpp"
-#include "HybridPassportZkSpec.hpp"
 #include "HybridSemaphoreSpec.hpp"
 #include "MrzScanResult.hpp"
 #include "NfcReadOptions.hpp"
 #include "NfcReadPhase.hpp"
 #include "NfcReadProgress.hpp"
-#include "NitroNoirProof.hpp"
-#include "OpenAcV3WitnessBuildResult.hpp"
 #include "ParsedMrz.hpp"
 #include "PassportMrzDraft.hpp"
 #include "PassportReadResult.hpp"
@@ -372,15 +361,6 @@ namespace margelo::nitro::solidarity::attest::bridge::swift {
     return Result<bool>::withError(error);
   }
   
-  // pragma MARK: Result<std::string>
-  using Result_std__string_ = Result<std::string>;
-  inline Result_std__string_ create_Result_std__string_(const std::string& value) noexcept {
-    return Result<std::string>::withValue(value);
-  }
-  inline Result_std__string_ create_Result_std__string_(const std::exception_ptr& error) noexcept {
-    return Result<std::string>::withError(error);
-  }
-  
   // pragma MARK: Result<std::shared_ptr<Promise<PassportReadResult>>>
   using Result_std__shared_ptr_Promise_PassportReadResult___ = Result<std::shared_ptr<Promise<PassportReadResult>>>;
   inline Result_std__shared_ptr_Promise_PassportReadResult___ create_Result_std__shared_ptr_Promise_PassportReadResult___(const std::shared_ptr<Promise<PassportReadResult>>& value) noexcept {
@@ -397,74 +377,6 @@ namespace margelo::nitro::solidarity::attest::bridge::swift {
   }
   inline Result_void_ create_Result_void_(const std::exception_ptr& error) noexcept {
     return Result<void>::withError(error);
-  }
-  
-  // pragma MARK: std::shared_ptr<Promise<NitroNoirProof>>
-  /**
-   * Specialized version of `std::shared_ptr<Promise<NitroNoirProof>>`.
-   */
-  using std__shared_ptr_Promise_NitroNoirProof__ = std::shared_ptr<Promise<NitroNoirProof>>;
-  inline std::shared_ptr<Promise<NitroNoirProof>> create_std__shared_ptr_Promise_NitroNoirProof__() noexcept {
-    return Promise<NitroNoirProof>::create();
-  }
-  inline PromiseHolder<NitroNoirProof> wrap_std__shared_ptr_Promise_NitroNoirProof__(std::shared_ptr<Promise<NitroNoirProof>> promise) noexcept {
-    return PromiseHolder<NitroNoirProof>(std::move(promise));
-  }
-  
-  // pragma MARK: std::function<void(const NitroNoirProof& /* result */)>
-  /**
-   * Specialized version of `std::function<void(const NitroNoirProof&)>`.
-   */
-  using Func_void_NitroNoirProof = std::function<void(const NitroNoirProof& /* result */)>;
-  /**
-   * Wrapper class for a `std::function<void(const NitroNoirProof& / * result * /)>`, this can be used from Swift.
-   */
-  class Func_void_NitroNoirProof_Wrapper final {
-  public:
-    explicit Func_void_NitroNoirProof_Wrapper(std::function<void(const NitroNoirProof& /* result */)>&& func): _function(std::make_unique<std::function<void(const NitroNoirProof& /* result */)>>(std::move(func))) {}
-    inline void call(NitroNoirProof result) const noexcept {
-      _function->operator()(result);
-    }
-  private:
-    std::unique_ptr<std::function<void(const NitroNoirProof& /* result */)>> _function;
-  } SWIFT_NONCOPYABLE;
-  Func_void_NitroNoirProof create_Func_void_NitroNoirProof(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_void_NitroNoirProof_Wrapper wrap_Func_void_NitroNoirProof(Func_void_NitroNoirProof value) noexcept {
-    return Func_void_NitroNoirProof_Wrapper(std::move(value));
-  }
-  
-  // pragma MARK: std::shared_ptr<Promise<std::shared_ptr<ArrayBuffer>>>
-  /**
-   * Specialized version of `std::shared_ptr<Promise<std::shared_ptr<ArrayBuffer>>>`.
-   */
-  using std__shared_ptr_Promise_std__shared_ptr_ArrayBuffer___ = std::shared_ptr<Promise<std::shared_ptr<ArrayBuffer>>>;
-  inline std::shared_ptr<Promise<std::shared_ptr<ArrayBuffer>>> create_std__shared_ptr_Promise_std__shared_ptr_ArrayBuffer___() noexcept {
-    return Promise<std::shared_ptr<ArrayBuffer>>::create();
-  }
-  inline PromiseHolder<std::shared_ptr<ArrayBuffer>> wrap_std__shared_ptr_Promise_std__shared_ptr_ArrayBuffer___(std::shared_ptr<Promise<std::shared_ptr<ArrayBuffer>>> promise) noexcept {
-    return PromiseHolder<std::shared_ptr<ArrayBuffer>>(std::move(promise));
-  }
-  
-  // pragma MARK: std::function<void(const std::shared_ptr<ArrayBuffer>& /* result */)>
-  /**
-   * Specialized version of `std::function<void(const std::shared_ptr<ArrayBuffer>&)>`.
-   */
-  using Func_void_std__shared_ptr_ArrayBuffer_ = std::function<void(const std::shared_ptr<ArrayBuffer>& /* result */)>;
-  /**
-   * Wrapper class for a `std::function<void(const std::shared_ptr<ArrayBuffer>& / * result * /)>`, this can be used from Swift.
-   */
-  class Func_void_std__shared_ptr_ArrayBuffer__Wrapper final {
-  public:
-    explicit Func_void_std__shared_ptr_ArrayBuffer__Wrapper(std::function<void(const std::shared_ptr<ArrayBuffer>& /* result */)>&& func): _function(std::make_unique<std::function<void(const std::shared_ptr<ArrayBuffer>& /* result */)>>(std::move(func))) {}
-    inline void call(ArrayBufferHolder result) const noexcept {
-      _function->operator()(result.getArrayBuffer());
-    }
-  private:
-    std::unique_ptr<std::function<void(const std::shared_ptr<ArrayBuffer>& /* result */)>> _function;
-  } SWIFT_NONCOPYABLE;
-  Func_void_std__shared_ptr_ArrayBuffer_ create_Func_void_std__shared_ptr_ArrayBuffer_(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_void_std__shared_ptr_ArrayBuffer__Wrapper wrap_Func_void_std__shared_ptr_ArrayBuffer_(Func_void_std__shared_ptr_ArrayBuffer_ value) noexcept {
-    return Func_void_std__shared_ptr_ArrayBuffer__Wrapper(std::move(value));
   }
   
   // pragma MARK: std::shared_ptr<Promise<bool>>
@@ -501,88 +413,6 @@ namespace margelo::nitro::solidarity::attest::bridge::swift {
     return Func_void_bool_Wrapper(std::move(value));
   }
   
-  // pragma MARK: std::shared_ptr<Promise<OpenAcV3WitnessBuildResult>>
-  /**
-   * Specialized version of `std::shared_ptr<Promise<OpenAcV3WitnessBuildResult>>`.
-   */
-  using std__shared_ptr_Promise_OpenAcV3WitnessBuildResult__ = std::shared_ptr<Promise<OpenAcV3WitnessBuildResult>>;
-  inline std::shared_ptr<Promise<OpenAcV3WitnessBuildResult>> create_std__shared_ptr_Promise_OpenAcV3WitnessBuildResult__() noexcept {
-    return Promise<OpenAcV3WitnessBuildResult>::create();
-  }
-  inline PromiseHolder<OpenAcV3WitnessBuildResult> wrap_std__shared_ptr_Promise_OpenAcV3WitnessBuildResult__(std::shared_ptr<Promise<OpenAcV3WitnessBuildResult>> promise) noexcept {
-    return PromiseHolder<OpenAcV3WitnessBuildResult>(std::move(promise));
-  }
-  
-  // pragma MARK: std::function<void(const OpenAcV3WitnessBuildResult& /* result */)>
-  /**
-   * Specialized version of `std::function<void(const OpenAcV3WitnessBuildResult&)>`.
-   */
-  using Func_void_OpenAcV3WitnessBuildResult = std::function<void(const OpenAcV3WitnessBuildResult& /* result */)>;
-  /**
-   * Wrapper class for a `std::function<void(const OpenAcV3WitnessBuildResult& / * result * /)>`, this can be used from Swift.
-   */
-  class Func_void_OpenAcV3WitnessBuildResult_Wrapper final {
-  public:
-    explicit Func_void_OpenAcV3WitnessBuildResult_Wrapper(std::function<void(const OpenAcV3WitnessBuildResult& /* result */)>&& func): _function(std::make_unique<std::function<void(const OpenAcV3WitnessBuildResult& /* result */)>>(std::move(func))) {}
-    inline void call(OpenAcV3WitnessBuildResult result) const noexcept {
-      _function->operator()(result);
-    }
-  private:
-    std::unique_ptr<std::function<void(const OpenAcV3WitnessBuildResult& /* result */)>> _function;
-  } SWIFT_NONCOPYABLE;
-  Func_void_OpenAcV3WitnessBuildResult create_Func_void_OpenAcV3WitnessBuildResult(void* NON_NULL swiftClosureWrapper) noexcept;
-  inline Func_void_OpenAcV3WitnessBuildResult_Wrapper wrap_Func_void_OpenAcV3WitnessBuildResult(Func_void_OpenAcV3WitnessBuildResult value) noexcept {
-    return Func_void_OpenAcV3WitnessBuildResult_Wrapper(std::move(value));
-  }
-  
-  // pragma MARK: std::shared_ptr<HybridPassportZkSpec>
-  /**
-   * Specialized version of `std::shared_ptr<HybridPassportZkSpec>`.
-   */
-  using std__shared_ptr_HybridPassportZkSpec_ = std::shared_ptr<HybridPassportZkSpec>;
-  std::shared_ptr<HybridPassportZkSpec> create_std__shared_ptr_HybridPassportZkSpec_(void* NON_NULL swiftUnsafePointer) noexcept;
-  void* NON_NULL get_std__shared_ptr_HybridPassportZkSpec_(std__shared_ptr_HybridPassportZkSpec_ cppType);
-  
-  // pragma MARK: std::weak_ptr<HybridPassportZkSpec>
-  using std__weak_ptr_HybridPassportZkSpec_ = std::weak_ptr<HybridPassportZkSpec>;
-  inline std__weak_ptr_HybridPassportZkSpec_ weakify_std__shared_ptr_HybridPassportZkSpec_(const std::shared_ptr<HybridPassportZkSpec>& strong) noexcept { return strong; }
-  
-  // pragma MARK: Result<std::shared_ptr<Promise<NitroNoirProof>>>
-  using Result_std__shared_ptr_Promise_NitroNoirProof___ = Result<std::shared_ptr<Promise<NitroNoirProof>>>;
-  inline Result_std__shared_ptr_Promise_NitroNoirProof___ create_Result_std__shared_ptr_Promise_NitroNoirProof___(const std::shared_ptr<Promise<NitroNoirProof>>& value) noexcept {
-    return Result<std::shared_ptr<Promise<NitroNoirProof>>>::withValue(value);
-  }
-  inline Result_std__shared_ptr_Promise_NitroNoirProof___ create_Result_std__shared_ptr_Promise_NitroNoirProof___(const std::exception_ptr& error) noexcept {
-    return Result<std::shared_ptr<Promise<NitroNoirProof>>>::withError(error);
-  }
-  
-  // pragma MARK: Result<std::shared_ptr<Promise<std::shared_ptr<ArrayBuffer>>>>
-  using Result_std__shared_ptr_Promise_std__shared_ptr_ArrayBuffer____ = Result<std::shared_ptr<Promise<std::shared_ptr<ArrayBuffer>>>>;
-  inline Result_std__shared_ptr_Promise_std__shared_ptr_ArrayBuffer____ create_Result_std__shared_ptr_Promise_std__shared_ptr_ArrayBuffer____(const std::shared_ptr<Promise<std::shared_ptr<ArrayBuffer>>>& value) noexcept {
-    return Result<std::shared_ptr<Promise<std::shared_ptr<ArrayBuffer>>>>::withValue(value);
-  }
-  inline Result_std__shared_ptr_Promise_std__shared_ptr_ArrayBuffer____ create_Result_std__shared_ptr_Promise_std__shared_ptr_ArrayBuffer____(const std::exception_ptr& error) noexcept {
-    return Result<std::shared_ptr<Promise<std::shared_ptr<ArrayBuffer>>>>::withError(error);
-  }
-  
-  // pragma MARK: Result<std::shared_ptr<Promise<bool>>>
-  using Result_std__shared_ptr_Promise_bool___ = Result<std::shared_ptr<Promise<bool>>>;
-  inline Result_std__shared_ptr_Promise_bool___ create_Result_std__shared_ptr_Promise_bool___(const std::shared_ptr<Promise<bool>>& value) noexcept {
-    return Result<std::shared_ptr<Promise<bool>>>::withValue(value);
-  }
-  inline Result_std__shared_ptr_Promise_bool___ create_Result_std__shared_ptr_Promise_bool___(const std::exception_ptr& error) noexcept {
-    return Result<std::shared_ptr<Promise<bool>>>::withError(error);
-  }
-  
-  // pragma MARK: Result<std::shared_ptr<Promise<OpenAcV3WitnessBuildResult>>>
-  using Result_std__shared_ptr_Promise_OpenAcV3WitnessBuildResult___ = Result<std::shared_ptr<Promise<OpenAcV3WitnessBuildResult>>>;
-  inline Result_std__shared_ptr_Promise_OpenAcV3WitnessBuildResult___ create_Result_std__shared_ptr_Promise_OpenAcV3WitnessBuildResult___(const std::shared_ptr<Promise<OpenAcV3WitnessBuildResult>>& value) noexcept {
-    return Result<std::shared_ptr<Promise<OpenAcV3WitnessBuildResult>>>::withValue(value);
-  }
-  inline Result_std__shared_ptr_Promise_OpenAcV3WitnessBuildResult___ create_Result_std__shared_ptr_Promise_OpenAcV3WitnessBuildResult___(const std::exception_ptr& error) noexcept {
-    return Result<std::shared_ptr<Promise<OpenAcV3WitnessBuildResult>>>::withError(error);
-  }
-  
   // pragma MARK: std::shared_ptr<Promise<void>>
   /**
    * Specialized version of `std::shared_ptr<Promise<void>>`.
@@ -615,6 +445,40 @@ namespace margelo::nitro::solidarity::attest::bridge::swift {
   Func_void create_Func_void(void* NON_NULL swiftClosureWrapper) noexcept;
   inline Func_void_Wrapper wrap_Func_void(Func_void value) noexcept {
     return Func_void_Wrapper(std::move(value));
+  }
+  
+  // pragma MARK: std::shared_ptr<Promise<std::shared_ptr<ArrayBuffer>>>
+  /**
+   * Specialized version of `std::shared_ptr<Promise<std::shared_ptr<ArrayBuffer>>>`.
+   */
+  using std__shared_ptr_Promise_std__shared_ptr_ArrayBuffer___ = std::shared_ptr<Promise<std::shared_ptr<ArrayBuffer>>>;
+  inline std::shared_ptr<Promise<std::shared_ptr<ArrayBuffer>>> create_std__shared_ptr_Promise_std__shared_ptr_ArrayBuffer___() noexcept {
+    return Promise<std::shared_ptr<ArrayBuffer>>::create();
+  }
+  inline PromiseHolder<std::shared_ptr<ArrayBuffer>> wrap_std__shared_ptr_Promise_std__shared_ptr_ArrayBuffer___(std::shared_ptr<Promise<std::shared_ptr<ArrayBuffer>>> promise) noexcept {
+    return PromiseHolder<std::shared_ptr<ArrayBuffer>>(std::move(promise));
+  }
+  
+  // pragma MARK: std::function<void(const std::shared_ptr<ArrayBuffer>& /* result */)>
+  /**
+   * Specialized version of `std::function<void(const std::shared_ptr<ArrayBuffer>&)>`.
+   */
+  using Func_void_std__shared_ptr_ArrayBuffer_ = std::function<void(const std::shared_ptr<ArrayBuffer>& /* result */)>;
+  /**
+   * Wrapper class for a `std::function<void(const std::shared_ptr<ArrayBuffer>& / * result * /)>`, this can be used from Swift.
+   */
+  class Func_void_std__shared_ptr_ArrayBuffer__Wrapper final {
+  public:
+    explicit Func_void_std__shared_ptr_ArrayBuffer__Wrapper(std::function<void(const std::shared_ptr<ArrayBuffer>& /* result */)>&& func): _function(std::make_unique<std::function<void(const std::shared_ptr<ArrayBuffer>& /* result */)>>(std::move(func))) {}
+    inline void call(ArrayBufferHolder result) const noexcept {
+      _function->operator()(result.getArrayBuffer());
+    }
+  private:
+    std::unique_ptr<std::function<void(const std::shared_ptr<ArrayBuffer>& /* result */)>> _function;
+  } SWIFT_NONCOPYABLE;
+  Func_void_std__shared_ptr_ArrayBuffer_ create_Func_void_std__shared_ptr_ArrayBuffer_(void* NON_NULL swiftClosureWrapper) noexcept;
+  inline Func_void_std__shared_ptr_ArrayBuffer__Wrapper wrap_Func_void_std__shared_ptr_ArrayBuffer_(Func_void_std__shared_ptr_ArrayBuffer_ value) noexcept {
+    return Func_void_std__shared_ptr_ArrayBuffer__Wrapper(std::move(value));
   }
   
   // pragma MARK: std::vector<std::string>
@@ -674,6 +538,24 @@ namespace margelo::nitro::solidarity::attest::bridge::swift {
   using std__weak_ptr_HybridSemaphoreSpec_ = std::weak_ptr<HybridSemaphoreSpec>;
   inline std__weak_ptr_HybridSemaphoreSpec_ weakify_std__shared_ptr_HybridSemaphoreSpec_(const std::shared_ptr<HybridSemaphoreSpec>& strong) noexcept { return strong; }
   
+  // pragma MARK: Result<std::string>
+  using Result_std__string_ = Result<std::string>;
+  inline Result_std__string_ create_Result_std__string_(const std::string& value) noexcept {
+    return Result<std::string>::withValue(value);
+  }
+  inline Result_std__string_ create_Result_std__string_(const std::exception_ptr& error) noexcept {
+    return Result<std::string>::withError(error);
+  }
+  
+  // pragma MARK: Result<std::shared_ptr<Promise<bool>>>
+  using Result_std__shared_ptr_Promise_bool___ = Result<std::shared_ptr<Promise<bool>>>;
+  inline Result_std__shared_ptr_Promise_bool___ create_Result_std__shared_ptr_Promise_bool___(const std::shared_ptr<Promise<bool>>& value) noexcept {
+    return Result<std::shared_ptr<Promise<bool>>>::withValue(value);
+  }
+  inline Result_std__shared_ptr_Promise_bool___ create_Result_std__shared_ptr_Promise_bool___(const std::exception_ptr& error) noexcept {
+    return Result<std::shared_ptr<Promise<bool>>>::withError(error);
+  }
+  
   // pragma MARK: Result<std::shared_ptr<Promise<void>>>
   using Result_std__shared_ptr_Promise_void___ = Result<std::shared_ptr<Promise<void>>>;
   inline Result_std__shared_ptr_Promise_void___ create_Result_std__shared_ptr_Promise_void___(const std::shared_ptr<Promise<void>>& value) noexcept {
@@ -681,6 +563,15 @@ namespace margelo::nitro::solidarity::attest::bridge::swift {
   }
   inline Result_std__shared_ptr_Promise_void___ create_Result_std__shared_ptr_Promise_void___(const std::exception_ptr& error) noexcept {
     return Result<std::shared_ptr<Promise<void>>>::withError(error);
+  }
+  
+  // pragma MARK: Result<std::shared_ptr<Promise<std::shared_ptr<ArrayBuffer>>>>
+  using Result_std__shared_ptr_Promise_std__shared_ptr_ArrayBuffer____ = Result<std::shared_ptr<Promise<std::shared_ptr<ArrayBuffer>>>>;
+  inline Result_std__shared_ptr_Promise_std__shared_ptr_ArrayBuffer____ create_Result_std__shared_ptr_Promise_std__shared_ptr_ArrayBuffer____(const std::shared_ptr<Promise<std::shared_ptr<ArrayBuffer>>>& value) noexcept {
+    return Result<std::shared_ptr<Promise<std::shared_ptr<ArrayBuffer>>>>::withValue(value);
+  }
+  inline Result_std__shared_ptr_Promise_std__shared_ptr_ArrayBuffer____ create_Result_std__shared_ptr_Promise_std__shared_ptr_ArrayBuffer____(const std::exception_ptr& error) noexcept {
+    return Result<std::shared_ptr<Promise<std::shared_ptr<ArrayBuffer>>>>::withError(error);
   }
   
   // pragma MARK: Result<std::shared_ptr<Promise<SemaphoreProof>>>

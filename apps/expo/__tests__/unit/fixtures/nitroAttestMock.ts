@@ -17,14 +17,12 @@ import { mock } from 'bun:test';
 import type {
   MrzOcr,
   NfcPassport,
-  PassportZk,
   Semaphore,
 } from '@solidarity/nitro-attest';
 
 export interface AttestMockLanes {
   readonly mrzOcr?: () => MrzOcr;
   readonly nfcPassport?: () => NfcPassport;
-  readonly passportZk?: () => PassportZk;
   readonly semaphore?: () => Semaphore;
 }
 
@@ -46,8 +44,6 @@ void mock.module('@solidarity/nitro-attest', () => ({
   getMrzOcr: (): MrzOcr => (lanes.mrzOcr ?? (() => missingLane('mrzOcr')))(),
   getNfcPassport: (): NfcPassport =>
     (lanes.nfcPassport ?? (() => missingLane('nfcPassport')))(),
-  getPassportZk: (): PassportZk =>
-    (lanes.passportZk ?? (() => missingLane('passportZk')))(),
   getSemaphore: (): Semaphore =>
     (lanes.semaphore ?? (() => missingLane('semaphore')))(),
 }));

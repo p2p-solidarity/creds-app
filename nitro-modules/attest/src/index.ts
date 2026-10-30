@@ -9,7 +9,6 @@
  *     Android: ML Kit Text Recognition.
  *   - NfcPassport — ePassport NFC read. iOS: NFCPassportReader wrap.
  *     Android: jmrtd.
- *   - PassportZk — Noir ZK prove + verify (mopro / barretenberg).
  *   - Semaphore — group membership proofs (semaphore-rs via uniffi).
  *   - DeviceAttest — App Attest / Android Key Attestation device keys.
  *
@@ -23,7 +22,6 @@ import { NitroModules } from 'react-native-nitro-modules';
 import type { DeviceAttest } from './specs/DeviceAttest.nitro';
 import type { MrzOcr } from './specs/MrzOcr.nitro';
 import type { NfcPassport } from './specs/NfcPassport.nitro';
-import type { PassportZk } from './specs/PassportZk.nitro';
 import type { Semaphore } from './specs/Semaphore.nitro';
 
 export type {
@@ -39,12 +37,6 @@ export type {
   ParsedMrz,
   DataGroupsBundle,
 } from './specs/NfcPassport.nitro';
-
-export type {
-  PassportZk,
-  NitroNoirProof,
-  OpenAcV3WitnessBuildResult,
-} from './specs/PassportZk.nitro';
 
 export type {
   Semaphore,
@@ -67,14 +59,6 @@ export function getNfcPassport(): NfcPassport {
   if (cachedNfcPassport) return cachedNfcPassport;
   cachedNfcPassport = NitroModules.createHybridObject<NfcPassport>('NfcPassport');
   return cachedNfcPassport;
-}
-
-let cachedPassportZk: PassportZk | null = null;
-
-export function getPassportZk(): PassportZk {
-  if (cachedPassportZk) return cachedPassportZk;
-  cachedPassportZk = NitroModules.createHybridObject<PassportZk>('PassportZk');
-  return cachedPassportZk;
 }
 
 let cachedSemaphore: Semaphore | null = null;

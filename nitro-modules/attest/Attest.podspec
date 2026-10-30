@@ -11,12 +11,11 @@ Pod::Spec.new do |s|
   s.platforms    = { :ios => '17.0' }
   s.source       = { :git => 'https://github.com/p2p-solidarity/airmeishi.git' }
 
-  # Hand-written Hybrid Swift for the four HybridObjects (MrzOcr,
-  # NfcPassport, PassportZk, Semaphore) plus the MoproShim / SemaphoreShim
-  # wrappers. The uniffi bindings live in the sibling `MoproBindings` and
-  # `SemaphoreBindings` pods so their types (RustBuffer, FfiConverter…)
-  # stay out of this pod's Swift→C++ interop header, which Nitro generates
-  # for the Hybrid*Spec classes.
+  # Hand-written Hybrid Swift for the HybridObjects (MrzOcr, NfcPassport,
+  # Semaphore, DeviceAttest) plus the SemaphoreShim wrapper. The uniffi
+  # bindings live in the sibling `SemaphoreBindings` pod so their types
+  # (RustBuffer, FfiConverter…) stay out of this pod's Swift→C++ interop
+  # header, which Nitro generates for the Hybrid*Spec classes.
   s.source_files = [
     'ios/**/*.{swift,h,m,mm}',
   ]
@@ -27,23 +26,11 @@ Pod::Spec.new do |s|
   # NSException from Swift; this guard does it in ObjC. See MrzVisionGuard.h.
   s.public_header_files = 'ios/MrzVisionGuard.h'
 
-  # Passport resources.
-  #   - One circuit manifest per circuit (small, checked in) + a SINGLE merged
-  #     SRS. barretenberg's SRS is a prefix, so `passport.srs.bin` (sized to
-  #     the largest of the three circuits) serves all of them — half the
-  #     bundle vs one SRS each. The .srs.bin is gitignored and produced by
-  #     `scripts/stage-openac-srs.sh` / build-android.sh.
-  #   - `masterList.pem` drives passive authentication;
-  #     `passportRevocationSnapshot*.json` feeds OpenAC v3 DSC revocation
-  #     checks. Module-local asset copies so CocoaPods includes them in the
-  #     host app resources script.
+  # `masterList.pem` (ICAO CSCAs) drives passive authentication. Module-local
+  # asset copy so CocoaPods includes it in the host app resources script.
+  # No circuit or SRS any more (docs/ref/11 P2).
   s.resources = [
-    'android/src/main/assets/dsc_chain.json',
-    'android/src/main/assets/passport_adapter.json',
-    'android/src/main/assets/openac_show.json',
-    'android/src/main/assets/passport.srs.bin',
     'android/src/main/assets/masterList.pem',
-    'android/src/main/assets/passportRevocationSnapshot.v3.json',
   ]
 
   pod_xcconfig = {
@@ -58,7 +45,6 @@ Pod::Spec.new do |s|
   # link it explicitly to be safe.
   s.frameworks = 'Vision'
 
-  s.dependency 'MoproBindings'
   s.dependency 'SemaphoreBindings'
 
   # VisionCamera is required so we can downcast `any HybridFrameSpec` to

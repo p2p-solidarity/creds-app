@@ -18,8 +18,6 @@ namespace margelo::nitro::camera { class HybridFrameSpec; }
 namespace margelo::nitro::solidarity::attest { class HybridMrzOcrSpec; }
 // Forward declaration of `HybridNfcPassportSpec` to properly resolve imports.
 namespace margelo::nitro::solidarity::attest { class HybridNfcPassportSpec; }
-// Forward declaration of `HybridPassportZkSpec` to properly resolve imports.
-namespace margelo::nitro::solidarity::attest { class HybridPassportZkSpec; }
 // Forward declaration of `HybridSemaphoreSpec` to properly resolve imports.
 namespace margelo::nitro::solidarity::attest { class HybridSemaphoreSpec; }
 // Forward declaration of `MrzScanResult` to properly resolve imports.
@@ -30,10 +28,6 @@ namespace margelo::nitro::solidarity::attest { struct NfcReadOptions; }
 namespace margelo::nitro::solidarity::attest { enum class NfcReadPhase; }
 // Forward declaration of `NfcReadProgress` to properly resolve imports.
 namespace margelo::nitro::solidarity::attest { struct NfcReadProgress; }
-// Forward declaration of `NitroNoirProof` to properly resolve imports.
-namespace margelo::nitro::solidarity::attest { struct NitroNoirProof; }
-// Forward declaration of `OpenAcV3WitnessBuildResult` to properly resolve imports.
-namespace margelo::nitro::solidarity::attest { struct OpenAcV3WitnessBuildResult; }
 // Forward declaration of `ParsedMrz` to properly resolve imports.
 namespace margelo::nitro::solidarity::attest { struct ParsedMrz; }
 // Forward declaration of `PassportMRZ` to properly resolve imports.
@@ -50,14 +44,11 @@ namespace margelo::nitro::solidarity::attest { struct SemaphoreProof; }
 #include "HybridDeviceAttestSpec.hpp"
 #include "HybridMrzOcrSpec.hpp"
 #include "HybridNfcPassportSpec.hpp"
-#include "HybridPassportZkSpec.hpp"
 #include "HybridSemaphoreSpec.hpp"
 #include "MrzScanResult.hpp"
 #include "NfcReadOptions.hpp"
 #include "NfcReadPhase.hpp"
 #include "NfcReadProgress.hpp"
-#include "NitroNoirProof.hpp"
-#include "OpenAcV3WitnessBuildResult.hpp"
 #include "ParsedMrz.hpp"
 #include "PassportMRZ.hpp"
 #include "PassportMrzDraft.hpp"
@@ -92,8 +83,6 @@ namespace VisionCamera { class HybridFrameSpec_cxx; }
 namespace Attest { class HybridMrzOcrSpec_cxx; }
 // Forward declaration of `HybridNfcPassportSpec_cxx` to properly resolve imports.
 namespace Attest { class HybridNfcPassportSpec_cxx; }
-// Forward declaration of `HybridPassportZkSpec_cxx` to properly resolve imports.
-namespace Attest { class HybridPassportZkSpec_cxx; }
 // Forward declaration of `HybridSemaphoreSpec_cxx` to properly resolve imports.
 namespace Attest { class HybridSemaphoreSpec_cxx; }
 

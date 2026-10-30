@@ -36,13 +36,11 @@ target_sources(
   ../nitrogen/generated/shared/c++/HybridDeviceAttestSpec.cpp
   ../nitrogen/generated/shared/c++/HybridMrzOcrSpec.cpp
   ../nitrogen/generated/shared/c++/HybridNfcPassportSpec.cpp
-  ../nitrogen/generated/shared/c++/HybridPassportZkSpec.cpp
   ../nitrogen/generated/shared/c++/HybridSemaphoreSpec.cpp
   # Android-specific Nitrogen C++ sources
   ../nitrogen/generated/android/c++/JHybridDeviceAttestSpec.cpp
   ../nitrogen/generated/android/c++/JHybridMrzOcrSpec.cpp
   ../nitrogen/generated/android/c++/JHybridNfcPassportSpec.cpp
-  ../nitrogen/generated/android/c++/JHybridPassportZkSpec.cpp
   ../nitrogen/generated/android/c++/JHybridSemaphoreSpec.cpp
 )
 

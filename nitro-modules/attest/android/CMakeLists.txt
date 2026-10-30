@@ -5,10 +5,9 @@
 # Wires the C++ side of the Nitro module. Pulls in nitrogen-generated
 # sources via the autolinking cmake and exposes the Attest shared library
 # that loadLibrary() looks up at runtime (see AttestOnLoad.kt →
-# System.loadLibrary("Attest")). The Rust cdylibs (passport_zk_mopro,
-# semaphore_bindings) are NOT built here — they are prebuilt into
-# src/main/jniLibs/<abi>/ by scripts/build-android.sh and
-# semaphore/rust/build-android.sh and loaded via JNA.
+# System.loadLibrary("Attest")). The Rust cdylib (semaphore_bindings) is NOT
+# built here — semaphore/rust/build-android.sh prebuilds it into
+# src/main/jniLibs/<abi>/ and it is loaded via JNA.
 #
 project(Attest)
 cmake_minimum_required(VERSION 3.9.0)

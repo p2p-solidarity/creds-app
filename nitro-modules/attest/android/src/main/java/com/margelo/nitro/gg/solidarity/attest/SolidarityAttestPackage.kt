@@ -8,7 +8,7 @@
  *      pair (so `autolinkLibrariesWithApp()` discovers us).
  *   2. Trigger AttestOnLoad.initializeNative() in the class initializer so
  *      the nitrogen-generated JNI registers the "MrzOcr", "NfcPassport",
- *      "PassportZk" and "Semaphore" HybridObjects before JS imports them.
+ *      "Semaphore" and "DeviceAttest" HybridObjects before JS imports them.
  */
 package com.margelo.nitro.gg.solidarity.attest
 

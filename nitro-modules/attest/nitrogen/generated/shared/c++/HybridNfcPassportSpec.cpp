@@ -15,7 +15,6 @@ namespace margelo::nitro::solidarity::attest {
     // load custom methods/properties
     registerHybrids(this, [](Prototype& prototype) {
       prototype.registerHybridMethod("isAvailable", &HybridNfcPassportSpec::isAvailable);
-      prototype.registerHybridMethod("getRevocationSnapshotJson", &HybridNfcPassportSpec::getRevocationSnapshotJson);
       prototype.registerHybridMethod("read", &HybridNfcPassportSpec::read);
       prototype.registerHybridMethod("cancel", &HybridNfcPassportSpec::cancel);
     });
