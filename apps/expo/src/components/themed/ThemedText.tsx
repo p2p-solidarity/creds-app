@@ -54,7 +54,7 @@ const DISPLAY: ReadonlySet<TextVariant> = new Set(['headlineLarge', 'headlineMed
  * wins outright.
  */
 export function typeStyle(variant: TextVariant, style?: TextProps['style']): TextStyle {
-  const merged = StyleSheet.flatten([VARIANT_STYLE[variant], style]);
+  const merged: TextStyle = StyleSheet.flatten([VARIANT_STYLE[variant], style]) ?? {};
   if (merged.fontFamily !== undefined) return merged;
   const fontFamily = DISPLAY.has(variant) ? displayFont(merged.fontWeight) : textFont(merged.fontWeight);
   return { ...merged, fontFamily, fontWeight: undefined };

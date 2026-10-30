@@ -139,8 +139,7 @@
         {
           "ios": {
             "deploymentTarget": "17.0",
-            "useFrameworks": "static",
-            "enableSceneSupport": true
+            "useFrameworks": "static"
           },
           "android": {
             "minSdkVersion": 29,

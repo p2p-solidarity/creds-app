@@ -32,7 +32,7 @@
  * singleton state + `_testHandleAppStateChange` test hook), since that's
  * the codebase's existing precedent for this exact kind of listener.
  */
-import { AppState, type NativeEventSubscription } from 'react-native';
+import { AppState, type EventSubscription } from 'react-native';
 
 import type { LaneHandle } from './lane';
 
@@ -55,7 +55,7 @@ export interface PearLifecycleConfig {
 }
 
 interface LifecycleState {
-  subscription: NativeEventSubscription | null;
+  subscription: EventSubscription | null;
   lanes: Set<LaneHandle>;
   onForeground: (() => void) | null;
   wasBackground: boolean;

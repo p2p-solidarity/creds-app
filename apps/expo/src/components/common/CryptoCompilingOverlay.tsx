@@ -13,7 +13,7 @@
  * 1:1 Swift port; only the fake 0.8s/3.5s/5s timeline was removed.
  */
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, Text, View, type ScrollViewInstance } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -67,7 +67,7 @@ export function CryptoCompilingOverlay({
   onDone,
 }: CryptoCompilingOverlayProps) {
   const [hashes, setHashes] = useState<readonly string[]>([]);
-  const scrollRef = useRef<ScrollView | null>(null);
+  const scrollRef = useRef<ScrollViewInstance | null>(null);
   const cursorOpacity = useSharedValue(0);
   const verifiedScale = useSharedValue(0.5);
   const verifiedOpacity = useSharedValue(0);

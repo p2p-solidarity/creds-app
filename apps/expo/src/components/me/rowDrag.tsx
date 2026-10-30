@@ -21,7 +21,7 @@
  */
 import { useMemo, type ReactNode } from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedReaction,
   useAnimatedStyle,
@@ -163,44 +163,42 @@ export function RowDragHandle({
   readonly disabled?: boolean;
   readonly onMove: (destination: number) => void;
 }): ReactNode {
-  const pan = useMemo(
-    () => Gesture.Pan()
-      .enabled(!disabled)
-      .activateAfterLongPress(120)
-      .onStart(() => {
-        controller.activeIndex.value = index;
-        controller.destination.value = index;
-        controller.dragY.value = 0;
-        scheduleOnRN(haptic, 'soft');
-      })
-      .onUpdate((event) => {
-        controller.dragY.value = rubberClamp(
-          event.translationY,
-          -index * stride,
-          (itemCount - 1 - index) * stride,
-        );
-        const destination = dragDestinationIndex(index, event.translationY, itemCount, stride);
-        if (destination !== controller.destination.value) {
-          controller.destination.value = destination;
-          scheduleOnRN(haptic, 'selection');
-        }
-      })
-      .onEnd((event) => {
-        const destination = dragDestinationIndex(index, event.translationY, itemCount, stride);
-        if (destination !== index) {
-          // Land in the destination slot first; the JS commit then repaints
-          // the same geometry with identity transforms (see module header).
-          controller.dragY.value = withSpring((destination - index) * stride, SPRING.press);
-          scheduleOnRN(onMove, destination);
-          return;
-        }
-        settleBack(controller);
-      })
-      .onFinalize((_event, success) => {
-        if (!success) settleBack(controller);
-      }),
-    [controller, disabled, index, itemCount, onMove, stride],
-  );
+  const pan = usePanGesture({
+    enabled: !disabled,
+    activateAfterLongPress: 120,
+    onActivate: () => {
+      controller.activeIndex.value = index;
+      controller.destination.value = index;
+      controller.dragY.value = 0;
+      scheduleOnRN(haptic, 'soft');
+    },
+    onUpdate: (event) => {
+      controller.dragY.value = rubberClamp(
+        event.translationY,
+        -index * stride,
+        (itemCount - 1 - index) * stride,
+      );
+      const destination = dragDestinationIndex(index, event.translationY, itemCount, stride);
+      if (destination !== controller.destination.value) {
+        controller.destination.value = destination;
+        scheduleOnRN(haptic, 'selection');
+      }
+    },
+    onDeactivate: (event) => {
+      const destination = dragDestinationIndex(index, event.translationY, itemCount, stride);
+      if (destination !== index) {
+        // Land in the destination slot first; the JS commit then repaints
+        // the same geometry with identity transforms (see module header).
+        controller.dragY.value = withSpring((destination - index) * stride, SPRING.press);
+        scheduleOnRN(onMove, destination);
+        return;
+      }
+      settleBack(controller);
+    },
+    onFinalize: (event) => {
+      if (event.canceled) settleBack(controller);
+    },
+  });
 
   return (
     <GestureDetector gesture={pan}>

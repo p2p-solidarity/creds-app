@@ -3,7 +3,7 @@
  * "資料雲端自動儲存 react-native-gesture-handler"
  *
  * Wires a Pan gesture to the coordinated `requestBackup('gesture')` entrypoint.
- * The gesture is created via react-native-gesture-handler's `Gesture.Pan()` so
+ * The gesture is created via react-native-gesture-handler's `usePanGesture` so
  * it composes with any scrollable container's native pull-to-refresh without
  * fighting the JS scroll thread.
  *
@@ -20,7 +20,7 @@
  * want the same gesture across the whole app shell (not bound to a specific
  * FlashList instance).
  */
-import { Gesture } from 'react-native-gesture-handler';
+import { usePanGesture } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-worklets';
 
 import { requestBackup, type BackupPayload } from './backupManager';
@@ -50,15 +50,16 @@ export function shouldTriggerGestureBackup(translationY: number): boolean {
 }
 
 /**
- * Create a gesture that fires a coordinated backup on a downward pull exceeding
- * PULL_THRESHOLD_PX. Compose with a scroll view via
- * `Gesture.Simultaneous(panGesture, nativeScroll)`.
+ * A pan gesture that fires a coordinated backup on a downward pull exceeding
+ * PULL_THRESHOLD_PX. Attach it with `<GestureDetector gesture={…}>`.
  */
-export function makeGestureAutoBackup(handlers: BackupHandlers = {}) {
-  return Gesture.Pan().onEnd((event) => {
-    'worklet';
-    if (shouldTriggerGestureBackup(event.translationY)) {
-      runOnJS(fireBackup)(handlers);
-    }
+export function useGestureAutoBackup(handlers: BackupHandlers = {}) {
+  return usePanGesture({
+    onDeactivate: (event) => {
+      'worklet';
+      if (shouldTriggerGestureBackup(event.translationY)) {
+        runOnJS(fireBackup)(handlers);
+      }
+    },
   });
 }

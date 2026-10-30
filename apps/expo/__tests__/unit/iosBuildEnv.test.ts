@@ -834,7 +834,7 @@ rm -rf "$work"
     const original = [
       '  log "Building framework slice for ${platform}..."',
       '',
-      '  (cd "$PACKAGE_DIR" && env -i "${env_args[@]}" \\',
+      '  (cd "$PACKAGE_DIR" && env -i PATH="$PATH" HOME="$HOME" \\',
       '    xcodebuild \\',
       '    build \\',
       '    -quiet \\',
@@ -849,7 +849,7 @@ rm -rf "$work"
 
     const first = plugin._internal.patchSource(patch, original);
     expect(first.status).toBe('patched');
-    expect(first.source).toContain('if ! (cd "$PACKAGE_DIR" && env -i "${env_args[@]}"');
+    expect(first.source).toContain('if ! (cd "$PACKAGE_DIR" && env -i PATH="$PATH" HOME="$HOME"');
     expect(first.source).toContain(') > "$nested_xcodebuild_log" 2>&1; then');
     expect(first.source).toContain('log "error: nested xcodebuild failed for ${platform}"');
     expect(first.source).toContain("sed -E 's/^((.*: )?)error: /\\1warning: /'");

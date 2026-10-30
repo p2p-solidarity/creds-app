@@ -29,7 +29,7 @@ export {
   type BackupRequestOutcome,
   type RestoreResult,
 } from './backupManager';
-export { makeGestureAutoBackup } from './gestureAutoBackup';
+export { useGestureAutoBackup } from './gestureAutoBackup';
 export { startAutoBackup } from './autoBackupScheduler';
 export { MAX_RETAINED_BACKUPS } from './backupPolicy';
 export {

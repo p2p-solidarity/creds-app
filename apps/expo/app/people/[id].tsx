@@ -1,7 +1,7 @@
 import { useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
-import { Image, TextInput, View } from 'react-native';
+import { Image, TextInput, View, type TextInputInstance } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -43,7 +43,7 @@ export default function PersonDetailScreen(): ReactNode {
   const remove = useContactStore((state) => state.remove);
   const loadDetail = useContactStore((state) => state.loadDetail);
   const insets = useSafeAreaInsets();
-  const noteInputRef = useRef<TextInput>(null);
+  const noteInputRef = useRef<TextInputInstance>(null);
 
   const [moreSheetOpen, setMoreSheetOpen] = useState(false);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
@@ -433,7 +433,7 @@ function NotesSection({
   onSave,
 }: {
   readonly contact: Contact;
-  readonly inputRef: RefObject<TextInput | null>;
+  readonly inputRef: RefObject<TextInputInstance | null>;
   readonly onSave: (note: string) => void;
 }): ReactNode {
   const { t } = useTranslation();

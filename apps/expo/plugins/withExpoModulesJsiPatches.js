@@ -18,10 +18,11 @@
  * are not fatal), on failure it prints everything and exits 1.
  *
  * (The former setter-pointer patch, a backport of expo/expo#46736, was retired
- * when expo-modules-jsi moved to 56.0.13, which ships that fix. The second
- * anchor of this patch moved to the `CLANG_COVERAGE_MAPPING=NO` line when
- * expo-modules-jsi 57.1.0 appended the two CLANG coverage settings; upstream
- * 57.1.0 still replays the nested output verbatim, so the patch stays.)
+ * when expo-modules-jsi moved to 56.0.13, which ships that fix. The anchors are
+ * the subshell opener and the `)` that closes it before `local product_path`,
+ * so the build-setting lines upstream keeps appending (57.1.0 coverage, 58.0
+ * env forwarding and symbol settings) don't move them; upstream 58.0.21 still
+ * replays the nested output verbatim, so the patch stays.)
  *
  * Drop a patch (and its case in __tests__/unit/iosBuildEnv.test.ts) once the
  * installed expo-modules-jsi carries the fix; the marker check makes an applied
@@ -40,7 +41,7 @@ const PATCHES = [
     marker: 'nested_xcodebuild_log',
     edits: [
       [
-        '  (cd "$PACKAGE_DIR" && env -i "${env_args[@]}" \\\n',
+        '  (cd "$PACKAGE_DIR" && env -i ',
         [
           '  # [airmeishi] Capture the nested xcodebuild. Xcode 27 `-quiet` prints a spurious',
           '  # "error: the following command failed with exit code 0 but produced no further',
@@ -51,14 +52,13 @@ const PATCHES = [
           '  # exited 0, so they were not fatal); on failure the full log is printed.',
           '  local nested_xcodebuild_log',
           '  nested_xcodebuild_log="$(mktemp -t ExpoModulesJSI-xcodebuild)"',
-          '  if ! (cd "$PACKAGE_DIR" && env -i "${env_args[@]}" \\',
-          '',
+          '  if ! (cd "$PACKAGE_DIR" && env -i ',
         ].join('\n'),
       ],
       [
-        '    CLANG_COVERAGE_MAPPING=NO \\\n  )\n',
+        ' \\\n  )\n\n  local product_path=',
         [
-          '    CLANG_COVERAGE_MAPPING=NO \\',
+          ' \\',
           '  ) > "$nested_xcodebuild_log" 2>&1; then',
           '    cat "$nested_xcodebuild_log"',
           '    rm -f "$nested_xcodebuild_log"',
@@ -68,6 +68,7 @@ const PATCHES = [
           "  sed -E 's/^((.*: )?)error: /\\1warning: /' \"$nested_xcodebuild_log\"",
           '  rm -f "$nested_xcodebuild_log"',
           '',
+          '  local product_path=',
         ].join('\n'),
       ],
     ],

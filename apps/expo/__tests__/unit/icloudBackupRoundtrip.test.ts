@@ -591,22 +591,13 @@ describe('iCloud backup — Swift BackupData field parity', () => {
 
 // ─── Gesture-triggered backup (pull-down) ──────────────────────────────────
 //
-// `makeGestureAutoBackup` returns a Gesture.Pan() with an onEnd handler.
-// We can't instantiate a real gesture in bun-test, but we CAN unit-test the
-// "did the threshold trigger?" logic by feeding fake events through the
-// gesture-handler mock. See gestureAutoBackup.ts: the threshold is 80px on
+// `useGestureAutoBackup` returns a usePanGesture() with an onDeactivate
+// handler. We can't instantiate a real gesture in bun-test, but we CAN
+// unit-test the "did the threshold trigger?" logic. See gestureAutoBackup.ts: the threshold is 80px on
 // translationY (downward pull) with a 30s cooldown.
 
-interface GestureEvent { readonly translationY: number }
 interface GestureModule {
   readonly shouldTriggerGestureBackup: (translationY: number) => boolean;
-  readonly makeGestureAutoBackup: (
-    handlers: {
-      readonly onStart?: () => void;
-      readonly onComplete?: (payload: unknown) => void;
-      readonly onError?: (err: unknown) => void;
-    }
-  ) => { readonly onEnd: (cb: (e: GestureEvent) => void) => unknown };
 }
 
 describe('iCloud backup — gesture-triggered (pull-down pan)', () => {
@@ -615,20 +606,8 @@ describe('iCloud backup — gesture-triggered (pull-down pan)', () => {
 
   beforeAll(async () => {
     // Mock the gesture-handler + worklets surface so the module loads in bun.
-    // The fake Pan returns the most-recent onEnd callback so the test can
-    // invoke it with a synthetic event.
-    let pendingOnEnd: ((e: GestureEvent) => void) | null = null;
     await mock.module('react-native-gesture-handler', () => ({
-      Gesture: {
-        Pan: () => ({
-          onEnd: (cb: (e: GestureEvent) => void) => {
-            pendingOnEnd = cb;
-            // Return the same shape so chained .onEnd / .activeOffsetY works.
-            return { __pendingOnEnd: cb };
-          },
-        }),
-      },
-      __getPendingOnEnd: () => pendingOnEnd,
+      usePanGesture: (config: unknown) => config,
     }));
     await mock.module('react-native-worklets', () => ({
       runOnJS: <T extends (...args: unknown[]) => unknown>(fn: T) =>

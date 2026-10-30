@@ -153,8 +153,10 @@ const DEFAULTS: Preferences = {
   publicPageBindingReady: false,
   publicPagePublishError: '',
   publicPageRetryAt: null,
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- dormant key, kept so persisted blobs round-trip
   biometricSensitiveOps: true,
   backupProvider: 'iCloud',
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- dormant key, kept so persisted blobs round-trip
   autoBackupOnPull: true,
   notificationsEnabled: true,
   developerMode: false,
@@ -163,6 +165,7 @@ const DEFAULTS: Preferences = {
   cardAccentHex: '#E091B3',
   enableGlow: true,
   selectedAnimal: null,
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- dormant key, kept so persisted blobs round-trip
   biometricPolicy: DEFAULT_BIOMETRIC_POLICY,
   backupEnabled: false,
   notificationsInAppToast: true,

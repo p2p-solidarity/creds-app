@@ -10,7 +10,7 @@ import ReanimatedSwipeable, {
 import { GestureDetector } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { makeGestureAutoBackup } from '@/backup';
+import { useGestureAutoBackup } from '@/backup';
 import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { PeopleFeatureArt } from '@/components/decor/CredsFeatureArt';
@@ -199,14 +199,10 @@ export default function PeopleTab() {
     })();
   };
 
-  const backupGesture = useMemo(
-    () =>
-      makeGestureAutoBackup({
-        onComplete: () => { pushToast(t('peopleList.backedUp'), 'success', 2000); },
-        onError: () => { pushToast(t('peopleList.backupFailed'), 'error'); },
-      }),
-    [t],
-  );
+  const backupGesture = useGestureAutoBackup({
+    onComplete: () => { pushToast(t('peopleList.backedUp'), 'success', 2000); },
+    onError: () => { pushToast(t('peopleList.backupFailed'), 'error'); },
+  });
 
   const body = (
     <View className="flex-1">
