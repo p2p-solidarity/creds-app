@@ -10,22 +10,21 @@
  * exact `verified` result gets a filled green seal; declared/stale/revoked
  * remain visibly non-green.
  */
-import { BrandIcon } from '@/components/icons/BrandIcon';
-import { linkDisplay, linkSecondaryLabel } from '@/profile/linkPresentation';
-import Animated, { useReducedMotion } from 'react-native-reanimated';
-import { fadeUpIn } from '@/feedback/motion';
-import type { ReactNode } from 'react';
-import { Linking, View } from 'react-native';
+import { useMemo, type ReactNode } from 'react';
+import { View } from 'react-native';
 
-import { PressableScale } from '@/components/common/PressableScale';
 import { handleBadgeViewModel } from '@/badges/handleBadgeDisplay';
-import { SfIcon } from '@/components/icons/SfIcon';
 import { PageLivePreview } from '@/components/me/PageLivePreview';
 import { PageAvatar } from '@/components/people/PageAvatar';
-import { ThemedSurface, ThemedText } from '@/components/themed';
-import { Colors } from '@/constants/Colors';
-import { appAlert } from '@/feedback/appAlert';
+import {
+  ChipBase,
+  PersonHeroCard,
+  PersonLinksCard,
+  buildLinkRows,
+} from '@/components/people/personDetailSupport';
 import { WitnessSection } from '@/components/scan/WitnessSection';
+import { ThemedText } from '@/components/themed';
+import { Colors } from '@/constants/Colors';
 import { useTranslation } from '@/i18n';
 import type { VerifiedHandleBinding } from '@/scan/verifiedPageHandler';
 import type { ProfileRecord } from '@solidarity/shared';
@@ -35,19 +34,34 @@ export interface VerifiedProfileViewProps {
   readonly handleBinding?: VerifiedHandleBinding;
 }
 
+/** Opens on the same name card a contact does (`PersonHeroCard`): avatar,
+ *  name, bio and the signature / handle chips, then this phone's checks,
+ *  then the published Page or its links as tappable rows. */
 export function VerifiedProfileView({ record, handleBinding }: VerifiedProfileViewProps): ReactNode {
   const { t } = useTranslation();
-  const reduceMotion = useReducedMotion();
+  const linkRows = useMemo(() => buildLinkRows(record.links), [record.links]);
   return (
     <View style={{ gap: 16 }}>
-      <View className="flex-row items-center" style={{ gap: 6 }}>
-        <SfIcon name="checkmark.seal.fill" size={16} color={Colors.terminalGreen} />
-        <ThemedText variant="label" style={{ color: Colors.terminalGreen }}>
-          {t('verifiedPage.signatureValid')}
+      <PersonHeroCard>
+        <PageAvatar avatar={record.avatar} displayName={record.displayName} size={88} />
+        <ThemedText variant="headlineMedium" numberOfLines={2} style={{ textAlign: 'center' }}>
+          {record.displayName}
         </ThemedText>
-      </View>
-
-      {handleBinding ? <HandleBindingBadge binding={handleBinding} /> : null}
+        {record.bio.length > 0 ? (
+          <ThemedText variant="bodySmall" tone="secondary" numberOfLines={3} style={{ textAlign: 'center' }}>
+            {record.bio}
+          </ThemedText>
+        ) : null}
+        <View className="flex-row flex-wrap items-center justify-center gap-2">
+          <ChipBase
+            icon="checkmark.seal.fill"
+            iconColor={Colors.terminalGreen}
+            labelColor={Colors.terminalGreen}
+            label={t('verifiedPage.signatureValid')}
+          />
+          {handleBinding ? <HandleBindingBadge binding={handleBinding} /> : null}
+        </View>
+      </PersonHeroCard>
 
       <WitnessSection record={record} />
 
@@ -65,58 +79,7 @@ export function VerifiedProfileView({ record, handleBinding }: VerifiedProfileVi
           />
         </View>
       ) : (
-        <>
-          <View className="flex-row items-center" style={{ gap: 12 }}>
-            <PageAvatar avatar={record.avatar} displayName={record.displayName} size={56} />
-            <ThemedText variant="titleLarge" style={{ flex: 1 }}>
-              {record.displayName}
-            </ThemedText>
-          </View>
-
-          {record.bio.length > 0 ? (
-            <ThemedText variant="bodyMedium" tone="secondary">
-              {record.bio}
-            </ThemedText>
-          ) : null}
-
-          {record.links.length > 0 ? (
-            <View style={{ gap: 8 }}>
-              <ThemedText variant="caption" tone="tertiary">
-                {t('verifiedPage.linksHeader')}
-              </ThemedText>
-              {record.links.map((link, index) => (
-                <Animated.View key={`${link.label}-${link.url}`} entering={fadeUpIn(index, reduceMotion)}>
-                  <PressableScale
-                    haptic="tap"
-                    onPress={() => {
-                      void Linking.openURL(link.url).catch(() => {
-                        appAlert({
-                          title: t('mePage.linkErrorTitle'),
-                          message: t('mePage.linkErrorMessage'),
-                        });
-                      });
-                    }}
-                    accessibilityRole="link"
-                    accessibilityLabel={linkDisplay(link.label, link.url).text}
-                    style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 10 }}
-                  >
-                    <BrandIcon name={linkDisplay(link.label, link.url).brand} size={20} color={Colors.text2} />
-                    <View style={{ flex: 1, gap: 1 }}>
-                      <ThemedText variant="bodyMedium" numberOfLines={1} ellipsizeMode="middle">
-                        {linkDisplay(link.label, link.url).text}
-                      </ThemedText>
-                      {linkSecondaryLabel(link.label, link.url) ? (
-                        <ThemedText variant="caption" tone="tertiary" numberOfLines={1}>
-                          {linkSecondaryLabel(link.label, link.url)}
-                        </ThemedText>
-                      ) : null}
-                    </View>
-                  </PressableScale>
-                </Animated.View>
-              ))}
-            </View>
-          ) : null}
-        </>
+        <PersonLinksCard rows={linkRows} />
       )}
     </View>
   );
@@ -146,17 +109,11 @@ function HandleBindingBadge({ binding }: { readonly binding: VerifiedHandleBindi
   })();
 
   return (
-    <ThemedSurface
-      variant="inset"
-      className="self-start px-3 py-2"
-      style={{ borderWidth: 1, borderColor: Colors.divider }}
-    >
-      <View className="flex-row items-center" style={{ gap: 7 }}>
-        <SfIcon name={style.icon} size={15} color={style.color} />
-        <ThemedText variant="label" style={{ color: style.color }}>
-          {`${binding.handle} · ${t(model.labelKey)}`}
-        </ThemedText>
-      </View>
-    </ThemedSurface>
+    <ChipBase
+      icon={style.icon}
+      iconColor={style.color}
+      labelColor={style.color}
+      label={`${binding.handle} · ${t(model.labelKey)}`}
+    />
   );
 }

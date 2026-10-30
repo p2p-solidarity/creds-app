@@ -1,3 +1,6 @@
+import { LinearGradient } from 'expo-linear-gradient';
+
+import { CredsMark } from '@/components/brand/CredsMark';
 import { BrandIcon } from '@/components/icons/BrandIcon';
 import type { BrandIconName } from '@/components/icons/brandGlyphs';
 import { linkDisplay, linkSecondaryLabel } from '@/profile/linkPresentation';
@@ -5,7 +8,7 @@ import Animated, { useReducedMotion } from 'react-native-reanimated';
 import { fadeUpIn } from '@/feedback/motion';
 import type { SFSymbol } from 'expo-symbols';
 import type { ReactNode } from 'react';
-import { Linking, View } from 'react-native';
+import { Linking, View, type StyleProp, type ViewStyle } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { PressableScale } from '@/components/common/PressableScale';
@@ -15,7 +18,7 @@ import { Colors } from '@/constants/Colors';
 import { Radius } from '@/constants/radius';
 import { appAlert } from '@/feedback/appAlert';
 import { useTranslation } from '@/i18n';
-import type { Contact } from '@solidarity/shared';
+import type { Contact, ProfileLink } from '@solidarity/shared';
 
 export interface PersonDetailContactRow {
   readonly id: string;
@@ -65,6 +68,68 @@ export function buildContactRows(contact: Contact): readonly PersonDetailContact
     });
   }
   return rows.map((row, index) => ({ ...row, index }));
+}
+
+/** Rows for a Page's links — same row shape as a contact's social networks. */
+export function buildLinkRows(links: readonly ProfileLink[]): readonly PersonDetailContactRow[] {
+  return links
+    .filter((link) => isHttpUrl(link.url.trim()))
+    .map((link, index) => ({
+      id: `link:${String(index)}:${link.url}`,
+      brand: linkDisplay(link.label, link.url).brand,
+      label: linkSecondaryLabel(link.label, link.url) ?? '',
+      value: linkDisplay(link.label, link.url).text,
+      url: link.url,
+      index,
+    }));
+}
+
+/** The person's name card: hero gradient, ring mark in the corner, centred
+ *  content. Shared by a contact, a saved Page and a declared Page so every
+ *  person in People opens on the same card. */
+export function PersonHeroCard({
+  children,
+  style,
+}: {
+  readonly children: ReactNode;
+  readonly style?: StyleProp<ViewStyle>;
+}): ReactNode {
+  return (
+    <ThemedSurface variant="card" style={[{ overflow: 'hidden' }, style]}>
+      <LinearGradient
+        colors={[Colors.heroGradientStart, Colors.heroGradientEnd]}
+        locations={[0.36, 0.68]}
+        start={{ x: 0.35, y: 0.98 }}
+        end={{ x: 0.65, y: 0.02 }}
+        style={{ position: 'absolute', inset: 0 }}
+      />
+      {/* creds.id's name card signs its corner with the ring mark (web `.scard`). */}
+      <View pointerEvents="none" style={{ position: 'absolute', right: 14, bottom: 14, opacity: 0.5 }}>
+        <CredsMark size={22} />
+      </View>
+      <View className="items-center px-4 py-5" style={{ gap: 12 }}>
+        {children}
+      </View>
+    </ThemedSurface>
+  );
+}
+
+/** A card of tappable link rows (phone, email, social, Page links). */
+export function PersonLinksCard({
+  rows,
+  style,
+}: {
+  readonly rows: readonly PersonDetailContactRow[];
+  readonly style?: StyleProp<ViewStyle>;
+}): ReactNode {
+  if (rows.length === 0) return null;
+  return (
+    <ThemedSurface variant="card" style={[{ overflow: 'hidden' }, style]}>
+      {rows.map((row, index) => (
+        <PersonDetailContactRowView key={row.id} row={row} divided={index < rows.length - 1} />
+      ))}
+    </ThemedSurface>
+  );
 }
 
 export function PersonDetailContactRowView({
@@ -147,14 +212,16 @@ export function ContextTag({ label }: { readonly label: string }): ReactNode {
   );
 }
 
-function ChipBase({
+export function ChipBase({
   icon,
   iconColor,
   label,
+  labelColor,
 }: {
   readonly icon: SFSymbol;
   readonly iconColor: string;
   readonly label: string;
+  readonly labelColor?: string;
 }): ReactNode {
   return (
     <ThemedSurface
@@ -163,7 +230,11 @@ function ChipBase({
       style={{ borderRadius: Radius.pill }}
     >
       <SfIcon name={icon} size={11} color={iconColor} />
-      <ThemedText variant="caption" tone="secondary" numberOfLines={1}>
+      <ThemedText
+        variant="caption"
+        tone="secondary"
+        numberOfLines={1}
+        style={labelColor ? { color: labelColor } : undefined}>
         {label}
       </ThemedText>
     </ThemedSurface>

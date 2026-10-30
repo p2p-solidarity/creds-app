@@ -1,5 +1,4 @@
 import { useLocalSearchParams } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { Image, TextInput, View, type TextInputInstance } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
@@ -8,7 +7,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { animalImageSource } from '@/cards/animals';
 import { PressableScale } from '@/components/common/PressableScale';
-import { CredsMark } from '@/components/brand/CredsMark';
 import { SfIcon } from '@/components/icons/SfIcon';
 import {
   contactSourceDescription,
@@ -18,7 +16,8 @@ import { EditContactSheet } from '@/components/people/EditContactSheet';
 import { PersonDetailMoreSheet } from '@/components/people/PersonDetailMoreSheet';
 import {
   ContextTag,
-  PersonDetailContactRowView,
+  PersonHeroCard,
+  PersonLinksCard,
   StatusTag,
   buildContactRows,
   formatIsoDate,
@@ -267,40 +266,23 @@ function HeroCard({
   const note = contact?.notes?.trim();
 
   return (
-    <ThemedSurface
-      variant="card"
-      style={{ marginHorizontal: HORIZONTAL_PADDING, overflow: 'hidden' }}
-    >
-      <LinearGradient
-        colors={[Colors.heroGradientStart, Colors.heroGradientEnd]}
-        locations={[0.36, 0.68]}
-        start={{ x: 0.35, y: 0.98 }}
-        end={{ x: 0.65, y: 0.02 }}
-        style={{ position: 'absolute', inset: 0 }}
+    <PersonHeroCard style={{ marginHorizontal: HORIZONTAL_PADDING }}>
+      <AvatarCircle
+        name={displayName}
+        profileImage={contact?.businessCard.profileImage}
+        animal={contact?.businessCard.animal}
       />
-      {/* creds.id's name card signs its corner with the ring mark (web `.scard`). */}
-      <View pointerEvents="none" style={{ position: 'absolute', right: 14, bottom: 14, opacity: 0.5 }}>
-        <CredsMark size={22} />
-      </View>
-
-      <View className="items-center px-4 py-5" style={{ gap: 12 }}>
-        <AvatarCircle
-          name={displayName}
-          profileImage={contact?.businessCard.profileImage}
-          animal={contact?.businessCard.animal}
-        />
-        <ThemedText variant="headlineMedium" numberOfLines={2} style={{ textAlign: 'center' }}>
-          {displayName}
-        </ThemedText>
-        <HeroNoteLine note={note} onEditNote={onEditNote} />
-        {contact ? (
-          <View className="flex-row flex-wrap items-center justify-center gap-2">
-            <StatusTag contact={contact} />
-            {sourceTag ? <ContextTag label={sourceTag} /> : null}
-          </View>
-        ) : null}
-      </View>
-    </ThemedSurface>
+      <ThemedText variant="headlineMedium" numberOfLines={2} style={{ textAlign: 'center' }}>
+        {displayName}
+      </ThemedText>
+      <HeroNoteLine note={note} onEditNote={onEditNote} />
+      {contact ? (
+        <View className="flex-row flex-wrap items-center justify-center gap-2">
+          <StatusTag contact={contact} />
+          {sourceTag ? <ContextTag label={sourceTag} /> : null}
+        </View>
+      ) : null}
+    </PersonHeroCard>
   );
 }
 
@@ -369,21 +351,7 @@ function AvatarCircle({
 
 function ContactMethodsSection({ contact }: { readonly contact: Contact }): ReactNode {
   const rows = useMemo(() => buildContactRows(contact), [contact]);
-  if (rows.length === 0) return null;
-  return (
-    <ThemedSurface
-      variant="card"
-      style={{ marginHorizontal: HORIZONTAL_PADDING, overflow: 'hidden' }}
-    >
-      {rows.map((row, index) => (
-        <PersonDetailContactRowView
-          key={row.id}
-          row={row}
-          divided={index < rows.length - 1}
-        />
-      ))}
-    </ThemedSurface>
-  );
+  return <PersonLinksCard rows={rows} style={{ marginHorizontal: HORIZONTAL_PADDING }} />;
 }
 
 function ContactMetadataSection({
