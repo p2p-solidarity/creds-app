@@ -174,18 +174,14 @@ export default function MeEditScreen() {
     setHasDraftEdits(true);
     setLinks((prev) => prev.filter((l) => l.id !== id));
   };
-  const moveLink = (id: string, direction: -1 | 1) => {
+  const reorderLink = (sourceIndex: number, destinationIndex: number) => {
     setHasDraftEdits(true);
     setLinks((prev) => {
-      const idx = prev.findIndex((l) => l.id === id);
-      const swapIdx = idx + direction;
-      if (idx < 0 || swapIdx < 0 || swapIdx >= prev.length) return prev;
+      if (sourceIndex === destinationIndex) return prev;
       const next = [...prev];
-      const a = next[idx];
-      const b = next[swapIdx];
-      if (!a || !b) return prev;
-      next[idx] = b;
-      next[swapIdx] = a;
+      const [moved] = next.splice(sourceIndex, 1);
+      if (!moved) return prev;
+      next.splice(destinationIndex, 0, moved);
       return next;
     });
   };
@@ -467,7 +463,7 @@ export default function MeEditScreen() {
             setLinkSheetTarget({ kind: 'edit', id });
           }}
           onRemove={removeLink}
-          onMove={moveLink}
+          onReorder={reorderLink}
           onImportLinktree={() => {
             setLinktreeSheetOpen(true);
           }}

@@ -142,6 +142,7 @@ const SF_TO_MATERIAL: Partial<Record<SFSymbol, AndroidSymbol>> = {
   'link.badge.plus': 'add_link',
   'link.circle': 'link',
   'link.circle.fill': 'link',
+  'line.3.horizontal': 'drag_handle',
   'list.bullet': 'format_list_bulleted',
   'list.bullet.rectangle': 'view_list',
   'list.bullet.clipboard': 'assignment',

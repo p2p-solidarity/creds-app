@@ -981,8 +981,6 @@
   "meEdit.linkSheet.add": "Add",
   "meEdit.linkSheet.save": "Save link",
   "meEdit.editLink": "Edit {{label}}",
-  "meEdit.moveUp": "Move link up",
-  "meEdit.moveDown": "Move link down",
   "meEdit.removeLink": "Remove link",
   "meEdit.save": "Save",
   "meEdit.saving": "Saving…",

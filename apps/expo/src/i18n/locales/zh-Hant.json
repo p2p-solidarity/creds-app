@@ -981,8 +981,6 @@
   "meEdit.linkSheet.add": "加上",
   "meEdit.linkSheet.save": "儲存連結",
   "meEdit.editLink": "編輯{{label}}",
-  "meEdit.moveUp": "上移連結",
-  "meEdit.moveDown": "下移連結",
   "meEdit.removeLink": "移除連結",
   "meEdit.save": "儲存",
   "meEdit.saving": "儲存中…",
