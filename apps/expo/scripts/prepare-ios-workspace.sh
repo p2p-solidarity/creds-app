@@ -17,7 +17,7 @@ SETUP_IOS_NATIVE_BINDINGS="${AIRMEISHI_SETUP_IOS_NATIVE_BINDINGS:-1}"
 PASSPORT_NOIR_DIR="${AIRMEISHI_PASSPORT_NOIR_DIR:-$(cd "$REPO_ROOT/.." && pwd)/passport-noir}"
 PASSPORT_MOPRO_VERSION="${AIRMEISHI_PASSPORT_MOPRO_VERSION:-v0.4.0}"
 PASSPORT_MOPRO_ZIP_URL="${AIRMEISHI_PASSPORT_MOPRO_ZIP_URL:-https://github.com/p2p-solidarity/passport-noir/releases/download/${PASSPORT_MOPRO_VERSION}/PassportMoproBindings.xcframework.zip}"
-PASSPORT_MOPRO_SHA256="${AIRMEISHI_PASSPORT_MOPRO_SHA256-771f2117f520b5d3ec0b95a8e1a398190c65fb836fd64c8710d0af8412b89f7e}"
+PASSPORT_MOPRO_SHA256="${AIRMEISHI_PASSPORT_MOPRO_SHA256-f397c013d69beced9c4299673c91884cdb02c900c0ff9a32de3869988cd3f49e}"
 # OpenAC v3 uses one merged `passport.srs.bin`. It is large (128MB) and
 # gitignored, so staging prefers local passport-noir build artifacts; when they
 # are absent (fresh checkout / Xcode Cloud) the SHA-pinned copy attached to the

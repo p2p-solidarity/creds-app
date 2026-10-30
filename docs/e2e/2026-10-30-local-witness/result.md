@@ -21,4 +21,4 @@
 - Passport enrollment → npub binding → nullifier count: needs a real passport + device.
 - Android mopro `.so` with the nullifier: needs the local bb-fork (NDK barretenberg) — not on this machine.
 - Pro license against App Store / Play: store secrets (09-plan A11/A12/P7/P8) not provisioned; license + notary witness keys not generated; `CREDS_LICENSE_ISSUERS` and `CREDS_NOTARY_WITNESS_PUBKEYS` are empty, so both fail closed.
-- Deploys: creds-notary, solidarity-id (+ D1 migration 0004), creds-web; passport-noir v0.4.0 release with `PassportMoproBindings.xcframework.zip` (local SHA `771f2117…f7e`) and `passport.srs.bin` (unchanged, `7d368f93…6996`).
+- Deploys: creds-notary, solidarity-id (+ D1 migration 0004), creds-web; passport-noir v0.4.0 release with `PassportMoproBindings.xcframework.zip` (built by the release workflow, SHA `f397c013…f49e`) and `passport.srs.bin` (unchanged, `7d368f93…6996`).

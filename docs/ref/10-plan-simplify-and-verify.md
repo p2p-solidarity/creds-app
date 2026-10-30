@@ -269,7 +269,8 @@ TLSNotary 對「沒揭露的部分」沒有證明成本（alpha.13 #1006），�
 **實作狀態（2026-10-30，phase 1–7 程式完成，見 `docs/e2e/2026-10-30-local-witness/result.md`）**
 - 已做：shared 驗證器（App Attest、Android Key Attestation、RSA、憑證鏈、見證格式與計數 `summarizeWitnesses`、本機抓頁 `checkSocialMarker`）；原生 `DeviceAttest`（iOS／Android）；App 自證、看的人自己抓、「幫他見證」；passport-noir 0.4.0 全域 nullifier（以 SOD 雜湊為鍵，不用 MRZ，避免從已知個資反推）、npub 綁定事件（`d = creds.passport.npub`、`n = nullifier`，新綁定取代舊的）、App 內護照見證人數；Pro 授權橋（`POST /pro/license`，換綁 30 天冷卻，授權最長 7 天）與 Pro notary（每小時批次自己抓頁，用自己的 npub 簽見證）；網頁見證顯示、Android 撤銷清單快取轉發、`/@name` 內嵌已簽 profile pointer、第一個中繼站回應後只再等 300 ms；TLSNotary prover、Container、notary 證據碼全部移除。
 - grill 待決在實作時直接定案：Q1 換綁允許、30 天冷卻；Q2 授權只給 notary 與 App 用，不寫進 Page；Q3 ES256 did:key 服務金鑰，公鑰釘在 shared（`CREDS_LICENSE_ISSUERS`）；Q4 自訂網域不做。
-- 仍待 Kidney：產生並放入 Worker secret 的兩把金鑰（授權簽章、notary 見證），再把公鑰釘進 shared；Play app-signing SHA-256；商店 API 設定；passport-noir v0.4.0 release；各 Worker／Pages 部署；Android mopro 重建（需 bb-fork）；實機 E2E。
+- 2026-10-30 已上線：兩把金鑰由腳本直接灌進 Worker secret（私鑰沒人看過），公鑰釘在 shared 2.1.2（`CREDS_LICENSE_ISSUERS`、`CREDS_NOTARY_WITNESS_PUBKEYS`）；solidarity-id（含 D1 0004、`/pro/*`）、creds-notary、creds-web 已部署；passport-noir v0.4.0 由 release workflow 打包；Android mopro 已用 NDK 版 bb 重建。
+- 仍待 Kidney：Play app-signing SHA-256；商店 API 設定（`ASC_P8_KEY`／`ASC_KEY_ID`／`ASC_ISSUER_ID`、`PLAY_SERVICE_ACCOUNT_JSON`，沒設定前 `/pro/license` 回 `not_configured`）；實機 E2E。
 
 ### 3.12 網頁速度（2026-10-30 診斷）
 
