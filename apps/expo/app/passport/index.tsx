@@ -106,7 +106,7 @@ async function findSavedPassport(fingerprint: string) {
   const records = [
     ...useIdentityData.getState().identityCards,
     ...useCredentialStore.getState().details.values(),
-  ].filter((r) => r.type === 'passport' && r.metadataTags?.includes(tag) === true);
+  ].filter((r) => r.type === 'passport' && r.metadataTags.includes(tag));
   return {
     duplicate: records.find((r) => !isRetiredPassportCredential(r)) ?? null,
     retiredIds: [...new Set(records.filter((r) => isRetiredPassportCredential(r)).map((r) => r.id))],
@@ -351,7 +351,7 @@ export default function PassportSetup() {
           currentDateYyMmDd: now.toISOString().slice(2, 10).replaceAll('-', ''),
         });
         const statement = await issuePassportStatement(
-          { sod, ageOver18, readAt: chip.readAt, passportExpiresAt: expiry, countAsWitness },
+          { sod, ageOver18, readAt: chip.readAt, passportExpiresAt: expiry, countAsWitness, credentialId: cardId },
           DEFAULT_RELAYS,
         );
         statementSigned = statement.ok;

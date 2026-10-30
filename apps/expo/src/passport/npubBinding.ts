@@ -31,43 +31,20 @@ import {
 import type { NostrEvent } from '@/nostr/nostrAdapter';
 import type { PublishReport } from '@/nostr/publish';
 import { getNostrPubkey, npubEncode, signNostrEvent } from '@/nostr/userKey';
-import { getMmkv } from '@/storage/mmkv';
 import { dropDeviceKey, signWithDeviceKey, type DeviceKeyFailure } from '@/witness/deviceKey';
 import { fetchEvents, publishWitness } from '@/witness/witness';
 
-const STORE_KEY = 'passport:statement:v1';
+import {
+  readStoredStatement,
+  statementGeneration,
+  writeStoredStatement,
+  type StoredStatement,
+} from './statementStore';
+
 const RENEW_AFTER_MS = 30 * 86_400_000;
 const RENEWAL_THROTTLE_MS = 60 * 60_000;
 
-export type PassportStatementFailure = DeviceKeyFailure | 'noNostrKey' | 'deviceRejected';
-
-/** What re-signing needs, kept on this phone only (never the chip data). */
-interface StoredStatement {
-  readonly npubHex: string;
-  readonly ageOver18: boolean;
-  readonly nullifier?: string;
-  readonly readAt: number;
-  readonly signedAt: number;
-  /** Passport expiry (unix ms); renewals stop after it. Null when the MRZ had none. */
-  readonly passportExpiresAt: number | null;
-}
-
-function readStored(): StoredStatement | null {
-  try {
-    const raw = getMmkv().getString(STORE_KEY);
-    return raw === undefined ? null : (JSON.parse(raw) as StoredStatement);
-  } catch {
-    return null;
-  }
-}
-
-function writeStored(stored: StoredStatement): void {
-  try {
-    getMmkv().set(STORE_KEY, JSON.stringify(stored));
-  } catch {
-    // Not persisted: the statement still went out; it lapses after 90 days without renewals.
-  }
-}
+export type PassportStatementFailure = DeviceKeyFailure | 'noNostrKey' | 'deviceRejected' | 'passportDeleted';
 
 async function signStatement(statement: PassportStatement, npubHex: string): Promise<Result<NostrEvent, PassportStatementFailure>> {
   const text = JSON.stringify(statement);
@@ -84,6 +61,8 @@ async function signAndPublish(
   relays: readonly string[],
   nowMs: number,
 ): Promise<Result<PublishReport, PassportStatementFailure>> {
+  // A passport deleted while this signs must not get its statement back.
+  const generation = statementGeneration();
   const holder = npubEncode(stored.npubHex);
   if (!holder.ok) return err('noNostrKey');
   const signedAt = Math.floor(nowMs / 1000);
@@ -102,7 +81,7 @@ async function signAndPublish(
     event = await signStatement(statement, stored.npubHex);
   }
   if (!event.ok) return event;
-  writeStored({ ...stored, signedAt: signedAt * 1000 });
+  if (!writeStoredStatement({ ...stored, signedAt: signedAt * 1000 }, generation)) return err('passportDeleted');
   return ok(await publishWitness(event.value, relays));
 }
 
@@ -118,6 +97,8 @@ export async function issuePassportStatement(
     readonly passportExpiresAt: Date | null;
     /** The user opted in to being counted as a passport witness (Q3). */
     readonly countAsWitness: boolean;
+    /** The passport credential being saved; deleting it stops renewals. */
+    readonly credentialId: string;
   },
   relays: readonly string[],
 ): Promise<Result<PublishReport, PassportStatementFailure>> {
@@ -130,6 +111,7 @@ export async function issuePassportStatement(
       ...(input.countAsWitness ? { nullifier: passportNullifier(new Uint8Array(input.sod)) } : {}),
       readAt: input.readAt.getTime(),
       passportExpiresAt: input.passportExpiresAt?.getTime() ?? null,
+      credentialId: input.credentialId,
     },
     relays,
     Date.now(),
@@ -142,7 +124,7 @@ let lastRenewalRun = 0;
 export async function renewPassportStatement(relays: readonly string[], nowMs: number = Date.now()): Promise<void> {
   if (nowMs - lastRenewalRun < RENEWAL_THROTTLE_MS) return;
   lastRenewalRun = nowMs;
-  const stored = readStored();
+  const stored = readStoredStatement();
   if (stored === null || nowMs - stored.signedAt < RENEW_AFTER_MS) return;
   if (stored.passportExpiresAt !== null && stored.passportExpiresAt <= nowMs) return;
   const npubHex = await getNostrPubkey();
