@@ -274,7 +274,15 @@ export default function RootLayout() {
     };
 
     const timeout = setTimeout(() => {
-      showApp(`timeout-${BOOT_TIMEOUT_MS}ms`);
+      // Never show screens before i18n: they would render raw keys
+      // (`ob.welcome.title`) and not re-render when boot installs it later.
+      void installI18n(usePreferences.getState().language)
+        .catch((error: unknown) => {
+          warnBoot('timeout-i18n-failed', error);
+        })
+        .finally(() => {
+          showApp(`timeout-${BOOT_TIMEOUT_MS}ms`);
+        });
     }, BOOT_TIMEOUT_MS);
 
     void boot().finally(() => {

@@ -13,7 +13,14 @@ import en from './locales/en.json';
 import zhHant from './locales/zh-Hant.json';
 
 export async function installI18n(preferred?: string): Promise<void> {
-  if (i18n.isInitialized) return;
+  if (i18n.isInitialized) {
+    // The boot timeout installed the device language before preferences were
+    // read; the persisted choice still wins once boot gets there.
+    if ((preferred === 'en' || preferred === 'zh-Hant') && i18n.language !== preferred) {
+      await i18n.changeLanguage(preferred);
+    }
+    return;
+  }
   // Resolve the launch language: an EXPLICIT persisted choice (preferred)
   // wins so the user's selection survives relaunch; otherwise fall back to
   // the device locale. Previously this only ever read the device locale, so
