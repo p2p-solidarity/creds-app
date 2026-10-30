@@ -121,6 +121,15 @@ export const publicPageBlockItemSchema = z
   .strict();
 export type PublicPageBlockItem = z.infer<typeof publicPageBlockItemSchema>;
 
+/**
+ * How large a block's cards render (link cards, Spotify / YouTube players).
+ * Optional and omitted for the default `medium`, so a Page that never picked a
+ * size signs byte-identical to one made before sizes existed (shared 2.2.0).
+ */
+export const PUBLIC_PAGE_CARD_SIZES = ['small', 'medium', 'large'] as const;
+export const publicPageCardSizeSchema = z.enum(PUBLIC_PAGE_CARD_SIZES);
+export type PublicPageCardSize = z.infer<typeof publicPageCardSizeSchema>;
+
 export const publicPageBlockSchema = z
   .object({
     id: z.string().min(1).max(64),
@@ -128,6 +137,7 @@ export const publicPageBlockSchema = z
     title: z.string().min(1).max(120),
     items: z.array(publicPageBlockItemSchema).max(24),
     style: z.string().min(1).max(32),
+    size: publicPageCardSizeSchema.exclude(['medium']).optional(),
     visible: z.boolean(),
     order: z.int().min(0).max(31),
   })
