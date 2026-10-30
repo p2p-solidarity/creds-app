@@ -56,6 +56,8 @@ namespace margelo::nitro::solidarity::keystone {
       virtual std::shared_ptr<Promise<std::string>> generateKey(const std::string& alias, const std::string& keyType, bool requireBiometric) = 0;
       virtual bool hasKey(const std::string& alias) = 0;
       virtual std::shared_ptr<Promise<std::string>> keyAuthMode(const std::string& alias) = 0;
+      virtual std::shared_ptr<Promise<std::string>> primeSignSession(const std::string& reason) = 0;
+      virtual void resetSignSession() = 0;
       virtual std::shared_ptr<Promise<bool>> deleteKey(const std::string& alias) = 0;
       virtual std::shared_ptr<Promise<std::string>> listSyncableP256Keys(const std::string& alias) = 0;
       virtual std::shared_ptr<Promise<bool>> deleteSyncableP256Key(const std::string& alias, const std::string& labelHex) = 0;

@@ -16,6 +16,8 @@ public protocol HybridSpruceDidSpec_protocol: HybridObject {
   func generateKey(alias: String, keyType: String, requireBiometric: Bool) throws -> Promise<String>
   func hasKey(alias: String) throws -> Bool
   func keyAuthMode(alias: String) throws -> Promise<String>
+  func primeSignSession(reason: String) throws -> Promise<String>
+  func resetSignSession() throws -> Void
   func deleteKey(alias: String) throws -> Promise<Bool>
   func listSyncableP256Keys(alias: String) throws -> Promise<String>
   func deleteSyncableP256Key(alias: String, labelHex: String) throws -> Promise<Bool>

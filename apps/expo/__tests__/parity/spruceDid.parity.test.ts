@@ -86,6 +86,16 @@ class InMemorySpruceDidDriver implements SpruceDid {
     return Promise.resolve(this.keyAuthModeResult);
   }
 
+  /** Reasons the JS gate primed the native sign session with (iOS path). */
+  readonly sessionPrimes: string[] = [];
+
+  primeSignSession(reason: string): Promise<string> {
+    this.sessionPrimes.push(reason);
+    return Promise.resolve('');
+  }
+
+  resetSignSession(): void {}
+
   // ---- Dual-key-under-one-tag modeling (key-resolution invariant) -----------
   // The native iOS fix (`SpruceDidKeyStore.copyECPrivateKey`) deterministically
   // resolves ONE physical key per alias for BOTH `getPublicKeyJwk` and
@@ -488,8 +498,9 @@ describe('SpruceID DID Nitro module — JS-side wiring', () => {
     ).toBe(true);
   });
 
-  it('skips the JS prompt when the driver reports native-acl (single-layer gate)', async () => {
+  it('skips the JS prompt for a native-acl key with no shareable session (Android)', async () => {
     driver.keyAuthModeResult = 'native-acl';
+    (globalThis as { __SPRUCE_DID_TEST_PLATFORM__?: string }).__SPRUCE_DID_TEST_PLATFORM__ = 'android';
     try {
       const nonceHash = new Uint8Array(32).fill(9);
       const { signature } = await signOpenAcDeviceBindingDigest(nonceHash);
@@ -497,7 +508,27 @@ describe('SpruceID DID Nitro module — JS-side wiring', () => {
       // The legacy SE key's keychain ACL prompts inside the native sign —
       // stacking the JS prompt on top was the "Face ID twice" bug.
       expect(authCalls.length).toBe(0);
+      expect(driver.sessionPrimes.length).toBe(0);
     } finally {
+      delete (globalThis as { __SPRUCE_DID_TEST_PLATFORM__?: string }).__SPRUCE_DID_TEST_PLATFORM__;
+      driver.keyAuthModeResult = 'js-gated';
+      await resetSigningKeyForTesting();
+    }
+  });
+
+  it('native-acl key on iOS: one JS prompt primes the native context and covers the next sign', async () => {
+    driver.keyAuthModeResult = 'native-acl';
+    driver.sessionPrimes.length = 0;
+    (globalThis as { __SPRUCE_DID_TEST_PLATFORM__?: string }).__SPRUCE_DID_TEST_PLATFORM__ = 'ios';
+    try {
+      await signOpenAcDeviceBindingDigest(new Uint8Array(32).fill(5));
+      await signOpenAcDeviceBindingDigest(new Uint8Array(32).fill(6));
+      // The live prompt ran ON the native sign context (so the keychain ACL
+      // does not ask again), once, and no second expo sheet was stacked.
+      expect(driver.sessionPrimes.length).toBe(1);
+      expect(authCalls.length).toBe(0);
+    } finally {
+      delete (globalThis as { __SPRUCE_DID_TEST_PLATFORM__?: string }).__SPRUCE_DID_TEST_PLATFORM__;
       driver.keyAuthModeResult = 'js-gated';
       await resetSigningKeyForTesting();
     }

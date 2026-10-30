@@ -281,6 +281,15 @@ class HybridSpruceDid : HybridSpruceDidSpec() {
     }.getOrDefault("js-gated")
   }
 
+  /**
+   * Auth-bound keystore keys need a BiometricPrompt CryptoObject per
+   * signature — there is no context the JS gate could pre-authorize.
+   */
+  override fun primeSignSession(reason: String): Promise<String> =
+    Promise.resolved("unsupported")
+
+  override fun resetSignSession() {}
+
   override fun deleteKey(alias: String): Promise<Boolean> = Promise.async {
     // Do not rely on a provider-specific missing-alias behaviour: absence is
     // already the desired state, while either the probe or deletion itself

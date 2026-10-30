@@ -29,7 +29,7 @@
  */
 import * as LocalAuthentication from 'expo-local-authentication';
 
-import { armBiometricGrace, hasBiometricGrace } from './biometric';
+import { hasBiometricGrace, promptForGrace, promptOnce } from './biometric';
 import {
   RED_LINE_ACTIONS,
   getSensitivePolicyFor,
@@ -59,11 +59,6 @@ export type BiometricFailureReason =
 export type BiometricResult =
   | { readonly success: true; readonly method: BiometricSuccessMethod }
   | { readonly success: false; readonly reason: BiometricFailureReason };
-
-interface AuthenticateOutcome {
-  readonly success: boolean;
-  readonly error?: string;
-}
 
 async function probeBiometricCapability(): Promise<{
   readonly hasHardware: boolean;
@@ -151,13 +146,15 @@ export async function requireSensitiveAction(
   const capability = await probeBiometricCapability();
   const biometricUsable = capability.hasHardware && capability.isEnrolled;
 
-  const outcome = await prompt(reason);
+  // Red-line actions get their own sheet: never shared with a concurrent
+  // access-level prompt, never arming the family window. Everything else goes
+  // through the one coalesced prompt that arms the shared bucket (and, for a
+  // legacy native-ACL key, the native sign context with it).
+  const outcome = ALWAYS_PROMPT_ACTIONS.has(action)
+    ? await promptOnce(reason)
+    : await promptForGrace(reason);
   if (!outcome.success) {
     return { success: false, reason: classifyError(outcome.error) };
-  }
-
-  if (!ALWAYS_PROMPT_ACTIONS.has(action)) {
-    armBiometricGrace();
   }
 
   // expo-local-authentication doesn't tell us which factor satisfied the
@@ -167,21 +164,6 @@ export async function requireSensitiveAction(
     success: true,
     method: biometricUsable ? 'biometric' : 'passcode',
   };
-}
-
-async function prompt(reason: string): Promise<AuthenticateOutcome> {
-  const r = await LocalAuthentication.authenticateAsync({
-    promptMessage: reason,
-    cancelLabel: 'Cancel',
-    fallbackLabel: 'Use device passcode',
-    disableDeviceFallback: false,
-  });
-  if (r.success) return { success: true };
-  // r.error is set to e.g. 'user_cancel', 'lockout', 'not_enrolled' on newer SDKs.
-  const message =
-    (r as unknown as { error?: string }).error ??
-    (r as unknown as { warning?: string }).warning;
-  return { success: false, error: message };
 }
 
 /**
