@@ -17,6 +17,8 @@ import { handleBadgeViewModel } from '@/badges/handleBadgeDisplay';
 import { PageLivePreview } from '@/components/me/PageLivePreview';
 import { ChipBase } from '@/components/people/personDetailSupport';
 import { WitnessSection } from '@/components/scan/WitnessSection';
+import { SfIcon } from '@/components/icons/SfIcon';
+import { ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { useTranslation } from '@/i18n';
 import { createInitialPageDesign } from '@/page/pageDesign';
@@ -44,17 +46,16 @@ export function VerifiedProfileView({ record, handleBinding }: VerifiedProfileVi
         handle={handleBinding?.handle ?? null}
       />
 
-      <View className="flex-row flex-wrap items-center gap-2">
-        <ChipBase
-          icon="checkmark.seal.fill"
-          iconColor={Colors.terminalGreen}
-          labelColor={Colors.terminalGreen}
-          label={t('verifiedPage.signatureValid')}
-        />
-        {handleBinding ? <HandleBindingBadge binding={handleBinding} /> : null}
-      </View>
-
-      <WitnessSection record={record} />
+      <ThemedSurface variant="card" style={{ overflow: 'hidden' }}>
+        <View className="flex-row flex-wrap items-center gap-2 px-4 py-3">
+          <SfIcon name="checkmark.seal.fill" size={18} color={Colors.terminalGreen} />
+          <ThemedText variant="bodyMedium" style={{ flex: 1 }}>
+            {t('verifiedPage.signatureValid')}
+          </ThemedText>
+          {handleBinding ? <HandleBindingBadge binding={handleBinding} /> : null}
+        </View>
+        <WitnessSection record={record} />
+      </ThemedSurface>
     </View>
   );
 }

@@ -31,3 +31,13 @@ Simulator: iPhone 18 Pro (iOS 27), dev client + metro from this checkout.
 - Not run: the scan-result sheet / Pear connect screens, which share
   `VerifiedProfileView` and change the same way; a Page with a real avatar
   image and a custom published design.
+
+## Checks without the green pills
+- Signature + link checks are one card: 「簽章有效」 row, then one row per
+  link (icon, handle, grey 「N 支手機見證」, ✓ when this phone found it, a small
+  「見證」 button only when witnessing is possible). Owner-checked pill dropped;
+  passport count and the public-witness note are grey lines in the card.
+  Your info: empty → one button; filled → 「你加的資訊 · 只存在這支手機  編輯」.
+  `checks-compact.png`.
+- Not seen this run: the passport-count line (relay count still loading / 0),
+  the 「見證」 button (App Attest needs a real device), a failed-check row.

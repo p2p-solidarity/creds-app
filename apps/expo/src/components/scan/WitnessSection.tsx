@@ -5,6 +5,9 @@
  * witnessed it. 「幫他見證」 publishes a witness — only on tap, because a
  * witness is a public "I know this person".
  *
+ * Renders rows for the card `VerifiedProfileView` opens with (under the
+ * signature row): one line per link, a tick when this phone found it.
+ *
  * Every row is loading / ready / error (Rule 8): the rows paint at once as
  * "checking", no count is shown until every relay answered, and a failed
  * check says so rather than showing a stale tick.
@@ -12,8 +15,11 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 
-import { SealPill } from '@/components/badges/SealPill';
-import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
+import { BrandIcon } from '@/components/icons/BrandIcon';
+import type { BrandIconName } from '@/components/icons/brandGlyphs';
+import { SfIcon } from '@/components/icons/SfIcon';
+import { ThemedButton, ThemedText } from '@/components/themed';
+import { Colors } from '@/constants/Colors';
 import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
 import { DEFAULT_RELAYS } from '@/nostr/publish';
@@ -122,13 +128,7 @@ export function WitnessSection({ record }: { readonly record: ProfileRecord }): 
 
   if (claims.length === 0) return null;
   if (identity.kind === 'error' || (identity.kind === 'ready' && identity.value === null)) {
-    return (
-      <ThemedSurface variant="inset" style={{ padding: 12 }}>
-        <ThemedText variant="caption" tone="secondary">
-          {t('witness.noName')}
-        </ThemedText>
-      </ThemedSurface>
-    );
+    return <CardNote text={t('witness.noName')} />;
   }
   // While the name resolves, the rows are already on screen, each still checking.
   const page = identity.kind === 'ready' ? identity.value : null;
@@ -152,68 +152,93 @@ export function WitnessSection({ record }: { readonly record: ProfileRecord }): 
     pushToast(t(report.success ? 'witness.published' : 'zktls.publishPending'), report.success ? 'success' : 'error');
   };
 
+  const offered: string[] = [];
+  const rows = claims.map(({ claim, target }) => {
+    const check = checks[claim] ?? 'checking';
+    const summary = summaries.kind === 'ready' ? summaries.value.get(claim) : undefined;
+    // The relays may already hold this phone's witness (an earlier visit):
+    // count it once, and don't offer to sign it again until it lapses.
+    const mineOnRelays =
+      page?.meHex != null &&
+      (summary?.others.some((w) => {
+        const hex = npubDecode(w.statement.witness);
+        return hex.ok && hex.value === page.meHex;
+      }) ?? false);
+    const others = (summary?.others.length ?? 0) + (witnessed.has(claim) && !mineOnRelays ? 1 : 0);
+    const alreadyWitnessed =
+      witnessed.has(claim) || mineOnRelays || (page !== null && myWitnessAt(claim, page.subjectHex) !== null);
+    const canOffer = canWitness && check === 'found' && !alreadyWitnessed;
+    if (canOffer) offered.push(claim);
+    // One quiet line under the handle: what this phone found, then how many
+    // phones witnessed it — only once every relay answered (Rule 8).
+    const detail = [
+      check === 'checking'
+        ? t('witness.checking')
+        : check === 'missing'
+          ? t('witness.missing')
+          : check === 'unreachable'
+            ? t('witness.unreachable')
+            : null,
+      summaries.kind === 'ready' && others > 0 ? t('witness.count', { count: others }) : null,
+      canWitness && alreadyWitnessed ? t('witness.youWitnessed') : null,
+    ].filter((part): part is string => part !== null).join(' · ');
+    return (
+      <View key={claim} className="flex-row items-center gap-3 px-4 py-3" style={{ borderTopWidth: 0.5, borderTopColor: Colors.divider }}>
+        <BrandIcon name={PLATFORM_BRAND[target.platform]} size={18} color={Colors.text2} />
+        <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
+          <ThemedText variant="bodyMedium" numberOfLines={1}>
+            {target.platform === 'website' ? target.handle : `@${target.handle}`}
+          </ThemedText>
+          {detail.length > 0 ? (
+            <ThemedText variant="caption" tone={check === 'missing' || check === 'unreachable' ? 'error' : 'tertiary'} numberOfLines={1}>
+              {detail}
+            </ThemedText>
+          ) : null}
+        </View>
+        {canOffer ? (
+          <ThemedButton
+            label={t('witness.actionShort')}
+            variant="secondary"
+            size="sm"
+            loading={witnessing === claim}
+            accessibilityLabel={t('witness.action', { handle: target.platform === 'website' ? target.handle : `@${target.handle}` })}
+            onPress={() => {
+              void witness(claim, target);
+            }}
+          />
+        ) : check === 'found' ? (
+          <View accessible accessibilityLabel={t('witness.checkedHere')}>
+            <SfIcon name="checkmark.circle.fill" size={18} color={Colors.terminalGreen} />
+          </View>
+        ) : null}
+      </View>
+    );
+  });
+
   return (
-    <View style={{ gap: 8 }}>
-      <ThemedText variant="caption" tone="tertiary">
-        {t('witness.header')}
-      </ThemedText>
-      {claims.map(({ claim, target }) => {
-        const check = checks[claim] ?? 'checking';
-        const summary = summaries.kind === 'ready' ? summaries.value.get(claim) : undefined;
-        // The relays may already hold this phone's witness (an earlier visit):
-        // count it once, and don't offer to sign it again until it lapses.
-        const mineOnRelays =
-          page?.meHex != null &&
-          (summary?.others.some((w) => {
-            const hex = npubDecode(w.statement.witness);
-            return hex.ok && hex.value === page.meHex;
-          }) ?? false);
-        const others = (summary?.others.length ?? 0) + (witnessed.has(claim) && !mineOnRelays ? 1 : 0);
-        const alreadyWitnessed =
-          witnessed.has(claim) || mineOnRelays || (page !== null && myWitnessAt(claim, page.subjectHex) !== null);
-        return (
-          <ThemedSurface key={claim} variant="outlined" style={{ padding: 12, gap: 8 }}>
-            <ThemedText variant="bodyMedium">{target.platform === 'website' ? target.handle : `${target.platform} @${target.handle}`}</ThemedText>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-              {check === 'checking' ? (
-                <SealPill state="declared" label={t('witness.checking')} />
-              ) : check === 'found' ? (
-                <SealPill state="verified" label={t('witness.checkedHere')} />
-              ) : (
-                <SealPill state="needsRecheck" label={t(check === 'missing' ? 'witness.missing' : 'witness.unreachable')} />
-              )}
-              {summaries.kind === 'loading' ? (
-                <SealPill state="declared" label={t('witness.countChecking')} />
-              ) : summaries.kind === 'error' ? (
-                <SealPill state="declared" label={t('witness.countUnavailable')} />
-              ) : (
-                <SealPill state={others > 0 ? 'verified' : 'declared'} label={t('witness.count', { count: others })} />
-              )}
-              {summary?.self ? <SealPill state="verified" label={t('witness.ownerChecked')} /> : null}
-              {canWitness && alreadyWitnessed ? <SealPill state="verified" label={t('witness.youWitnessed')} /> : null}
-            </View>
-            {canWitness && check === 'found' && !alreadyWitnessed ? (
-              <ThemedButton
-                label={t('witness.action', { handle: target.platform === 'website' ? target.handle : `@${target.handle}` })}
-                variant="secondary"
-                size="sm"
-                loading={witnessing === claim}
-                onPress={() => {
-                  void witness(claim, target);
-                }}
-              />
-            ) : null}
-          </ThemedSurface>
-        );
-      })}
+    <>
+      {rows}
       {passports.kind === 'ready' && passports.value > 0 ? (
-        <SealPill state="verified" label={t('witness.passportCount', { count: passports.value })} />
+        <CardNote text={t('witness.passportCount', { count: passports.value })} />
       ) : null}
-      {canWitness ? (
-        <ThemedText variant="caption" tone="tertiary">
-          {t('witness.publicNote')}
-        </ThemedText>
-      ) : null}
+      {offered.length > 0 ? <CardNote text={t('witness.publicNote')} /> : null}
+    </>
+  );
+}
+
+const PLATFORM_BRAND: Readonly<Record<SocialTarget['platform'], BrandIconName>> = {
+  x: 'x',
+  github: 'github',
+  telegram: 'telegram',
+  website: 'globe',
+};
+
+function CardNote({ text }: { readonly text: string }): ReactNode {
+  return (
+    <View className="px-4 py-3" style={{ borderTopWidth: 0.5, borderTopColor: Colors.divider }}>
+      <ThemedText variant="caption" tone="tertiary">
+        {text}
+      </ThemedText>
     </View>
   );
 }

@@ -10,6 +10,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ModalSheet } from '@/components/common/ModalSheet';
+import { PressableScale } from '@/components/common/PressableScale';
 import { FieldRow, SheetToolbar } from '@/components/people/EditContactSheet';
 import { PersonLinksCard, type PersonDetailContactRow } from '@/components/people/personDetailSupport';
 import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
@@ -25,32 +26,42 @@ export function PageLocalDetailsSection({ snapshot }: { readonly snapshot: Verif
 
   return (
     <View style={{ gap: 8 }}>
-      <View style={{ gap: 2 }}>
-        <ThemedText variant="label" tone="secondary">
-          {t('pageLocalDetails.title')}
-        </ThemedText>
-        <ThemedText variant="caption" tone="tertiary">
-          {t('pageLocalDetails.onlyThisPhone')}
-        </ThemedText>
-      </View>
-      <PersonLinksCard rows={localRows(snapshot)} />
-      {snapshot.note !== null ? (
-        <ThemedSurface variant="card" className="px-4 py-3" style={{ gap: 2 }}>
-          <ThemedText variant="bodySmall" tone="secondary">
-            {t('personDetail.noteLabel')}
-          </ThemedText>
-          <ThemedText variant="bodyMedium" selectable>
-            {snapshot.note}
-          </ThemedText>
-        </ThemedSurface>
-      ) : null}
-      <ThemedButton
-        fullWidth
-        variant="secondary"
-        icon={hasAny ? 'square.and.pencil' : 'plus'}
-        label={hasAny ? t('pageLocalDetails.edit') : t('pageLocalDetails.add')}
-        onPress={() => { setEditing(true); }}
-      />
+      {hasAny ? (
+        <>
+          <View className="flex-row items-center justify-between">
+            <ThemedText variant="caption" tone="tertiary">
+              {`${t('pageLocalDetails.title')} · ${t('pageLocalDetails.onlyThisPhone')}`}
+            </ThemedText>
+            <PressableScale
+              haptic="tap"
+              onPress={() => { setEditing(true); }}
+              accessibilityRole="button"
+              accessibilityLabel={t('pageLocalDetails.edit')}
+              style={{ minHeight: 44, minWidth: 44, alignItems: 'flex-end', justifyContent: 'center' }}
+            >
+              <ThemedText variant="label" tone="accent">
+                {t('pageLocalDetails.editShort')}
+              </ThemedText>
+            </PressableScale>
+          </View>
+          <PersonLinksCard rows={localRows(snapshot)} />
+          {snapshot.note !== null ? (
+            <ThemedSurface variant="card" className="px-4 py-3">
+              <ThemedText variant="bodyMedium" selectable>
+                {snapshot.note}
+              </ThemedText>
+            </ThemedSurface>
+          ) : null}
+        </>
+      ) : (
+        <ThemedButton
+          fullWidth
+          variant="secondary"
+          icon="plus"
+          label={t('pageLocalDetails.add')}
+          onPress={() => { setEditing(true); }}
+        />
+      )}
       <ModalSheet
         visible={editing}
         presentationStyle="formSheet"
