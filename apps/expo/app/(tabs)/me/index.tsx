@@ -1,9 +1,15 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MeProfileGate, MeProfilePage } from '@/components/me';
+import { AvatarEditorSheet } from '@/components/me/AvatarEditor';
+import { saveAndPublishProfile } from '@/components/me/saveAndPublishProfile';
+import { useAvatarEditor } from '@/components/me/useAvatarEditor';
+import { useTranslation } from '@/i18n';
+import { hasNostrKey } from '@/nostr/userKey';
+import { usePreferences } from '@/settings/preferences';
 import { useProfileStore } from '@/profile/store';
 import { preparePageDesign, usePageDesignStore } from '@/page/pageDesignStore';
 
@@ -25,6 +31,34 @@ export default function MeTab() {
   const shareJws = shared?.jws ?? jws;
   const nostrShortUrlReady = published !== null && nostrPublishedJws === published.jws;
   const addProofRequested = params.addProof === '1';
+  const { t } = useTranslation();
+  const autoRepublish = usePreferences((state) => state.nostrAutoRepublish);
+  const [nostrKeyPresent, setNostrKeyPresent] = useState(false);
+  useEffect(() => {
+    void hasNostrKey().then(setNostrKeyPresent);
+  }, []);
+  // The photo picker opens in place on this tab. It used to push the whole
+  // editor just to show the same sheet, so closing the sheet also popped a
+  // screen — two dismissals for one tap.
+  const avatarWillPublish = autoRepublish && nostrKeyPresent;
+  const avatarEditor = useAvatarEditor({
+    record,
+    commitProfile: async (avatar) =>
+      record
+        ? await saveAndPublishProfile(
+            {
+              displayName: record.displayName,
+              bio: record.bio,
+              links: record.links,
+              linkVisibility,
+            },
+            { avatar },
+            { publishAfterSave: avatarWillPublish, allowNostrProvisioning: false },
+            t,
+          )
+        : 'saveFailed',
+    willPublish: avatarWillPublish,
+  });
   const pageDesignStatus = usePageDesignStore((state) => state.status);
   const adoptPublishedPage = usePageDesignStore((state) => state.adoptPublishedPage);
   const openAddProof = useCallback(() => {
@@ -63,9 +97,7 @@ export default function MeTab() {
           onEdit={() => {
             router.push('/me/edit');
           }}
-          onEditAvatar={() => {
-            router.push({ pathname: '/me/edit', params: { avatar: '1' } });
-          }}
+          onEditAvatar={avatarEditor.open}
           onImportLinks={() => {
             router.push({ pathname: '/me/edit', params: { importLinks: '1' } });
           }}
@@ -86,6 +118,7 @@ export default function MeTab() {
           }}
         />
       )}
+      <AvatarEditorSheet controller={avatarEditor} />
     </View>
   );
 }

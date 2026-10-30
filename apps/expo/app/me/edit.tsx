@@ -30,6 +30,7 @@ import {
   focusedEditorMode,
   shouldReturnAfterFocusedCancel,
 } from '@/components/me/focusedEditorReturn';
+import { saveAndPublishProfile, type PublishChoice } from '@/components/me/saveAndPublishProfile';
 import { useAvatarEditor, type ProfileCommitResult } from '@/components/me/useAvatarEditor';
 import {
   LinkPageImportSheet,
@@ -42,14 +43,7 @@ import { haptic } from '@/feedback/haptics';
 import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
 import { hasRootKey } from '@/identity/rootKey';
-import {
-  isBiometricCancellation,
-  isNostrPublishOutcomePartiallyAccepted,
-  isNostrPublishOutcomeSuccessful,
-  prepareNostrClaimForSave,
-  publishWithNostrAutoSetup,
-} from '@/nostr/connectWizard';
-import { DEFAULT_RELAYS } from '@/nostr/publish';
+import { isBiometricCancellation, prepareNostrClaimForSave } from '@/nostr/connectWizard';
 import {
   getNostrPubkey,
   hasNostrKey,
@@ -63,7 +57,7 @@ import {
   type LinkVisibility,
   type VisibilitySummary,
 } from '@/profile/projection';
-import { useProfileStore, type NostrPublishOutcome } from '@/profile/store';
+import { useProfileStore } from '@/profile/store';
 import { usePreferences } from '@/settings/preferences';
 import { uuid, type ProfileLink } from '@solidarity/shared';
 
@@ -76,22 +70,7 @@ type LinkSheetTarget =
   | { readonly kind: 'edit'; readonly id: string }
   | null;
 
-type TFn = ReturnType<typeof useTranslation>['t'];
-
-interface CommitProfileOptions {
-  /** Only the explicit bottom Save action may create a missing Nostr key. */
-  readonly allowNostrProvisioning: boolean;
-  readonly publishAfterSave: boolean;
-}
-
-function publishFailureDetail(outcome: NostrPublishOutcome, t: TFn): string {
-  return t('nostrConnect.publishReportDetail', {
-    profileAccepted: outcome.profile.acceptedCount,
-    profileTotal: outcome.profile.results.length,
-    bindingAccepted: outcome.kind0.acceptedCount,
-    bindingTotal: outcome.kind0.results.length,
-  });
-}
+type CommitProfileOptions = PublishChoice;
 
 function toEditableLink(link: ProfileLink, visibility: LinkVisibility): EditableLink {
   const detectedPreset = detectLinkFromUrl(link.url)?.preset ?? null;
@@ -114,8 +93,6 @@ export default function MeEditScreen() {
   }>();
   const record = useProfileStore((s) => s.record);
   const storeLinkVisibility = useProfileStore((s) => s.linkVisibility);
-  const saveProfile = useProfileStore((s) => s.saveProfile);
-  const publishToNostr = useProfileStore((s) => s.publishToNostr);
   const autoRepublish = usePreferences((s) => s.nostrAutoRepublish);
   // The preference is the user's explicit publishing opt-in. On a first
   // publish, Save provisions the Nostr key and adds its claim before signing;
@@ -250,7 +227,7 @@ export default function MeEditScreen() {
       setNostrKeyPresent(true);
     }
 
-    const saved = await saveProfile(
+    return await saveAndPublishProfile(
       {
         displayName: displayName.trim(),
         bio: bio.trim(),
@@ -260,56 +237,10 @@ export default function MeEditScreen() {
       {
         ...(alsoKnownAs === undefined ? {} : { alsoKnownAs }),
         ...(avatarOverride === undefined ? {} : { avatar: avatarOverride }),
-      }
+      },
+      options,
+      t,
     );
-
-    if (!saved.ok) {
-      if (isBiometricCancellation(saved.error)) return 'cancelled';
-      haptic('error');
-      showError({
-        context: 'Me › Edit',
-        summary: t('meEdit.saveFailed'),
-        error: new Error(saved.error),
-      });
-      return 'saveFailed';
-    }
-
-    if (options.publishAfterSave) {
-      const published = options.allowNostrProvisioning
-        ? await publishWithNostrAutoSetup({
-            hasKey: hasNostrKey,
-            provision: provisionFromRootMnemonic,
-            publish: async () => await publishToNostr(DEFAULT_RELAYS),
-          })
-        : await publishToNostr(DEFAULT_RELAYS);
-      if (!published.ok) {
-        if (isBiometricCancellation(published.error)) return 'cancelled';
-        haptic('error');
-        showError({
-          context: 'Me › Edit › Publish',
-          summary: t('meEdit.publishFailed'),
-          error: new Error(published.error),
-        });
-        return 'publishFailed';
-      }
-      if (
-        !isNostrPublishOutcomeSuccessful(published.value) &&
-        isNostrPublishOutcomePartiallyAccepted(published.value)
-      ) {
-        return 'partialSuccess';
-      }
-      if (!isNostrPublishOutcomeSuccessful(published.value)) {
-        haptic('error');
-        showError({
-          context: 'Me › Edit › Publish',
-          summary: t('meEdit.publishFailed'),
-          error: new Error(publishFailureDetail(published.value, t)),
-        });
-        return 'publishFailed';
-      }
-    }
-
-    return 'success';
   };
 
   const avatarWillPublish = willAutoRepublish && nostrKeyPresent;

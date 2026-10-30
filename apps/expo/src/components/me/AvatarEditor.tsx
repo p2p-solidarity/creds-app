@@ -46,27 +46,39 @@ export function AvatarEditor({
         </ThemedText>
       </View>
 
-      <AvatarPickerSheet
-        visible={controller.sheetOpen}
-        phase={controller.phase}
-        canUseBluesky={controller.canUseBluesky}
-        canRemove={controller.canRemove}
-        linkAvatars={controller.linkAvatars}
-        onClose={controller.close}
-        onChooseLibrary={() => {
-          void controller.chooseFromLibrary();
-        }}
-        onUseBluesky={() => {
-          void controller.useBluesky();
-        }}
-        onUseLinkAvatar={(picture) => {
-          void controller.useLinkAvatar(picture);
-        }}
-        onRemove={() => {
-          void controller.remove();
-        }}
-        onResetError={controller.resetError}
-      />
+      <AvatarEditorSheet controller={controller} />
     </Fragment>
+  );
+}
+
+/** The photo picker sheet bound to an avatar controller — the Page tab opens
+ *  it in place; the editor opens it from its avatar button. */
+export function AvatarEditorSheet({
+  controller,
+}: {
+  readonly controller: AvatarEditorController;
+}): ReactNode {
+  return (
+    <AvatarPickerSheet
+      visible={controller.sheetOpen}
+      phase={controller.phase}
+      canUseBluesky={controller.canUseBluesky}
+      canRemove={controller.canRemove}
+      linkAvatars={controller.linkAvatars}
+      onClose={controller.close}
+      onChooseLibrary={() => {
+        void controller.chooseFromLibrary();
+      }}
+      onUseBluesky={() => {
+        void controller.useBluesky();
+      }}
+      onUseLinkAvatar={(picture) => {
+        void controller.useLinkAvatar(picture);
+      }}
+      onRemove={() => {
+        void controller.remove();
+      }}
+      onResetError={controller.resetError}
+    />
   );
 }

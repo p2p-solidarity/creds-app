@@ -12,8 +12,8 @@
  */
 import type { SFSymbol } from 'expo-symbols';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useState, type ReactNode } from 'react';
-import { ScrollView, Switch, View } from 'react-native';
+import { useRef, useState, type ReactNode } from 'react';
+import { Platform, ScrollView, Switch, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown, useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -49,7 +49,7 @@ export interface PageAppearanceSheetProps {
   readonly record: ProfileRecord;
   /** Real page address for the preview's `.pub-handle` line, when one exists. */
   readonly handle?: string | null;
-  /** 頭貼 › change photo: the photo editor lives on its own screen. */
+  /** 頭貼 › change photo: opens the photo picker once this sheet has closed. */
   readonly onEditAvatar?: () => void;
   readonly onClose: () => void;
 }
@@ -71,10 +71,33 @@ const PHONE_BEZEL = 6;
 
 const ignoreChange = (): void => undefined;
 
-export function PageAppearanceSheet({ visible, onClose, ...props }: PageAppearanceSheetProps): ReactNode {
+export function PageAppearanceSheet({ visible, onClose, onEditAvatar, ...props }: PageAppearanceSheetProps): ReactNode {
+  // iOS won't present the photo sheet while this one is still sliding away,
+  // so the hand-off waits for the dismissal to finish (Android has no
+  // dismiss event and no such limit).
+  const avatarAfterDismiss = useRef(false);
+  const editAvatar =
+    onEditAvatar === undefined
+      ? undefined
+      : () => {
+          if (Platform.OS !== 'ios') {
+            onClose();
+            onEditAvatar();
+            return;
+          }
+          avatarAfterDismiss.current = true;
+          onClose();
+        };
   return (
-    <ModalSheet visible={visible} onRequestClose={onClose}>
-      {visible ? <DesignScreen {...props} onClose={onClose} /> : null}
+    <ModalSheet
+      visible={visible}
+      onRequestClose={onClose}
+      onDismiss={() => {
+        if (!avatarAfterDismiss.current) return;
+        avatarAfterDismiss.current = false;
+        onEditAvatar?.();
+      }}>
+      {visible ? <DesignScreen {...props} onEditAvatar={editAvatar} onClose={onClose} /> : null}
     </ModalSheet>
   );
 }
@@ -134,7 +157,7 @@ function DesignScreen({
             <DesignPanel
               tab={tab}
               record={record}
-              onEditAvatar={onEditAvatar === undefined ? undefined : () => { onClose(); onEditAvatar(); }}
+              onEditAvatar={onEditAvatar}
               onDismiss={() => { setTab(null); }}
             />
           </Animated.View>
