@@ -20,6 +20,7 @@ import { DEFAULT_RELAYS } from '@/nostr/publish';
 import { getNostrPubkey, npubDecode } from '@/nostr/userKey';
 import { countPassportHolders } from '@/passport/npubBinding';
 import { deviceAttestSupported } from '@/witness/deviceKey';
+import { myWitnessAt, rememberMyWitness } from '@/witness/myWitnesses';
 import {
   checkOnThisPhone,
   createWitness,
@@ -38,6 +39,8 @@ interface PageIdentity {
   readonly subjectHex: string;
   readonly name: string;
   readonly mine: boolean;
+  /** This phone's npub (hex), to spot its own witness among the relays'. */
+  readonly meHex: string | null;
 }
 
 function claimsOf(record: ProfileRecord): { claim: string; target: SocialTarget }[] {
@@ -70,16 +73,17 @@ export function WitnessSection({ record }: { readonly record: ProfileRecord }): 
     // Witness events need no name: fetch them alongside the name lookup.
     const witnessEvents = fetchWitnessEvents(subjectHex.value, claimList, DEFAULT_RELAYS);
     void (async () => {
-      const [name, mine] = await Promise.all([
+      const [name, meHex] = await Promise.all([
         resolveCredsName(subjectHex.value, DEFAULT_RELAYS),
-        getNostrPubkey().then((p) => p.ok && p.value === subjectHex.value),
+        getNostrPubkey().then((p) => (p.ok ? p.value : null)),
       ]);
+      const mine = meHex === subjectHex.value;
       if (!live) return;
       if (name === null) {
         setIdentity({ kind: 'error' });
         return;
       }
-      const page = { subject, subjectHex: subjectHex.value, name, mine };
+      const page = { subject, subjectHex: subjectHex.value, name, mine, meHex };
       setIdentity({ kind: 'ready', value: page });
       setChecks(Object.fromEntries(claims.map((c) => [c.claim, 'checking' as const])));
       void witnessEvents
@@ -141,7 +145,10 @@ export function WitnessSection({ record }: { readonly record: ProfileRecord }): 
     }
     const report = await publishWitness(event.value, DEFAULT_RELAYS);
     setWitnessing(null);
-    if (report.success) setWitnessed((prev) => new Set(prev).add(claim));
+    if (report.success) {
+      rememberMyWitness(claim, page.subjectHex, event.value.created_at);
+      setWitnessed((prev) => new Set(prev).add(claim));
+    }
     pushToast(t(report.success ? 'witness.published' : 'zktls.publishPending'), report.success ? 'success' : 'error');
   };
 
@@ -153,7 +160,17 @@ export function WitnessSection({ record }: { readonly record: ProfileRecord }): 
       {claims.map(({ claim, target }) => {
         const check = checks[claim] ?? 'checking';
         const summary = summaries.kind === 'ready' ? summaries.value.get(claim) : undefined;
-        const others = (summary?.others.length ?? 0) + (witnessed.has(claim) ? 1 : 0);
+        // The relays may already hold this phone's witness (an earlier visit):
+        // count it once, and don't offer to sign it again until it lapses.
+        const mineOnRelays =
+          page?.meHex != null &&
+          (summary?.others.some((w) => {
+            const hex = npubDecode(w.statement.witness);
+            return hex.ok && hex.value === page.meHex;
+          }) ?? false);
+        const others = (summary?.others.length ?? 0) + (witnessed.has(claim) && !mineOnRelays ? 1 : 0);
+        const alreadyWitnessed =
+          witnessed.has(claim) || mineOnRelays || (page !== null && myWitnessAt(claim, page.subjectHex) !== null);
         return (
           <ThemedSurface key={claim} variant="outlined" style={{ padding: 12, gap: 8 }}>
             <ThemedText variant="bodyMedium">{target.platform === 'website' ? target.handle : `${target.platform} @${target.handle}`}</ThemedText>
@@ -173,8 +190,9 @@ export function WitnessSection({ record }: { readonly record: ProfileRecord }): 
                 <SealPill state={others > 0 ? 'verified' : 'declared'} label={t('witness.count', { count: others })} />
               )}
               {summary?.self ? <SealPill state="verified" label={t('witness.ownerChecked')} /> : null}
+              {canWitness && alreadyWitnessed ? <SealPill state="verified" label={t('witness.youWitnessed')} /> : null}
             </View>
-            {canWitness && check === 'found' && !witnessed.has(claim) ? (
+            {canWitness && check === 'found' && !alreadyWitnessed ? (
               <ThemedButton
                 label={t('witness.action', { handle: target.platform === 'website' ? target.handle : `@${target.handle}` })}
                 variant="secondary"

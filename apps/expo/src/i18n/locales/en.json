@@ -1339,6 +1339,7 @@
   "witness.ownerChecked": "Owner's phone checked",
   "witness.action": "Witness {{handle}}",
   "witness.publicNote": "A witness is public: it says you checked this person's link with your phone.",
+  "witness.youWitnessed": "You witnessed this",
   "witness.published": "Witness published",
   "witness.noName": "This Page has no creds.id name that points back to it, so its links can't be checked.",
   "witness.count": "Phones that witnessed: {{count}}",
