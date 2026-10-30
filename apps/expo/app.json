@@ -144,7 +144,7 @@
           },
           "android": {
             "minSdkVersion": 29,
-            "compileSdkVersion": 36,
+            "compileSdkVersion": 37,
             "targetSdkVersion": 36,
             "useLegacyPackaging": true
           }
