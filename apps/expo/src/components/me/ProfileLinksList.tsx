@@ -61,6 +61,7 @@ import {
   type ProfileRecord,
 } from '@solidarity/shared';
 
+import { LinkActionSheet, type LinkSheetAction } from './LinkActionSheet';
 import { PageEmptyState } from './PageEmptyState';
 import { PageSectionLabel } from './PageSectionLabel';
 import {
@@ -272,12 +273,14 @@ function LinkRowsSection({
   // the moved rows; replaying the entrance there would blink them out right
   // after the drop, so later mounts skip it.
   const [entered, setEntered] = useState(false);
+  const [menu, setMenu] = useState<{ readonly link: ProfileLink; readonly actions: readonly LinkSheetAction[] } | null>(null);
   useEffect(() => {
     setEntered(true);
   }, []);
   if (entries.length === 0) return null;
   return (
     <View style={{ gap: 8 }}>
+      <LinkActionSheet link={menu?.link ?? null} actions={menu?.actions ?? []} onClose={() => { setMenu(null); }} />
       <PageSectionLabel title={title} />
       <View style={{ gap: ROW_GAP }}>
         {entries.map(({ link, sourceIndex }, sectionIndex) => {
@@ -288,15 +291,18 @@ function LinkRowsSection({
           const showBanner = verifyTarget !== null && (job !== undefined || !dismissed.includes(checkKey ?? ''));
           const display = linkDisplay(link.label, link.url).text;
           const openMenu = (): void => {
-            appAlert({
-              title: display,
-              buttons: [
-                { label: t('mePage.linkMenu.open'), onPress: () => { onOpenLink(link); } },
-                { label: t('mePage.linkMenu.edit'), onPress: onEdit },
+            setMenu({
+              link,
+              actions: [
+                { icon: 'arrow.up.right', label: t('mePage.linkMenu.open'), onPress: () => { onOpenLink(link); } },
+                { icon: 'pencil', label: t('mePage.linkMenu.edit'), onPress: onEdit },
                 ...(verifyTarget !== null && !showBanner
-                  ? [{ label: t('zktls.verifyLink'), onPress: () => { void startLinkCheck(verifyTarget); } }]
+                  ? [{
+                      icon: 'checkmark.seal' as const,
+                      label: t('zktls.verifyLink'),
+                      onPress: () => { void startLinkCheck(verifyTarget); },
+                    }]
                   : []),
-                { label: t('alert.cancel'), style: 'cancel' as const },
               ],
             });
           };

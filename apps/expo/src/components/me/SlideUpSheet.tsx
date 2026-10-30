@@ -21,6 +21,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Modal,
+  Pressable,
   StyleSheet,
   View,
   useWindowDimensions,
@@ -36,6 +37,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 
 import { Colors } from '@/constants/Colors';
 import { TIMING } from '@/feedback/motion';
+import { useTranslation } from '@/i18n';
 
 /** Animate the sheet out, then unmount it, call `onClose`, then `after`. */
 export type SheetClose = (after?: () => void) => void;
@@ -46,11 +48,15 @@ export interface SlideUpSheetProps {
   readonly visible: boolean;
   /** Called once the exit animation has finished and the sheet is gone. */
   readonly onClose: () => void;
+  /** A light action sheet closes on a backdrop tap; the publish preview doesn't. */
+  readonly dismissOnBackdrop?: boolean;
   readonly children: (close: SheetClose) => ReactNode;
 }
 
-export function SlideUpSheet({ visible, onClose, children }: SlideUpSheetProps): ReactNode {
+export function SlideUpSheet({ visible, onClose, dismissOnBackdrop = false, children }: SlideUpSheetProps): ReactNode {
   const reduceMotion = useReducedMotion();
+  const { t } = useTranslation();
+  const closeLabel = t('common.close');
   const { height: windowHeight } = useWindowDimensions();
   const [mounted, setMounted] = useState(false);
   // 0 = off screen, 1 = resting. Drives both the backdrop and the sheet.
@@ -140,6 +146,14 @@ export function SlideUpSheet({ visible, onClose, children }: SlideUpSheetProps):
           pointerEvents="none"
           style={[StyleSheet.absoluteFill, { backgroundColor: Colors.overlayBg }, backdropStyle]}
         />
+        {dismissOnBackdrop ? (
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            accessibilityRole="button"
+            accessibilityLabel={closeLabel}
+            onPress={() => { close(); }}
+          />
+        ) : null}
         <Animated.View onLayout={onSheetLayout} style={sheetStyle}>
           {children(close)}
         </Animated.View>

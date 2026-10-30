@@ -16,6 +16,7 @@ import {
   pageDesignFromPublicPage,
   publicPageDesignEquals,
   removePageBlock,
+  setPageBlockSize,
   syncLapsedAlert,
   togglePageBlock,
   toPublicPageDesign,
@@ -24,6 +25,7 @@ import {
   type LapsedEvidence,
   type PageAppearance,
   type PageBlock,
+  type PageCardSize,
   type PageBlockType,
   type PageDesign,
 } from './pageDesign';
@@ -88,6 +90,7 @@ interface PageDesignState {
     id: string,
     patch: Partial<Pick<PageBlock, 'title' | 'items' | 'style'>>
   ) => void;
+  readonly setBlockSize: (id: string, size: PageCardSize) => void;
   readonly removeBlock: (id: string) => void;
   readonly setBlockVisible: (id: string, visible: boolean) => void;
   readonly moveBlock: (id: string, direction: 'up' | 'down') => void;
@@ -140,6 +143,9 @@ export const usePageDesignStore = create<PageDesignState>((set, get) => {
     },
     updateBlock: (id, patch) => {
       commit(updatePageBlock(get().design, id, patch));
+    },
+    setBlockSize: (id, size) => {
+      commit(setPageBlockSize(get().design, id, size));
     },
     removeBlock: (id) => {
       commit(removePageBlock(get().design, id));

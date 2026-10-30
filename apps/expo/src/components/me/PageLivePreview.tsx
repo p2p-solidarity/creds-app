@@ -23,7 +23,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import type { ReactNode } from 'react';
 import { ScrollView, View } from 'react-native';
 
-import type { PageAppearance, PageBlock } from '@/page/pageDesign';
+import { cardSizeOf, type PageAppearance, type PageBlock } from '@/page/pageDesign';
 import { richMediaForBlock } from '@/page/richMedia';
 import type { ProfileRecord } from '@solidarity/shared';
 
@@ -42,6 +42,7 @@ import {
   MediaTile,
   PagePreviewMediaFacade,
   ShopRow,
+  sized,
   type BlockRenderProps,
 } from './PagePreviewItems';
 import {
@@ -181,6 +182,38 @@ export function PageBlockPreview({
   );
 }
 
+/**
+ * Some items of a block on the Page's ground, without the section title — a
+ * single link's card in its action sheet, at the size the block uses.
+ */
+export function PageItemsPreview({
+  block,
+  items,
+  appearance,
+}: {
+  readonly block: PageBlock;
+  readonly items: readonly PreviewItem[];
+  readonly appearance: PageAppearance;
+}): ReactNode {
+  const palette = paletteFor(appearance);
+  const metrics = PREVIEW_METRICS.public;
+  return (
+    <PageGround appearance={appearance}>
+      <View style={{ padding: metrics.padX }}>
+        <PreviewBlockItems
+          block={block}
+          items={items}
+          palette={palette}
+          metrics={metrics}
+          textColor={palette.text}
+          fontFamily={fontFor(appearance.font)}
+          variant="public"
+        />
+      </View>
+    </PageGround>
+  );
+}
+
 /** The ground is the web palette's: one stop is flat; the gradient template
  *  runs 165° and sun 180°, as `GRADIENT_GROUND` / `SUN_GROUND` do. */
 function PageGround({
@@ -217,13 +250,22 @@ function PreviewBlockItems({
   readonly items: readonly PreviewItem[];
 }): ReactNode {
   const { palette, metrics, textColor, fontFamily, variant } = render;
+  const size = cardSizeOf(block);
+  const sizedRender = { ...render, size };
   const visibleItems = variant === 'public' ? items : items.slice(0, 3);
   if (visibleItems.length === 0 && block.type !== 'leave-card') return null;
   // Web `richOr`: a Spotify / YouTube item plays instead of being a row.
   const richOr = (item: PreviewItem, fallback: ReactNode): ReactNode => {
     const media = richMediaForBlock(block.type, item.url);
     return media === null ? fallback : (
-      <PagePreviewMediaFacade key={item.id} media={media} title={item.title} palette={palette} fontFamily={fontFamily} />
+      <PagePreviewMediaFacade
+        key={item.id}
+        media={media}
+        title={item.title}
+        palette={palette}
+        fontFamily={fontFamily}
+        size={size}
+      />
     );
   };
 
@@ -277,25 +319,27 @@ function PreviewBlockItems({
           {visibleItems.map((item) => (
             block.type === 'shop'
               ? <ShopRow key={item.id} item={item} {...render} />
-              : richOr(item, <LinkCard key={item.id} item={item} {...render} />)
+              : richOr(item, <LinkCard key={item.id} item={item} {...sizedRender} />)
           ))}
         </View>
       );
-    case 'grid':
+    case 'grid': {
+      const columns = size === 'small' ? metrics.gridColumns + 1 : size === 'large' ? 2 : metrics.gridColumns;
       return (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
           {visibleItems.map((item) => (
             <View
               key={item.id}
-              style={{ width: `${100 / metrics.gridColumns}%`, aspectRatio: 1, padding: 4 }}>
+              style={{ width: `${100 / columns}%`, aspectRatio: 1, padding: 4 }}>
               <MediaTile item={item} {...render} />
             </View>
           ))}
         </View>
       );
+    }
     case 'carousel': {
       const cards = visibleItems.map((item) => (
-        <View key={item.id} style={{ width: 128, height: 128 }}>
+        <View key={item.id} style={{ width: sized(128, size), height: sized(128, size) }}>
           <MediaTile item={item} {...render} />
         </View>
       ));
@@ -312,7 +356,7 @@ function PreviewBlockItems({
       return (
         <View style={{ gap: metrics.cardGap }}>
           {(variant === 'public' ? visibleItems : visibleItems.slice(0, 1)).map((item) => (
-            richOr(item, <FeatureRow key={item.id} item={item} thumbSize={76} {...render} />)
+            richOr(item, <FeatureRow key={item.id} item={item} thumbSize={sized(76, size)} {...render} />)
           ))}
         </View>
       );

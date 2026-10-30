@@ -20,6 +20,7 @@ import { ThemedText } from '@/components/themed';
 import { BrandBadge } from '@/components/icons/BrandBadge';
 import { PageChromeColors, PageTemplateColors } from '@/constants/Colors';
 import { MONO } from '@/constants/fonts';
+import type { PageCardSize } from '@/page/pageDesign';
 import type { RichMedia } from '@/page/richMedia';
 import { Radius } from '@/constants/radius';
 import { appAlert } from '@/feedback/appAlert';
@@ -52,6 +53,13 @@ export interface BlockRenderProps {
   readonly textColor: string;
   readonly fontFamily: string | undefined;
   readonly variant: PageLivePreviewVariant;
+  /** The block's card size; absent = medium. */
+  readonly size?: PageCardSize;
+}
+
+/** Scale a medium measurement to a card size. */
+export function sized(value: number, size: PageCardSize = 'medium'): number {
+  return Math.round(size === 'small' ? value * 0.72 : size === 'large' ? value * 1.36 : value);
 }
 
 /** Opens a signed item's URL on the visitor surface; inert in the editor. */
@@ -156,17 +164,23 @@ export function LinkCard({
   ...render
 }: BlockRenderProps & { readonly item: PreviewItem }): ReactNode {
   const { t } = useTranslation();
-  const { palette, metrics, textColor, fontFamily, variant } = render;
+  const { palette, metrics, textColor, fontFamily, variant, size = 'medium' } = render;
   const mediaUrl = item.media && isRenderableLinkUrl(item.media) ? item.media : null;
   const reduceMotion = useReducedMotion();
-  const shown = item.url ? linkDisplay(item.title, item.url) : null;
+  const shown = item.url && size !== 'small' ? linkDisplay(item.title, item.url) : null;
+  const icon = sized(metrics.linkIcon, size);
   return (
     <ItemPressable item={item} variant={variant}>
-      <Animated.View entering={fadeUpIn(0, reduceMotion)} style={[previewCardStyle(palette, metrics), { minHeight: 44 }]}>
+      <Animated.View
+        entering={fadeUpIn(0, reduceMotion)}
+        style={[
+          previewCardStyle(palette, metrics),
+          { minHeight: 44, paddingVertical: sized(metrics.cardPadV, size) },
+        ]}>
         <View
           style={{
-            width: metrics.linkIcon,
-            height: metrics.linkIcon,
+            width: icon,
+            height: icon,
             borderRadius: Radius.field,
             overflow: 'hidden',
             alignItems: 'center',
@@ -183,15 +197,15 @@ export function LinkCard({
           ) : (
             <BrandIcon
               name={linkDisplay(item.title, item.url ?? '').brand}
-              size={metrics.linkIcon >= 44 ? 22 : 18}
+              size={Math.round(icon * 0.5)}
               color={palette.iconTint}
             />
           )}
         </View>
         <View style={{ flex: 1, gap: 1 }}>
           <ThemedText
-            variant="titleMedium"
-            numberOfLines={1}
+            variant={size === 'small' ? 'bodyMedium' : size === 'large' ? 'titleLarge' : 'titleMedium'}
+            numberOfLines={size === 'large' ? 2 : 1}
             style={{ color: textColor, fontFamily, flexShrink: 1 }}>
             {item.title.trim() || t('pageDesign.untitledLink')}
           </ThemedText>
@@ -219,13 +233,76 @@ export function PagePreviewMediaFacade({
   title,
   palette = DEFAULT_FACADE_PALETTE,
   fontFamily,
+  size = 'medium',
 }: {
   readonly media: RichMedia;
   readonly title: string;
   readonly palette?: PagePalette;
   readonly fontFamily?: string | undefined;
+  readonly size?: PageCardSize;
 }): ReactNode {
   const { t } = useTranslation();
+  const host = media.kind === 'spotify' ? 'Spotify' : 'YouTube';
+  const kindLabel = media.kind === 'spotify'
+    ? `${t(`pageAdd.music.spotify.${media.type}`)} · ${t('pageDesign.loadsFrom', { host })}`
+    : t('pageDesign.loadsFrom', { host });
+  // Small: one slim row for either service — the player still loads on tap.
+  if (size === 'small') {
+    return (
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 10,
+          paddingVertical: 8,
+          paddingHorizontal: 10,
+          borderWidth: 1,
+          borderColor: palette.cardBorder,
+          borderRadius: palette.cardRadius,
+          backgroundColor: palette.cardBg,
+        }}>
+        <BrandBadge name={media.kind === 'spotify' ? 'spotify' : 'youtube'} size={28} />
+        <ThemedText variant="bodyMedium" numberOfLines={1} style={{ flex: 1, color: palette.text, fontFamily }}>
+          {title}
+        </ThemedText>
+        <PlayDisc size={26} />
+      </View>
+    );
+  }
+  if (media.kind === 'spotify' && size === 'large') {
+    // Large: a cover-style plate above the title, like a record sleeve.
+    return (
+      <View
+        style={{
+          overflow: 'hidden',
+          borderWidth: 1,
+          borderColor: palette.cardBorder,
+          borderRadius: palette.cardRadius,
+          backgroundColor: palette.cardBg,
+        }}>
+        <View
+          style={{
+            aspectRatio: 16 / 9,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: PageChromeColors.playerPlate,
+          }}>
+          <BrandBadge name="spotify" size={64} />
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 }}>
+          <View style={{ flex: 1, gap: 2 }}>
+            <ThemedText variant="titleLarge" numberOfLines={2} style={{ color: palette.text, fontFamily }}>
+              {title}
+            </ThemedText>
+            <ThemedText variant="caption" numberOfLines={1} style={{ color: palette.subtle, fontFamily }}>
+              {kindLabel}
+            </ThemedText>
+          </View>
+          <PlayDisc size={44} />
+        </View>
+      </View>
+    );
+  }
   if (media.kind === 'spotify') {
     return (
       <View
@@ -245,7 +322,7 @@ export function PagePreviewMediaFacade({
             {title}
           </ThemedText>
           <ThemedText variant="caption" numberOfLines={1} style={{ color: palette.subtle, fontFamily }}>
-            {t(`pageAdd.music.spotify.${media.type}`)} · {t('pageDesign.loadsFrom', { host: 'Spotify' })}
+            {kindLabel}
           </ThemedText>
         </View>
         <PlayDisc size={36} />
@@ -255,16 +332,19 @@ export function PagePreviewMediaFacade({
   return (
     <View
       style={{
-        aspectRatio: 16 / 9,
+        aspectRatio: size === 'large' ? 4 / 3 : 16 / 9,
         alignItems: 'center',
         justifyContent: 'center',
         overflow: 'hidden',
         borderRadius: palette.cardRadius,
         backgroundColor: PageChromeColors.playerPlate,
       }}>
-      <PlayDisc size={52} />
+      <PlayDisc size={size === 'large' ? 64 : 52} />
       <View style={{ position: 'absolute', left: 12, right: 12, bottom: 10, gap: 2 }}>
-        <ThemedText variant="bodyMedium" numberOfLines={1} style={{ color: PageChromeColors.playerInk, fontFamily }}>
+        <ThemedText
+          variant={size === 'large' ? 'titleMedium' : 'bodyMedium'}
+          numberOfLines={1}
+          style={{ color: PageChromeColors.playerInk, fontFamily }}>
           {title}
         </ThemedText>
         <ThemedText variant="caption" numberOfLines={1} style={{ color: PageChromeColors.playerInk, opacity: 0.72 }}>

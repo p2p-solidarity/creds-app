@@ -17,6 +17,8 @@ import {
   MAX_PAGE_ITEM_PRICE_LENGTH,
   MAX_PAGE_ITEM_TITLE_LENGTH,
   MAX_PAGE_ITEMS_PER_BLOCK,
+  blockHasCardSize,
+  cardSizeOf,
   createInitialPageDesign,
   publicPageDesignEquals,
   toPublicPageDesign,
@@ -26,6 +28,7 @@ import {
 import { preparePageDesign, usePageDesignStore } from '@/page/pageDesignStore';
 import { useProGate } from '@/pro/useProGate';
 
+import { CardSizePicker } from './CardSizePicker';
 import { PHONE_SCREEN_RADIUS, PageBlockPreview, PageLivePreview } from './PageLivePreview';
 import type { PreviewBlockEditing } from './PagePreviewBlockFrame';
 import { PageCollapsibleHeader } from './PageCollapsibleHeader';
@@ -226,6 +229,8 @@ function PageBlockEditorContent({ block, onClose }: { readonly block: PageBlock;
   const record = useProfileStore((state) => state.record);
   const [title, setTitle] = useState(block.title);
   const [style, setStyle] = useState(block.style);
+  const [size, setSize] = useState(cardSizeOf(block));
+  const setBlockSize = usePageDesignStore((state) => state.setBlockSize);
   const [items, setItems] = useState<readonly PageBlockItem[]>(block.items);
   const catalog = PAGE_BLOCK_CATALOG.find((entry) => entry.type === block.type);
   if (!catalog) return null;
@@ -238,9 +243,10 @@ function PageBlockEditorContent({ block, onClose }: { readonly block: PageBlock;
       ...(item.price?.trim() ? { price: item.price.trim() } : { price: undefined }),
     }));
   // The card at the top is this draft painted exactly as the Page will.
-  const draft: PageBlock = { ...block, title: title.trim() || block.title, style, items: cleanedItems };
+  const draft: PageBlock = { ...block, title: title.trim() || block.title, style, size, items: cleanedItems };
   const save = () => {
     updateBlock(block.id, { title, style, items: cleanedItems });
+    setBlockSize(block.id, size);
     onClose();
   };
   return (
@@ -276,6 +282,7 @@ function PageBlockEditorContent({ block, onClose }: { readonly block: PageBlock;
               </View>
             </View>
           ) : null}
+          {blockHasCardSize(style) ? <CardSizePicker value={size} onChange={setSize} /> : null}
           <ThemedTextInput
             label={t('pageDesign.sectionTitle')}
             value={title}

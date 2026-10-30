@@ -1,4 +1,4 @@
-import { stableJSON, type PublicPageDesign } from '@solidarity/shared';
+import { PUBLIC_PAGE_CARD_SIZES, stableJSON, type PublicPageCardSize, type PublicPageDesign } from '@solidarity/shared';
 
 export type PageBlockType =
   | 'links'
@@ -37,8 +37,22 @@ export interface PageBlock {
   readonly title: string;
   readonly items: readonly PageBlockItem[];
   readonly style: string;
+  /** How large its cards render; absent = medium (never stored as 'medium'). */
+  readonly size?: PageCardSize;
   readonly visible: boolean;
   readonly order: number;
+}
+
+export type PageCardSize = PublicPageCardSize;
+export const PAGE_CARD_SIZES = PUBLIC_PAGE_CARD_SIZES;
+
+/** Text panels have no cards to size; every other style does. */
+export function blockHasCardSize(style: string): boolean {
+  return style !== 'plain' && style !== 'card';
+}
+
+export function cardSizeOf(block: Pick<PageBlock, 'size'>): PageCardSize {
+  return block.size ?? 'medium';
 }
 
 export interface PageAppearance {
@@ -173,6 +187,7 @@ export function toPublicPageDesign(design: PageDesign): PublicPageDesign {
         ...(item.price ? { price: item.price } : {}),
       })),
       style: block.style,
+      ...(block.size !== undefined && block.size !== 'medium' ? { size: block.size } : {}),
       visible: block.visible,
       order: block.order,
     })),
@@ -204,6 +219,7 @@ export function pageDesignFromPublicPage(page: PublicPageDesign): PageDesign {
         ...(item.price ? { price: item.price } : {}),
       })),
       style: block.style,
+      ...(block.size !== undefined ? { size: block.size } : {}),
       visible: block.visible,
       order: block.order,
     })),
@@ -297,6 +313,19 @@ export function updatePageBlock(
           }
         : block
     ),
+  };
+}
+
+export function setPageBlockSize(design: PageDesign, id: string, size: PageCardSize): PageDesign {
+  const target = design.blocks.find((block) => block.id === id);
+  if (!target || cardSizeOf(target) === size) return design;
+  return {
+    ...design,
+    blocks: design.blocks.map((block) => {
+      if (block.id !== id) return block;
+      const { size: _dropped, ...rest } = block;
+      return size === 'medium' ? rest : { ...rest, size };
+    }),
   };
 }
 
@@ -397,6 +426,7 @@ function readBlock(value: unknown): PageBlock | null {
     !value['items'].every(isBlockItem) ||
     typeof value['style'] !== 'string' ||
     !catalogEntry(value['type']).styles.includes(value['style']) ||
+    !(value['size'] === undefined || PAGE_CARD_SIZES.includes(value['size'] as PageCardSize)) ||
     typeof value['visible'] !== 'boolean' ||
     typeof value['order'] !== 'number'
   ) return null;
