@@ -93,7 +93,7 @@ async function readAtprotoProfile(
   const fetched = await io.getRecord(repoDid, PROFILE_COLLECTION, PROFILE_RKEY);
   if (!fetched.ok) {
     return fetched.error === 'notFound'
-      ? invalid('notFound', 'the ATProto repository has no creds.id profile record')
+      ? invalid('notFound', 'the ATProto repository has no Solidarity profile record')
       : fetched.error === 'insecureEndpoint'
         ? invalid('insecureEndpoint', 'the ATProto repository advertised an insecure endpoint')
         : invalid('unreachable', 'the ATProto profile repository is unreachable');

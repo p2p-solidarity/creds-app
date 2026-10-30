@@ -9,14 +9,13 @@ import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BrandIcon } from '@/components/icons/BrandIcon';
+import { LinkIcon } from '@/components/icons/LinkIcon';
 import type { PublicPageShareSource } from '@/components/me/meProfileModel';
 import { MeProfileGate } from '@/components/me/MeProfileGate';
 import { PageHeaderAction } from '@/components/me/PageHeaderAction';
 import { PageSectionLabel } from '@/components/me/PageSectionLabel';
 import { PresentCard } from '@/components/present/PresentCard';
 import { ThemedSurface, ThemedText } from '@/components/themed';
-import { Colors } from '@/constants/Colors';
 import { Radius } from '@/constants/radius';
 import { useThemeColors } from '@/constants/useThemeColors';
 import { fadeUpIn } from '@/feedback/motion';
@@ -146,22 +145,7 @@ function PublicLinkGroup({
             borderTopColor: colors.divider,
           }}
         >
-          <View
-            style={{
-              width: 26,
-              height: 26,
-              borderRadius: Radius.pill,
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: colors.chipSurface,
-            }}
-          >
-            <BrandIcon
-              name={linkDisplay(link.label, link.url).brand}
-              size={15}
-              color={Colors.primaryBlue}
-            />
-          </View>
+          <LinkIcon label={link.label} url={link.url} size={26} glyph={15} surface={colors.chipSurface} />
           <View style={{ flex: 1, gap: 1 }}>
             <ThemedText variant="bodyMedium" numberOfLines={1} ellipsizeMode="middle">
               {linkDisplay(link.label, link.url).text}
