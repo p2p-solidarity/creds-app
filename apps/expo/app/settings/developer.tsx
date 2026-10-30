@@ -25,11 +25,7 @@ import { appAlert, showError } from '@/feedback/appAlert';
 import { confirmDialog } from '@/feedback/confirmDialog';
 import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
-import {
-  ensureSigningKey,
-  requireSensitiveAction,
-  resetSigningKeyForTesting,
-} from '@/keychain';
+import { requireSensitiveAction } from '@/keychain';
 import { safeBack } from '@/navigation/safeBack';
 import { usePreferences } from '@/settings/preferences';
 import { wipeLocalDevice } from '@/settings/productionWipe';
@@ -74,40 +70,6 @@ export default function DeveloperSettings() {
       showError({
         context: 'Developer Options › Wipe Everything',
         summary: t('advanced.wipe.failed'),
-        error,
-      });
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const onResetIdentityKeys = async () => {
-    const confirmed = await confirmDialog({
-      title: t('dataSync.resetKeys.confirmTitle'),
-      message: t('dataSync.resetKeys.confirmMessage'),
-      confirmLabel: t('dataSync.resetKeys.confirmAction'),
-      destructive: true,
-    });
-    if (!confirmed || busy) return;
-
-    setBusy(true);
-    try {
-      // rotateMasterKey is gated unconditionally — see RED_LINE_ACTIONS.
-      const gate = await requireSensitiveAction(
-        'rotateMasterKey',
-        t('security.prompt.rotateMasterKey')
-      );
-      if (!gate.success) return;
-      await resetSigningKeyForTesting();
-      await ensureSigningKey();
-      appAlert({
-        title: t('dataSync.resetKeys.doneTitle'),
-        message: t('dataSync.resetKeys.doneMessage'),
-      });
-    } catch (error) {
-      showError({
-        context: 'Developer Options › Reset Identity Keys',
-        summary: t('dataSync.resetKeys.authFailed'),
         error,
       });
     } finally {
@@ -226,12 +188,6 @@ export default function DeveloperSettings() {
           <View className="gap-3">
             <SettingsBlockSectionHeader title={t('developer.dangerZone.header')} />
             <View className="px-4 gap-2">
-              <SettingsBlockDangerRow
-                icon="key.slash"
-                title={t('dataSync.resetKeys.row')}
-                subtitle={t('dataSync.resetKeys.subtitle')}
-                onPress={() => { void onResetIdentityKeys(); }}
-              />
               <SettingsBlockDangerRow
                 icon="trash.slash"
                 title={t('developer.dangerZone.wipe')}

@@ -18,7 +18,7 @@
 | `settings/notifications` | 首頁 | 1 開關 | 產品 | **改首頁行內開關，刪頁** |
 | `settings/advanced`（重設選項） | 首頁 | 2 危險列 | 產品 | **改首頁「重設」區，刪頁**（Face ID 閘門照舊 `rotateMasterKey`） |
 | `settings/connections` | 開發者頁；People 的 Pear「開啟連線設定」 | 狀態＋發布＋2 開關 | 開發者閘門 | **刪頁**：Pear 開關移到首頁（一般用戶原本按「開啟連線設定」會被彈回首頁、找不到開關）；自動發布開關＋Nostr 發布列移進開發者頁；發布狀態看 Page 的發布卡與 `verify/nostr` |
-| `settings/data-sync` | 只有開發者頁 | 備份連結（重複）＋計數＋1 危險 | 開發者 | **刪頁**：「重設身分金鑰（僅本機）」移進開發者頁危險區 |
+| `settings/data-sync` | 只有開發者頁 | 備份連結（重複）＋計數＋1 危險 | 開發者 | **刪頁**；「重設身分金鑰（僅本機）」先移進開發者頁，後經 Kidney 決定刪除（見文末） |
 | `settings/developer` | 首頁（開發者模式） | 11 | 開發者 | 留，兩個「掃描」列併成一個 |
 | `settings/developer/verification` | 開發者頁 | 工具清單 | 開發者 | 留（首頁→開發者→工具 = 2 次） |
 | `verify/social` | **沒有**（Page 連結列改成行內驗證 `checkJobs.ts`；AddLinkSheet 直接嵌 `SocialVerifyPanel`） | 0 | 死路由 | **刪** |
@@ -46,9 +46,9 @@
 
 設定子頁：14 → 8（username、passkeys、security、backup、identity-export、pro、developer、developer/verification）。
 
-## 安全相關：這次沒刪、等 Kidney 決定
+## 安全相關：Kidney 決定刪除（2026-10-30）
 
-這次刪的都是 `app/` 下的畫面殼；`src/{passport,keychain,identity,vault,witness}` 一行沒動，三個重設動作（`rotateMasterKey` 閘門）只是換位置。下列候選要 Kidney 點頭才刪：
+這次刪的都是 `app/` 下的畫面殼；三個重設動作（`rotateMasterKey` 閘門）只是換位置。原本待決的兩項，Kidney 回覆「Delete both」：
 
-- 開發者頁「重設身分金鑰（僅本機）」（`resetSigningKeyForTesting`）：文案還在講 iCloud Keychain DID 同步，可能已經過時。
-- `src/passport/useShowPresentation.ts`：ui-rebrand 之後已無呼叫者（passport session 的範圍）。
+- 開發者頁「重設身分金鑰（僅本機）」：已刪 UI 列、處理函式與 `dataSync.resetKeys.*` 字串。`resetSigningKeyForTesting` 本身保留——帳號保護的「替換安全登入」和 parity 測試還在用。
+- `src/passport/useShowPresentation.ts`：passport session 已在 `4df32992` 刪除，目前零呼叫者，無須再動。
