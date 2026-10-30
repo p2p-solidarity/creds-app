@@ -50,12 +50,12 @@ export type DeviceProof =
   /** The Pro notary (creds.id) fetched the page itself; trusted by its pinned npub, not a device. */
   | { readonly platform: 'notary' };
 
-const deviceSchema = z.union([
+export const deviceProofSchema = z.union([
   z.object({ platform: z.literal('ios'), attestation: z.string(), keyId: z.string(), assertion: z.string() }).strict(),
   z.object({ platform: z.literal('android'), chain: z.array(z.string()).min(2).max(8), signature: z.string() }).strict(),
   z.object({ platform: z.literal('notary') }).strict(),
 ]);
-const contentSchema = z.object({ statement: z.string().max(2048), device: deviceSchema }).strict();
+const contentSchema = z.object({ statement: z.string().max(2048), device: deviceProofSchema }).strict();
 
 /** Who we accept device proofs from: our app IDs and the pinned vendor roots. */
 export interface DeviceProofTrust {
@@ -99,8 +99,12 @@ export function buildWitnessEvent(statement: WitnessStatement, device: DevicePro
   };
 }
 
-function verifyDevice(
-  device: z.infer<typeof deviceSchema>,
+/**
+ * Verify `device` signed `signedBytes` with a key attested for `witnessHex`
+ * (or is the pinned notary). Returns the device public key (empty for the notary).
+ */
+export function verifyDeviceProof(
+  device: z.infer<typeof deviceProofSchema>,
   signedBytes: Uint8Array,
   witnessHex: string,
   at: number,
@@ -168,7 +172,7 @@ export function verifyWitness(event: NostrEvent, trust: DeviceProofTrust): Resul
   const d = event.tags.find((t) => t[0] === 'd')?.[1];
   if (d !== witnessDTag(statement.claim, subjectHex.value)) return err('d tag is for another claim');
 
-  const device = verifyDevice(content.device, new TextEncoder().encode(content.statement), witnessHex.value, statement.observedAt * 1000, trust);
+  const device = verifyDeviceProof(content.device, new TextEncoder().encode(content.statement), witnessHex.value, statement.observedAt * 1000, trust);
   if (!device.ok) return device;
   return ok({
     statement,
