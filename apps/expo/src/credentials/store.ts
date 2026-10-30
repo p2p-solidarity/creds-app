@@ -32,8 +32,6 @@
 import { create } from 'zustand';
 
 import { fetchAndCacheIssuer } from '@/credentials/issuerStore';
-import { clearPassportShowPrefetch } from '@/passport/showPrefetch';
-import { deletePassportShowWitness } from '@/passport/showWitnessVault';
 import { decryptJson, encryptJson } from '@/storage/encryptionManager';
 import { ManifestStorage } from '@/storage/manifestStorage';
 import { getMmkv } from '@/storage/mmkv';
@@ -218,11 +216,6 @@ export const useCredentialStore = create<CredentialStoreState>((set, get) => ({
   remove: async (id) => {
     if (!canCommitLocalData(captureLocalDataEpoch())) return;
     getMmkv().remove(`${PREFIX}${id}`);
-    // Passport credentials keep their show-witness bundle (commitment
-    // opening) in the vault keyed by the same id — drop it with the
-    // credential. No-op for every other credential type.
-    deletePassportShowWitness(id);
-    clearPassportShowPrefetch(id);
     set((s) => {
       const nextManifest = s.manifest.filter((m) => m.id !== id);
       ManifestStorage.set(CREDENTIALS_MANIFEST_SCOPE, nextManifest);
@@ -234,7 +227,6 @@ export const useCredentialStore = create<CredentialStoreState>((set, get) => ({
 
   resetForLocalWipe: () => {
     localWipeGeneration += 1;
-    clearPassportShowPrefetch();
     set({ manifest: [], details: new Map(), detailsHydrated: true });
   },
 }));

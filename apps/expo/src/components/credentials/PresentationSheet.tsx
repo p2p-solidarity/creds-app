@@ -76,7 +76,7 @@ function PresentationBody({
   >(() => {
     // A passport is never presented from here (its badge lives on the Page,
     // 10 §4); say so instead of a generic "no claims" placeholder.
-    if (credential.metadataTags.includes('passport-openac-v3')) {
+    if (credential.type === 'passport') {
       return { pages: [], error: t('credentialDetail.passportNotPresentable') };
     }
     if (selectedClaims.length === 0) return { pages: [] };

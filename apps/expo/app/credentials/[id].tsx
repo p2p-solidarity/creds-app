@@ -16,7 +16,7 @@
  * Selective Disclosures are sourced from `useIdentityData.provableClaims`
  * filtered by this credential's id — mirrors Swift `associatedClaims`.
  */
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { safeBack } from '@/navigation/safeBack';
 import type { SFSymbol } from 'expo-symbols';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
@@ -36,6 +36,7 @@ import { useIssuerMetadataStore } from '@/credentials/issuerStore';
 import { useCredentialById, useCredentialStore, type StoredCredential } from '@/credentials/store';
 import {
   credentialTrustDisplayFor,
+  isRetiredPassportCredential,
   type CredentialTrustDisplay,
   type TrustDisplayTone,
 } from '@/credentials/trustDisplay';
@@ -52,7 +53,6 @@ import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
 import { useIdentityData, type ProvableClaimEntity } from '@/identity';
 import { requireSensitiveAction } from '@/keychain/biometricGatekeeper';
-import { filterPassportShowPresentationClaims } from '@/passport/presentationClaims';
 import { usePreferences } from '@/settings/preferences';
 
 // MARK: - Helpers (Swift parity)
@@ -87,28 +87,22 @@ function credentialIcon(type: string): SFSymbol {
 }
 
 function proofTagText(metadataTags: readonly string[]): string {
-  if (metadataTags.includes('passport-openac-v3') || metadataTags.includes('passport-noir')) {
-    return 'Passport ZK';
-  }
-  if (metadataTags.includes('mopro-noir')) return 'OpenPassport';
+  if (metadataTags.includes('passport-statement')) return 'Device-attested passport';
+  if (metadataTags.includes('passport-passive-auth')) return 'Passport chip';
   if (metadataTags.includes('semaphore-zk')) return 'Semaphore ZK';
-  return 'SD-JWT Fallback';
+  return 'Unverified';
 }
 
 function proofTypeText(metadataTags: readonly string[]): string {
-  if (metadataTags.includes('passport-openac-v3') || metadataTags.includes('passport-noir')) {
-    return 'Passport ZK (OpenAC v3)';
-  }
-  if (metadataTags.includes('mopro-noir')) return 'OpenPassport (Noir/Mopro)';
+  if (metadataTags.includes('passport-statement')) return 'Passive auth + device statement';
+  if (metadataTags.includes('passport-passive-auth')) return 'Passive auth (this phone only)';
   if (metadataTags.includes('semaphore-zk')) return 'Semaphore ZK';
-  return 'SD-JWT Fallback';
+  return 'Unverified';
 }
 
 function proofIcon(metadataTags: readonly string[]): SFSymbol {
-  if (metadataTags.includes('passport-openac-v3') || metadataTags.includes('passport-noir')) {
-    return 'checkmark.shield.fill';
-  }
-  if (metadataTags.includes('mopro-noir')) return 'bolt.shield.fill';
+  if (metadataTags.includes('passport-statement')) return 'checkmark.shield.fill';
+  if (metadataTags.includes('passport-passive-auth')) return 'checkmark.shield';
   if (metadataTags.includes('semaphore-zk')) return 'shield.checkered';
   return 'doc.text.fill';
 }
@@ -389,24 +383,8 @@ export default function CredentialDetailScreen() {
   // A passport is shown in person through its L3 badge on the Page (10 §4);
   // the multi-frame proof QR that used to present it here is gone, and the
   // Pear hand-over that replaces it is not built yet — so no present CTA.
-  const isPassportCredential =
-    credential !== undefined &&
-    (credential.metadataTags.includes('passport-openac-v3') ||
-      credential.metadataTags.includes('passport-noir'));
-
-  // Narrow on the TAG alone, never on the device witness: `openac_show` can
-  // only ever disclose age/nationality, so a witness-less device must not be
-  // shown the wider set it cannot prove (the gate used to fail OPEN here).
-  const isOpenAcV3Credential =
-    credential?.metadataTags.includes('passport-openac-v3') ?? false;
-
-  const presentationClaimRows = useMemo(
-    () =>
-      isOpenAcV3Credential
-        ? filterPassportShowPresentationClaims(associatedClaims)
-        : associatedClaims,
-    [associatedClaims, isOpenAcV3Credential]
-  );
+  const isPassportCredential = credential?.type === 'passport';
+  const presentationClaimRows = associatedClaims;
 
   const initialClaimIdsForPresentation = useMemo(
     () =>
@@ -630,6 +608,21 @@ export default function CredentialDetailScreen() {
               </View>
             </LinearGradient>
           </View>
+
+          {/* A passport saved by the retired ZK path earns no level any more
+              (docs/ref/11 P2): ask for a rescan, which replaces it. */}
+          {isRetiredPassportCredential(credential) ? (
+            <ThemedSurface variant="outlined" padded className="mx-4 gap-3">
+              <ThemedText variant="bodySmall" tone="secondary">
+                {t('credentialDetail.passportRescan')}
+              </ThemedText>
+              <ThemedButton
+                label={t('credentialDetail.passportRescanAction')}
+                fullWidth
+                onPress={() => { router.push('/passport'); }}
+              />
+            </ThemedSurface>
+          ) : null}
 
           {/* Metadata section */}
           <View className="gap-2">

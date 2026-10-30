@@ -18,7 +18,7 @@ import {
 
 export type PresentationCredential = Pick<
   StoredCredential,
-  'id' | 'holderDid' | 'rawJwt' | 'metadataTags'
+  'id' | 'type' | 'holderDid' | 'rawJwt' | 'metadataTags'
 >;
 
 export interface BuildPresentationProofInput {
@@ -108,22 +108,12 @@ export function buildPresentationProofJson(
     );
   }
 
-  // An OpenAC-v3 passport enrollment envelope proves NONE of the four claims:
-  // `openac_show` is deliberately filtered out of enrollment proving (see
-  // passport/openacV3.ts), so `rawJwt` holds only dsc_chain + passport_adapter.
-  // Pairing it with `selected_claims` below would present a fallback as a real
-  // ZK attestation. A fresh `openac_show` proof is the only honest disclosure,
-  // and that needs the device-local show-witness — so fail closed here, the one
-  // place every surface that replays a STORED credential as a QR payload funnels
-  // through. (The live prover paths — openac_show, OIDC `buildVpToken`, Pear —
-  // build their own envelopes and never reach this function.)
-  if (credential.metadataTags.includes('passport-openac-v3')) {
-    return err(
-      disclosureError(
-        'device-witness-missing',
-        'OpenAC-v3 enrollment envelope proves none of the selected claims; a fresh openac_show proof is required',
-      ),
-    );
+  // A passport is never presented as a QR payload (docs/ref/11 §6.1): its
+  // badge is the device-attested statement on nostr, and its stored record
+  // holds no proof. Fail closed here, where every surface that replays a
+  // STORED credential as a QR payload funnels through.
+  if (credential.type === 'passport') {
+    return err(disclosureError('not-redactable', 'A passport is never presented as a QR payload'));
   }
 
   const base = {
@@ -235,11 +225,6 @@ export function disclosureErrorI18nKey(
       return 'credentialDetail.disclosureAltered';
     case 'malformed':
       return 'credentialDetail.disclosureMalformed';
-    // NOT `disclosureNotRedactable`: that string says "present all of it, or
-    // nothing", and presenting all of an openac-v3 enrollment envelope is
-    // exactly the over-claim this refusal exists to stop.
-    case 'device-witness-missing':
-      return 'present.rescanRequiredBody';
     case 'not-redactable':
     default:
       return error.message.includes('unverified')
