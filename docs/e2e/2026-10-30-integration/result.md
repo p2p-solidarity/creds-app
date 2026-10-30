@@ -59,6 +59,21 @@ actions `absoluteFill` behind the row and the row was transparent; the row conta
 (`05-contacts-row-at-rest.png`). The swipe gesture itself was not re-tested — another session took over the
 shared simulator.
 
+## TestFlight build 207 crash: passport save (and any native-acl sign)
+
+- Same `.ips` shape as build 206 (`performVoidMethodInvocation` rethrow). The device console named it
+  (`device-passport-crash-before-fix.log`): `Invariant Violation: new NativeEventEmitter() requires a non-null
+  argument` from `get PushNotificationIOS` ← `metroImportAll` ← `asyncRequire` ← `isIosRuntime` ←
+  `nativeSignSession`.
+- Cause: `await import('react-native')` compiles to Metro's `importAll`, which reads every lazy getter of the RN
+  barrel. RN 0.88's `PushNotificationIOS` getter builds a `NativeEventEmitter` over a native module that no longer
+  exists, and Metro's `guardedLoadModule` reports a module-init throw as fatal, so the surrounding `try/catch` never
+  ran. Every Face ID–gated sign with a native-acl key reaches `isIosRuntime`, so this was not passport-only.
+  `rootVaultSync` (passkey connect) had the same dynamic import.
+- Fix: static `import { Platform } from 'react-native'` at both sites. The release bundle
+  (`expo export:embed --dev false`) now compiles `isIosRuntime` to `return true` — no `asyncRequire` left.
+  Not yet re-run on the iPhone XR.
+
 ## Android
 
 - `build:android:local` from a clean worktree at `47e28b36` first failed `checkReleaseAarMetadata`: Expo SDK 58

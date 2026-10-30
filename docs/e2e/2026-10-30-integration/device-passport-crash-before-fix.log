@@ -1,0 +1,15 @@
+Oct 30 19:31:31.099135 Solidarity[4091] <Fault>: [MRZ-FATAL] uncaught: NSException RCTFatalException: Unhandled JS Exception: Invariant Violation: `new NativeEventEmitter()` requires a non-null argument.: ExceptionsManager.reportException raised an exception: Unhandled JS Exception: Invariant Violation: `new NativeEventEmitter()` requires a non-null argument., stack:
+invariant@5278:25
+NativeEventEmitter@28161:30
+anonymous@49579:62
+loadModuleImplementation@208:15
+guardedLoadModule@129:46
+metroRequire@69:91
+get PushNotificationIOS@30867:20
+metroImportAll@97:38
+asyncRequire@168893:43
+?anon_0_isIosRuntime@233242:42
+isIosRuntime@233236:2
+?anon_2_nativeSignSession@233285:30
+Oct 30 19:31:31.347127 Solidarity(CoreFoundation)[4091] <Notice>: *** Terminating app due to uncaught exception 'RCTFatalException: Unhandled JS Exception: Invariant Violation: `new NativeEventEmitter()` requires a non-null argument.', reason: 'ExceptionsManager.reportException raised an exception: Unhandled JS Exception: Invariant Violation: `new NativeEventEmitter()` requires a non-null argument., stack:
+invariant@5278:25
