@@ -340,7 +340,17 @@ final class HybridNfcPassport: HybridNfcPassportSpec {
       let paceOK = (model.PACEStatus == .success)
       let supportsPACE = model.isPACESupported
       let downgraded = supportsPACE && bacOK && !paceOK
-      let signedAndUntampered = model.passportCorrectlySigned && model.passportDataNotTampered
+      // `passportCorrectlySigned` only says the SOD's signer cert chains to a
+      // CSCA; the SOD signature itself is `documentSigningCertificateVerified`.
+      // NFCPassportReader swallows a bad signature and still compares hashes
+      // against the unsigned content, so without it a chip with a genuine
+      // (public) DS cert and a self-made DG1 passed as verified. DG1 must be
+      // read and hash-matched: it carries the date of birth and nationality.
+      let dg1Matched = model.dataGroupHashes[.DG1]?.match == true
+      let signedAndUntampered = model.passportCorrectlySigned
+        && model.documentSigningCertificateVerified
+        && model.passportDataNotTampered
+        && dg1Matched
       let passiveAuthValid = signedAndUntampered && !downgraded
       Self.logReadDiagnostics(
         model: model,
@@ -385,7 +395,7 @@ final class HybridNfcPassport: HybridNfcPassportSpec {
       let dg15Length = length(.DG15)
       print(
         """
-        [nfc] read-diagnostics sod=\(sodLength > 0)(\(sodLength)) dg1=\(dg1Length > 0)(\(dg1Length)) dg2=\(dg2Length > 0)(\(dg2Length)) dg14=\(dg14Length > 0)(\(dg14Length)) dg15=\(dg15Length > 0)(\(dg15Length)) passiveAuthValid=\(passiveAuthValid) signed=\(model.passportCorrectlySigned) tamper=\(model.passportDataNotTampered) bac=\(model.BACStatus) pace=\(model.PACEStatus) paceSupported=\(model.isPACESupported) downgraded=\(downgraded) aaSupported=\(model.activeAuthenticationSupported) aaPassed=\(model.activeAuthenticationPassed)
+        [nfc] read-diagnostics sod=\(sodLength > 0)(\(sodLength)) dg1=\(dg1Length > 0)(\(dg1Length)) dg2=\(dg2Length > 0)(\(dg2Length)) dg14=\(dg14Length > 0)(\(dg14Length)) dg15=\(dg15Length > 0)(\(dg15Length)) passiveAuthValid=\(passiveAuthValid) chain=\(model.passportCorrectlySigned) sodSig=\(model.documentSigningCertificateVerified) dg1Hash=\(model.dataGroupHashes[.DG1]?.match == true) tamper=\(model.passportDataNotTampered) bac=\(model.BACStatus) pace=\(model.PACEStatus) paceSupported=\(model.isPACESupported) downgraded=\(downgraded) aaSupported=\(model.activeAuthenticationSupported) aaPassed=\(model.activeAuthenticationPassed)
         """
       )
     }

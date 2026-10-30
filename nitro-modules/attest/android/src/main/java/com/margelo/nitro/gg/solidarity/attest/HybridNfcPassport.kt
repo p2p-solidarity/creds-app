@@ -760,6 +760,13 @@ class HybridNfcPassport : HybridNfcPassportSpec() {
       return false
     }
 
+    // DG1 carries the date of birth and nationality the app relies on: it
+    // must be read and covered by the SOD, never skipped like an optional DG.
+    if (dataGroups[1] == null || expectedHashes?.get(1) == null) {
+      Log.w(TAG, "DG1 missing or not covered by the SOD")
+      return false
+    }
+
     for ((dgNumber, dgBytesOrNull) in dataGroups) {
       val dgBytes = dgBytesOrNull ?: continue
       val expected = expectedHashes?.get(dgNumber) ?: continue
