@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
+import { SheetHeader } from '@/components/me/AddLinkSheet';
 import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
 import { CardMetalColors, Colors } from '@/constants/Colors';
 import { useThemeColors } from '@/constants/useThemeColors';
@@ -19,13 +20,19 @@ const MATERIALS = ['steel', 'blackTitanium', 'brass'] as const satisfies readonl
 export interface PhysicalCardSheetProps {
   readonly visible: boolean;
   readonly onClose: () => void;
+  /** What the card would carry — the owner's real name and page address. */
+  readonly name: string | null;
+  readonly address: string;
 }
 
 export function PhysicalCardSheet({
   visible,
   onClose,
+  name,
+  address,
 }: PhysicalCardSheetProps): ReactNode {
   const { t } = useTranslation();
+  const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const material = usePreferences(
     (state) => state.presentPhysicalCardMaterial ?? 'steel'
@@ -46,17 +53,22 @@ export function PhysicalCardSheet({
       visible={visible}
       onRequestClose={onClose}>
       <View className="flex-1 bg-pageBg" style={{ paddingTop: sheetTopInset(insets.top) }}>
+        <SheetHeader title={t('present.physicalCard.title')} canGoBack={false} onClose={onClose} />
         <ScrollView
           contentContainerStyle={{
             paddingHorizontal: 16,
-            paddingTop: 12,
+            paddingTop: 20,
             paddingBottom: 24,
-            gap: 18,
+            gap: 22,
           }}
         >
-          <ThemedText accessibilityRole="header" variant="titleLarge">
-            {t('present.physicalCard.title')}
-          </ThemedText>
+          {/* The card as it would be cut: material and engraving update live. */}
+          <CardPreview
+            material={material}
+            name={engraveName ? name : null}
+            address={engraveUsername ? address : null}
+            qr={engraveQr}
+          />
 
           <View style={{ gap: 10 }}>
             <ThemedText variant="label" tone="secondary">
@@ -81,50 +93,120 @@ export function PhysicalCardSheet({
             <ThemedText variant="label" tone="secondary">
               {t('present.physicalCard.engraving')}
             </ThemedText>
-            <EngravingToggle
-              label={t('present.physicalCard.engraveName')}
-              value={engraveName}
-              onValueChange={(value) => {
-                setPreference('presentPhysicalCardEngraveName', value);
-              }}
-            />
-            <EngravingToggle
-              label={t('present.physicalCard.engraveUsername')}
-              value={engraveUsername}
-              onValueChange={(value) => {
-                setPreference('presentPhysicalCardEngraveUsername', value);
-              }}
-            />
-            <EngravingToggle
-              label={t('present.physicalCard.engraveQr')}
-              value={engraveQr}
-              onValueChange={(value) => {
-                setPreference('presentPhysicalCardEngraveQr', value);
-              }}
-            />
+            <ThemedSurface variant="inset" style={{ paddingHorizontal: 16 }}>
+              <EngravingToggle
+                label={t('present.physicalCard.engraveName')}
+                value={engraveName}
+                onValueChange={(value) => {
+                  setPreference('presentPhysicalCardEngraveName', value);
+                }}
+              />
+              <View style={{ height: 1, backgroundColor: colors.divider }} />
+              <EngravingToggle
+                label={t('present.physicalCard.engraveUsername')}
+                value={engraveUsername}
+                onValueChange={(value) => {
+                  setPreference('presentPhysicalCardEngraveUsername', value);
+                }}
+              />
+              <View style={{ height: 1, backgroundColor: colors.divider }} />
+              <EngravingToggle
+                label={t('present.physicalCard.engraveQr')}
+                value={engraveQr}
+                onValueChange={(value) => {
+                  setPreference('presentPhysicalCardEngraveQr', value);
+                }}
+              />
+            </ThemedSurface>
           </View>
         </ScrollView>
 
         <View
           className="bg-pageBg px-4 pt-3"
-          style={{ paddingBottom: Math.max(insets.bottom, 12), gap: 10 }}
+          style={{ paddingBottom: Math.max(insets.bottom, 12) }}
         >
           <ThemedButton
             fullWidth
             disabled
             label={t('present.physicalCard.comingSoon')}
           />
-          <ThemedButton
-            fullWidth
-            variant="secondary"
-            label={t('present.close')}
-            onPress={onClose}
-          />
         </View>
       </View>
     </ModalSheet>
   );
 }
+
+/** `.metal` proportions, painted in the chosen material. The QR corner is a
+ *  position mark (an icon), not a code — the real one is cut at order time. */
+function CardPreview({
+  material,
+  name,
+  address,
+  qr,
+}: {
+  readonly material: PhysicalCardMaterial;
+  readonly name: string | null;
+  readonly address: string | null;
+  readonly qr: boolean;
+}): ReactNode {
+  return (
+    <View
+      style={{
+        alignSelf: 'center',
+        width: '82%',
+        aspectRatio: 1.586,
+        borderRadius: Radius.card,
+        shadowColor: Colors.text1,
+        shadowOpacity: 0.18,
+        shadowRadius: 16,
+        shadowOffset: { width: 0, height: 8 },
+        elevation: 6,
+      }}>
+      <LinearGradient
+        colors={materialGradient(material)}
+        start={{ x: 0, y: 0.3 }}
+        end={{ x: 1, y: 0.7 }}
+        style={{
+          flex: 1,
+          borderRadius: Radius.card,
+          borderWidth: 1,
+          borderColor: CardMetalColors.faceBorder,
+          padding: 16,
+          justifyContent: 'space-between',
+        }}>
+        <View>
+          {name !== null ? (
+            <ThemedText variant="titleMedium" numberOfLines={1} style={ETCH}>
+              {name}
+            </ThemedText>
+          ) : null}
+          {address !== null ? (
+            <ThemedText variant="caption" numberOfLines={1} ellipsizeMode="middle" style={{ ...ETCH, opacity: 0.82 }}>
+              {address}
+            </ThemedText>
+          ) : null}
+        </View>
+        <View className="flex-row items-end justify-between">
+          <View style={{ opacity: 0.55 }}>
+            <SfIcon name="wave.3.right" size={14} color={CardMetalColors.etch} />
+          </View>
+          {qr ? (
+            <View style={{ opacity: 0.85 }}>
+              <SfIcon name="qrcode" size={34} color={CardMetalColors.etch} />
+            </View>
+          ) : null}
+        </View>
+      </LinearGradient>
+    </View>
+  );
+}
+
+const ETCH = {
+  color: CardMetalColors.etch,
+  textShadowColor: CardMetalColors.etchShadow,
+  textShadowOffset: { width: 0, height: 1 },
+  textShadowRadius: 0,
+} as const;
 
 function MaterialOption({
   material,
@@ -149,34 +231,25 @@ function MaterialOption({
     >
       <ThemedSurface
         variant="outlined"
-        className="items-center justify-center"
+        className="flex-row items-center justify-center"
         style={{
-          minHeight: 88,
-          paddingHorizontal: 6,
-          paddingVertical: 10,
+          minHeight: 44,
+          paddingHorizontal: 8,
           gap: 8,
           borderColor: selected ? colors.primaryBlue : colors.divider,
           borderWidth: selected ? 2 : 1,
+          backgroundColor: selected ? colors.chipSurface : colors.cardBg,
         }}
       >
         <LinearGradient
           colors={materialGradient(material)}
           start={{ x: 0, y: 0.5 }}
           end={{ x: 1, y: 0.5 }}
-          style={{ width: 34, height: 22, borderRadius: Radius.xs }}
+          style={{ width: 16, height: 16, borderRadius: Radius.pill }}
         />
-        <View className="flex-row items-center" style={{ gap: 4 }}>
-          {selected ? (
-            <SfIcon
-              name="checkmark.circle.fill"
-              size={14}
-              color={Colors.primaryBlue}
-            />
-          ) : null}
-          <ThemedText variant="caption" numberOfLines={1}>
-            {label}
-          </ThemedText>
-        </View>
+        <ThemedText variant="label" numberOfLines={1}>
+          {label}
+        </ThemedText>
       </ThemedSurface>
     </PressableScale>
   );
@@ -193,11 +266,7 @@ function EngravingToggle({
 }): ReactNode {
   const colors = useThemeColors();
   return (
-    <ThemedSurface
-      variant="inset"
-      className="flex-row items-center px-4"
-      style={{ minHeight: 52, gap: 12 }}
-    >
+    <View className="flex-row items-center" style={{ minHeight: 52, gap: 12 }}>
       <ThemedText variant="bodyMedium" style={{ flex: 1 }}>
         {label}
       </ThemedText>
@@ -211,7 +280,7 @@ function EngravingToggle({
         trackColor={{ false: colors.divider, true: colors.primaryMauve }}
         thumbColor={colors.cardBg}
       />
-    </ThemedSurface>
+    </View>
   );
 }
 

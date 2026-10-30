@@ -28,7 +28,7 @@ import {
 import { useProfileShareSelection } from '@/components/me/useProfileShareSelection';
 import { PhysicalCardSheet } from '@/components/present/PhysicalCardSheet';
 import { PresentCardVisual } from '@/components/present/PresentCardVisual';
-import { ON_DARK, ThemedSurface, ThemedText } from '@/components/themed';
+import { ON_DARK, ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { Radius } from '@/constants/radius';
 import { useThemeColors } from '@/constants/useThemeColors';
@@ -114,15 +114,27 @@ export function PresentCard({
         scanHint={t('present.scanToExchange')}
         displayUrl={displayUrl}
         flipLabel={t('present.flipCard')}
-        physicalCardLabel={t('present.orderPhysicalCard')}
-        onOpenPhysicalCard={() => {
-          setPhysicalCardOpen(true);
-        }}
       />
-      <QrModeControl mode={mode} onlineAvailable={online !== null} onChange={setChosen} />
-      <QrPlate key={mode} candidate={active} mode={mode} onlineMissing={online === null} />
+      {/* One plate: which form the code takes sits on it, not beside it. */}
+      <ThemedSurface variant="card" className="items-center" style={{ paddingTop: 12, paddingBottom: 20, gap: 14 }}>
+        <QrModeControl mode={mode} onlineAvailable={online !== null} onChange={setChosen} />
+        <QrPlate key={mode} candidate={active} mode={mode} onlineMissing={online === null} />
+      </ThemedSurface>
+      <View style={{ alignSelf: 'center' }}>
+        <ThemedButton
+          variant="secondary"
+          size="sm"
+          icon="creditcard"
+          label={t('present.orderPhysicalCard')}
+          onPress={() => {
+            setPhysicalCardOpen(true);
+          }}
+        />
+      </View>
       <PhysicalCardSheet
         visible={physicalCardOpen}
+        name={ownerName}
+        address={displayUrl}
         onClose={() => {
           setPhysicalCardOpen(false);
         }}
@@ -148,14 +160,13 @@ function QrModeControl({
       accessibilityRole="tablist"
       variant="inset"
       className="flex-row"
-      style={{ borderRadius: Radius.button, padding: 4 }}>
+      style={{ borderRadius: Radius.card, padding: 3, borderWidth: 0 }}>
       {options.map((option) => {
         const selected = option === mode;
         const disabled = option === 'online' && !onlineAvailable;
         return (
           <PressableScale
             key={option}
-            fill
             haptic="tap"
             disabled={disabled}
             accessibilityRole="tab"
@@ -165,14 +176,16 @@ function QrModeControl({
               onChange(option);
             }}
             style={{
-              minHeight: 40,
+              minHeight: 32,
+              minWidth: 76,
+              paddingHorizontal: 14,
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: selected ? colors.invertedButtonBg : 'transparent',
-              borderRadius: Radius.xs,
+              backgroundColor: selected ? colors.cardBg : 'transparent',
+              borderRadius: Radius.group - 3,
               opacity: disabled ? 0.45 : 1,
             }}>
-            <ThemedText variant="label" style={{ color: selected ? colors.invertedButtonText : colors.text2 }}>
+            <ThemedText variant="label" style={{ color: selected ? colors.text1 : colors.text3 }}>
               {t(`present.mode.${option}`)}
             </ThemedText>
           </PressableScale>
@@ -198,8 +211,7 @@ function QrPlate({
   const qr = useQrPng(candidate?.url ?? null, size);
 
   return (
-    <Animated.View entering={reduceMotion ? undefined : zoomFadeIn(DURATION.enter)}>
-      <ThemedSurface variant="card" className="items-center" style={{ paddingVertical: 20, gap: 12 }}>
+    <Animated.View entering={reduceMotion ? undefined : zoomFadeIn(DURATION.enter)} style={{ alignItems: 'center', gap: 12 }}>
         <View
           style={{
             width: size + QR_PLATE_PADDING * 2,
@@ -236,7 +248,6 @@ function QrPlate({
               ? t('present.mode.offlineOnlyHint')
               : t('present.mode.offlineHint')}
         </ThemedText>
-      </ThemedSurface>
     </Animated.View>
   );
 }

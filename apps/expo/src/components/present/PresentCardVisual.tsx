@@ -15,7 +15,7 @@ import Animated, {
 
 import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
-import { ThemedButton, ThemedText } from '@/components/themed';
+import { ThemedText } from '@/components/themed';
 import { CardMetalColors, Colors } from '@/constants/Colors';
 import { Radius } from '@/constants/radius';
 import { DURATION, EASE_OUT, IDLE, SPRING } from '@/feedback/motion';
@@ -119,9 +119,8 @@ interface PresentCardVisualProps {
   /** Which QR the plate below shows, e.g. "Online page". */
   readonly summary: string;
   readonly scanHint: string;
+  /** The card flips on tap; this names that for assistive tech. */
   readonly flipLabel: string;
-  readonly physicalCardLabel: string;
-  readonly onOpenPhysicalCard: () => void;
 }
 
 export function PresentCardVisual(props: PresentCardVisualProps): ReactNode {
@@ -232,26 +231,6 @@ export function PresentCardVisual(props: PresentCardVisualProps): ReactNode {
         </PressableScale>
       </Animated.View>
 
-      {/* `.card-acts` — two equal, quiet actions below the object. Keeping
-          these in ThemedButton preserves the app-wide hit target and haptics. */}
-      <View className="flex-row" style={{ gap: 8 }}>
-        <View style={{ flex: 1 }}>
-          <ThemedButton
-            fullWidth
-            variant="secondary"
-            label={props.flipLabel}
-            onPress={toggleFlip}
-          />
-        </View>
-        <View style={{ flex: 1 }}>
-          <ThemedButton
-            fullWidth
-            variant="secondary"
-            label={props.physicalCardLabel}
-            onPress={props.onOpenPhysicalCard}
-          />
-        </View>
-      </View>
     </View>
   );
 }
