@@ -26,7 +26,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ModalSheet } from '@/components/common/ModalSheet';
 import { PressableScale } from '@/components/common/PressableScale';
-import { BrandBadge } from '@/components/icons/BrandBadge';
 import { LinkIcon } from '@/components/icons/LinkIcon';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedButton, ThemedSurface, ThemedText, ThemedTextInput } from '@/components/themed';
@@ -54,6 +53,7 @@ import type { LinkVisibility } from '@/profile/projection';
 import { deviceAttestSupported } from '@/witness/deviceKey';
 import { socialTargetForLink, type SocialTarget } from '@solidarity/shared';
 
+import { RowGroup } from './AddListRow';
 import { LinkVisibilityControl } from './PublishPreviewSheet';
 
 export interface LinkSheetValue {
@@ -454,46 +454,22 @@ function DetectedPreview({ url, label }: { readonly url: string; readonly label:
   );
 }
 
-/** No URL at hand → pick the platform, then type only the handle. */
+/** No URL at hand → pick the platform, then type only the handle. One
+ *  vertical 建議-style list (badge, name, what it is for), not a chip grid. */
 function PlatformGrid({ onChoose }: { readonly onChoose: (preset: LinkLabelPreset) => void }): ReactNode {
   const { t } = useTranslation();
-  const c = useThemeColors();
   return (
-    <View style={{ gap: 10 }}>
-      <ThemedText variant="label" tone="tertiary">
-        {t('meEdit.linkSheet.choosePlatform')}
-      </ThemedText>
-      <View className="flex-row flex-wrap" style={{ gap: 8 }}>
-        {LINK_LABEL_PRESETS.map((preset) => {
-          const label = t(`profileLink.preset.${preset}`);
-          return (
-            <PressableScale
-              key={preset}
-              haptic="tap"
-              onPress={() => {
-                onChoose(preset);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={label}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 8,
-                minHeight: 44,
-                paddingLeft: 9,
-                paddingRight: 14,
-                borderRadius: Radius.button,
-                borderWidth: 1,
-                borderColor: c.divider,
-                backgroundColor: c.cardBg,
-              }}>
-              <BrandBadge name={brandIconForLink(preset, '')} size={26} />
-              <ThemedText variant="bodyMedium">{label}</ThemedText>
-            </PressableScale>
-          );
-        })}
-      </View>
-    </View>
+    <RowGroup
+      title={t('meEdit.linkSheet.choosePlatform')}
+      rows={LINK_LABEL_PRESETS.map((preset) => ({
+        key: preset,
+        title: t(`profileLink.preset.${preset}`),
+        description: t(`pageAdd.platformDesc.${preset}`),
+        keywords: preset,
+        badge: brandIconForLink(preset, ''),
+        onPress: () => { onChoose(preset); },
+      }))}
+    />
   );
 }
 

@@ -1,8 +1,9 @@
 /**
  * PageAddSheet — the Page tab's one "＋ 新增" sheet, laid out like Linktree's
- * Add sheet: a paste-or-search field on top, a row of category tiles
- * (連結 / 音樂 / 表單 / 證明), then 建議 — platforms as brand-coloured round
- * badges with a one-line description — and the Page's section types.
+ * Add sheet: a paste-or-search field on top, then 建議 as one vertical list —
+ * 連結 / 音樂 / 表單 / 證明 first, then platforms as brand-coloured round badges,
+ * each with a one-line description — and the Page's section types. No grid of
+ * squares (Kidney, 2026-10-30).
  *
  * Everything happens inside this one sheet: a platform opens the add-link flow
  * on its handle field, a pasted URL is saved straight away (or offered as a
@@ -18,14 +19,9 @@ import { Platform, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ModalSheet } from '@/components/common/ModalSheet';
-import { PressableScale } from '@/components/common/PressableScale';
-import { BrandBadge, type BrandBadgeName } from '@/components/icons/BrandBadge';
-import { SfIcon } from '@/components/icons/SfIcon';
+import type { BrandBadgeName } from '@/components/icons/BrandBadge';
 import { ThemedButton, ThemedText, ThemedTextInput } from '@/components/themed';
-import { Radius } from '@/constants/radius';
-import { useThemeColors } from '@/constants/useThemeColors';
 import { haptic } from '@/feedback/haptics';
-import { SCALE } from '@/feedback/motion';
 import { pushToast } from '@/feedback/toast';
 import { translate, useTranslation } from '@/i18n';
 import { MAX_PAGE_BLOCK_COUNT, PAGE_BLOCK_CATALOG, type PageBlockType } from '@/page/pageDesign';
@@ -37,6 +33,7 @@ import { applyPagePhoto, quickAddLink } from '@/profile/quickAddLink';
 import { useProGate } from '@/pro/useProGate';
 
 import { AddLinkFlow, SheetHeader, detectPasted, type AddLinkOutcome, type LinkSheetValue } from './AddLinkSheet';
+import { ListRow, RowGroup, type AddRow } from './AddListRow';
 import { PageEmbedFlow, type EmbedKind } from './PageEmbedFlow';
 import { PageSectionLabel } from './PageSectionLabel';
 
@@ -56,20 +53,6 @@ const SECTION_ICON: Readonly<Record<SectionType, SFSymbol>> = {
   'leave-card': 'person.text.rectangle',
   booking: 'calendar.badge.checkmark',
 };
-
-/** One row of the list: a platform, a section type, or the import entry. */
-interface AddRow {
-  readonly key: string;
-  readonly title: string;
-  readonly description: string;
-  /** Extra words the search matches (host names, English names). */
-  readonly keywords: string;
-  readonly badge: BrandBadgeName | null;
-  readonly icon?: SFSymbol;
-  readonly pro?: boolean;
-  readonly disabled?: boolean;
-  readonly onPress: () => void;
-}
 
 /** Linktree's "Suggested" order: the big social platforms first. */
 const SUGGESTED: readonly {
@@ -201,7 +184,48 @@ function AddMenu({
         ? t('pageAdd.sectionsFull', { count: MAX_PAGE_BLOCK_COUNT })
         : null;
 
+  // What used to be four squares on top now leads the one scrolling list.
+  const quick: readonly AddRow[] = [
+    {
+      key: 'link',
+      title: t('pageAdd.tile.link'),
+      description: t('pageAdd.tileDesc.link'),
+      keywords: 'link url',
+      badge: null,
+      icon: 'link',
+      onPress: () => { onPick({ kind: 'link', preset: null, url: null }); },
+    },
+    {
+      key: 'music',
+      title: t('pageAdd.tile.music'),
+      description: t('pageAdd.tileDesc.music'),
+      keywords: 'music spotify youtube player',
+      badge: null,
+      icon: 'music.note',
+      onPress: () => { onPick({ kind: 'embed', embed: 'music', url: null }); },
+    },
+    {
+      key: 'form',
+      title: t('pageAdd.tile.form'),
+      description: t('pageAdd.tileDesc.form'),
+      keywords: 'form google forms tally typeform questionnaire',
+      badge: null,
+      icon: 'list.bullet.clipboard',
+      onPress: () => { onPick({ kind: 'embed', embed: 'form', url: null }); },
+    },
+    {
+      key: 'proof',
+      title: t('pageAdd.tile.proof'),
+      description: t('pageAdd.tileDesc.proof'),
+      keywords: 'proof passport check verify',
+      badge: null,
+      icon: 'checkmark.shield',
+      onPress: () => { finish(onAddProof); },
+    },
+  ];
+
   const suggested: readonly AddRow[] = [
+    ...quick,
     ...SUGGESTED.map((entry) => ({
       key: entry.key,
       title: t(`pageAdd.platform.${entry.key}`),
@@ -308,14 +332,6 @@ function AddMenu({
           </View>
         ) : null}
 
-        {needle.length === 0 ? (
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            <CategoryTile icon="link" label={t('pageAdd.tile.link')} onPress={() => { onPick({ kind: 'link', preset: null, url: null }); }} />
-            <CategoryTile icon="music.note" label={t('pageAdd.tile.music')} onPress={() => { onPick({ kind: 'embed', embed: 'music', url: null }); }} />
-            <CategoryTile icon="list.bullet.clipboard" label={t('pageAdd.tile.form')} onPress={() => { onPick({ kind: 'embed', embed: 'form', url: null }); }} />
-            <CategoryTile icon="checkmark.shield" label={t('pageAdd.tile.proof')} onPress={() => { finish(onAddProof); }} />
-          </View>
-        ) : null}
 
         {shownSuggested.length > 0 && pasted === null ? (
           <RowGroup title={t('pageAdd.suggested')} rows={shownSuggested} />
@@ -341,119 +357,3 @@ function AddMenu({
   );
 }
 
-/** Linktree's category square: a tinted tile with the glyph, label below. */
-function CategoryTile({
-  icon,
-  label,
-  onPress,
-}: {
-  readonly icon: SFSymbol;
-  readonly label: string;
-  readonly onPress: () => void;
-}): ReactNode {
-  const c = useThemeColors();
-  return (
-    <PressableScale
-      fill
-      haptic="tap"
-      scaleTo={SCALE.tile}
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      style={{ flex: 1, alignItems: 'center', gap: 8 }}>
-      <View
-        style={{
-          alignSelf: 'stretch',
-          aspectRatio: 1,
-          alignItems: 'center',
-          justifyContent: 'center',
-          borderRadius: Radius.card,
-          borderWidth: 1,
-          borderColor: c.divider,
-          backgroundColor: c.cardBg,
-        }}>
-        <SfIcon name={icon} size={26} color={c.primaryBlue} weight="medium" />
-      </View>
-      <ThemedText variant="bodySmall" numberOfLines={1} style={{ textAlign: 'center' }}>
-        {label}
-      </ThemedText>
-    </PressableScale>
-  );
-}
-
-function RowGroup({
-  title,
-  note = null,
-  rows,
-}: {
-  readonly title: string;
-  readonly note?: string | null;
-  readonly rows: readonly AddRow[];
-}): ReactNode {
-  return (
-    <View style={{ gap: 4 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <View style={{ flex: 1 }}>
-          <PageSectionLabel title={title} />
-        </View>
-        {note !== null ? (
-          <ThemedText variant="caption" tone="tertiary" numberOfLines={1}>{note}</ThemedText>
-        ) : null}
-      </View>
-      {rows.map((row, index) => <ListRow key={row.key} row={row} divided={index < rows.length - 1} />)}
-    </View>
-  );
-}
-
-/** Badge, title, one-line description; a hairline under every row but the last. */
-function ListRow({ row, divided = false }: { readonly row: AddRow; readonly divided?: boolean }): ReactNode {
-  const c = useThemeColors();
-  const disabled = row.disabled === true;
-  return (
-    <PressableScale
-      haptic={disabled ? false : 'tap'}
-      disabled={disabled}
-      onPress={row.onPress}
-      accessibilityRole="button"
-      accessibilityLabel={row.pro ? `${row.title}, PRO` : row.title}
-      accessibilityHint={row.description}
-      accessibilityState={{ disabled }}
-      style={{ flexDirection: 'row', alignItems: 'center', gap: 14, opacity: disabled ? 0.4 : 1 }}>
-      {row.badge !== null ? (
-        <BrandBadge name={row.badge} size={44} />
-      ) : (
-        <View
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: Radius.pill,
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: c.chipSurface,
-          }}>
-          {row.icon ? <SfIcon name={row.icon} size={20} color={c.primaryBlue} /> : null}
-        </View>
-      )}
-      <View
-        style={{
-          flex: 1,
-          gap: 2,
-          alignSelf: 'stretch',
-          justifyContent: 'center',
-          paddingVertical: 14,
-          borderBottomWidth: divided ? 1 : 0,
-          borderBottomColor: c.divider,
-        }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <ThemedText variant="titleMedium" numberOfLines={1} style={{ flexShrink: 1 }}>{row.title}</ThemedText>
-          {row.pro ? (
-            <View style={{ paddingHorizontal: 6, borderRadius: Radius.pill, backgroundColor: c.chipSurface }}>
-              <ThemedText variant="caption" style={{ color: c.primaryBlue, letterSpacing: 0.6 }}>PRO</ThemedText>
-            </View>
-          ) : null}
-        </View>
-        <ThemedText variant="bodySmall" tone="secondary" numberOfLines={1}>{row.description}</ThemedText>
-      </View>
-    </PressableScale>
-  );
-}

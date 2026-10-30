@@ -1454,5 +1454,15 @@
   "pageBio.title": "Bio",
   "pageBio.add": "Add a bio",
   "pageBio.edit": "Edit bio",
-  "pageBio.long": "{{count}} characters. It all shows, but shorter reads better"
+  "pageBio.long": "{{count}} characters. It all shows, but shorter reads better",
+  "pageDesign.design": "Design",
+  "pageDesign.tab.theme": "Theme",
+  "pageDesign.tab.header": "Header",
+  "pageDesign.tab.wallpaper": "Wallpaper",
+  "pageDesign.tab.text": "Text",
+  "pageDesign.tab.footer": "Footer",
+  "pageAdd.tileDesc.link": "Paste any URL; the platform is detected",
+  "pageAdd.tileDesc.music": "Spotify or YouTube, playable on your page",
+  "pageAdd.tileDesc.form": "A survey or sign-up; answers go to your form service",
+  "pageAdd.tileDesc.proof": "Prove it's you with your passport"
 }

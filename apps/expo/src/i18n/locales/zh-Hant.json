@@ -1454,5 +1454,15 @@
   "pageBio.title": "簡介",
   "pageBio.add": "新增簡介",
   "pageBio.edit": "編輯簡介",
-  "pageBio.long": "{{count}} 字，頁面上會完整顯示，但短一點更好讀"
+  "pageBio.long": "{{count}} 字，頁面上會完整顯示，但短一點更好讀",
+  "pageDesign.design": "設計",
+  "pageDesign.tab.theme": "模板",
+  "pageDesign.tab.header": "頭貼",
+  "pageDesign.tab.wallpaper": "背景",
+  "pageDesign.tab.text": "文字",
+  "pageDesign.tab.footer": "頁尾",
+  "pageAdd.tileDesc.link": "貼上任何網址，自動認出平台",
+  "pageAdd.tileDesc.music": "Spotify 或 YouTube，訪客點了就播放",
+  "pageAdd.tileDesc.form": "問卷或報名表，回覆進到你的表單服務",
+  "pageAdd.tileDesc.proof": "用護照證明這是本人"
 }
