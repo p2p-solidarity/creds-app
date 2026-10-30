@@ -31,15 +31,15 @@ const ETCH_TEXT = {
   textShadowRadius: 0,
 } as const;
 
-function CardSheen({ enabled }: { readonly enabled: boolean }): ReactNode {
+function CardSheen(): ReactNode {
   const reduceMotion = useReducedMotion();
   const progress = useSharedValue(-1);
 
   useEffect(() => {
     progress.value = -1;
-    if (!enabled || reduceMotion) return;
+    if (reduceMotion) return;
     progress.value = withDelay(DURATION.enter, withTiming(1, { duration: IDLE.enterMs, easing: EASE_OUT }));
-  }, [enabled, progress, reduceMotion]);
+  }, [progress, reduceMotion]);
 
   const style = useAnimatedStyle(() => ({
     transform: [{ translateX: progress.value * 330 }, { rotate: '18deg' }],
@@ -55,7 +55,7 @@ function CardSheen({ enabled }: { readonly enabled: boolean }): ReactNode {
           left: 0,
           width: 92,
           height: 410,
-          opacity: enabled ? 0.48 : 0.24,
+          opacity: 0.48,
         },
         style,
       ]}>
@@ -113,8 +113,6 @@ function useCardMotion(isFlipped: boolean) {
 }
 
 interface PresentCardVisualProps {
-  readonly resolvedAccent: string;
-  readonly enableGlow: boolean;
   readonly name: string | null;
   /** Printed under the name in mono — the page address this card hands over. */
   readonly displayUrl: string;
@@ -154,9 +152,9 @@ export function PresentCardVisual(props: PresentCardVisualProps): ReactNode {
           style={{
             aspectRatio: CARD_ASPECT_RATIO,
             borderRadius: CARD_RADIUS,
-            shadowColor: props.enableGlow ? props.resolvedAccent : Colors.text1,
-            shadowOpacity: props.enableGlow ? 0.34 : 0.22,
-            shadowRadius: props.enableGlow ? 24 : 22,
+            shadowColor: Colors.text1,
+            shadowOpacity: 0.22,
+            shadowRadius: 22,
             shadowOffset: { width: 0, height: 12 },
             elevation: 8,
           }}>
@@ -167,7 +165,7 @@ export function PresentCardVisual(props: PresentCardVisualProps): ReactNode {
               start={{ x: 0, y: 0.39 }}
               end={{ x: 1, y: 0.61 }}
               style={{ flex: 1, paddingVertical: 15, paddingHorizontal: 16 }}>
-              <CardSheen enabled={props.enableGlow} />
+              <CardSheen />
               {/* `.m-nfc` — the tap-to-exchange mark, quiet in the corner. */}
               <View style={{ position: 'absolute', top: 14, right: 15, opacity: 0.55 }}>
                 <SfIcon name="wave.3.right" size={16} color={CardMetalColors.etch} />
@@ -215,7 +213,7 @@ export function PresentCardVisual(props: PresentCardVisualProps): ReactNode {
                 gap: 10,
                 padding: 18,
               }}>
-              <CardSheen enabled={props.enableGlow} />
+              <CardSheen />
               <ThemedText variant="caption" style={{ ...ETCH_TEXT, letterSpacing: 2.2 }}>
                 CREDS.ID
               </ThemedText>

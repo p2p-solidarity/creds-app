@@ -42,9 +42,6 @@ export type SensitiveActionKey =
 /** Mirrors Swift AppColorScheme (system / light / dark). */
 export type AppColorScheme = 'system' | 'light' | 'dark';
 
-/** Mirrors Swift AnimalCharacter. */
-export type AnimalCharacter = 'dog' | 'horse' | 'pig' | 'sheep' | 'dove';
-
 export interface Preferences {
   readonly hasCompletedOnboarding: boolean;
   /** Locally selected name, even while the network-backed page is unpublished. */
@@ -83,12 +80,6 @@ export interface Preferences {
   readonly themeMode: 'auto' | 'light' | 'dark';
   /** Mirrors Swift ThemeManager.appColorScheme. */
   readonly appColorScheme: AppColorScheme;
-  /** Mirrors Swift ThemeManager.cardAccent (hex). */
-  readonly cardAccentHex: string;
-  /** Mirrors Swift ThemeManager.enableGlow. */
-  readonly enableGlow: boolean;
-  /** Mirrors Swift ThemeManager.selectedAnimal (null = none). */
-  readonly selectedAnimal: AnimalCharacter | null;
   /**
    * Per-action Face ID requirement flags (Swift SensitiveActionPolicyStore).
    *
@@ -162,9 +153,6 @@ const DEFAULTS: Preferences = {
   developerMode: false,
   themeMode: 'auto',
   appColorScheme: 'system',
-  cardAccentHex: '#E091B3',
-  enableGlow: true,
-  selectedAnimal: null,
   // eslint-disable-next-line @typescript-eslint/no-deprecated -- dormant key, kept so persisted blobs round-trip
   biometricPolicy: DEFAULT_BIOMETRIC_POLICY,
   backupEnabled: false,

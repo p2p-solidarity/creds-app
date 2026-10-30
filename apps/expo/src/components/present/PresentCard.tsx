@@ -34,7 +34,6 @@ import { Radius } from '@/constants/radius';
 import { useThemeColors } from '@/constants/useThemeColors';
 import { zoomFadeIn, DURATION } from '@/feedback/motion';
 import { useTranslation } from '@/i18n';
-import { usePreferences } from '@/settings/preferences';
 
 export type PresentQrMode = 'online' | 'offline';
 
@@ -46,10 +45,6 @@ type QrState =
 /** The plate never grows past this — a bigger code scans no better. */
 const MAX_QR_SIZE = 280;
 const QR_PLATE_PADDING = 14;
-
-function resolveCardAccent(value: string): string {
-  return value.startsWith('#') && value.length === 7 ? value : Colors.primaryMauve;
-}
 
 function onlineCandidate(
   candidates: readonly ProfileShareUrlCandidate[],
@@ -100,8 +95,6 @@ export function PresentCard({
   readonly nostrShortUrlReady: boolean;
 }): ReactNode {
   const { t } = useTranslation();
-  const cardAccentHex = usePreferences((state) => state.cardAccentHex);
-  const enableGlow = usePreferences((state) => state.enableGlow);
   const [physicalCardOpen, setPhysicalCardOpen] = useState(false);
   const selection = useProfileShareSelection(shareRecord, shareJws, nostrShortUrlReady, 0, publicPage);
 
@@ -116,8 +109,6 @@ export function PresentCard({
   return (
     <View style={{ gap: 16 }}>
       <PresentCardVisual
-        resolvedAccent={resolveCardAccent(cardAccentHex)}
-        enableGlow={enableGlow}
         name={ownerName}
         summary={t(mode === 'online' ? 'present.mode.onlineSummary' : 'present.mode.offlineSummary')}
         scanHint={t('present.scanToExchange')}
