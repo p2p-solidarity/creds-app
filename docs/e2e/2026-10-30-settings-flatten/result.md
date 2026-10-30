@@ -25,3 +25,15 @@
 - People 頁 Pear 關閉時的「開啟設定」按鈕（現在導到設定首頁）：要先有聯絡人／對方 did 才看得到，沒跑。
 - 「允許私密名片交換」「顯示最近更新」開關沒切換（只看到 render）。
 - Android 沒跑。
+
+## 追加：標題和返回鍵同一行（Kidney 回饋）
+
+子頁原本是兩列：上面一列「‹ 設定」（`SettingsBackToolbar`），下面一列置中標題。現在全部改成首頁那種一列：‹（或「取消」的頁面用 ✕）釘在左邊、標題置中；`SettingsBackToolbar` 已無人使用並刪除。返回鍵原本比標題低約 4pt（它的欄位把標題下方 12pt 留白也算進去），一起修正。websign 審核頁原本把標題放在內容裡當大標，也改成同一列。
+
+| # | 畫面 | 截圖 |
+|---|---|---|
+| 9 | 通行密鑰：‹、標題、ⓘ 同一列且垂直對齊 | `09-header-one-row-passkeys.png` |
+| 10 | 隱私權政策 | `10-header-one-row-privacy.png` |
+| 11 | 帳號保護 | `11-header-one-row-security.png` |
+
+另外看過開發者選項（同一列）。沒逐頁點開的：username、backup、identity-export、pro、verify/nostr、verify/bluesky、me/edit、websign、驗證工具（同一個元件、同一個機械替換，typecheck 過）。
