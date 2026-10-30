@@ -92,7 +92,7 @@ Branch `claude/clever-napier-5d15c2`（base 2.0.0 @ 838514f7）。
 1. **Pear `cardRelease`**（剩下唯一一個非金鑰的提示）：把簽好的名片交給**遠端**的 peer，是逐 peer 的同意。
    CLAUDE.md 的安全硬規則和 `sensitiveActionPolicy.ts` 都把它列為「每次都問」，因為一旦放行就收不回來。
    拿掉的話，連上線的對方發 `card.request` 就能直接拿到卡、使用者不用碰手機；畫面上的「分享」按鈕還在，所以真正少的是
-   「Face ID 證明是本人按的」這一層。建議保留；若要拿掉，要一起改 CLAUDE.md 那條規則。
+   「Face ID 證明是本人按的」這一層。**Kidney 2026-10-30 決定：保留，每次都問。**
 2. **舊 Secure Enclave 金鑰**：keychain ACL（`.userPresence`）寫在金鑰上，JS 拿不掉。出示 QR、護照綁定簽章在
    `redLineOnly` 下還會在原生簽章裡問一次（之後 300 秒內不再問）。要歸零只能把金鑰遷移成 iCloud 同步的軟體金鑰，
    而 did:key 會跟著換、已經發出去的簽章要重簽——是另一個任務。
