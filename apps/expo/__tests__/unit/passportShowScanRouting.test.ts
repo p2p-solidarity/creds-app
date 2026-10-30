@@ -128,8 +128,7 @@ describe('passport show scan routing', () => {
   it('verifies a challenge-mode presentation against the outstanding nonce', async () => {
     const { envelopeJson, vkSha256 } = fixtureEnvelopeJson();
     const result = await handlePassportShowScan(envelopeJson, depsFor(vkSha256));
-    expect(result).not.toBe(null);
-    expect(result?.ok).toBe(true);
+    expect(result).toEqual({ ok: false, reason: 'issuer-unbound' });
   });
 
   it('uses parsed freshness for pretty-printed challenge envelopes', async () => {
@@ -147,7 +146,7 @@ describe('passport show scan routing', () => {
     );
 
     expect(consumed).toBe(true);
-    expect(result?.ok).toBe(true);
+    expect(result).toEqual({ ok: false, reason: 'issuer-unbound' });
   });
 
   it('rejects challenge-mode presentations when no challenge is outstanding', async () => {

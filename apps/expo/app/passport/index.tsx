@@ -122,9 +122,6 @@ import type {
 import type { getPassportZk } from '@solidarity/nitro-attest';
 import { sha256Bytes, uuid } from '@solidarity/shared';
 import { loadPassportNitroModules } from '@/passport/nitroModules';
-import { publishPassportNpubBinding } from '@/passport/npubBinding';
-import { DEFAULT_RELAYS } from '@/nostr/publish';
-import { hasNostrKeySync } from '@/nostr/userKey';
 
 function loadBundledRevocationSnapshot(
   nfc: ReturnType<typeof getNfcPassport> | null
@@ -665,14 +662,6 @@ export default function PassportSetup() {
         // it must NOT block the save UX. Fire-and-forget: the pin is only
         // needed before this device first VERIFIES someone else's show
         // presentation, and the verifier fails closed without it.
-        // Bind this passport to the user's npub (nullifier + proof on Nostr) so
-        // viewers' apps can count distinct passports behind witnesses. One
-        // more device-binding signature; non-fatal, retried from the Page.
-        if (!chip.isSimulated && hasNostrKeySync()) {
-          void publishPassportNpubBinding(cardId, holderDid, DEFAULT_RELAYS).then((r) => {
-            if (!r.ok) console.warn(`[zk] passport npub binding not published — ${r.error}`);
-          });
-        }
         if (nitro.zk && loadPassportShowVkSelfPin() === null) {
           const zkForPin = nitro.zk;
           void computePassportShowVkSha256(zkForPin).then((vkSelfPin) => {

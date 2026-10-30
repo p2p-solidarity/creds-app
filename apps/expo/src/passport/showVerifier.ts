@@ -13,6 +13,9 @@
  *      window (current + previous bucket).
  *   4. The native `verifyNoirProof` call is injected so this module stays
  *      unit-testable without the Nitro bridge.
+ *   5. Every presentation that passes 1–4 is still refused as
+ *      `issuer-unbound` (docs/ref/11): the proof is not bound to any
+ *      issuing state, so it cannot attest a passport.
  */
 import { base64Decode, bytesToHex, sha256Bytes } from '@solidarity/shared';
 
@@ -191,11 +194,6 @@ export interface VerifyPassportShowPresentationArgs {
   readonly expectedScope: string;
   readonly freshness: PassportShowFreshnessExpectation;
   readonly now: Date;
-  /**
-   * How old the proof's `current_*` date may be. Defaults to ±48 h (a live
-   * presentation); a published npub binding is long-lived and passes more.
-   */
-  readonly maxAgeMs?: number;
 }
 
 export type PassportShowVerifyFailureReason =
@@ -210,7 +208,8 @@ export type PassportShowVerifyFailureReason =
   | 'scope-mismatch'
   | 'nonce-mismatch'
   | 'stale-presentation-date'
-  | 'proof-verification-failed';
+  | 'proof-verification-failed'
+  | 'issuer-unbound';
 
 export type VerifyPassportShowPresentationResult =
   | {
@@ -267,7 +266,7 @@ export async function verifyPassportShowPresentation(
     fromProof.day
   );
   const ageMs = args.now.getTime() - presentedAt;
-  if (ageMs < -TODAY_TOLERANCE_MS || ageMs > (args.maxAgeMs ?? TODAY_TOLERANCE_MS)) {
+  if (ageMs < -TODAY_TOLERANCE_MS || ageMs > TODAY_TOLERANCE_MS) {
     return fail('stale-presentation-date');
   }
 
@@ -277,19 +276,12 @@ export async function verifyPassportShowPresentation(
   );
   if (!verified) return fail('proof-verification-failed');
 
-  return {
-    ok: true,
-    envelope,
-    freshnessMode: envelope.freshness,
-    disclosed: {
-      age: fromProof.discloseAge
-        ? { threshold: fromProof.ageThreshold, satisfied: fromProof.outIsOlder }
-        : null,
-      nationality: fromProof.discloseNationality
-        ? String.fromCharCode(...fromProof.outNationalityBytes)
-        : null,
-    },
-  };
+  // Even a verifying proof is not a passport (docs/ref/11 §1–§2): openac_show
+  // checks no issuer signature, and the prepare circuits it would link to run
+  // over a self-minted CSCA/DSC, so made-up passport data proves under the
+  // pinned vk with any nullifier. Passport ZK is retired from the app (plan 11
+  // K2); until it is removed, no presentation or npub binding may pass.
+  return fail('issuer-unbound');
 }
 
 function envelopeMatchesProof(

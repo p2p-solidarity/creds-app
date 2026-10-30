@@ -166,7 +166,10 @@ describe('passport show verifier — public input extraction', () => {
 });
 
 describe('passport show verifier — verification', () => {
-  it('accepts a fresh challenge-mode presentation', async () => {
+  // Regression (docs/ref/11 §2.2): openac_show checks no issuer signature, so a
+  // proof built from made-up passport data verifies natively under the pinned
+  // vk. A presentation that passes every check must still not count as a passport.
+  it('rejects a fully verifying presentation as not bound to an issuing state', async () => {
     const fixture = buildFixture();
     const result = await verifyPassportShowPresentation({
       envelopeJson: envelopeFor(fixture),
@@ -176,11 +179,7 @@ describe('passport show verifier — verification', () => {
       freshness: { mode: 'challenge', expectedNonceHash: NONCE },
       now: NOW,
     });
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.disclosed.age).toEqual({ threshold: 18, satisfied: true });
-    expect(result.disclosed.nationality).toBe('TWN');
-    expect(result.freshnessMode).toBe('challenge');
+    expect(result).toEqual({ ok: false, reason: 'issuer-unbound' });
   });
 
   it('falls back to the enrollment self-pin when no build pin exists', async () => {
@@ -193,7 +192,7 @@ describe('passport show verifier — verification', () => {
       freshness: { mode: 'challenge', expectedNonceHash: NONCE },
       now: NOW,
     });
-    expect(result.ok).toBe(true);
+    expect(result).toEqual({ ok: false, reason: 'issuer-unbound' });
   });
 
   it('fails closed without any vk pin and on pin mismatch', async () => {
@@ -291,8 +290,7 @@ describe('passport show verifier — verification', () => {
       freshness: { mode: 'time-bucket', scope: SCOPE, now: NOW },
       now: NOW,
     });
-    expect(fresh.ok).toBe(true);
-    if (fresh.ok) expect(fresh.freshnessMode).toBe('time-bucket');
+    expect(fresh).toEqual({ ok: false, reason: 'issuer-unbound' });
 
     const later = new Date(NOW.getTime() + 25 * 60 * 1000);
     const expired = await verifyPassportShowPresentation({
