@@ -1814,5 +1814,6 @@
   "meEdit.linkSheet.avatarUse": "換上",
   "meEdit.linkSheet.duplicate": "這個連結已經在你的頁面上了。",
   "ob.links.signCount": "加上 {{count}} 條連結並繼續",
-  "ob.links.remove": "移除 {{label}}"
+  "ob.links.remove": "移除 {{label}}",
+  "present.verificationQr": "驗證 QR"
 }

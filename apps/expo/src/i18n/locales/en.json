@@ -1814,5 +1814,6 @@
   "meEdit.linkSheet.avatarUse": "Use it",
   "meEdit.linkSheet.duplicate": "That link is already on your Page.",
   "ob.links.signCount": "Add {{count}} links & continue",
-  "ob.links.remove": "Remove {{label}}"
+  "ob.links.remove": "Remove {{label}}",
+  "present.verificationQr": "Verification QR"
 }
