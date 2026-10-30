@@ -79,7 +79,7 @@ export function PublishChangesCard({
           {state.kind === 'error' ? <StatusBox tone="warn" text={t('pageDesign.publishError')} /> : null}
           <ThemedButton
             label={t(state.kind === 'error' ? 'mePage.retry' : 'pageDesign.publishButton')}
-            leadingIcon={<SfIcon name="square.and.arrow.up" size={15} color={c.pageBg} />}
+            icon="square.and.arrow.up"
             loading={state.kind === 'publishing'}
             fullWidth
             onPress={onPublish}

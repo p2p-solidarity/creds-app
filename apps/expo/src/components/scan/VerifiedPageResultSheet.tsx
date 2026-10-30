@@ -105,7 +105,7 @@ export function VerifiedPageResultSheet(): ReactNode {
                 fullWidth
                 loading={saving}
                 label={existing ? t('verifiedPage.updateInPeople') : t('verifiedPage.saveToPeople')}
-                leadingIcon={<SfIcon name="person.badge.plus" size={16} color={Colors.pageBg} />}
+                icon="person.badge.plus"
                 onPress={() => {
                   void onSave(false);
                 }}

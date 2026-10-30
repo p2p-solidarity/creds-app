@@ -142,7 +142,7 @@ function EnabledPearConnectSection({ did }: PearConnectSectionProps): ReactNode 
           fullWidth
           loading={busy}
           disabled={busy}
-          leadingIcon={<SfIcon name="lock.shield" size={16} color={Colors.pageBg} />}
+          icon="lock.shield"
           onPress={() => {
             requestFlow.start();
           }}
@@ -165,7 +165,7 @@ function EnabledPearConnectSection({ did }: PearConnectSectionProps): ReactNode 
               variant="secondary"
               fullWidth
               loading={saving}
-              leadingIcon={<SfIcon name="person.badge.plus" size={16} color={Colors.text1} />}
+              icon="person.badge.plus"
               onPress={onSave}
             />
           </View>

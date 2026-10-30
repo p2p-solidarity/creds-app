@@ -82,7 +82,7 @@ export function ProfileShareReadyContent({
             variant="primary"
             fullWidth
             haptic={false}
-            leadingIcon={<SfIcon name="doc.on.doc" size={15} color={Colors.pageBg} />}
+            icon="doc.on.doc"
             onPress={() => {
               onCopy(selected.url);
             }}
@@ -93,7 +93,7 @@ export function ProfileShareReadyContent({
             label={t('meShare.shareLink')}
             variant="secondary"
             fullWidth
-            leadingIcon={<SfIcon name="square.and.arrow.up" size={15} color={Colors.text1} />}
+            icon="square.and.arrow.up"
             onPress={() => {
               onShare(selected.url);
             }}
@@ -106,7 +106,7 @@ export function ProfileShareReadyContent({
         variant="secondary"
         fullWidth
         disabled={qrImageUri === null}
-        leadingIcon={<SfIcon name="photo" size={15} color={Colors.text1} />}
+        icon="photo"
         onPress={() => {
           if (qrImageUri !== null) onShareQr(qrImageUri);
         }}

@@ -35,6 +35,8 @@ export interface ModalSheetProps {
   /** Android back button and iOS swipe-to-dismiss both land here. */
   readonly onRequestClose: () => void;
   readonly presentationStyle?: ModalSheetPresentation;
+  /** iOS only: the dismissal animation finished (Android has no such event). */
+  readonly onDismiss?: () => void;
   readonly children: ReactNode;
 }
 
@@ -42,6 +44,7 @@ export function ModalSheet({
   visible,
   onRequestClose,
   presentationStyle = 'pageSheet',
+  onDismiss,
   children,
 }: ModalSheetProps): ReactNode {
   const parentInsets = useSafeAreaInsets();
@@ -58,7 +61,8 @@ export function ModalSheet({
       visible={visible}
       animationType="slide"
       presentationStyle={presentationStyle}
-      onRequestClose={onRequestClose}>
+      onRequestClose={onRequestClose}
+      onDismiss={onDismiss}>
       <SafeAreaProvider initialMetrics={initialMetrics}>{children}</SafeAreaProvider>
     </Modal>
   );

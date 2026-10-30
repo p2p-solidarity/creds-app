@@ -286,7 +286,7 @@ function ErrorSheet({ req, onDone }: { readonly req: ErrorRequest; readonly onDo
               variant="primary"
               fullWidth
               loading={sending}
-              leadingIcon={<SfIcon name="paperplane.fill" size={15} color={Colors.pageBg} />}
+              icon="paperplane.fill"
               onPress={() => { void onSend(); }}
             />
             <ThemedButton

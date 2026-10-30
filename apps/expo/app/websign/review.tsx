@@ -273,7 +273,7 @@ export default function WebSignReviewScreen(): ReactNode {
                   fullWidth
                   loading={phase === 'approving'}
                   disabled={phase === 'approving'}
-                  leadingIcon={<SfIcon name="checkmark.seal.fill" size={15} color={Colors.pageBg} />}
+                  icon="checkmark.seal.fill"
                   onPress={() => { void onApprove(); }}
                 />
                 <ThemedButton
@@ -597,7 +597,7 @@ function SignedPanel({
           label={t('websign.copyResponse')}
           variant="secondary"
           fullWidth
-          leadingIcon={<SfIcon name="doc.on.doc" size={14} color={Colors.text1} />}
+          icon="doc.on.doc"
           onPress={onCopy}
         />
       </ThemedSurface>

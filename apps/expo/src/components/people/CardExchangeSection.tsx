@@ -25,10 +25,8 @@ import { useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 
 import { InfoButton } from '@/components/common/InfoSheet';
-import { SfIcon } from '@/components/icons/SfIcon';
 import { ToggleRow } from '@/components/settings/SettingRow';
 import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
-import { Colors } from '@/constants/Colors';
 import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
 import { useProfileSnapshotStore } from '@/people/profileSnapshots';
@@ -353,7 +351,7 @@ function EnabledCardExchangeSection({ did, verifiedDisplayName }: CardExchangeSe
           fullWidth
           loading={requestBusy}
           disabled={requestBusy}
-          leadingIcon={<SfIcon name="arrow.down.circle" size={16} color={Colors.text1} />}
+          icon="arrow.down.circle"
           onPress={() => {
             requestFlow.start();
           }}
@@ -367,7 +365,7 @@ function EnabledCardExchangeSection({ did, verifiedDisplayName }: CardExchangeSe
               variant="primary"
               fullWidth
               loading={saving}
-              leadingIcon={<SfIcon name="person.badge.plus" size={16} color={Colors.pageBg} />}
+              icon="person.badge.plus"
               onPress={onSaveReceived}
             />
           </View>
@@ -381,7 +379,7 @@ function EnabledCardExchangeSection({ did, verifiedDisplayName }: CardExchangeSe
           fullWidth
           loading={exchangeBusy}
           disabled={exchangeBusy}
-          leadingIcon={<SfIcon name="arrow.left.arrow.right.circle" size={16} color={Colors.text1} />}
+          icon="arrow.left.arrow.right.circle"
           onPress={() => {
             exchangeFlow.start();
           }}
@@ -407,7 +405,7 @@ function EnabledCardExchangeSection({ did, verifiedDisplayName }: CardExchangeSe
           fullWidth
           loading={presentBusy}
           disabled={presentBusy}
-          leadingIcon={<SfIcon name="checkmark.shield" size={16} color={Colors.text1} />}
+          icon="checkmark.shield"
           onPress={() => {
             presentFlow.start();
           }}

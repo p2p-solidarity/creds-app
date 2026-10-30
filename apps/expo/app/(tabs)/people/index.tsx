@@ -688,7 +688,7 @@ function EmptyState({
         <ThemedButton
           fullWidth
           label={t('peopleList.add')}
-          leadingIcon={<SfIcon name="plus" size={15} color={Colors.invertedButtonText} />}
+          icon="plus"
           onPress={onAdd}
         />
         <ThemedButton
@@ -754,7 +754,7 @@ function EmptySearchState({
           fullWidth
           variant="secondary"
           label={t('peopleList.add')}
-          leadingIcon={<SfIcon name="plus" size={15} color={Colors.text1} />}
+          icon="plus"
           onPress={onAdd}
         />
         <ThemedButton

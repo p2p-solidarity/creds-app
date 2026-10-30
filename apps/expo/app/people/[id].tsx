@@ -163,7 +163,7 @@ export default function PersonDetailScreen(): ReactNode {
               fullWidth
               variant="secondary"
               label={t('personDetail.exportVCard')}
-              leadingIcon={<SfIcon name="square.and.arrow.up" size={15} color={Colors.text1} />}
+              icon="square.and.arrow.up"
               loading={sharing}
               onPress={onShare}
             />

@@ -149,7 +149,7 @@ export function EditableLinksList({
       <ThemedButton
         label={t('meEdit.addLink')}
         variant="secondary"
-        leadingIcon={<SfIcon name="plus" size={14} color={Colors.text1} />}
+        icon="plus"
         onPress={onAdd}
       />
     </View>

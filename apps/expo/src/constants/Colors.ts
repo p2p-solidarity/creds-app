@@ -119,11 +119,17 @@ const RAW = {
   gradientCream: '#F0EDF4',
   gradientCreamDark: '#141112',
 
-  /** Inverted button background — text1 (used by Edit / Show buttons). */
+  /** creds.id `--color-inverted` / `--color-on-inverted`: the `.btn` fill and
+   *  label — ink on cream by day, cream with near-black type by night. The
+   *  night label stays `#060417` rather than the web's `#2F2F30`: that hex is
+   *  the light `text1`, and `resolveThemeColor` would read it as a stale one. */
   invertedButtonBg: '#2F2F30',
-  invertedButtonBgDark: '#F0E8F0',
+  invertedButtonBgDark: '#FBF9F2',
   invertedButtonText: '#FBF9F2',
   invertedButtonTextDark: '#060417',
+  /** `.field-input:focus-visible` ring — primary at 18%. */
+  focusRing: 'rgba(131,83,125,0.18)',
+  focusRingDark: 'rgba(191,128,167,0.22)',
 
   /** Accent rose — primary brand colour (Palette.purple #83537D mauve in dark). */
   accentRose: '#BF80A7',
@@ -259,6 +265,99 @@ export const PageTemplateColors = {
   pageSunEnd: RAW.pageSunEnd,
   pagePreviewGlass: RAW.pagePreviewGlass,
   pagePreviewBorder: RAW.pagePreviewBorder,
+} as const;
+
+/**
+ * Platform colours for the round brand badges in the add sheet (Linktree's
+ * "Suggested" list). `bg` fills the circle, `fg` is the glyph on it; a brand
+ * whose mark is a gradient carries its `stops` too. Brand colours are the
+ * platforms' own, so like the Page palette they do NOT follow `Appearance`.
+ */
+export const BrandColors = {
+  instagram: { bg: '#E1306C', fg: '#FFFFFF', stops: ['#FEDA75', '#FA7E1E', '#D62976', '#962FBF', '#4F5BD5'] },
+  x: { bg: '#000000', fg: '#FFFFFF' },
+  threads: { bg: '#000000', fg: '#FFFFFF' },
+  tiktok: { bg: '#000000', fg: '#FFFFFF' },
+  youtube: { bg: '#FF0033', fg: '#FFFFFF' },
+  spotify: { bg: '#1ED760', fg: '#000000' },
+  github: { bg: '#181717', fg: '#FFFFFF' },
+  linkedin: { bg: '#0A66C2', fg: '#FFFFFF' },
+  telegram: { bg: '#26A5E4', fg: '#FFFFFF' },
+  facebook: { bg: '#1877F2', fg: '#FFFFFF' },
+  bluesky: { bg: '#1185FE', fg: '#FFFFFF' },
+  line: { bg: '#06C755', fg: '#FFFFFF' },
+  discord: { bg: '#5865F2', fg: '#FFFFFF' },
+  whatsapp: { bg: '#25D366', fg: '#FFFFFF' },
+  substack: { bg: '#FF6719', fg: '#FFFFFF' },
+  twitch: { bg: '#9146FF', fg: '#FFFFFF' },
+  reddit: { bg: '#FF4500', fg: '#FFFFFF' },
+  medium: { bg: '#000000', fg: '#FFFFFF' },
+  pinterest: { bg: '#E60023', fg: '#FFFFFF' },
+  mastodon: { bg: '#6364FF', fg: '#FFFFFF' },
+  farcaster: { bg: '#855DCD', fg: '#FFFFFF' },
+  linktree: { bg: '#43E55E', fg: '#000000' },
+  /** A plain website / any link: the creds.id plum. */
+  web: { bg: '#83537D', fg: '#FFFFFF' },
+  maps: { bg: '#34A853', fg: '#FFFFFF' },
+  form: { bg: '#7A5AF8', fg: '#FFFFFF' },
+  /** A brand mark that is black on its own ground needs an edge on a dark sheet. */
+  edgeOnDark: 'rgba(255,255,255,0.18)',
+} as const;
+
+/**
+ * The visitor page's per-template surfaces — airmeishi-web
+ * `src/page/pageAppearance.ts` `TEMPLATE_PALETTE` / `BACKGROUND_GROUND`,
+ * transcribed 1:1 so the app preview paints what creds.id paints. Change both
+ * together. Like `PageTemplateColors` these never follow `Appearance`.
+ */
+export const PagePalettes = {
+  cream: {
+    stops: ['#FBF9F2'], card: '#FFFFFF', iconWell: '#EEEEEE', border: '#D1D1D1',
+    text1: '#2F2F30', text2: '#5F5E67', text3: '#6E6B7B', accent: '#83537D', cardRadius: 0, onDark: false,
+  },
+  ink: {
+    stops: ['#26221C'], card: '#322D26', iconWell: '#3C362E', border: '#453F35',
+    text1: '#F5F0E4', text2: '#A79F8F', text3: '#A79F8F', accent: '#BF80A7', cardRadius: 0, onDark: true,
+  },
+  journal: {
+    stops: ['#F3EDDD'], card: '#FFFFFF', iconWell: '#EEEEEE', border: '#D1D1D1',
+    text1: '#2F2F30', text2: '#5F5E67', text3: '#6B6877', accent: '#83537D', cardRadius: 0, onDark: false,
+  },
+  gradient: {
+    stops: ['#6E3D5F', '#B4628F', '#E7A17A'],
+    card: 'rgba(46,25,40,0.55)', iconWell: 'rgba(46,25,40,0.40)', border: 'rgba(255,255,255,0.24)',
+    text1: '#FFFFFF', text2: 'rgba(255,255,255,0.78)', text3: '#43414B', accent: '#FFFFFF', cardRadius: 20, onDark: true,
+  },
+  night: {
+    stops: ['#0F1420'], card: '#171D2E', iconWell: '#1E2740', border: '#252D42',
+    text1: '#E8EAF2', text2: '#7B85A3', text3: '#7B85A3', accent: '#4C7BF0', cardRadius: 16, onDark: true,
+  },
+  mint: {
+    stops: ['#E9F6EF'], card: '#FFFFFF', iconWell: '#E3F1E9', border: '#CBE7D8',
+    text1: '#2F2F30', text2: '#5F5E67', text3: '#6E6B7B', accent: '#83537D', cardRadius: 22, onDark: false,
+  },
+  sun: {
+    stops: ['#FFE9C7', '#FFD3A0'], card: '#FFFDF8', iconWell: '#FDEFD8', border: '#F0C48C',
+    text1: '#2F2F30', text2: '#5F5E67', text3: '#605D6B', accent: '#83537D', cardRadius: 22, onDark: false,
+  },
+  minimal: {
+    stops: ['#FFFFFF'], card: '#FFFFFF', iconWell: '#F2F2F2', border: '#E6E6E6',
+    text1: '#2F2F30', text2: '#5F5E67', text3: '#6E6B7B', accent: '#83537D', cardRadius: 8, onDark: false,
+  },
+} as const;
+
+/** `BACKGROUND_GROUND` — the signed `background` field as grounds. */
+export const PageBackgroundGrounds = {
+  cream: '#F3EBDD', white: '#FFFFFF', mint: '#E9F6EF', rose: '#F6EAEA', ink: '#26221C',
+} as const;
+
+/** `.pub-avatar` ground (`--color-warm-cream` → `--color-gradient-cream`) and
+ *  the dark media plate behind a player facade. */
+export const PageChromeColors = {
+  avatarStops: ['#F3EBDD', '#F0EDF4'],
+  playerPlate: '#14161A',
+  playerInk: '#FFFFFF',
+  playerScrim: 'rgba(0,0,0,0.35)',
 } as const;
 
 /**
