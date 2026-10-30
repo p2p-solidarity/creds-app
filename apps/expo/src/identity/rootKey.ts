@@ -438,6 +438,9 @@ export async function hasRootKey(): Promise<boolean> {
   }
 }
 
+/** How long one root signer's authorization covers its own later signatures. */
+const ROOT_SIGNER_INTENT_MS = 60_000;
+
 /**
  * Face-ID-gated `Signer` for the root key (contract: `@solidarity/shared`'s
  * `Signer` — receives the 32-byte SHA-256 digest of the signing input,
@@ -473,9 +476,19 @@ export async function getRootSigner(): Promise<Result<Signer, RootKeyError>> {
     return err({ kind: 'invalidMnemonic', message: e instanceof Error ? e.message : String(e) });
   }
 
+  // One user intent = one `getRootSigner()` call (a Page save signs three
+  // projections; a Pear connection signs its handshake). The signer authorizes
+  // once and reuses that for its own next signatures for at most
+  // ROOT_SIGNER_INTENT_MS, so "ask every time" means every action, not every
+  // signature (Kidney, 2026-10-30). Scoped to this instance — another call
+  // site's signer, a red-line action or a later intent still gates itself.
+  let authorizedAt: number | null = null;
   const signer: Signer = async (digest: Uint8Array): Promise<Uint8Array> => {
-    const allowed = await activeBiometricGate('presentProof');
-    if (!allowed) throw new Error('biometric authentication required');
+    if (authorizedAt === null || Date.now() - authorizedAt > ROOT_SIGNER_INTENT_MS) {
+      const allowed = await activeBiometricGate('presentProof');
+      if (!allowed) throw new Error('biometric authentication required');
+      authorizedAt = Date.now();
+    }
     // `{ prehash: false }` — `digest` is already the single-SHA-256 RFC 7515
     // signing-input digest computed by `signCompact`; @noble/curves'
     // default (`prehash: true`) would hash it a second time (the exact bug
@@ -496,6 +509,27 @@ export async function revealMnemonicForExport(): Promise<Result<string, RootKeyE
   // RED LINE: the mnemonic IS the master secret, so this authenticates in
   // every gate mode, including `redLineOnly`.
   const allowed = await activeBiometricGate('revealRecoveryBundle');
+  if (!allowed) return err({ kind: 'biometricDenied' });
+  let mnemonic: string | null;
+  try {
+    mnemonic = await activeStorage.getMnemonic();
+  } catch (e) {
+    return err(toStorageError(e));
+  }
+  if (!mnemonic) return err({ kind: 'notProvisioned' });
+  return ok(mnemonic);
+}
+
+/**
+ * Internal derivation read for the Nostr publishing key. The phrase never
+ * reaches UI — the caller derives a scalar and drops it — and `getRootSigner`
+ * already reads the same mnemonic under this ACCESS-LEVEL gate for every
+ * signature, so gating it as the red-line reveal added a second, ungraced
+ * prompt (restored identity: reveal + Page sign in one tap) and no protection
+ * (Kidney, 2026-10-30). Showing the phrase stays `revealMnemonicForExport`.
+ */
+export async function readMnemonicForKeyDerivation(): Promise<Result<string, RootKeyError>> {
+  const allowed = await activeBiometricGate('presentProof');
   if (!allowed) return err({ kind: 'biometricDenied' });
   let mnemonic: string | null;
   try {
