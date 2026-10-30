@@ -330,7 +330,12 @@ export function AddLinkFlow({
                 setDraft((current) => ({ ...current, input }));
               }}
               inlinePrefix={inputModel.prefix}
-              placeholder={inputModel.handle ? t('profileLink.handlePlaceholder') : t('profileLink.urlPlaceholder')}
+              placeholder={
+                inputModel.handle
+                  // `threads.com/@` already carries the @ the placeholder starts with.
+                  ? t('profileLink.handlePlaceholder').replace(inputModel.prefix.endsWith('@') ? /^@/u : /^$/u, '')
+                  : t('profileLink.urlPlaceholder')
+              }
               error={inputError}
               autoFocus={!editing}
               showClear

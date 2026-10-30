@@ -30,7 +30,7 @@ type ThemeKey =
   | 'gradientCream' | 'blobCenter'
   | 'overlayBg' | 'popupSurface'
   | 'cardSurface' | 'cardBorder'
-  | 'terminalGreenText' | 'warningText' | 'focusRing';
+  | 'terminalGreenText' | 'warningText';
 
 export type ThemeColors = Readonly<Record<ThemeKey, string>> & {
   readonly invertedButtonBg: string;
@@ -57,7 +57,7 @@ const KEYS: readonly ThemeKey[] = [
   'bubbleOutgoing', 'bubbleIncoming', 'bubbleIncomingText',
   'heroGradientStart', 'heroGradientEnd',
   'gradientCream', 'blobCenter',
-  'overlayBg', 'popupSurface', 'focusRing',
+  'overlayBg', 'popupSurface',
   'cardSurface', 'cardBorder',
   'terminalGreenText', 'warningText',
 ];

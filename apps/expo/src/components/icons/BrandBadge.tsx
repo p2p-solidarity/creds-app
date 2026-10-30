@@ -21,6 +21,9 @@ import { SfIcon } from './SfIcon';
 
 export type BrandBadgeName = BrandIconName | 'maps' | 'form';
 
+/** Marks that sit on (near-)black and vanish into a dark sheet without an edge. */
+const NEAR_BLACK: ReadonlySet<string> = new Set([BrandColors.x.bg, BrandColors.github.bg]);
+
 type BrandColorKey = Exclude<keyof typeof BrandColors, 'edgeOnDark'>;
 
 function colorsFor(name: BrandBadgeName): (typeof BrandColors)[BrandColorKey] {
@@ -32,7 +35,7 @@ export function BrandBadge({ name, size = 44 }: { readonly name: BrandBadgeName;
   const c = useThemeColors();
   const colors = colorsFor(name);
   const glyph = Math.round(size * 0.48);
-  const edge = c.scheme === 'dark' && colors.bg === BrandColors.x.bg;
+  const edge = c.scheme === 'dark' && NEAR_BLACK.has(colors.bg);
   const mark = name === 'maps' || name === 'form'
     ? <SfIcon name={name === 'maps' ? 'mappin.and.ellipse' : 'list.bullet.clipboard'} size={glyph} color={colors.fg} weight="medium" />
     : <BrandIcon name={name} size={glyph} color={colors.fg} />;

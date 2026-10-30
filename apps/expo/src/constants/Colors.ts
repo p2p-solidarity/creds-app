@@ -127,9 +127,6 @@ const RAW = {
   invertedButtonBgDark: '#FBF9F2',
   invertedButtonText: '#FBF9F2',
   invertedButtonTextDark: '#060417',
-  /** `.field-input:focus-visible` ring — primary at 18%. */
-  focusRing: 'rgba(131,83,125,0.18)',
-  focusRingDark: 'rgba(191,128,167,0.22)',
 
   /** Accent rose — primary brand colour (Palette.purple #83537D mauve in dark). */
   accentRose: '#BF80A7',

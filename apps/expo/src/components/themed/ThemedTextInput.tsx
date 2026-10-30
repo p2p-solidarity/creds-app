@@ -20,7 +20,7 @@
  * Shape = creds.id's form row (`.land-row`, airmeishi-web global.css): one
  * bordered 48pt row at `--radius-field`, an optional icon well flush left
  * behind a divider (`icon` / `leading`), an inline mono prefix
- * (`creds.id/@`, `t.me/`) and the `.field-input:focus-visible` ring.
+ * (`creds.id/@`, `t.me/`) and the primary border of `.field-input:focus-visible`.
  * Technical text — URLs, handles, keys — is monospace, value and
  * placeholder alike, as on the web.
  *
@@ -177,6 +177,7 @@ export function ThemedTextInput({
   const [focused, setFocused] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const fontFamily = (mono ?? cfg.mono) === true ? MONO : textFont();
+  const focusInput = () => { inputRef.current?.focus(); };
 
   const trailing: ReactNode[] = [];
   if (cfg.secret) {
@@ -231,12 +232,11 @@ export function ThemedTextInput({
   return (
     <View style={{ gap: label ? 8 : 6 }}>
       {label ? <ThemedText variant="label">{label}</ThemedText> : null}
-      {/* The whole row is the hit area: a tap on the well or the prefix still
-          lands the caret in the field, as `.land-row`'s `cursor: text`. */}
-      <Pressable
-        accessible={false}
-        disabled={!editable}
-        onPress={() => { inputRef.current?.focus(); }}
+      {/* A tap on the well still lands the caret in the field (`.land-row`'s
+          `cursor: text`). Never wrap the input itself in a pressable, and
+          never change the row's shadow on focus: on device both left the
+          field unable to take focus (2026-10-30). Focus shows as the border. */}
+      <View
         style={{
           flexDirection: 'row',
           alignItems: multiline ? 'stretch' : 'center',
@@ -245,11 +245,12 @@ export function ThemedTextInput({
           borderColor,
           borderRadius: FIELD_RADIUS,
           backgroundColor: c.cardBg,
-          overflow: 'hidden',
-          boxShadow: focused && !error ? `0 0 0 3px ${c.focusRing}` : undefined,
         }}>
         {well ? (
-          <View
+          <Pressable
+            accessible={false}
+            disabled={!editable}
+            onPress={focusInput}
             style={{
               width: WELL_WIDTH,
               alignSelf: 'stretch',
@@ -261,7 +262,7 @@ export function ThemedTextInput({
               borderRightColor: c.divider,
             }}>
             {well}
-          </View>
+          </Pressable>
         ) : null}
         {inlinePrefix ? (
           <ThemedText
@@ -328,7 +329,7 @@ export function ThemedTextInput({
             {trailing}
           </View>
         ) : null}
-      </Pressable>
+      </View>
       {error ? (
         <ThemedText variant="caption" tone="error">
           {error}
