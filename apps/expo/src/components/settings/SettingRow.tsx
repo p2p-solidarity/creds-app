@@ -74,5 +74,5 @@ export interface ToggleRowProps {
 }
 
 export function ToggleRow({ label, value, onChange }: ToggleRowProps): ReactNode {
-  return <SettingRow label={label} trailing={<Switch value={value} onValueChange={onChange} />} />;
+  return <SettingRow label={label} trailing={<Switch value={value} onValueChange={onChange} style={{ alignSelf: 'center' }} />} />;
 }

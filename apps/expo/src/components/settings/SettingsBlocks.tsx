@@ -287,6 +287,7 @@ export function SettingsBlockToggleRow({
         ) : null}
       </View>
       <Switch
+        style={{ alignSelf: 'center' }}
         value={value}
         onValueChange={onValueChange}
         disabled={disabled}

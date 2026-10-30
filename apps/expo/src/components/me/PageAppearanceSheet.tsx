@@ -384,6 +384,7 @@ function FooterControls(): ReactNode {
       <View className="flex-row items-center justify-between">
         <ThemedText variant="bodyMedium">{t('pageDesign.showBrand')}</ThemedText>
         <Switch
+          style={{ alignSelf: 'center' }}
           value={appearance.showBrand}
           onValueChange={isPro ? (showBrand) => { setAppearance({ showBrand }); } : openUpgrade}
           accessibilityHint={isPro ? undefined : t('pageDesign.proControl')}

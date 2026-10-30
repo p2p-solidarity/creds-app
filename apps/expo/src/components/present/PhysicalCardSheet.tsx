@@ -203,7 +203,10 @@ function EngravingToggle({
       <ThemedText variant="bodyMedium" style={{ flex: 1 }}>
         {label}
       </ThemedText>
+      {/* RN's iOS Switch defaults to alignSelf 'flex-start', which beats the
+          row's items-center and pins it to the top of a 52-pt row. */}
       <Switch
+        style={{ alignSelf: 'center' }}
         accessibilityLabel={label}
         value={value}
         onValueChange={onValueChange}
