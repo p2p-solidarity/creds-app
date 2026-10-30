@@ -310,15 +310,15 @@ export const BrandColors = {
 export const PagePalettes = {
   cream: {
     stops: ['#FBF9F2'], card: '#FFFFFF', iconWell: '#EEEEEE', border: '#D1D1D1',
-    text1: '#2F2F30', text2: '#5F5E67', text3: '#6E6B7B', accent: '#83537D', cardRadius: 0, onDark: false,
+    text1: '#2F2F30', text2: '#5F5E67', text3: '#6E6B7B', accent: '#83537D', cardRadius: 12, onDark: false,
   },
   ink: {
     stops: ['#26221C'], card: '#322D26', iconWell: '#3C362E', border: '#453F35',
-    text1: '#F5F0E4', text2: '#A79F8F', text3: '#A79F8F', accent: '#BF80A7', cardRadius: 0, onDark: true,
+    text1: '#F5F0E4', text2: '#A79F8F', text3: '#A79F8F', accent: '#BF80A7', cardRadius: 12, onDark: true,
   },
   journal: {
     stops: ['#F3EDDD'], card: '#FFFFFF', iconWell: '#EEEEEE', border: '#D1D1D1',
-    text1: '#2F2F30', text2: '#5F5E67', text3: '#6B6877', accent: '#83537D', cardRadius: 0, onDark: false,
+    text1: '#2F2F30', text2: '#5F5E67', text3: '#6B6877', accent: '#83537D', cardRadius: 12, onDark: false,
   },
   gradient: {
     stops: ['#6E3D5F', '#B4628F', '#E7A17A'],

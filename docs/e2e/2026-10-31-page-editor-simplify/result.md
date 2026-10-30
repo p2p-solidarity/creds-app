@@ -15,5 +15,7 @@ iPhone 18 Pro simulator, dev client + Metro from `apps/expo` (hot reload, then a
 - 9-physical-card-sheet.png — 訂製實體卡 sheet: ✕ header, live card in the chosen material with only the engraving that is on, material chips, one grouped toggle list. 黃銅 repaints the card; set back to 不鏽鋼.
 - 10-empty-card-style.png — an empty 文字 block in 卡片 style now draws the card panel with the hint inside (was invisible, so 卡片 looked like no change). Cancelled without saving.
 
+- 11-rounded-page-cards.png — cream / ink / journal Page cards are 12px rounded (were 0), same change in airmeishi-web `pageAppearance.ts` (web typecheck + 239 tests green).
+
 ## Not run
 - 移除 from the sheet, the 6-section cap reached in the UI (cap covered by `pageDesign.test.ts`), dark mode, Android.
