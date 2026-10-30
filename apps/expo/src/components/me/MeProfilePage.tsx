@@ -182,6 +182,7 @@ export function MeProfilePage({
         visible={appearanceOpen}
         record={publicRecord}
         handle={pageHandle}
+        onEditAvatar={onEditAvatar}
         onClose={() => {
           setAppearanceOpen(false);
         }}

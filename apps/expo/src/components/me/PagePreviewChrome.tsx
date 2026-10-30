@@ -48,35 +48,38 @@ export function PagePreviewHeader({
 
   return (
     <View style={{ alignItems: 'center' }}>
-      {/* `.pub-avatar`: warm-cream → gradient-cream disc, a card-coloured ring. */}
-      <LinearGradient
-        colors={PageChromeColors.avatarStops}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={{
-          width: metrics.avatar,
-          height: metrics.avatar,
-          borderRadius: Radius.pill,
-          overflow: 'hidden',
-          alignItems: 'center',
-          justifyContent: 'center',
-          borderWidth: 3,
-          borderColor: palette.cardBg,
-          ...shadow('avatar'),
-        }}>
-        <ThemedText variant={headline} style={{ color: PagePalettes.cream.accent, fontFamily }}>
-          {(record.displayName.trim().charAt(0) || '?').toUpperCase()}
-        </ThemedText>
-        {avatarUrl ? (
-          <Image
-            source={{ uri: avatarUrl }}
-            contentFit="cover"
-            accessibilityLabel={record.displayName}
-            cachePolicy="memory-disk"
-            style={{ position: 'absolute', width: '100%', height: '100%' }}
-          />
-        ) : null}
-      </LinearGradient>
+      {/* `.pub-avatar`: warm-cream → gradient-cream disc, a card-coloured ring.
+          The shadow sits on a wrapper: on iOS a shadow on the clipping gradient
+          paints its square bounds behind the disc. */}
+      <View style={{ borderRadius: Radius.pill, ...shadow('avatar') }}>
+        <LinearGradient
+          colors={PageChromeColors.avatarStops}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{
+            width: metrics.avatar,
+            height: metrics.avatar,
+            borderRadius: metrics.avatar / 2,
+            overflow: 'hidden',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderWidth: 3,
+            borderColor: palette.cardBg,
+          }}>
+          <ThemedText variant={headline} style={{ color: PagePalettes.cream.accent, fontFamily }}>
+            {(record.displayName.trim().charAt(0) || '?').toUpperCase()}
+          </ThemedText>
+          {avatarUrl ? (
+            <Image
+              source={{ uri: avatarUrl }}
+              contentFit="cover"
+              accessibilityLabel={record.displayName}
+              cachePolicy="memory-disk"
+              style={{ position: 'absolute', width: '100%', height: '100%' }}
+            />
+          ) : null}
+        </LinearGradient>
+      </View>
 
       <ThemedText
         variant={headline}

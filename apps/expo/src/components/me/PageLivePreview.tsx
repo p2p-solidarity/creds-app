@@ -54,7 +54,7 @@ import {
 import { ThemedText } from '@/components/themed';
 
 /** The phone mock's screen corner — a device shape, not a UI surface role. */
-const PHONE_SCREEN_RADIUS = 24;
+export const PHONE_SCREEN_RADIUS = 24;
 
 export type { PageLivePreviewVariant } from './pagePreviewTheme';
 
