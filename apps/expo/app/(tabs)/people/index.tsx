@@ -28,6 +28,7 @@ import { TrustGraphContactRow } from '@/components/people/TrustGraphContactRow';
 import { LinkPageImportSheet, type LinkPageImportResult } from '@/components/profile/LinkPageImportSheet';
 import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
+import { useThemeColors } from '@/constants/useThemeColors';
 import { useTranslation } from '@/i18n';
 import { useContactStore, type ContactManifestEntry } from '@/contacts/repository';
 import { shareContactVCard } from '@/contacts/shareContactVCard';
@@ -371,6 +372,7 @@ function PeopleRow({
   readonly onLongPress: () => void;
   readonly onSwipeDelete: () => void;
 }) {
+  const c = useThemeColors();
   const inner = (
     <TrustGraphContactRow
       contact={contact}
@@ -385,6 +387,9 @@ function PeopleRow({
 
   return (
     <ReanimatedSwipeable
+      // The delete action fills the row from behind; an opaque row hides it
+      // until a swipe slides the row aside.
+      childrenContainerStyle={{ backgroundColor: c.pageBg }}
       friction={2}
       rightThreshold={48}
       overshootRight={false}
