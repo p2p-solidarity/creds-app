@@ -1,48 +1,54 @@
 /**
- * PageAddSheet — the Page tab's one "＋ 新增" menu. Links, sections and
- * attestations used to each carry their own add button (新增連結 / ＋ 新增區塊 /
- * ＋ 新增證明); the tab now has a single entry point, and this sheet sorts the
- * choice under the same labels the page itself uses (連結 / 區塊 / 證明), so
- * whatever you pick lands in the group of the same name.
+ * PageAddSheet — the Page tab's one "＋ 新增" sheet, laid out like Linktree's
+ * Add sheet: a paste-or-search field on top, a row of category tiles
+ * (連結 / 音樂 / 表單 / 證明), then 建議 — platforms as brand-coloured round
+ * badges with a one-line description — and the Page's section types.
  *
- * Shape: the mock's `#sh-addfield` (`creds-design/verified-linkinbio-mock-v3.html`)
- * — `.proof-sec` group labels over a 3-column `.tpl-grid` of icon tiles, with
- * the `.pro-tag` on a section only a Pro plan can add.
- *
- * Every choice runs only after the sheet's exit (`close(after)`): the next
- * screen never slides in over a sheet that is still leaving, and a second tap
- * during the exit is dropped by `close` instead of adding a section twice.
+ * Everything happens inside this one sheet: a platform opens the add-link flow
+ * on its handle field, a pasted URL is saved straight away (or offered as a
+ * player when it is Spotify / YouTube), music and forms get their own step
+ * (`PageEmbedFlow`). Only the choices that leave the Page tab — importing,
+ * the passport proof, the Pro screen — close the sheet first and run after
+ * its exit, so the next screen never slides in under a sheet still leaving.
  */
 import type { SFSymbol } from 'expo-symbols';
 import { router } from 'expo-router';
-import type { ReactNode } from 'react';
-import { ScrollView, View, useWindowDimensions } from 'react-native';
+import { useRef, useState, type ReactNode } from 'react';
+import { Platform, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ModalSheet } from '@/components/common/ModalSheet';
 import { PressableScale } from '@/components/common/PressableScale';
+import { BrandBadge, type BrandBadgeName } from '@/components/icons/BrandBadge';
 import { SfIcon } from '@/components/icons/SfIcon';
-import { ThemedSurface, ThemedText } from '@/components/themed';
-import { Colors } from '@/constants/Colors';
-import { useThemeColors } from '@/constants/useThemeColors';
+import { ThemedButton, ThemedText, ThemedTextInput } from '@/components/themed';
 import { Radius } from '@/constants/radius';
+import { useThemeColors } from '@/constants/useThemeColors';
+import { haptic } from '@/feedback/haptics';
 import { SCALE } from '@/feedback/motion';
-import { useTranslation } from '@/i18n';
+import { pushToast } from '@/feedback/toast';
+import { translate, useTranslation } from '@/i18n';
 import { MAX_PAGE_BLOCK_COUNT, PAGE_BLOCK_CATALOG, type PageBlockType } from '@/page/pageDesign';
 import { usePageDesignStore } from '@/page/pageDesignStore';
+import { classifyMediaUrl } from '@/page/richMedia';
+import { brandIconForLink, linkDisplay } from '@/profile/linkPresentation';
+import type { LinkLabelPreset } from '@/profile/linkUrl';
+import { applyPagePhoto, quickAddLink } from '@/profile/quickAddLink';
 import { useProGate } from '@/pro/useProGate';
 
+import { AddLinkFlow, SheetHeader, detectPasted, type AddLinkOutcome, type LinkSheetValue } from './AddLinkSheet';
+import { PageEmbedFlow, type EmbedKind } from './PageEmbedFlow';
 import { PageSectionLabel } from './PageSectionLabel';
-import { ICON_TILE_GLYPH, iconTileStyle } from './pageRowStyles';
-import { SlideUpSheet, type SheetClose } from './SlideUpSheet';
 
 type SectionType = Exclude<PageBlockType, 'links'>;
 
-/** `.tpl-grid` — three equal columns, 8pt apart. */
-const GRID_COLUMNS = 3;
-const GRID_GAP = 8;
+type Step =
+  | { readonly kind: 'menu' }
+  | { readonly kind: 'link'; readonly preset: LinkLabelPreset | null; readonly url: string | null }
+  | { readonly kind: 'embed'; readonly embed: EmbedKind; readonly url: string | null };
 
 const SECTION_ICON: Readonly<Record<SectionType, SFSymbol>> = {
-  text: 'doc.text',
+  text: 'text.quote',
   portfolio: 'photo',
   featured: 'sparkles',
   video: 'play.rectangle.fill',
@@ -51,68 +57,140 @@ const SECTION_ICON: Readonly<Record<SectionType, SFSymbol>> = {
   booking: 'calendar.badge.checkmark',
 };
 
-interface AddTile {
+/** One row of the list: a platform, a section type, or the import entry. */
+interface AddRow {
   readonly key: string;
-  readonly label: string;
-  readonly icon: SFSymbol;
-  /** Draw the PRO tag — only for a locked entry, never for a paying user. */
+  readonly title: string;
+  readonly description: string;
+  /** Extra words the search matches (host names, English names). */
+  readonly keywords: string;
+  readonly badge: BrandBadgeName | null;
+  readonly icon?: SFSymbol;
   readonly pro?: boolean;
   readonly disabled?: boolean;
-  readonly hint?: string;
   readonly onPress: () => void;
 }
+
+/** Linktree's "Suggested" order: the big social platforms first. */
+const SUGGESTED: readonly {
+  readonly key: string;
+  readonly badge: BrandBadgeName;
+  readonly keywords: string;
+  readonly target: { readonly preset: LinkLabelPreset | null } | { readonly embed: EmbedKind };
+}[] = [
+  { key: 'instagram', badge: 'instagram', keywords: 'instagram ig', target: { preset: 'instagram' } },
+  { key: 'x', badge: 'x', keywords: 'x twitter', target: { preset: 'x' } },
+  { key: 'threads', badge: 'threads', keywords: 'threads', target: { preset: 'threads' } },
+  { key: 'youtube', badge: 'youtube', keywords: 'youtube yt', target: { preset: 'youtube' } },
+  { key: 'tiktok', badge: 'tiktok', keywords: 'tiktok', target: { preset: 'tiktok' } },
+  { key: 'spotify', badge: 'spotify', keywords: 'spotify music', target: { embed: 'music' } },
+  { key: 'github', badge: 'github', keywords: 'github git', target: { preset: 'github' } },
+  { key: 'linkedin', badge: 'linkedin', keywords: 'linkedin', target: { preset: 'linkedin' } },
+  { key: 'telegram', badge: 'telegram', keywords: 'telegram tg', target: { preset: 'telegram' } },
+  { key: 'website', badge: 'globe', keywords: 'website web site url', target: { preset: 'website' } },
+  { key: 'maps', badge: 'maps', keywords: 'map maps google apple location', target: { preset: null } },
+];
 
 export interface PageAddSheetProps {
   readonly visible: boolean;
   readonly onClose: () => void;
-  readonly onAddLink: () => void;
   readonly onImportLinks: () => void;
   readonly onAddProof: () => void;
 }
 
-export function PageAddSheet({
-  visible,
-  onClose,
-  onAddLink,
-  onImportLinks,
-  onAddProof,
-}: PageAddSheetProps): ReactNode {
+export function PageAddSheet({ visible, onClose, onImportLinks, onAddProof }: PageAddSheetProps): ReactNode {
+  // A route to push once the sheet is gone. iOS reports the end of the
+  // dismissal (`onDismiss`); Android has no such event, so it runs at once.
+  const afterDismiss = useRef<(() => void) | null>(null);
+  const finish = (after?: () => void) => {
+    onClose();
+    if (after === undefined) return;
+    if (Platform.OS === 'ios') afterDismiss.current = after;
+    else after();
+  };
   return (
-    <SlideUpSheet visible={visible} onClose={onClose}>
-      {(close) => (
-        <PageAddSheetContent
-          close={close}
-          onAddLink={onAddLink}
-          onImportLinks={onImportLinks}
-          onAddProof={onAddProof}
-        />
-      )}
-    </SlideUpSheet>
+    <ModalSheet
+      visible={visible}
+      onRequestClose={onClose}
+      onDismiss={() => {
+        const run = afterDismiss.current;
+        afterDismiss.current = null;
+        run?.();
+      }}>
+      {visible ? <PageAddContent finish={finish} onImportLinks={onImportLinks} onAddProof={onAddProof} /> : null}
+    </ModalSheet>
   );
 }
 
-function PageAddSheetContent({
-  close,
-  onAddLink,
+function PageAddContent({
+  finish,
   onImportLinks,
   onAddProof,
 }: {
-  readonly close: SheetClose;
-  readonly onAddLink: () => void;
+  readonly finish: (after?: () => void) => void;
+  readonly onImportLinks: () => void;
+  readonly onAddProof: () => void;
+}): ReactNode {
+  const [step, setStep] = useState<Step>({ kind: 'menu' });
+  const toMenu = () => { setStep({ kind: 'menu' }); };
+
+  if (step.kind === 'link') {
+    return (
+      <AddLinkFlow
+        initialLink={null}
+        initialPreset={step.preset}
+        initialUrl={step.url}
+        onSave={saveLink}
+        onUseAvatar={applyPagePhoto}
+        onClose={() => { finish(); }}
+        onExit={toMenu}
+      />
+    );
+  }
+  if (step.kind === 'embed') {
+    return <PageEmbedFlow kind={step.embed} initialUrl={step.url} onBack={toMenu} onDone={() => { finish(); }} />;
+  }
+  return (
+    <AddMenu
+      finish={finish}
+      onPick={setStep}
+      onImportLinks={onImportLinks}
+      onAddProof={onAddProof}
+    />
+  );
+}
+
+/** Save a link at once (the Page tab's add-and-check flow). */
+async function saveLink(link: LinkSheetValue): Promise<AddLinkOutcome> {
+  const added = await quickAddLink({ label: link.label, url: link.url });
+  if (added.ok) {
+    haptic('success');
+    return { kind: 'saved', ...added.value };
+  }
+  if (added.error === 'duplicate') pushToast(translate('meEdit.linkSheet.duplicate'), 'warning');
+  else if (added.error === 'saveFailed') pushToast(translate('meEdit.saveFailed'), 'error');
+  return { kind: 'failed' };
+}
+
+function AddMenu({
+  finish,
+  onPick,
+  onImportLinks,
+  onAddProof,
+}: {
+  readonly finish: (after?: () => void) => void;
+  readonly onPick: (step: Step) => void;
   readonly onImportLinks: () => void;
   readonly onAddProof: () => void;
 }): ReactNode {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const { height: windowHeight } = useWindowDimensions();
+  const [query, setQuery] = useState('');
   const status = usePageDesignStore((state) => state.status);
   const blockCount = usePageDesignStore((state) => state.design.blocks.length);
   const addBlock = usePageDesignStore((state) => state.addBlock);
   const { locked } = useProGate();
 
-  // Sections can only be added to a design that has loaded, and never past
-  // the cap `addPageBlock` enforces — the tiles say so instead of silently
-  // doing nothing.
   const sectionsFull = blockCount >= MAX_PAGE_BLOCK_COUNT;
   const sectionsUnavailable = status !== 'ready' || sectionsFull;
   const sectionsNote = status === 'loading'
@@ -123,162 +201,259 @@ function PageAddSheetContent({
         ? t('pageAdd.sectionsFull', { count: MAX_PAGE_BLOCK_COUNT })
         : null;
 
-  const linkTiles: readonly AddTile[] = [
-    {
-      key: 'link',
-      label: t('meHome.addLink'),
-      icon: 'link',
-      onPress: () => { close(onAddLink); },
-    },
+  const suggested: readonly AddRow[] = [
+    ...SUGGESTED.map((entry) => ({
+      key: entry.key,
+      title: t(`pageAdd.platform.${entry.key}`),
+      description: t(`pageAdd.platformDesc.${entry.key}`),
+      keywords: entry.keywords,
+      badge: entry.badge,
+      onPress: () => {
+        onPick('embed' in entry.target
+          ? { kind: 'embed', embed: entry.target.embed, url: null }
+          : { kind: 'link', preset: entry.target.preset, url: null });
+      },
+    })),
     {
       key: 'import',
-      label: t('mePage.importLinks'),
-      icon: 'square.and.arrow.down',
-      onPress: () => { close(onImportLinks); },
+      title: t('mePage.importLinks'),
+      description: t('pageAdd.platformDesc.import'),
+      keywords: 'import linktree lit.link',
+      badge: 'linktree',
+      onPress: () => { finish(onImportLinks); },
     },
   ];
 
-  const sectionTiles: readonly AddTile[] = PAGE_BLOCK_CATALOG.flatMap((entry) => {
+  const sections: readonly AddRow[] = PAGE_BLOCK_CATALOG.flatMap((entry) => {
     if (entry.type === 'links') return [];
     const type: SectionType = entry.type;
     const label = t(`pageDesign.block.${type}`);
     const entryLocked = locked(entry.pro);
     return [{
       key: type,
-      label,
+      title: label,
+      description: t(`pageAdd.blockDesc.${type}`),
+      keywords: entry.defaultTitle,
+      badge: null,
       icon: SECTION_ICON[type],
       pro: entryLocked,
       disabled: sectionsUnavailable,
-      ...(entryLocked ? { hint: t('pageDesign.proControl') } : {}),
       onPress: () => {
         if (entryLocked) {
-          close(() => { router.push('/settings/pro'); });
+          finish(() => { router.push('/settings/pro'); });
           return;
         }
-        close(() => { addBlock(type, label); });
+        if (addBlock(type, label) !== null) {
+          haptic('success');
+          pushToast(t('pageAdd.addedToDraft'), 'success');
+        }
+        finish();
       },
     }];
   });
 
-  const proofTiles: readonly AddTile[] = [
-    {
-      key: 'proof',
-      label: t('mePage.createProof'),
-      icon: 'checkmark.shield',
-      onPress: () => { close(onAddProof); },
-    },
-  ];
+  const trimmed = query.trim();
+  const pasted = trimmed.includes('.') ? detectPasted(trimmed) : null;
+  const pastedMedia = pasted === null ? null : classifyMediaUrl(pasted.url);
+  const needle = trimmed.toLowerCase();
+  const matches = (row: AddRow) =>
+    `${row.title} ${row.description} ${row.keywords}`.toLowerCase().includes(needle);
+  const shownSuggested = needle.length === 0 ? suggested : suggested.filter(matches);
+  const shownSections = needle.length === 0 ? sections : sections.filter(matches);
 
   return (
-    <ThemedSurface
-      variant="elevated"
-      className="px-4 pt-5"
-      style={{ maxHeight: windowHeight - Math.max(insets.top, 12) }}>
-      <View className="flex-row items-start gap-3">
-        <ThemedText variant="titleLarge" className="flex-1 pt-2">
-          {t('pageAdd.title')}
-        </ThemedText>
-        <PressableScale
-          haptic="tap"
-          scaleTo={SCALE.icon}
-          onPress={() => { close(); }}
-          accessibilityRole="button"
-          accessibilityLabel={t('common.close')}
-          style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
-          <SfIcon name="xmark" size={16} color={Colors.text1} />
-        </PressableScale>
-      </View>
-
+    <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
+      <SheetHeader title={t('pageAdd.title')} canGoBack={false} onClose={() => { finish(); }} />
       <ScrollView
-        style={{ flexShrink: 1 }}
-        contentContainerStyle={{
-          gap: 20,
-          paddingTop: 12,
-          paddingBottom: Math.max(insets.bottom, 16),
-        }}
-        showsVerticalScrollIndicator={false}
-        alwaysBounceVertical={false}>
-        <AddGroup title={t('mePage.links')} tiles={linkTiles} />
-        <AddGroup title={t('mePage.sections')} note={sectionsNote} tiles={sectionTiles} />
-        <AddGroup title={t('mePage.attestations')} tiles={proofTiles} />
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 24, gap: 22 }}>
+        <ThemedTextInput
+          value={query}
+          onChangeText={setQuery}
+          icon="magnifyingglass"
+          placeholder={t('pageAdd.searchPlaceholder')}
+          autoCapitalize="none"
+          autoCorrect={false}
+          showPaste
+          showClear
+          returnKeyType="search"
+        />
+
+        {pasted !== null ? (
+          <View style={{ gap: 8 }}>
+            <PageSectionLabel title={t('pageAdd.pasted')} />
+            <ListRow
+              row={{
+                key: 'pasted-link',
+                title: linkDisplay(pasted.label, pasted.url).text,
+                description: t('pageAdd.addAsLink'),
+                keywords: '',
+                badge: brandIconForLink(pasted.label, pasted.url),
+                onPress: () => { onPick({ kind: 'link', preset: null, url: pasted.url }); },
+              }}
+            />
+            {pastedMedia !== null ? (
+              <ListRow
+                row={{
+                  key: 'pasted-player',
+                  title: t('pageAdd.embedPlayer'),
+                  description: t(pastedMedia.kind === 'spotify' ? 'pageAdd.embedPlayerSpotify' : 'pageAdd.embedPlayerYoutube'),
+                  keywords: '',
+                  badge: pastedMedia.kind === 'spotify' ? 'spotify' : 'youtube',
+                  onPress: () => { onPick({ kind: 'embed', embed: 'music', url: pasted.url }); },
+                }}
+              />
+            ) : null}
+          </View>
+        ) : null}
+
+        {needle.length === 0 ? (
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <CategoryTile icon="link" label={t('pageAdd.tile.link')} onPress={() => { onPick({ kind: 'link', preset: null, url: null }); }} />
+            <CategoryTile icon="music.note" label={t('pageAdd.tile.music')} onPress={() => { onPick({ kind: 'embed', embed: 'music', url: null }); }} />
+            <CategoryTile icon="list.bullet.clipboard" label={t('pageAdd.tile.form')} onPress={() => { onPick({ kind: 'embed', embed: 'form', url: null }); }} />
+            <CategoryTile icon="checkmark.shield" label={t('pageAdd.tile.proof')} onPress={() => { finish(onAddProof); }} />
+          </View>
+        ) : null}
+
+        {shownSuggested.length > 0 && pasted === null ? (
+          <RowGroup title={t('pageAdd.suggested')} rows={shownSuggested} />
+        ) : null}
+        {shownSections.length > 0 && pasted === null ? (
+          <RowGroup title={t('mePage.sections')} note={sectionsNote} rows={shownSections} />
+        ) : null}
+
+        {pasted === null && needle.length > 0 && shownSuggested.length === 0 && shownSections.length === 0 ? (
+          <View style={{ gap: 12, alignItems: 'flex-start' }}>
+            <ThemedText variant="bodyMedium" tone="secondary">{t('pageAdd.noResults', { query: trimmed })}</ThemedText>
+            <ThemedButton
+              label={t('pageAdd.tile.link')}
+              icon="link"
+              variant="secondary"
+              size="sm"
+              onPress={() => { onPick({ kind: 'link', preset: null, url: null }); }}
+            />
+          </View>
+        ) : null}
       </ScrollView>
-    </ThemedSurface>
+    </View>
   );
 }
 
-function AddGroup({
+/** Linktree's category square: a tinted tile with the glyph, label below. */
+function CategoryTile({
+  icon,
+  label,
+  onPress,
+}: {
+  readonly icon: SFSymbol;
+  readonly label: string;
+  readonly onPress: () => void;
+}): ReactNode {
+  const c = useThemeColors();
+  return (
+    <PressableScale
+      fill
+      haptic="tap"
+      scaleTo={SCALE.tile}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={{ flex: 1, alignItems: 'center', gap: 8 }}>
+      <View
+        style={{
+          alignSelf: 'stretch',
+          aspectRatio: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderRadius: Radius.card,
+          borderWidth: 1,
+          borderColor: c.divider,
+          backgroundColor: c.cardBg,
+        }}>
+        <SfIcon name={icon} size={26} color={c.primaryBlue} weight="medium" />
+      </View>
+      <ThemedText variant="bodySmall" numberOfLines={1} style={{ textAlign: 'center' }}>
+        {label}
+      </ThemedText>
+    </PressableScale>
+  );
+}
+
+function RowGroup({
   title,
   note = null,
-  tiles,
+  rows,
 }: {
   readonly title: string;
   readonly note?: string | null;
-  readonly tiles: readonly AddTile[];
+  readonly rows: readonly AddRow[];
 }): ReactNode {
-  const rows: (readonly AddTile[])[] = [];
-  for (let start = 0; start < tiles.length; start += GRID_COLUMNS) {
-    rows.push(tiles.slice(start, start + GRID_COLUMNS));
-  }
   return (
-    <View style={{ gap: 8 }}>
+    <View style={{ gap: 4 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <View style={{ flex: 1 }}>
           <PageSectionLabel title={title} />
         </View>
         {note !== null ? (
-          <ThemedText variant="caption" tone="tertiary" numberOfLines={1}>
-            {note}
-          </ThemedText>
+          <ThemedText variant="caption" tone="tertiary" numberOfLines={1}>{note}</ThemedText>
         ) : null}
       </View>
-      <View style={{ gap: GRID_GAP }}>
-        {rows.map((row) => (
-          // Rows stretch, so a label that wraps to two lines keeps every tile
-          // beside it the same height; spacers hold a short last row to the
-          // same column widths as the rows above it.
-          <View key={row.map((tile) => tile.key).join('|')} style={{ flexDirection: 'row', gap: GRID_GAP }}>
-            {row.map((tile) => <AddTileButton key={tile.key} tile={tile} />)}
-            {Array.from({ length: GRID_COLUMNS - row.length }, (_, index) => (
-              <View key={`spacer-${String(index)}`} style={{ flex: 1 }} />
-            ))}
-          </View>
-        ))}
-      </View>
+      {rows.map((row, index) => <ListRow key={row.key} row={row} divided={index < rows.length - 1} />)}
     </View>
   );
 }
 
-function AddTileButton({ tile }: { readonly tile: AddTile }): ReactNode {
+/** Badge, title, one-line description; a hairline under every row but the last. */
+function ListRow({ row, divided = false }: { readonly row: AddRow; readonly divided?: boolean }): ReactNode {
   const c = useThemeColors();
-  const disabled = tile.disabled === true;
+  const disabled = row.disabled === true;
   return (
     <PressableScale
-      fill
-      scaleTo={SCALE.tile}
       haptic={disabled ? false : 'tap'}
       disabled={disabled}
-      onPress={tile.onPress}
+      onPress={row.onPress}
       accessibilityRole="button"
-      accessibilityLabel={tile.pro ? `${tile.label}, PRO` : tile.label}
-      accessibilityHint={tile.hint}
+      accessibilityLabel={row.pro ? `${row.title}, PRO` : row.title}
+      accessibilityHint={row.description}
       accessibilityState={{ disabled }}
-      className="items-center border border-divider bg-cardBg px-1 pb-2.5 pt-3"
-      style={{ flexGrow: 1, gap: 6, opacity: disabled ? 0.4 : 1 }}>
-      <View style={iconTileStyle(c.chipSurface)}>
-        <SfIcon name={tile.icon} size={ICON_TILE_GLYPH} color={Colors.primaryBlue} />
-      </View>
-      <ThemedText variant="caption" numberOfLines={2} style={{ textAlign: 'center' }}>
-        {tile.label}
-      </ThemedText>
-      {tile.pro ? (
+      style={{ flexDirection: 'row', alignItems: 'center', gap: 14, opacity: disabled ? 0.4 : 1 }}>
+      {row.badge !== null ? (
+        <BrandBadge name={row.badge} size={44} />
+      ) : (
         <View
-          className="bg-chipSurface"
-          style={{ position: 'absolute', top: 6, right: 6, paddingHorizontal: 6, borderRadius: Radius.pill }}>
-          <ThemedText variant="caption" style={{ color: Colors.primaryBlue, letterSpacing: 0.6 }}>
-            PRO
-          </ThemedText>
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: Radius.pill,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: c.chipSurface,
+          }}>
+          {row.icon ? <SfIcon name={row.icon} size={20} color={c.primaryBlue} /> : null}
         </View>
-      ) : null}
+      )}
+      <View
+        style={{
+          flex: 1,
+          gap: 2,
+          alignSelf: 'stretch',
+          justifyContent: 'center',
+          paddingVertical: 14,
+          borderBottomWidth: divided ? 1 : 0,
+          borderBottomColor: c.divider,
+        }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <ThemedText variant="titleMedium" numberOfLines={1} style={{ flexShrink: 1 }}>{row.title}</ThemedText>
+          {row.pro ? (
+            <View style={{ paddingHorizontal: 6, borderRadius: Radius.pill, backgroundColor: c.chipSurface }}>
+              <ThemedText variant="caption" style={{ color: c.primaryBlue, letterSpacing: 0.6 }}>PRO</ThemedText>
+            </View>
+          ) : null}
+        </View>
+        <ThemedText variant="bodySmall" tone="secondary" numberOfLines={1}>{row.description}</ThemedText>
+      </View>
     </PressableScale>
   );
 }

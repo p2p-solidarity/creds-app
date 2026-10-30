@@ -85,3 +85,19 @@ export async function applyPagePhoto(picture: string): Promise<boolean> {
   publishInBackground();
   return true;
 }
+
+/** Rewrite the Page's bio in place (the Page tab's bio sheet): one signature,
+ *  same publish rule as adding a link. */
+export async function saveBio(bio: string): Promise<boolean> {
+  const { record, linkVisibility, saveProfile } = useProfileStore.getState();
+  if (record === null) return false;
+  const next = bio.trim();
+  if (next === record.bio) return true;
+  const saved = await saveProfile(
+    { displayName: record.displayName, bio: next, links: record.links, linkVisibility },
+    {},
+  );
+  if (!saved.ok) return false;
+  publishInBackground();
+  return true;
+}

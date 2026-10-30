@@ -82,7 +82,8 @@ interface PageDesignState {
   readonly status: PageDesignStatus;
   readonly error: string | null;
   readonly design: PageDesign;
-  readonly addBlock: (type: Exclude<PageBlockType, 'links'>, title?: string) => void;
+  /** Returns the new block's id, or `null` when the design is full / unsaved. */
+  readonly addBlock: (type: Exclude<PageBlockType, 'links'>, title?: string) => string | null;
   readonly updateBlock: (
     id: string,
     patch: Partial<Pick<PageBlock, 'title' | 'items' | 'style'>>
@@ -133,7 +134,9 @@ export const usePageDesignStore = create<PageDesignState>((set, get) => {
   return {
     ...INITIAL_STATE,
     addBlock: (type, title) => {
-      commit(addPageBlock(get().design, type, uuid(), title));
+      const id = uuid();
+      commit(addPageBlock(get().design, type, id, title));
+      return get().design.blocks.some((block) => block.id === id) ? id : null;
     },
     updateBlock: (id, patch) => {
       commit(updatePageBlock(get().design, id, patch));

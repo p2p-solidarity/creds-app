@@ -18,7 +18,7 @@
 import * as Clipboard from 'expo-clipboard';
 import { Image } from 'expo-image';
 import type { ReactNode } from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
@@ -26,7 +26,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ModalSheet } from '@/components/common/ModalSheet';
 import { PressableScale } from '@/components/common/PressableScale';
-import { BrandIcon } from '@/components/icons/BrandIcon';
+import { BrandBadge } from '@/components/icons/BrandBadge';
 import { LinkIcon } from '@/components/icons/LinkIcon';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedButton, ThemedSurface, ThemedText, ThemedTextInput } from '@/components/themed';
@@ -131,7 +131,7 @@ function detailsUrl(preset: LinkLabelPreset | null, input: string): string {
 }
 
 /** A pasted value only counts as a link when it names a real host. */
-function detectPasted(input: string): ReturnType<typeof detectLinkFromUrl> {
+export function detectPasted(input: string): ReturnType<typeof detectLinkFromUrl> {
   const detected = detectLinkFromUrl(input);
   if (detected === null) return null;
   try {
@@ -149,23 +149,45 @@ function checkTargetFor(url: string): SocialTarget | null {
 export function AddLinkSheet(props: AddLinkSheetProps): ReactNode {
   return (
     <ModalSheet visible={props.visible} onRequestClose={props.onClose}>
-      {props.visible ? <AddLinkSheetContent {...props} /> : null}
+      {props.visible ? <AddLinkFlow {...props} /> : null}
     </ModalSheet>
   );
 }
 
-function AddLinkSheetContent({
+export interface AddLinkFlowProps extends Omit<AddLinkSheetProps, 'visible'> {
+  /** Start on this platform's handle field (the Page add sheet's 建議 rows). */
+  readonly initialPreset?: LinkLabelPreset | null;
+  /** A URL already pasted in the Page add sheet: saved at once when `onSave` is set. */
+  readonly initialUrl?: string | null;
+  /** Back from the first step to whatever hosts the flow (the Page add sheet). */
+  readonly onExit?: () => void;
+}
+
+/** The add/edit-link flow without its modal, so the Page tab's one add sheet
+ *  can host it as a step. */
+export function AddLinkFlow({
   initialLink,
+  initialPreset = null,
+  initialUrl = null,
   onSubmit,
   onSave,
   onUseAvatar,
   onClose,
-}: Omit<AddLinkSheetProps, 'visible'>): ReactNode {
+  onExit,
+}: AddLinkFlowProps): ReactNode {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const editing = initialLink !== null;
-  const [step, setStep] = useState<Step>(editing ? { kind: 'details' } : { kind: 'compose' });
-  const [draft, setDraft] = useState<Draft>(() => initialDraft(initialLink));
+  const [step, setStep] = useState<Step>(
+    editing || initialPreset !== null ? { kind: 'details' } : { kind: 'compose' },
+  );
+  const [draft, setDraft] = useState<Draft>(() =>
+    initialLink === null && initialPreset !== null
+      ? { preset: initialPreset, input: '', label: '', visibility: 'public' }
+      : initialLink === null && initialUrl !== null
+        ? { preset: null, input: initialUrl, label: '', visibility: 'public' }
+        : initialDraft(initialLink),
+  );
   const clipboardUrl = useClipboardLink(step.kind === 'compose' && draft.input.length === 0);
 
   const detected = step.kind === 'compose' ? detectPasted(draft.input) : null;
@@ -217,9 +239,22 @@ function AddLinkSheetContent({
   };
 
   const backToCompose = () => {
+    if (onExit !== undefined) {
+      onExit();
+      return;
+    }
     setDraft({ preset: null, input: '', label: '', visibility: 'public' });
     setStep({ kind: 'compose' });
   };
+
+  // A URL pasted into the Page add sheet was already the owner's choice:
+  // save it straight away instead of asking for the same tap twice.
+  const autoSubmitted = useRef(false);
+  useEffect(() => {
+    if (autoSubmitted.current || initialUrl === null || onSave === undefined) return;
+    autoSubmitted.current = true;
+    submit();
+  }, []);
 
   const inputModel = linkInputModelFor(draft.preset);
 
@@ -227,7 +262,7 @@ function AddLinkSheetContent({
     <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
       <SheetHeader
         title={t(editing ? 'meEdit.linkSheet.editTitle' : step.kind === 'added' ? 'meEdit.linkSheet.addedTitle' : 'meEdit.linkSheet.addTitle')}
-        canGoBack={!editing && step.kind === 'details'}
+        canGoBack={!editing && (step.kind === 'details' || (onExit !== undefined && step.kind === 'compose'))}
         onBack={backToCompose}
         onClose={onClose}
       />
@@ -440,13 +475,14 @@ function PlatformGrid({ onChoose }: { readonly onChoose: (preset: LinkLabelPrese
                 alignItems: 'center',
                 gap: 8,
                 minHeight: 44,
-                paddingHorizontal: 14,
+                paddingLeft: 9,
+                paddingRight: 14,
                 borderRadius: Radius.button,
                 borderWidth: 1,
                 borderColor: c.divider,
                 backgroundColor: c.cardBg,
               }}>
-              <BrandIcon name={brandIconForLink(preset, '')} size={16} color={Colors.primaryBlue} />
+              <BrandBadge name={brandIconForLink(preset, '')} size={26} />
               <ThemedText variant="bodyMedium">{label}</ThemedText>
             </PressableScale>
           );
@@ -568,7 +604,7 @@ function AvatarRow({
   );
 }
 
-function SheetHeader({
+export function SheetHeader({
   title,
   canGoBack,
   onBack,
@@ -576,7 +612,7 @@ function SheetHeader({
 }: {
   readonly title: string;
   readonly canGoBack: boolean;
-  readonly onBack: () => void;
+  readonly onBack?: () => void;
   readonly onClose: () => void;
 }): ReactNode {
   const { t } = useTranslation();

@@ -87,10 +87,8 @@ export interface ProfileLinksListProps {
   readonly links: readonly ProfileLink[];
   readonly linkVisibility: readonly LinkVisibility[];
   readonly onEdit: () => void;
-  /** Opens the shared add-link sheet — the Page's first, most common action. */
-  readonly onAddLink: () => void;
-  /** Opens the "＋ 新增" sheet for sections and attestations. */
-  readonly onAddMore: () => void;
+  /** Opens the Page's one "＋ 新增" sheet (links, music, forms, sections, proofs). */
+  readonly onAdd: () => void;
   readonly onImportLinks?: () => void;
 }
 
@@ -98,8 +96,7 @@ export function ProfileLinksList({
   links,
   linkVisibility,
   onEdit,
-  onAddLink,
-  onAddMore,
+  onAdd,
   onImportLinks,
 }: ProfileLinksListProps): ReactNode {
   const { t } = useTranslation();
@@ -176,25 +173,10 @@ export function ProfileLinksList({
   const verifyTargetFor = (link: ProfileLink): SocialTarget | null =>
     canProve && record !== null && pillFor(link) === null ? socialTargetForLink(link.url) : null;
 
-  // Adding a link is the Page's main action, so it leads the list (Linktree's
-  // big "+ Add"); sections and attestations share the quieter button below.
-  const addLinkAction = (
-    <ThemedButton
-      label={t('mePage.addLink')}
-      leadingIcon={<SfIcon name="plus" size={15} color={c.pageBg} />}
-      haptic="tap"
-      fullWidth
-      onPress={onAddLink}
-    />
-  );
-  const addMoreAction = (
-    <ThemedButton
-      label={t('mePage.addMore')}
-      variant="secondary"
-      haptic="tap"
-      fullWidth
-      onPress={onAddMore}
-    />
+  // Linktree's one big "+ Add": links, music, forms, sections and proofs all
+  // start from the same sheet.
+  const addAction = (
+    <ThemedButton label={t('mePage.add')} icon="plus" haptic="tap" fullWidth onPress={onAdd} />
   );
 
   if (links.length === 0) {
@@ -203,7 +185,7 @@ export function ProfileLinksList({
         <PageEmptyState
           title={t('mePage.noLinks')}
           message={t('mePage.noLinksHint')}
-          action={addLinkAction}
+          action={addAction}
           {...(onImportLinks
             ? { secondaryAction: { label: t('mePage.importLinks'), onPress: onImportLinks } }
             : {})}
@@ -214,12 +196,7 @@ export function ProfileLinksList({
 
   return (
     <View className="gap-5 px-4">
-      {/* Linktree's pair: the quieter "＋ 新增" (sections, attestations) beside
-          the main "＋ 新增連結". */}
-      <View style={{ flexDirection: 'row', gap: 10 }}>
-        <View style={{ flex: 1 }}>{addMoreAction}</View>
-        <View style={{ flex: 1 }}>{addLinkAction}</View>
-      </View>
+      {addAction}
       <LinkRowsSection
         title={t('mePage.publicPage')}
         entries={sections.publicLinks}

@@ -7,6 +7,7 @@ import { useWindowDimensions, View } from 'react-native';
 import { CopyableAddress } from '@/components/common/CopyableAddress';
 import { PressableScale } from '@/components/common/PressableScale';
 import { BrandIcon } from '@/components/icons/BrandIcon';
+import { SfIcon } from '@/components/icons/SfIcon';
 import { brandIconForHost } from '@/profile/linkPresentation';
 import { ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
@@ -15,6 +16,7 @@ import { resolveProfileAvatarSource } from '@/profile/avatar';
 import { readLocalAvatarUri } from '@/profile/localAvatar';
 import type { ProfileRecord } from '@solidarity/shared';
 
+import { PageBioSheet } from './PageBioSheet';
 import { PageHeaderAction, PageHeaderActions } from './PageHeaderAction';
 import { pageHeaderLayout } from './pageHeaderLayout';
 import { ProfileShareSurface } from './ProfileShareSurface';
@@ -50,6 +52,7 @@ export function ProfileHero({
   const { width, fontScale } = useWindowDimensions();
   const layout = pageHeaderLayout(width, fontScale);
   const [localAvatar, setLocalAvatar] = useState(readLocalAvatarUri);
+  const [bioOpen, setBioOpen] = useState(false);
   const shareSelection = useProfileShareSelection(
     shareRecord,
     shareJws,
@@ -122,6 +125,30 @@ export function ProfileHero({
           />
         ) : null}
       </View>
+
+      {/* The bio, under the name like the visitor page's `.pub-bio`; a tap
+          edits it in place. No bio yet → one quiet invitation. */}
+      <PressableScale
+        haptic="tap"
+        onPress={() => { setBioOpen(true); }}
+        accessibilityRole="button"
+        accessibilityLabel={record.bio.length > 0 ? t('pageBio.edit') : t('pageBio.add')}
+        style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+        {record.bio.length > 0 ? (
+          <ThemedText variant="bodyMedium" tone="secondary" numberOfLines={3} style={{ flex: 1 }}>
+            {record.bio}
+          </ThemedText>
+        ) : (
+          <>
+            <SfIcon name="plus" size={13} color={Colors.primaryBlue} />
+            <ThemedText variant="bodyMedium" style={{ color: Colors.primaryBlue, flex: 1 }}>
+              {t('pageBio.add')}
+            </ThemedText>
+          </>
+        )}
+        {record.bio.length > 0 ? <SfIcon name="pencil" size={13} color={Colors.text3} /> : null}
+      </PressableScale>
+      <PageBioSheet visible={bioOpen} bio={record.bio} onClose={() => { setBioOpen(false); }} />
 
       {layout === 'stacked' ? (
         <View className="flex-row justify-end">
