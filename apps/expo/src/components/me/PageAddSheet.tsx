@@ -11,6 +11,9 @@
  * (`PageEmbedFlow`). Only the choices that leave the Page tab — importing,
  * the passport proof, the Pro screen — close the sheet first and run after
  * its exit, so the next screen never slides in under a sheet still leaving.
+ *
+ * `scope="sections"` is the same sheet opened from the 區塊 group's ＋: only
+ * the special objects (players, forms, section types), never plain links.
  */
 import type { SFSymbol } from 'expo-symbols';
 import { router } from 'expo-router';
@@ -24,7 +27,7 @@ import { ThemedButton, ThemedText, ThemedTextInput } from '@/components/themed';
 import { haptic } from '@/feedback/haptics';
 import { pushToast } from '@/feedback/toast';
 import { translate, useTranslation } from '@/i18n';
-import { MAX_PAGE_BLOCK_COUNT, PAGE_BLOCK_CATALOG, type PageBlockType } from '@/page/pageDesign';
+import { MAX_PAGE_SECTIONS, PAGE_BLOCK_CATALOG, pageSectionCount, type PageBlockType } from '@/page/pageDesign';
 import { usePageDesignStore } from '@/page/pageDesignStore';
 import { classifyMediaUrl } from '@/page/richMedia';
 import { brandIconForLink, linkDisplay } from '@/profile/linkPresentation';
@@ -79,9 +82,13 @@ export interface PageAddSheetProps {
   readonly onClose: () => void;
   readonly onImportLinks: () => void;
   readonly onAddProof: () => void;
+  /** `sections` lists only the Page's special objects (the 區塊 ＋). */
+  readonly scope?: AddScope;
 }
 
-export function PageAddSheet({ visible, onClose, onImportLinks, onAddProof }: PageAddSheetProps): ReactNode {
+type AddScope = 'all' | 'sections';
+
+export function PageAddSheet({ visible, onClose, onImportLinks, onAddProof, scope = 'all' }: PageAddSheetProps): ReactNode {
   // A route to push once the sheet is gone. iOS reports the end of the
   // dismissal (`onDismiss`); Android has no such event, so it runs at once.
   const afterDismiss = useRef<(() => void) | null>(null);
@@ -100,7 +107,9 @@ export function PageAddSheet({ visible, onClose, onImportLinks, onAddProof }: Pa
         afterDismiss.current = null;
         run?.();
       }}>
-      {visible ? <PageAddContent finish={finish} onImportLinks={onImportLinks} onAddProof={onAddProof} /> : null}
+      {visible ? (
+        <PageAddContent finish={finish} onImportLinks={onImportLinks} onAddProof={onAddProof} scope={scope} />
+      ) : null}
     </ModalSheet>
   );
 }
@@ -109,10 +118,12 @@ function PageAddContent({
   finish,
   onImportLinks,
   onAddProof,
+  scope,
 }: {
   readonly finish: (after?: () => void) => void;
   readonly onImportLinks: () => void;
   readonly onAddProof: () => void;
+  readonly scope: AddScope;
 }): ReactNode {
   const [step, setStep] = useState<Step>({ kind: 'menu' });
   const toMenu = () => { setStep({ kind: 'menu' }); };
@@ -139,6 +150,7 @@ function PageAddContent({
       onPick={setStep}
       onImportLinks={onImportLinks}
       onAddProof={onAddProof}
+      scope={scope}
     />
   );
 }
@@ -160,28 +172,30 @@ function AddMenu({
   onPick,
   onImportLinks,
   onAddProof,
+  scope,
 }: {
   readonly finish: (after?: () => void) => void;
   readonly onPick: (step: Step) => void;
   readonly onImportLinks: () => void;
   readonly onAddProof: () => void;
+  readonly scope: AddScope;
 }): ReactNode {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
   const status = usePageDesignStore((state) => state.status);
-  const blockCount = usePageDesignStore((state) => state.design.blocks.length);
+  const blockCount = usePageDesignStore((state) => pageSectionCount(state.design.blocks));
   const addBlock = usePageDesignStore((state) => state.addBlock);
   const { locked } = useProGate();
 
-  const sectionsFull = blockCount >= MAX_PAGE_BLOCK_COUNT;
+  const sectionsFull = blockCount >= MAX_PAGE_SECTIONS;
   const sectionsUnavailable = status !== 'ready' || sectionsFull;
   const sectionsNote = status === 'loading'
     ? t('pageDesign.loading')
     : status === 'error'
       ? t('pageDesign.loadError')
       : sectionsFull
-        ? t('pageAdd.sectionsFull', { count: MAX_PAGE_BLOCK_COUNT })
+        ? t('pageAdd.sectionsFull', { count: MAX_PAGE_SECTIONS })
         : null;
 
   // What used to be four squares on top now leads the one scrolling list.
@@ -224,7 +238,10 @@ function AddMenu({
     },
   ];
 
-  const suggested: readonly AddRow[] = [
+  const sectionsOnly = scope === 'sections';
+  const suggested: readonly AddRow[] = sectionsOnly
+    ? quick.filter((row) => row.key === 'music' || row.key === 'form').map((row) => ({ ...row, disabled: sectionsUnavailable }))
+    : [
     ...quick,
     ...SUGGESTED.map((entry) => ({
       key: entry.key,
@@ -287,7 +304,13 @@ function AddMenu({
 
   return (
     <View className="flex-1 bg-pageBg" style={{ paddingTop: sheetTopInset(insets.top) }}>
-      <SheetHeader title={t('pageAdd.title')} canGoBack={false} onClose={() => { finish(); }} />
+      <SheetHeader
+        title={sectionsOnly
+          ? t('pageAdd.sectionsTitle', { count: blockCount, max: MAX_PAGE_SECTIONS })
+          : t('pageAdd.title')}
+        canGoBack={false}
+        onClose={() => { finish(); }}
+      />
       <ScrollView
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
@@ -304,9 +327,10 @@ function AddMenu({
           returnKeyType="search"
         />
 
-        {pasted !== null ? (
+        {pasted !== null && (!sectionsOnly || pastedMedia !== null) ? (
           <View style={{ gap: 8 }}>
             <PageSectionLabel title={t('pageAdd.pasted')} />
+            {sectionsOnly ? null : (
             <ListRow
               row={{
                 key: 'pasted-link',
@@ -317,6 +341,7 @@ function AddMenu({
                 onPress: () => { onPick({ kind: 'link', preset: null, url: pasted.url }); },
               }}
             />
+            )}
             {pastedMedia !== null ? (
               <ListRow
                 row={{
@@ -340,9 +365,10 @@ function AddMenu({
           <RowGroup title={t('mePage.sections')} note={sectionsNote} rows={shownSections} />
         ) : null}
 
-        {pasted === null && needle.length > 0 && shownSuggested.length === 0 && shownSections.length === 0 ? (
+        {(pasted === null || (sectionsOnly && pastedMedia === null)) && needle.length > 0 && shownSuggested.length === 0 && shownSections.length === 0 ? (
           <View style={{ gap: 12, alignItems: 'flex-start' }}>
             <ThemedText variant="bodyMedium" tone="secondary">{t('pageAdd.noResults', { query: trimmed })}</ThemedText>
+            {sectionsOnly ? null : (
             <ThemedButton
               label={t('pageAdd.tile.link')}
               icon="link"
@@ -350,6 +376,7 @@ function AddMenu({
               size="sm"
               onPress={() => { onPick({ kind: 'link', preset: null, url: null }); }}
             />
+            )}
           </View>
         ) : null}
       </ScrollView>

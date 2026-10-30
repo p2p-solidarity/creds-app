@@ -72,13 +72,17 @@ export function MeProfilePage({
   const [appearanceOpen, setAppearanceOpen] = useState(false);
   // The tab's one add entry point: links, sections and attestations all start
   // from the same "＋ 新增" sheet instead of three per-group buttons.
+  // The 區塊 group's ＋ opens the same sheet scoped to special objects; the
+  // scope outlives `addOpen` so the sheet keeps its content while leaving.
   const [addOpen, setAddOpen] = useState(false);
+  const [addScope, setAddScope] = useState<'all' | 'sections'>('all');
   // Linktree-simple: hero and links first; attestations fold to one row.
   const [proofsOpen, setProofsOpen] = useState(false);
   const claims = useDisplayClaims();
   const claimsHydrated = useIdentityData((state) => state.hydrated);
   const proofCount = claims.filter((claim) => claim.claimType !== 'profile_card').length;
-  const openAdd = () => {
+  const openAdd = (scope: 'all' | 'sections' = 'all') => {
+    setAddScope(scope);
     setAddOpen(true);
   };
   // The preview's `.pub-handle` line shows the page's REAL address, or
@@ -123,14 +127,14 @@ export function MeProfilePage({
           links={record.links}
           linkVisibility={linkVisibility}
           onEdit={onEdit}
-          onAdd={openAdd}
+          onAdd={() => { openAdd(); }}
           onImportLinks={onImportLinks}
         />
       </Animated.View>
 
       <Animated.View entering={entrance(2)}>
         <ProfileSectionsList
-          onAddSection={openAdd}
+          onAddSection={() => { openAdd('sections'); }}
           previewRecord={publicRecord}
           previewHandle={pageHandle}
         />
@@ -171,6 +175,7 @@ export function MeProfilePage({
 
       <PageAddSheet
         visible={addOpen}
+        scope={addScope}
         onClose={() => {
           setAddOpen(false);
         }}

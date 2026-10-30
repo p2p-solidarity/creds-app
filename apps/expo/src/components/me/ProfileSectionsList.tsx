@@ -4,12 +4,15 @@ import { ActivityIndicator, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import type { SFSymbol } from 'expo-symbols';
+
 import { ModalSheet, sheetTopInset } from '@/components/common/ModalSheet';
+import { PressableScale } from '@/components/common/PressableScale';
+import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedButton, ThemedChoiceChip, ThemedSurface, ThemedText, ThemedTextInput } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { useThemeColors } from '@/constants/useThemeColors';
 import { useTranslation } from '@/i18n';
-import { confirmDialog } from '@/feedback/confirmDialog';
 import { haptic } from '@/feedback/haptics';
 import {
   PAGE_BLOCK_CATALOG,
@@ -17,9 +20,11 @@ import {
   MAX_PAGE_ITEM_PRICE_LENGTH,
   MAX_PAGE_ITEM_TITLE_LENGTH,
   MAX_PAGE_ITEMS_PER_BLOCK,
+  MAX_PAGE_SECTIONS,
   blockHasCardSize,
   cardSizeOf,
   createInitialPageDesign,
+  pageSectionCount,
   publicPageDesignEquals,
   toPublicPageDesign,
   type PageBlock,
@@ -30,14 +35,13 @@ import { useProGate } from '@/pro/useProGate';
 
 import { CardSizePicker } from './CardSizePicker';
 import { PHONE_SCREEN_RADIUS, PageBlockPreview, PageLivePreview } from './PageLivePreview';
-import type { PreviewBlockEditing } from './PagePreviewBlockFrame';
 import { PageCollapsibleHeader } from './PageCollapsibleHeader';
 import { PublishChangesCard } from './PublishChangesCard';
 import { useProfileStore } from '@/profile/store';
 import { uuid, type ProfileRecord } from '@solidarity/shared';
 
 export interface ProfileSectionsListProps {
-  /** Opens the tab's ＋ 新增 sheet, where new sections come from. */
+  /** Opens the add sheet scoped to sections (the header's ＋). */
   readonly onAddSection: () => void;
   /** The public projection the preview paints — the same record a visitor
    *  would resolve, not the owner's full one. */
@@ -57,9 +61,6 @@ export function ProfileSectionsList({
   const error = usePageDesignStore((state) => state.error);
   const design = usePageDesignStore((state) => state.design);
   const blocks = usePageDesignStore((state) => state.design.blocks);
-  const setBlockVisible = usePageDesignStore((state) => state.setBlockVisible);
-  const moveBlock = usePageDesignStore((state) => state.moveBlock);
-  const removeBlock = usePageDesignStore((state) => state.removeBlock);
   const { locked } = useProGate();
   const record = useProfileStore((state) => state.record);
   const savePageDesign = useProfileStore((state) => state.savePageDesign);
@@ -91,29 +92,9 @@ export function ProfileSectionsList({
   const proLocked = (block: PageBlock): boolean =>
     locked(PAGE_BLOCK_CATALOG.find((entry) => entry.type === block.type)?.pro ?? false);
 
-  const blockEditing: PreviewBlockEditing = {
-    onEdit: (block) => {
-      if (proLocked(block)) openProSettings();
-      else setEditing(block);
-    },
-    onMove: (block, direction) => {
-      if (proLocked(block)) openProSettings();
-      else moveBlock(block.id, direction);
-    },
-    onToggleVisible: (block) => {
-      if (proLocked(block)) openProSettings();
-      else setBlockVisible(block.id, !block.visible);
-    },
-    onRemove: (block) => {
-      void confirmDialog({
-        title: t('pageDesign.removeSectionConfirmTitle', { title: block.title }),
-        message: t('pageDesign.removeSectionConfirmBody'),
-        confirmLabel: t('pageDesign.removeSection'),
-        destructive: true,
-      }).then((confirmed) => {
-        if (confirmed) removeBlock(block.id);
-      });
-    },
+  const editBlock = (block: PageBlock): void => {
+    if (proLocked(block)) openProSettings();
+    else setEditing(block);
   };
 
   const publishPageChanges = (): void => {
@@ -140,9 +121,14 @@ export function ProfileSectionsList({
     <View className="gap-3 px-4">
       <PageCollapsibleHeader
         title={t('mePage.sections')}
-        summary={status === 'ready' ? t('mePage.groupCount', { count: movableBlocks.length + 1 }) : null}
+        summary={status === 'ready' ? `${movableBlocks.length}/${MAX_PAGE_SECTIONS}` : null}
         open={open}
         onToggle={() => { setOpen((current) => !current); }}
+        add={{
+          label: t('pageDesign.addSection'),
+          disabled: status !== 'ready' || movableBlocks.length >= MAX_PAGE_SECTIONS,
+          onPress: onAddSection,
+        }}
       />
 
       {!open ? null : status === 'loading' ? (
@@ -162,9 +148,10 @@ export function ProfileSectionsList({
         </ThemedSurface>
       ) : (
         <>
-          {/* The page itself is the editor: blocks are tapped, moved, hidden
-              and removed where they appear; the links block stays first and
-              is edited from the links list above. */}
+          {/* The page itself is the editor: it paints as visitors see it and a
+              tapped block opens its editor (order, hide, remove live there);
+              the links block stays first and is edited from the list above.
+              New sections come from the tab's ＋ 新增. */}
           <View
             style={{
               borderRadius: PHONE_SCREEN_RADIUS + 6,
@@ -178,16 +165,9 @@ export function ProfileSectionsList({
               blocks={blocks}
               appearance={design.appearance}
               handle={previewHandle}
-              editing={blockEditing}
+              onEditBlock={editBlock}
             />
           </View>
-          <ThemedButton
-            label={t('pageDesign.addSection')}
-            icon="plus"
-            variant="secondary"
-            fullWidth
-            onPress={onAddSection}
-          />
         </>
       )}
 
@@ -222,10 +202,20 @@ function PageBlockEditorSheet({ block, onClose }: { readonly block: PageBlock | 
 
 function PageBlockEditorContent({ block, onClose }: { readonly block: PageBlock; readonly onClose: () => void }): ReactNode {
   const { t } = useTranslation();
+  const c = useThemeColors();
   const insets = useSafeAreaInsets();
   const updateBlock = usePageDesignStore((state) => state.updateBlock);
   const removeBlock = usePageDesignStore((state) => state.removeBlock);
+  const moveBlock = usePageDesignStore((state) => state.moveBlock);
+  const setBlockVisible = usePageDesignStore((state) => state.setBlockVisible);
   const appearance = usePageDesignStore((state) => state.design.appearance);
+  // Order and visibility apply at once, so they read the live store, not the
+  // snapshot the sheet opened with.
+  const visible = usePageDesignStore((state) => state.design.blocks.find((candidate) => candidate.id === block.id)?.visible ?? block.visible);
+  const position = usePageDesignStore((state) => state.design.blocks
+    .filter((candidate) => candidate.type !== 'links')
+    .findIndex((candidate) => candidate.id === block.id));
+  const sectionCount = usePageDesignStore((state) => pageSectionCount(state.design.blocks));
   const record = useProfileStore((state) => state.record);
   const [title, setTitle] = useState(block.title);
   const [style, setStyle] = useState(block.style);
@@ -244,7 +234,9 @@ function PageBlockEditorContent({ block, onClose }: { readonly block: PageBlock;
     }));
   // The card at the top is this draft painted exactly as the Page will.
   const draft: PageBlock = { ...block, title: title.trim() || block.title, style, size, items: cleanedItems };
+  const canSave = title.trim().length > 0;
   const save = () => {
+    if (!canSave) return;
     updateBlock(block.id, { title, style, items: cleanedItems });
     setBlockSize(block.id, size);
     onClose();
@@ -252,14 +244,21 @@ function PageBlockEditorContent({ block, onClose }: { readonly block: PageBlock;
   return (
     <ModalSheet visible onRequestClose={onClose}>
       <View className="flex-1 bg-pageBg" style={{ paddingTop: sheetTopInset(insets.top) }}>
+        {/* Cancel / title / Save, like iOS edit sheets: no stack of buttons. */}
+        <View className="min-h-14 flex-row items-center justify-between border-b border-divider px-2">
+          <SheetTextButton label={t('common.cancel')} onPress={onClose} />
+          <ThemedText variant="titleMedium">{t('pageDesign.editSectionTitle')}</ThemedText>
+          <SheetTextButton label={t('common.save')} strong disabled={!canSave} onPress={save} />
+        </View>
         <KeyboardAwareScrollView
           keyboardShouldPersistTaps="handled"
           bottomOffset={16}
           contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 24, gap: 18 }}>
-          <ThemedText variant="titleLarge">{t('pageDesign.editSectionTitle')}</ThemedText>
           {record !== null ? (
             <View className="gap-2">
-              <PageBlockPreview block={draft} record={record} appearance={appearance} />
+              <View style={{ opacity: visible ? 1 : 0.45 }}>
+                <PageBlockPreview block={draft} record={record} appearance={appearance} />
+              </View>
               {cleanedItems.length === 0 && block.type !== 'leave-card' ? (
                 <ThemedText variant="caption" tone="tertiary" style={{ textAlign: 'center' }}>
                   {t('pageDesign.previewEmptyHint')}
@@ -267,6 +266,37 @@ function PageBlockEditorContent({ block, onClose }: { readonly block: PageBlock;
               ) : null}
             </View>
           ) : null}
+
+          <ThemedSurface className="flex-row" style={{ paddingVertical: 4 }}>
+            <SheetTool
+              icon="arrow.up"
+              label={t('pageDesign.moveUpShort')}
+              accessibilityLabel={t('pageDesign.moveUp', { title: block.title })}
+              disabled={position <= 0}
+              onPress={() => { moveBlock(block.id, 'up'); }}
+            />
+            <SheetTool
+              icon="arrow.down"
+              label={t('pageDesign.moveDownShort')}
+              accessibilityLabel={t('pageDesign.moveDown', { title: block.title })}
+              disabled={position < 0 || position >= sectionCount - 1}
+              onPress={() => { moveBlock(block.id, 'down'); }}
+            />
+            <SheetTool
+              icon={visible ? 'eye.slash' : 'eye'}
+              label={t(visible ? 'pageDesign.hideShort' : 'pageDesign.showShort')}
+              accessibilityLabel={t(visible ? 'pageDesign.hideSection' : 'pageDesign.showSection', { title: block.title })}
+              onPress={() => { setBlockVisible(block.id, !visible); }}
+            />
+            <SheetTool
+              icon="trash"
+              color={Colors.destructive}
+              label={t('pageDesign.removeShort')}
+              accessibilityLabel={t('pageDesign.removeSectionNamed', { title: block.title })}
+              onPress={() => { removeBlock(block.id); onClose(); }}
+            />
+          </ThemedSurface>
+
           {catalog.styles.length > 1 ? (
             <View className="gap-2">
               <ThemedText variant="label" tone="tertiary">{t('pageDesign.style')}</ThemedText>
@@ -292,18 +322,32 @@ function PageBlockEditorContent({ block, onClose }: { readonly block: PageBlock;
           />
 
           <View className="gap-2">
-            <ThemedText variant="label" tone="tertiary">{t('pageDesign.items')}</ThemedText>
+            <ThemedText variant="label" tone="tertiary">
+              {`${t('pageDesign.items')} ${items.length}/${MAX_PAGE_ITEMS_PER_BLOCK}`}
+            </ThemedText>
             {items.map((item) => (
               <ThemedSurface key={item.id} padded className="gap-3">
-                <ThemedTextInput
-                  label={t('pageDesign.itemTitle')}
-                  value={item.title}
-                  maxLength={MAX_PAGE_ITEM_TITLE_LENGTH}
-                  onChangeText={(nextTitle) => {
-                    setItems((current) => current.map((candidate) => candidate.id === item.id ? { ...candidate, title: nextTitle } : candidate));
-                  }}
-                  showClear
-                />
+                <View className="flex-row items-end gap-1">
+                  <View className="flex-1">
+                    <ThemedTextInput
+                      label={t('pageDesign.itemTitle')}
+                      value={item.title}
+                      maxLength={MAX_PAGE_ITEM_TITLE_LENGTH}
+                      onChangeText={(nextTitle) => {
+                        setItems((current) => current.map((candidate) => candidate.id === item.id ? { ...candidate, title: nextTitle } : candidate));
+                      }}
+                      showClear
+                    />
+                  </View>
+                  <PressableScale
+                    haptic="tap"
+                    onPress={() => { setItems((current) => current.filter((candidate) => candidate.id !== item.id)); }}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('pageDesign.removeItem')}
+                    style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+                    <SfIcon name="trash" size={15} color={c.text2} />
+                  </PressableScale>
+                </View>
                 <ThemedTextInput
                   kind="url"
                   label={t('pageDesign.itemUrl')}
@@ -324,33 +368,77 @@ function PageBlockEditorContent({ block, onClose }: { readonly block: PageBlock;
                     showClear
                   />
                 ) : null}
-                <ThemedButton
-                  label={t('pageDesign.removeItem')}
-                  variant="destructive"
-                  size="sm"
-                  onPress={() => { setItems((current) => current.filter((candidate) => candidate.id !== item.id)); }}
-                />
               </ThemedSurface>
             ))}
-            <ThemedButton
-              label={t('pageDesign.addItem')}
-              variant="secondary"
-              fullWidth
-              disabled={items.length >= MAX_PAGE_ITEMS_PER_BLOCK}
-              onPress={() => { setItems((current) => [...current, { id: uuid(), title: '' }]); }}
-            />
+            {items.length < MAX_PAGE_ITEMS_PER_BLOCK ? (
+              <ThemedButton
+                label={t('pageDesign.addItem')}
+                variant="dottedOutline"
+                fullWidth
+                onPress={() => { setItems((current) => [...current, { id: uuid(), title: '' }]); }}
+              />
+            ) : null}
           </View>
-
-          <ThemedButton label={t('common.save')} fullWidth disabled={!title.trim()} onPress={save} />
-          <ThemedButton
-            label={t('pageDesign.removeSection')}
-            variant="destructive"
-            fullWidth
-            onPress={() => { removeBlock(block.id); onClose(); }}
-          />
-          <ThemedButton label={t('common.cancel')} variant="secondary" fullWidth onPress={onClose} />
         </KeyboardAwareScrollView>
       </View>
     </ModalSheet>
+  );
+}
+
+function SheetTextButton({
+  label,
+  strong = false,
+  disabled = false,
+  onPress,
+}: {
+  readonly label: string;
+  readonly strong?: boolean;
+  readonly disabled?: boolean;
+  readonly onPress: () => void;
+}): ReactNode {
+  return (
+    <PressableScale
+      haptic="tap"
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      style={{ minWidth: 64, height: 44, paddingHorizontal: 8, justifyContent: 'center', opacity: disabled ? 0.35 : 1 }}>
+      <ThemedText variant={strong ? 'titleMedium' : 'bodyLarge'} style={{ textAlign: 'center' }}>{label}</ThemedText>
+    </PressableScale>
+  );
+}
+
+/** One of the block's whole-section actions: icon over a short word. */
+function SheetTool({
+  icon,
+  label,
+  accessibilityLabel,
+  color,
+  disabled = false,
+  onPress,
+}: {
+  readonly icon: SFSymbol;
+  readonly label: string;
+  readonly accessibilityLabel: string;
+  readonly color?: string;
+  readonly disabled?: boolean;
+  readonly onPress: () => void;
+}): ReactNode {
+  const c = useThemeColors();
+  const tint = color ?? c.text1;
+  return (
+    <PressableScale
+      haptic="tap"
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ disabled }}
+      containerStyle={{ flex: 1 }}
+      style={{ minHeight: 52, alignItems: 'center', justifyContent: 'center', gap: 4, opacity: disabled ? 0.3 : 1 }}>
+      <SfIcon name={icon} size={17} color={tint} />
+      <ThemedText variant="caption" style={{ color: tint }}>{label}</ThemedText>
+    </PressableScale>
   );
 }

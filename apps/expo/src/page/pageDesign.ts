@@ -140,6 +140,14 @@ export const PAGE_FONT_IDS: readonly PageFontId[] = ['sans', 'serif', 'rounded',
 export const PAGE_BACKGROUND_IDS: readonly PageBackgroundId[] = ['cream', 'white', 'mint', 'rose', 'ink'];
 /** Keep the editable draft within the signed Page schema's QR-safe bounds. */
 export const MAX_PAGE_BLOCK_COUNT = 16;
+/** Sections (every block but links) the editor lets an owner add — a Page
+ *  stays a short, scannable list (Kidney, 2026-10-31). Signed Pages with more
+ *  still verify; only adding stops. */
+export const MAX_PAGE_SECTIONS = 6;
+
+export function pageSectionCount(blocks: readonly PageBlock[]): number {
+  return blocks.filter((block) => block.type !== 'links').length;
+}
 export const MAX_PAGE_ITEMS_PER_BLOCK = 24;
 export const MAX_PAGE_BLOCK_TITLE_LENGTH = 120;
 export const MAX_PAGE_ITEM_TITLE_LENGTH = 160;
@@ -279,6 +287,7 @@ export function addPageBlock(
   title?: string
 ): PageDesign {
   if (design.blocks.length >= MAX_PAGE_BLOCK_COUNT) return design;
+  if (pageSectionCount(design.blocks) >= MAX_PAGE_SECTIONS) return design;
   return {
     ...design,
     blocks: withCanonicalOrder([...design.blocks, createBlock(type, id, title)]),

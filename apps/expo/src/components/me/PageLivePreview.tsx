@@ -27,7 +27,8 @@ import { cardSizeOf, type PageAppearance, type PageBlock } from '@/page/pageDesi
 import { richMediaForBlock } from '@/page/richMedia';
 import type { ProfileRecord } from '@solidarity/shared';
 
-import { PagePreviewBlockFrame, type PreviewBlockEditing } from './PagePreviewBlockFrame';
+import { PressableScale } from '@/components/common/PressableScale';
+import { useTranslation } from '@/i18n';
 import {
   PagePreviewEmpty,
   PagePreviewFooter,
@@ -71,9 +72,10 @@ export interface PageLivePreviewProps {
    * the display name exactly as the mock's `.pub-handle`; omitted entirely
    * when the caller has no address to show. */
   readonly handle?: string | null;
-  /** The owner's Page tab edits blocks right here: every non-links block
-   *  (empty or hidden too) gets in-place controls. Visitors never pass it. */
-  readonly editing?: PreviewBlockEditing;
+  /** The owner's Page tab: tapping a non-links block opens its editor, and
+   *  empty or hidden blocks still paint (hidden ones dimmed and tagged) so
+   *  they can be found. Visitors never pass it. */
+  readonly onEditBlock?: (block: PageBlock) => void;
 }
 
 export function PageLivePreview({
@@ -82,17 +84,17 @@ export function PageLivePreview({
   appearance,
   variant = 'editor',
   handle = null,
-  editing,
+  onEditBlock,
 }: PageLivePreviewProps): ReactNode {
+  const { t } = useTranslation();
   const palette = paletteFor(appearance);
   const fontFamily = fontFor(appearance.font);
   const metrics = PREVIEW_METRICS[variant];
   const chrome = { palette, metrics, fontFamily, variant };
   const renderedBlocks = blocks.filter(
-    (block) => (editing !== undefined && block.type !== 'links')
+    (block) => (onEditBlock !== undefined && block.type !== 'links')
       || (block.visible && (block.type === 'leave-card' || blockItems(block, record).length > 0)),
   );
-  const movable = blocks.filter((block) => block.type !== 'links');
 
   const content = (
     <View
@@ -107,10 +109,22 @@ export function PageLivePreview({
 
       {renderedBlocks.map((block) => {
         const items = blockItems(block, record);
+        const onEdit = block.type === 'links' ? undefined : onEditBlock;
+        const editable = onEdit !== undefined;
+        const empty = items.length === 0 && block.type !== 'leave-card';
         const body = (
           <>
             {block.type === 'links' ? null : (
-              <PagePreviewSectionTitle title={block.title} palette={palette} fontFamily={fontFamily} />
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                <View style={{ flex: 1 }}>
+                  <PagePreviewSectionTitle title={block.title} palette={palette} fontFamily={fontFamily} />
+                </View>
+                {editable && !block.visible ? (
+                  <ThemedText variant="caption" style={{ color: palette.subtle, fontFamily }}>
+                    {t('pageDesign.hiddenOnPage')}
+                  </ThemedText>
+                ) : null}
+              </View>
             )}
             <PreviewBlockItems
               block={block}
@@ -121,20 +135,23 @@ export function PageLivePreview({
               fontFamily={fontFamily}
               variant={variant}
             />
+            {editable && empty ? (
+              <ThemedText variant="caption" style={{ color: palette.subtle, fontFamily }}>
+                {t('pageDesign.emptyBlockHint')}
+              </ThemedText>
+            ) : null}
           </>
         );
-        const position = movable.findIndex((candidate) => candidate.id === block.id);
         return (
           <View key={block.id} style={{ marginTop: metrics.sectionGap }}>
-            {editing !== undefined && block.type !== 'links' ? (
-              <PagePreviewBlockFrame
-                block={block}
-                empty={items.length === 0 && block.type !== 'leave-card'}
-                canMoveUp={position > 0}
-                canMoveDown={position < movable.length - 1}
-                editing={editing}>
+            {onEdit !== undefined ? (
+              <PressableScale
+                onPress={() => { onEdit(block); }}
+                accessibilityRole="button"
+                accessibilityLabel={t('pageDesign.editSection', { title: block.title })}
+                style={{ opacity: block.visible ? 1 : 0.45 }}>
                 {body}
-              </PagePreviewBlockFrame>
+              </PressableScale>
             ) : body}
           </View>
         );

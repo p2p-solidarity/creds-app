@@ -24,7 +24,8 @@ import { haptic } from '@/feedback/haptics';
 import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
 import {
-  MAX_PAGE_BLOCK_COUNT,
+  MAX_PAGE_SECTIONS,
+  pageSectionCount,
   MAX_PAGE_BLOCK_TITLE_LENGTH,
   MAX_PAGE_ITEM_TITLE_LENGTH,
 } from '@/page/pageDesign';
@@ -54,7 +55,7 @@ export function PageEmbedFlow({ kind, initialUrl = null, onBack, onDone }: PageE
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const status = usePageDesignStore((state) => state.status);
-  const blockCount = usePageDesignStore((state) => state.design.blocks.length);
+  const blockCount = usePageDesignStore((state) => pageSectionCount(state.design.blocks));
   const addBlock = usePageDesignStore((state) => state.addBlock);
   const updateBlock = usePageDesignStore((state) => state.updateBlock);
   const [input, setInput] = useState(initialUrl ?? '');
@@ -70,10 +71,10 @@ export function PageEmbedFlow({ kind, initialUrl = null, onBack, onDone }: PageE
     : kind === 'music'
       ? media === null ? t('pageAdd.music.unsupported') : null
       : !validUrl ? t('profileLink.httpsOnly') : media !== null ? t('pageAdd.form.isMedia') : null;
-  const full = blockCount >= MAX_PAGE_BLOCK_COUNT;
+  const full = blockCount >= MAX_PAGE_SECTIONS;
   const blocked = status !== 'ready'
     ? t(status === 'loading' ? 'pageDesign.loading' : 'pageDesign.loadError')
-    : full ? t('pageAdd.sectionsFull', { count: MAX_PAGE_BLOCK_COUNT }) : null;
+    : full ? t('pageAdd.sectionsFull', { count: MAX_PAGE_SECTIONS }) : null;
   const ready = typed && urlError === null && blocked === null;
 
   const itemTitle = title.trim()
