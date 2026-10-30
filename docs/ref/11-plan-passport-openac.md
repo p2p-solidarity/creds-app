@@ -1,6 +1,6 @@
 # 11 — 護照 ZK（passport-noir OpenAC v3）檢討 plan
 
-> 2026-10-30 · 狀態：**plan，第二輪：Kidney 已定方向（§0.1），§9 剩下的題目答完才動 code**。安全路徑，size **L**。
+> 2026-10-30 · 狀態：**plan 已定案（§0.1、§9 全部採用建議）；P0 完成（`docs/e2e/2026-10-30-passport-p0`），下一步 P1／P3**。安全路徑，size **L**。
 > 與 10 的關係：取代 10 §3.11 裡關於護照的幾條（nullifier、晶片簽章不強制、網頁不驗護照 ZK）、§4 的「護照 ZK 當面出示改走 Pear」、§5。10 的其他決定不變。
 > 程式碼基準：creds-app `e9c4f09c`、passport-noir `2c58ade`（v0.4.0）。
 
@@ -10,7 +10,7 @@
 
 **現在的護照 ZK 證明不證明任何護照。** App 驗的只有 `openac_show` 一顆證明，而這顆電路只檢查「我知道某個 commitment 的開口」，不檢查任何發證國簽章。任何人用開源的 prover、自己編一組護照資料，就能做出通過 App 驗證的證明，而且每編一組就多一個不同的 nullifier。2026-10-30 已實測（§2.2）。
 
-所以 10 §3.11 的「N 位不同的真人（護照 nullifier）」、掃描到的護照出示（年齡、國籍）、L3 護照徽章，目前都能被任何人無限量偽造；已發佈的 1.3.3 的護照出示驗證也一樣（§1.2）。這正是 Kidney 說的「ZK 變成假造身分的工具」。要先止血（§7 P0），再把電路改成驗真的發證國簽章（P3）。
+所以 10 §3.11 的「N 位不同的真人（護照 nullifier）」、掃描到的護照出示（年齡、國籍）、L3 護照徽章，在證明層都能被任何人無限量偽造。App 目前沒有真的接受過偽造，只是因為另一個 bug 意外擋住：App 的解析器沒處理 mopro 證明開頭的 4 bytes 公開輸入數量，所以**任何**真證明（包括真護照的）都被判成 `malformed-public-inputs`——護照出示和計數從來沒有對真證明成功過（§2.4）。只要有人修好解析器、或用別的驗證端，偽造就會通過。這正是 Kidney 說的「ZK 變成假造身分的工具」。要先止血（§7 P0），再把電路改成驗真的發證國簽章（P3）。
 
 輕量化也有空間：SRS 可以從 128 MB 降到約 16 MB（實測，§2.3）；vk 不放 envelope 只省 17%；護照證明約 17.6 KB，壓縮後仍要 10 幀 QR，**當面出示不該走 QR**。
 
@@ -50,7 +50,7 @@
 
 檢查項目：vk 雜湊等於釘選值、公開輸入與證明一致、`credential_type`、scope、nonce、日期。**收到的只有 `openac_show` 一顆證明**；`dsc_chain`、`passport_adapter` 的證明根本沒送出去。就算送了也沒用：它們的 CSCA 是每次自己產生的，`csca_root` 沒有釘到任何真實的根。
 
-**已發佈版本也受影響**：sqc1 護照出示從 2026-06-12（`865ccbbc`）就在，tag `1.3.3` 裡有同一個驗證器（49 個公開輸入，沒有 nullifier）。那一版的 build pin 是 `null`，改用「這支手機自己註冊護照時記下的 vk」（TOFU），所以**自己掃過護照的手機**會接受偽造的年齡／國籍出示；沒掃過的手機回 `missing-vk-pin`。npub 綁定與護照見證計數是 2026-10-30（`5ba46b12`）才加的，還沒出貨。
+**已發佈版本**：sqc1 護照出示從 2026-06-12（`865ccbbc`）就在，tag `1.3.3` 裡有同一個驗證器（49 個公開輸入，沒有 nullifier；build pin 是 `null`，改用「這支手機自己註冊護照時記下的 vk」）。邏輯上，自己掃過護照的手機會接受偽造的出示；實際上 §2.4 的解析 bug 讓它對所有證明都回 `malformed-public-inputs`（1.3.3 用的 passport-noir 0.3.x 與 0.4.0 是同一版 noir-rs `v1.0.0-beta.19`；沒有用 0.3.x 實測）。npub 綁定與護照見證計數是 2026-10-30（`5ba46b12`）才加的，還沒出貨。
 
 ### 1.3 其他已知事實
 
@@ -105,6 +105,16 @@ iOS release `.app` 約 280 MB、SRS 佔 46% 是盤點時的數字，本次沒有
 照這個結果，`passport_adapter`（2¹⁸）只需要約 16.8 MB 的 SRS，`openac_show` 約 8.4 MB。`passport_adapter` 在 1× 下的出證還沒測（要真的晶片 witness，P1 補）。SRS 大小不影響安全性：KZG 的 SRS 是通用的，電路只取前 N 個點；vk 相同代表電路與承諾設定一致。
 
 出證時間 3.5–15 秒（同一台機器上有其他 session 在編譯，數字很吵，不當基準）。
+
+---
+
+### 2.4 App 的解析器讀不懂真的證明（P0 時發現）
+
+mopro／barretenberg 的證明位元組開頭有 4 bytes 的公開輸入數量（`00 00 00 33` = 51），後面才是 51 × 32 B 的公開輸入。`showVerifier.ts` 的 `extractPassportShowProofPublicInputs` 從第 0 個 byte 就開始切欄位，所以讀歪，回 `null` → `malformed-public-inputs`。單元測試的假證明沒有這個前綴，所以一直沒被抓到。原生層（`HybridPassportZk.swift`、Android `HybridPassportZk.kt`）都是原封不動轉交 mopro 的位元組。
+
+實測（`docs/e2e/2026-10-30-passport-p0/result.md`）：偽造的證明丟進 App 自己的 TS 驗證器——原樣的位元組被判 `malformed-public-inputs`；把前綴對齊之後，P0 前的驗證器回 `ok: true`（接受偽造護照），P0 後回 `issuer-unbound`。
+
+P2 會把整個護照 ZK 驗證器移除，所以**不修**這個解析器；P0 的 `issuer-unbound` 關卡確保就算有人修了它，偽造也過不了。
 
 ---
 
@@ -276,7 +286,7 @@ nullifier 只由 SOD 雜湊決定。發證國政府、讀過你晶片的海關�
 
 | 階段 | 內容 | 結束時的 E2E |
 |---|---|---|
-| **P0 止血**（2.0.0 出貨前） | `countPassportHolders` 不再計數；`showPresentationHandler` 的護照分支改成「此版本的護照證明不含發證國驗證」，不給綠勾；`publishPassportNpubBinding` 停止發佈；所有 v1 綁定一律不算。**回歸測試**（真 bug）：用任意 opening 產生的 show 證明不能被當成護照。 | 模擬器：掃假護照出示 → 不給綠勾；見證區不出現護照人數（截圖） |
+| **P0 止血**（2.0.0 出貨前，✅ 2026-10-30） | `countPassportHolders` 不再計數；`showPresentationHandler` 的護照分支改成「此版本的護照證明不含發證國驗證」，不給綠勾；`publishPassportNpubBinding` 停止發佈；所有 v1 綁定一律不算。**回歸測試**（真 bug）：用任意 opening 產生的 show 證明不能被當成護照。 | 模擬器：掃假護照出示 → 不給綠勾；見證區不出現護照人數（截圖） |
 | **P1 護照裝置證明**（App 主線） | §6.1：shared 新增 `creds.passport.v1` statement 的驗證（tdd：偽造裝置證明、npub 不符、過期護照、開發環境 aaguid、`white` 憑證、G3 持有人規則、Q3 的 nullifier 選項）；App 在 passive auth 後簽發與背景重簽；`WitnessSection` 與網頁改用它計數。 | 兩支實機（TestFlight build，dev build 的 App Attest 是 sandbox）各掃一本護照 → 對方 App 與 creds.id 網頁都看到「護照見證者」 |
 | **P2 App 移除護照 ZK**（依 Q8） | 拿掉 mopro 護照 prover、`passport.srs.bin`、三顆電路、`showWitnessVault`、show envelope、sqc1 護照路徑、SD-JWT 降級；CI 的 SRS／xcframework pin 與 Android NDK barretenberg 建置一起移除；Semaphore 不動。已存的舊護照憑證（`passport-openac-v3`、`sd-jwt-fallback`）不再顯示 L3 徽章，改顯示「請重新掃描護照」並走 P1 的流程（Rule 8：不留一個看起來有效的舊徽章）。 | release build 的 `.app`／AAB 大小前後對照；實機掃護照到徽章完整走一次 |
 | **P3 passport-noir 0.5.0** | 晶片調查（台灣、日本真護照：SOD／DSC 演算法、LDS 雜湊，只記 OID 不記個資）→ §6.2 的電路與驗證端；只支援調查到的演算法，其他一律失敗並寫明；SRS 照實際 dyadic 大小（不乘 8）；發安全說明；**完成後封存 repo（畢業）**，README 寫明狀態並指向 creds 的裝置證明做法。 | 真護照 → 證明 → 獨立的驗證 CLI 驗過；換成任意 opening／非釘選 CSCA → 被拒（回歸） |
@@ -303,7 +313,7 @@ P1 與 P3 互不依賴，可以平行；P2 要等 P1 上線（App 才有新的�
 - **台灣沒有 AA，G3 的「AA 可搶回」對台灣用戶沒用？** 對。台灣用戶只有「先綁先贏＋90 天失效」的保護；徽章詳情要寫。台灣新版護照有 AA 後自動升級。
 - **裝置綁定的金鑰沒有被 App Attest 證明，有關係嗎？** 裝置綁定只保證「出示者持有同一把私鑰」（不可轉移），不是護照真偽的來源；P3 後護照真偽由電路保證，這把鑰匙不需要額外證明。
 - **Pear 當面出示還需要嗎？** 平常不需要：對方掃 Page QR 後在 App 裡查 nostr 上的綁定就夠。Pear 只在雙方都離線時用，走同一個 v2 事件格式。
-- **已發佈的 1.3.3 受不受影響？** 受影響，但範圍小：只有自己註冊過護照的手機（TOFU vk pin）會接受偽造的出示，顯示的是年齡／國籍；沒有計數功能（§1.2）。是否另出 hotfix 見 Q7。
+- **已發佈的 1.3.3 受不受影響？** 邏輯上受影響（自己註冊過護照的手機），實際上被 §2.4 的解析 bug 擋住：偽造的和真的出示都被拒絕。所以 Q7 不另出 hotfix 更站得住。
 - **「每 30 天背景重發」做得到嗎？** 做不到：show 證明要裝置金鑰簽章，走 Face ID 閘門。改成 App 開啟時重發（G3）。
 - **「先綁先贏＋90 天失效」會不會讓搶綁者撿走過期的綁定？** 會，如果只認 npub。所以改成認持有人（prepare commitment C）：同一持有人換 npub 不受影響，只有三個月沒開 App 才會讓出。
 - **別人能不能拿我公開的 prepare 證明去做 show？** 不能：show 要開 C，需要只存在我手機的 `link_rand` 與裝置私鑰。AA 簽章是私密 witness，不會公開；P3 再把 AA challenge 綁到裝置公鑰。
@@ -322,7 +332,7 @@ P1 與 P3 互不依賴，可以平行；P2 要等 P1 上線（App 才有新的�
 
 ## 9. 給 Kidney 的產品決策（每題附建議；「照你的」＝全部採用建議）
 
-第一輪的 Q1、Q2、Q5、Q6 已由 §0.1 定案。
+第一輪的 Q1、Q2、Q5、Q6 已由 §0.1 定案。**2026-10-30 Kidney：「照你的」——下表 Q3、Q4、Q7–Q10 全部採用建議答案，先做 P0。**
 
 | # | 問題 | 建議答案 | 其他選項 |
 |---|---|---|---|
@@ -331,7 +341,7 @@ P1 與 P3 互不依賴，可以平行；P2 要等 P1 上線（App 才有新的�
 | Q4 | 同一本護照的衝突規則？ | **認持有人（裝置金鑰）不認 npub：先註冊者勝、三個月沒重簽才讓出**（G3 選項 A，不做 AA 所以沒有「AA 搶回」） | 維持「最新勝出」 |
 | Q9 | App 的 ZK 套件要做什麼？ | **Semaphore「匿名的真人見證」**：護照 statement 背書一個 Semaphore identity commitment，見證時用 Semaphore 證明「我是其中一位已驗證的真人」，nullifier 來自用戶自己的秘密，發證國連不起來（順便解 G4）。在 P1 上線後另開 plan；zkTLS 等到要證明「登入後才看得到的資料」再回來。 | 先不做 ZK 套件；或先做 zkTLS |
 | Q10 | passport-noir 0.5.0 要單顆電路（scoped 裝置標記），還是保留 OpenAC 的兩階段 commitment？ | **單顆電路**（§6.2）：少一顆電路、一個 vk、沒有跨證明的連結檢查；OpenAC 的選擇性揭露與 scoped 化名都還在。 | 保留兩階段（與 OpenAC 論文對齊，但多一顆電路與連結邏輯） |
-| Q7 | 已發佈的 1.3.x 要不要另出 hotfix，關掉護照出示驗證？ | **不另出**，P0 跟 2.0.0 一起出；影響只限自己註冊過護照的手機，且只顯示年齡／國籍。若 2.0.0 晚於兩週，再出 hotfix。 | 立刻出 1.3.x hotfix |
+| Q7 | 已發佈的 1.3.x 要不要另出 hotfix，關掉護照出示驗證？ | **不另出**，P0 跟 2.0.0 一起出；1.3.3 的解析 bug 實際上拒絕所有證明（§2.4），偽造在那一版過不了。 | 立刻出 1.3.x hotfix |
 
 **我自己定、不用問的**：不做 AA、不做 CA、不做人臉比對；網頁不跑也不驗電路；護照資料永遠不進 QR；passport-noir 的 SRS 照實際大小（不乘 8）、電路 JSON 一律內建、vk 釘選。
 
