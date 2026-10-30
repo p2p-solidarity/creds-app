@@ -122,6 +122,12 @@ import type {
 import type { getPassportZk } from '@solidarity/nitro-attest';
 import { sha256Bytes, uuid } from '@solidarity/shared';
 import { loadPassportNitroModules } from '@/passport/nitroModules';
+import { issuePassportStatement } from '@/passport/npubBinding';
+import { derivePassportPublicSignals } from '@/passport/pipeline';
+import { confirmDialog } from '@/feedback/confirmDialog';
+import { DEFAULT_RELAYS } from '@/nostr/publish';
+import { hasNostrKeySync } from '@/nostr/userKey';
+import { deviceAttestSupported } from '@/witness/deviceKey';
 
 function loadBundledRevocationSnapshot(
   nfc: ReturnType<typeof getNfcPassport> | null
@@ -705,6 +711,29 @@ export default function PassportSetup() {
       });
       for (const c of claims) {
         await useIdentityData.getState().upsertProvableClaim(c);
+      }
+
+      // Device-attested passport statement (docs/ref/11 P1): only for a real
+      // chip that passed passive auth, on a phone that can attest its key.
+      const sod = chip.dataGroups?.sod;
+      if (!chip.isSimulated && chip.passiveAuthValid && sod !== undefined && sod.byteLength > 0 && hasNostrKeySync() && deviceAttestSupported()) {
+        const countAsWitness = await confirmDialog({
+          title: t('passportStatement.optInTitle'),
+          message: t('passportStatement.optInBody'),
+          confirmLabel: t('passportStatement.optInConfirm'),
+          cancelLabel: t('passportStatement.optInDecline'),
+        });
+        const { ageOver18 } = derivePassportPublicSignals({
+          dg1MRZData: chip.dg1MRZData,
+          fallbackNationality: draft.nationalityCode,
+          currentDateYyMmDd: now.toISOString().slice(2, 10).replaceAll('-', ''),
+        });
+        void issuePassportStatement(
+          { sod, ageOver18, readAt: chip.readAt, passportExpiresAt: expiry, countAsWitness },
+          DEFAULT_RELAYS,
+        ).then((r) => {
+          if (!r.ok) console.warn(`[passport] statement not published — ${r.error}`);
+        });
       }
 
       pushToast(
