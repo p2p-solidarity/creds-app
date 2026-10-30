@@ -289,7 +289,7 @@ nullifier 只由 SOD 雜湊決定。發證國政府、讀過你晶片的海關�
 | **P0 止血**（2.0.0 出貨前，✅ 2026-10-30） | `countPassportHolders` 不再計數；`showPresentationHandler` 的護照分支改成「此版本的護照證明不含發證國驗證」，不給綠勾；`publishPassportNpubBinding` 停止發佈；所有 v1 綁定一律不算。**回歸測試**（真 bug）：用任意 opening 產生的 show 證明不能被當成護照。 | 模擬器：掃假護照出示 → 不給綠勾；見證區不出現護照人數（截圖） |
 | **P1 護照裝置證明**（App 主線，✅ 程式 2026-10-30；實機 E2E 待 TestFlight） | §6.1：shared 新增 `creds.passport.v1` statement 的驗證（tdd：偽造裝置證明、npub 不符、過期護照、開發環境 aaguid、`white` 憑證、G3 持有人規則、Q3 的 nullifier 選項）；App 在 passive auth 後簽發與背景重簽；`WitnessSection` 與網頁改用它計數。 | 兩支實機（TestFlight build，dev build 的 App Attest 是 sandbox）各掃一本護照 → 對方 App 與 creds.id 網頁都看到「護照見證者」 |
 | **P2 App 移除護照 ZK**（依 Q8） | 拿掉 mopro 護照 prover、`passport.srs.bin`、三顆電路、`showWitnessVault`、show envelope、sqc1 護照路徑、SD-JWT 降級；CI 的 SRS／xcframework pin 與 Android NDK barretenberg 建置一起移除；Semaphore 不動。已存的舊護照憑證（`passport-openac-v3`、`sd-jwt-fallback`）不再顯示 L3 徽章，改顯示「請重新掃描護照」並走 P1 的流程（Rule 8：不留一個看起來有效的舊徽章）。 | release build 的 `.app`／AAB 大小前後對照；實機掃護照到徽章完整走一次 |
-| **P3 passport-noir 0.5.0**（✅ 2026-10-30，tag `v0.5.0`；晶片調查未做，只支援 RSA-2048／SHA-256 DSC） | 晶片調查（台灣、日本真護照：SOD／DSC 演算法、LDS 雜湊，只記 OID 不記個資）→ §6.2 的電路與驗證端；只支援調查到的演算法，其他一律失敗並寫明；SRS 照實際 dyadic 大小（不乘 8）；發安全說明；**完成後封存 repo（畢業）**，README 寫明狀態並指向 creds 的裝置證明做法。 | 真護照 → 證明 → 獨立的驗證 CLI 驗過；換成任意 opening／非釘選 CSCA → 被拒（回歸） |
+| **P3 passport-noir 0.5.0**（✅ 2026-10-30，tag `v0.5.0`；晶片調查未做，只支援 RSA-2048／SHA-256 DSC；SRS 不放 release，要出證的人自己 `make gen-srs-mrz`，後續不再處理 SRS） | 晶片調查（台灣、日本真護照：SOD／DSC 演算法、LDS 雜湊，只記 OID 不記個資）→ §6.2 的電路與驗證端；只支援調查到的演算法，其他一律失敗並寫明；SRS 照實際 dyadic 大小（不乘 8）；發安全說明；**完成後封存 repo（畢業）**，README 寫明狀態並指向 creds 的裝置證明做法。 | 真護照 → 證明 → 獨立的驗證 CLI 驗過；換成任意 opening／非釘選 CSCA → 被拒（回歸） |
 | **P4 ZK 套件**（依 Q9） | 依 Q9 的定位另開 plan。 | — |
 
 P1 與 P3 互不依賴，可以平行；P2 要等 P1 上線（App 才有新的護照徽章）。

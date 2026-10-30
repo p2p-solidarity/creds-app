@@ -46,4 +46,5 @@
 
 - **No real passport.** The TW/JP chip survey (which DSC algorithms states actually use) was not done. The circuit supports only RSA-2048 / e = 65537 / SHA-256; anything else fails with a reason code. For example, a German brainpool DSC will not work.
 - **No proof on an iPhone.** The new xcframework is built by CI from the tag.
+- **No SRS release asset, by decision.** v0.5.0 ships `PassportMoproBindings.xcframework.zip` and `passport_mrz.json`. Anyone who proves runs `make gen-srs-mrz`. No later work will add one.
 - **No ICAO Master List shipped or tested.** The verifier takes whatever CSCA list the caller pins.
