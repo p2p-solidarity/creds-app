@@ -51,15 +51,51 @@ Bug found and fixed: the preview avatar painted a square behind the disc (shadow
 gradient); the shadow now sits on a round wrapper (14 vs the first Design screenshot).
 Seen, not fixed: switching the sim to dark while the Design sheet was open dismissed the sheet.
 
+## Round 3 — Page tab for real (Kidney approved the publish: "OK, release after", then "Publish, keep claimed")
+Onboarding finished with the name **230701**, and it is live in the creds.id directory:
+`/.well-known/nostr.json?name=230701` → `c1f55acf…5862`, availability `taken`. The app has no
+way to release a name: Settings › 我的名稱 can only register or rename, and the backend's
+`DELETE /id` would leave a permanent tombstone. Kidney chose to keep @230701 claimed.
+
+| # | Screen | Shows |
+|---|---|---|
+| 20 | onboarding ready | creds.id/@230701 · 正在發佈… (relay + directory publish) |
+| 21 | Page tab | header shows creds.id/@230701 |
+| 22 | add link › GitHub | handle typed, detected card with the GitHub avatar |
+| 23 | 已加上 | link saved, GitHub avatar became the Page photo |
+| 24 | Page tab | link row in 公開頁 |
+| 25 | add music | Spotify track URL detected, player facade preview |
+| 26 | bio sheet | bio typed, 42 / 160 |
+| 27 | Page tab | bio + 區塊 2 個 + 發布頁面變更 card |
+| 28 | after 發布 | 已發布頁面變更 · 已上線：creds.id/@230701 |
+| 29 | add music (fix) | title placeholder now 音樂 (was 填寫表單) |
+| 30 | add link › GitHub (fix) | placeholder now `github.com/username` (was `github.com/@username`) |
+
+**Bug found, not fixed (needs a product call):** the 發布 card says 已上線：creds.id/@230701,
+but it only re-signs the Page locally (`savePageDesign`). The relay publish runs only when
+the developer toggle `nostrAutoRepublish` is on, and it is off by default. After 28, primal
+and nos.lol still held only the 14:21Z onboarding events (bio "", links []). creds.id/@230701
+in a browser showed the onboarding version, with no link, bio or music. damus refused our
+read, so it was not checked.
+
+Bugs found and fixed: music title placeholder (填寫表單 → 音樂), and the `@` on handle
+placeholders after a `/` prefix.
+
+Seen, not fixed: with the keyboard up, the first tap on a sheet's CTA or close button only
+dismisses the keyboard (add music, bio sheet, add link), so it takes a second tap.
+
+Sim driving for this run: the simulator pasteboard stayed empty (`simctl pbcopy` didn't reach
+it), and typing over HID went through the Zhuyin hardware layout. The run set the sim's
+keyboards to English only, then deleted those prefs again afterwards.
+
 ## Not run
-- Saving from the Page tab (add link, music / form blocks, bio save, publish): each re-signs the
-  Page and may publish to Nostr; production publish not approved, so not run.
-- The Design panels 背景 / 文字 / 頁尾 were not opened on the sim (only 模板 and 頭貼).
-- Spotify / YouTube player rendering on creds.id itself was not re-checked — the blocks use the
-  existing `featured` / `video` types the web already plays (`RichBlocks.richMediaFor`).
+- The form block: it needs a real form-service URL, and a made-up one would publish a broken
+  link. Not run.
+- The web page actually showing the link, bio and Spotify block: blocked by the publish bug above.
+- The Design panels 背景 / 文字 / 頁尾 on the sim (only 模板 and 頭貼).
 - Android.
 
 ## Verify
 `bun run typecheck && bun run lint && bun run test` from the repo root: typecheck 0, lint 0
 errors (169 warnings, pre-existing), test 1503 unit + 73 parity pass / 0 fail — re-run after the
-three fixes, and again after round 2 (lint 170 warnings, 0 errors).
+three fixes, again after round 2, and again after round 3's fixes (lint 171 warnings, 0 errors; 1503 + 73 pass).
