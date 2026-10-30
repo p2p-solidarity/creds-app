@@ -18,6 +18,7 @@ import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedButton, ThemedText } from '@/components/themed';
 import { CardMetalColors, Colors } from '@/constants/Colors';
 import { Radius } from '@/constants/radius';
+import { DURATION, EASE_OUT, IDLE, SPRING } from '@/feedback/motion';
 
 /** `.metal` — credit-card proportions; corners follow the card role. */
 const CARD_ASPECT_RATIO = 1.586;
@@ -37,7 +38,7 @@ function CardSheen({ enabled }: { readonly enabled: boolean }): ReactNode {
   useEffect(() => {
     progress.value = -1;
     if (!enabled || reduceMotion) return;
-    progress.value = withDelay(260, withTiming(1, { duration: 900 }));
+    progress.value = withDelay(DURATION.enter, withTiming(1, { duration: IDLE.enterMs, easing: EASE_OUT }));
   }, [enabled, progress, reduceMotion]);
 
   const style = useAnimatedStyle(() => ({
@@ -79,7 +80,7 @@ function useCardMotion(isFlipped: boolean) {
   useEffect(() => {
     flip.value = reduceMotion
       ? isFlipped ? 180 : 0
-      : withSpring(isFlipped ? 180 : 0, { damping: 18, stiffness: 150 });
+      : withSpring(isFlipped ? 180 : 0, SPRING.gentle);
   }, [flip, isFlipped, reduceMotion]);
 
   useEffect(() => {

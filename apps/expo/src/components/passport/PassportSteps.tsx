@@ -32,7 +32,7 @@ import { BulletGuaranteeRow } from '@/components/passport/BulletGuaranteeRow';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedButton } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
-import { TIMING } from '@/feedback/motion';
+import { SPRING, TIMING } from '@/feedback/motion';
 import {
   credentialTrustDisplayFor,
   passportTrustLevelFromProof,
@@ -289,7 +289,7 @@ function SuccessCheck() {
   const opacity = useSharedValue(0);
   useEffect(() => {
     opacity.value = withTiming(1, TIMING.enter);
-    if (!reduceMotion) scale.value = withSpring(1, { duration: 200, dampingRatio: 0.8 });
+    if (!reduceMotion) scale.value = withSpring(1, SPRING.gentle);
   }, [opacity, reduceMotion, scale]);
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,

@@ -1,11 +1,13 @@
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
+import Animated, { useReducedMotion } from 'react-native-reanimated';
 
 import { PressableScale } from '@/components/common/PressableScale';
 import { BrandIcon } from '@/components/icons/BrandIcon';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
+import { LIST_LAYOUT, fadeOutSettle, fadeUpIn } from '@/feedback/motion';
 import { useTranslation } from '@/i18n';
 import {
   displayLinkText,
@@ -45,6 +47,7 @@ export function EditableLinksList({
   onImportLinktree,
 }: EditableLinksListProps): ReactNode {
   const { t } = useTranslation();
+  const reduceMotion = useReducedMotion();
   return (
     <View className="gap-3">
       <View className="min-h-11 flex-row items-center justify-between">
@@ -63,8 +66,12 @@ export function EditableLinksList({
       </View>
 
       {links.map((link, index) => (
-        <ThemedSurface
+        <Animated.View
           key={link.id}
+          entering={reduceMotion ? undefined : fadeUpIn(0)}
+          exiting={reduceMotion ? undefined : fadeOutSettle()}
+          layout={reduceMotion ? undefined : LIST_LAYOUT}>
+        <ThemedSurface
           variant="outlined"
           className="flex-row">
           <PressableScale
@@ -136,6 +143,7 @@ export function EditableLinksList({
             />
           </View>
         </ThemedSurface>
+        </Animated.View>
       ))}
 
       <ThemedButton

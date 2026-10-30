@@ -37,6 +37,7 @@ import { useThemeColors, type ThemeColors } from '@/constants/useThemeColors';
 import { haptic as fireHaptic, type HapticKind } from '@/feedback/haptics';
 import { ON_DARK, ON_LIGHT } from './contrast';
 import { Radius } from '@/constants/radius';
+import { SCALE, SPRING } from '@/feedback/motion';
 
 export type ButtonVariant =
   | 'primary'
@@ -112,10 +113,10 @@ export function ThemedButton({
   const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
   const handlePressIn = () => {
-    scale.value = withSpring(0.97, { damping: 100, stiffness: 600 });
+    scale.value = withSpring(SCALE.press, SPRING.press);
   };
   const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 100, stiffness: 600 });
+    scale.value = withSpring(1, SPRING.press);
   };
 
   const handlePress = (e: GestureResponderEvent) => {
