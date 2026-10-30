@@ -131,6 +131,11 @@ export interface VerifiedSnapshot {
    * when unset — never fabricated.
    */
   readonly note: string | null;
+  /** Device-owned phone / email the user added for this person — same rules
+   *  as `note`: outside the signed record, kept across every merge, null when
+   *  unset. Never shown as part of the person's signed Page. */
+  readonly phone: string | null;
+  readonly email: string | null;
   /** Same-timestamp, different-content forks kept as conflict markers. */
   readonly conflicts: readonly VerifiedConflict[];
 }
@@ -263,7 +268,7 @@ export function mergeVerifiedSnapshot(
   if (!existing) {
     return {
       kind: 'saved',
-      snapshot: { kind: 'verified', did: record.did, scope, record, jws, verifiedAt: nowIso, note: null, conflicts: [] },
+      snapshot: { kind: 'verified', did: record.did, scope, record, jws, verifiedAt: nowIso, note: null, phone: null, email: null, conflicts: [] },
     };
   }
 
@@ -290,6 +295,8 @@ export function mergeVerifiedSnapshot(
         jws,
         verifiedAt: nowIso,
         note: existing.note,
+        phone: existing.phone,
+        email: existing.email,
         conflicts: [],
       },
     };
@@ -317,6 +324,8 @@ interface PersistedVerifiedEntry {
   readonly jws: unknown;
   readonly verifiedAt: unknown;
   readonly note?: unknown; // absent on pre-T5 entries — back-compat
+  readonly phone?: unknown; // absent on entries saved before local details — back-compat
+  readonly email?: unknown;
   readonly conflicts?: unknown; // absent on pre-T5 entries — back-compat
 }
 
@@ -379,7 +388,7 @@ function readPersistedVerified(entry: PersistedVerifiedEntry): VerifiedSnapshot 
   if (typeof entry.verifiedAt !== 'string' || entry.verifiedAt.length === 0) return null;
   const validated = parseProfile(entry.record);
   if (!validated.ok) return null;
-  const note = typeof entry.note === 'string' && entry.note.trim().length > 0 ? entry.note : null;
+  const note = persistedText(entry.note);
   return {
     kind: 'verified',
     did: validated.value.did,
@@ -390,8 +399,14 @@ function readPersistedVerified(entry: PersistedVerifiedEntry): VerifiedSnapshot 
     jws: entry.jws,
     verifiedAt: entry.verifiedAt,
     note,
+    phone: persistedText(entry.phone),
+    email: persistedText(entry.email),
     conflicts: readPersistedConflicts(entry.conflicts),
   };
+}
+
+function persistedText(raw: unknown): string | null {
+  return typeof raw === 'string' && raw.trim().length > 0 ? raw : null;
 }
 
 function readPersisted(): ReadonlyMap<string, ProfileSnapshot> {
@@ -442,6 +457,8 @@ function writePersisted(
               jws: snapshot.jws,
               verifiedAt: snapshot.verifiedAt,
               note: snapshot.note,
+              phone: snapshot.phone,
+              email: snapshot.email,
               conflicts: snapshot.conflicts.map((c) => ({
                 record: c.record,
                 jws: c.jws,
@@ -467,6 +484,18 @@ function writePersisted(
   }
 }
 
+/** What the user can add to a saved Page on this device. */
+export interface LocalDetails {
+  readonly phone: string | null;
+  readonly email: string | null;
+  readonly note: string | null;
+}
+
+function blankToNull(value: string | null): string | null {
+  const trimmed = value?.trim() ?? '';
+  return trimmed.length > 0 ? trimmed : null;
+}
+
 interface ProfileSnapshotState {
   readonly snapshots: ReadonlyMap<string, ProfileSnapshot>;
   /**
@@ -482,6 +511,10 @@ interface ProfileSnapshotState {
   /** Set (or clear, with `null`/blank) the device-owned note for a saved
    *  verified snapshot. No-op if the DID isn't a saved verified page. */
   readonly setNote: (did: string, note: string | null) => void;
+  /** Set the device-owned phone, email and note for a saved verified
+   *  snapshot in one write (blank clears a field). No-op if the DID isn't a
+   *  saved verified page. */
+  readonly setLocalDetails: (did: string, details: LocalDetails) => void;
   /** Insert-or-replace by `stableDeclaredId(sourceUrl)` — re-pasting the
    * same link page updates the saved link list rather than duplicating. */
   readonly upsertDeclared: (
@@ -520,16 +553,26 @@ export const useProfileSnapshotStore = create<ProfileSnapshotState>((set, get) =
   },
 
   setNote: (did, note) => {
+    const current = getProfileSnapshot(did);
+    if (!current) return;
+    get().setLocalDetails(did, { phone: current.phone, email: current.email, note });
+  },
+
+  setLocalDetails: (did, details) => {
     const writeEpoch = captureLocalDataEpoch();
-    // The note is a per-person annotation; attach it to the richest projection
-    // we hold for this did (the one `getProfileSnapshot` surfaces).
+    // Local details are per-person; attach them to the richest projection we
+    // hold for this did (the one `getProfileSnapshot` surfaces).
     const key = bestVerifiedKeyForDid(get().snapshots, did);
     if (!key) return;
     const current = get().snapshots.get(key);
     if (current?.kind !== 'verified') return;
-    const trimmed = note?.trim() ?? '';
     const next = new Map(get().snapshots);
-    next.set(key, { ...current, note: trimmed.length > 0 ? trimmed : null });
+    next.set(key, {
+      ...current,
+      phone: blankToNull(details.phone),
+      email: blankToNull(details.email),
+      note: blankToNull(details.note),
+    });
     if (writePersisted(next, writeEpoch)) set({ snapshots: next });
   },
 

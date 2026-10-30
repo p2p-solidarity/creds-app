@@ -134,7 +134,8 @@ function EditContactSheetContent({
   return (
     <View style={{ flex: 1, backgroundColor: Colors.pageBg }}>
       <View style={{ paddingTop: insets.top }}>
-        <Toolbar
+        <SheetToolbar
+          title="Edit Contact"
           onCancel={onClose}
           onSave={onSave}
           canSave={canSave && !saving}
@@ -219,17 +220,20 @@ function EditContactSheetContent({
   );
 }
 
-function Toolbar({
+export function SheetToolbar({
+  title,
   onCancel,
   onSave,
   canSave,
   saving,
 }: {
+  readonly title: string;
   readonly onCancel: () => void;
   readonly onSave: () => void;
   readonly canSave: boolean;
   readonly saving: boolean;
 }): ReactNode {
+  const { t } = useTranslation();
   return (
     <View
       className="flex-row items-center justify-between"
@@ -242,12 +246,12 @@ function Toolbar({
         hitSlop={8}
       >
         <Text className="text-text1" style={{ fontSize: 16 }}>
-          Cancel
+          {t('common.cancel')}
         </Text>
       </Pressable>
 
       <Text className="text-text1" style={{ fontSize: 17, fontWeight: '600' }}>
-        Edit Contact
+        {title}
       </Text>
 
       <Pressable
@@ -263,14 +267,14 @@ function Toolbar({
             fontWeight: '600',
           }}
         >
-          {saving ? 'Saving…' : 'Save'}
+          {saving ? 'Saving…' : t('common.save')}
         </Text>
       </Pressable>
     </View>
   );
 }
 
-interface FieldRowProps {
+export interface FieldRowProps {
   readonly label: string;
   readonly placeholder: string;
   readonly value: string;
@@ -280,7 +284,7 @@ interface FieldRowProps {
   readonly multiline?: boolean;
 }
 
-function FieldRow({
+export function FieldRow({
   label,
   placeholder,
   value,

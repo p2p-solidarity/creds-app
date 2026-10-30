@@ -33,6 +33,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { CardExchangeSection } from '@/components/people/CardExchangeSection';
+import { PageLocalDetailsSection } from '@/components/people/PageLocalDetails';
 import { PearConnectSection } from '@/components/people/PearConnectSection';
 import { VerifiedProfileView } from '@/components/scan/VerifiedProfileView';
 import { ThemedText } from '@/components/themed';
@@ -72,6 +73,9 @@ export default function VerifiedProfileDetailScreen(): ReactNode {
             <VerifiedProfileView record={snapshot.record} />
           </Animated.View>
           <Animated.View entering={fadeUpIn(1, reduceMotion)}>
+            <PageLocalDetailsSection snapshot={snapshot} />
+          </Animated.View>
+          <Animated.View entering={fadeUpIn(2, reduceMotion)}>
             <CardExchangeSection did={snapshot.did} verifiedDisplayName={snapshot.record.displayName} />
           </Animated.View>
         </ScrollView>
