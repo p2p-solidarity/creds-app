@@ -28,7 +28,7 @@ import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PresentationProofQr } from '@/components/credentials/PresentationProofQr';
-import { SettingsBackToolbar } from '@/components/settings/SettingsBlocks';
+import { SettingsScreenTitle } from '@/components/settings/SettingsBlocks';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
@@ -250,13 +250,14 @@ export default function WebSignReviewScreen(): ReactNode {
 
   return (
     <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
-      <SettingsBackToolbar title={t('websign.back')} onPress={() => { safeBack(); }} />
+      <SettingsScreenTitle
+        title={t('websign.title')}
+        leadingAction={{ accessibilityLabel: t('common.back'), onPress: () => { safeBack(); } }}
+      />
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: insets.bottom + 40, gap: 18 }}
         keyboardShouldPersistTaps="handled"
       >
-        <ThemedText variant="headlineLarge">{t('websign.title')}</ThemedText>
-
         {state.kind === 'error' ? (
           <ErrorPanel detail={state.detail} onBack={() => { safeBack(); }} />
         ) : (

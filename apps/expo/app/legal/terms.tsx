@@ -9,18 +9,19 @@ import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MarkdownDocument } from '@/components/common/MarkdownDocument';
-import {
-  SettingsBackToolbar,
-  SettingsScreenTitle,
-} from '@/components/settings/SettingsBlocks';
+import { SettingsScreenTitle } from '@/components/settings/SettingsBlocks';
+import { useTranslation } from '@/i18n';
 import { TERMS_OF_SERVICE_MARKDOWN } from '@/legal/terms';
 
 export default function TermsOfServicePage(): ReactNode {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   return (
     <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
-      <SettingsBackToolbar onPress={() => { safeBack(); }} />
-      <SettingsScreenTitle title="Terms of Service" />
+      <SettingsScreenTitle
+        title="Terms of Service"
+        leadingAction={{ accessibilityLabel: t('common.back'), onPress: () => { safeBack(); } }}
+      />
       <MarkdownDocument source={TERMS_OF_SERVICE_MARKDOWN} />
     </View>
   );

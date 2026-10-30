@@ -36,7 +36,6 @@ import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { appAlert, showError } from '@/feedback/appAlert';
 import {
-  SettingsBackToolbar,
   SettingsBlockDangerRow,
   SettingsBlockSection,
   SettingsScreenTitle,
@@ -162,8 +161,10 @@ export default function SecuritySettings() {
 
   return (
     <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
-      <SettingsBackToolbar onPress={() => { safeBack('/settings'); }} />
-      <SettingsScreenTitle title={t('security.title')} />
+      <SettingsScreenTitle
+        title={t('security.title')}
+        leadingAction={{ accessibilityLabel: t('common.back'), onPress: () => { safeBack('/settings'); } }}
+      />
 
       <ScrollView
         className="flex-1"

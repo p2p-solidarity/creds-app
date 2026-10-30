@@ -9,7 +9,7 @@ import { InfoButton } from '@/components/common/InfoSheet';
 import { ModalSheet } from '@/components/common/ModalSheet';
 import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
-import { SettingsBackToolbar, SettingsScreenTitle } from '@/components/settings/SettingsBlocks';
+import { SettingsScreenTitle } from '@/components/settings/SettingsBlocks';
 import { ThemedButton, ThemedSurface, ThemedText, ThemedTextInput } from '@/components/themed';
 import { useWebEditing, WEB_EDITOR_URL } from '@/components/webEditing/useWebEditing';
 import { webEditingViewModel } from '@/components/webEditing/webEditingViewModel';
@@ -110,10 +110,12 @@ export function PasskeysScreen() {
 
   return (
     <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
-      <SettingsBackToolbar title={t('settingsHub.title')} onPress={() => { safeBack('/settings'); }} />
       <View style={{ minHeight: 44, justifyContent: 'center' }}>
-        <SettingsScreenTitle title={t('passkeys.title')} />
-        <View style={{ position: 'absolute', right: 24, minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
+        <SettingsScreenTitle
+          title={t('passkeys.title')}
+          leadingAction={{ accessibilityLabel: t('common.back'), onPress: () => { safeBack('/settings'); } }}
+        />
+        <View style={{ position: 'absolute', right: 24, top: 0, bottom: 8, minWidth: 44, alignItems: 'center', justifyContent: 'center' }}>
           <InfoButton title={t('passkeys.aboutTitle')} body={t('passkeys.aboutBody')} />
         </View>
       </View>

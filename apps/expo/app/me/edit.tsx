@@ -35,7 +35,7 @@ import {
   LinkPageImportSheet,
   type LinkPageImportResult,
 } from '@/components/profile/LinkPageImportSheet';
-import { SettingsBackToolbar, SettingsScreenTitle } from '@/components/settings/SettingsBlocks';
+import { SettingsScreenTitle } from '@/components/settings/SettingsBlocks';
 import { ThemedButton, ThemedText, ThemedTextInput } from '@/components/themed';
 import { showError } from '@/feedback/appAlert';
 import { haptic } from '@/feedback/haptics';
@@ -391,11 +391,9 @@ export default function MeEditScreen() {
   if (!rootKeyPresent) {
     return (
       <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
-        <SettingsBackToolbar
-          title={t('meEdit.cancel')}
-          onPress={() => {
-            safeBack();
-          }}
+        <SettingsScreenTitle
+          title={t('meEdit.title')}
+          leadingAction={{ icon: 'xmark', accessibilityLabel: t('common.cancel'), onPress: () => { safeBack(); } }}
         />
         <View
           style={{
@@ -422,13 +420,10 @@ export default function MeEditScreen() {
 
   return (
     <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
-      <SettingsBackToolbar
-        title={t('meEdit.cancel')}
-        onPress={() => {
-          safeBack();
-        }}
+      <SettingsScreenTitle
+        title={t('meEdit.title')}
+        leadingAction={{ icon: 'xmark', accessibilityLabel: t('common.cancel'), onPress: () => { safeBack(); } }}
       />
-      <SettingsScreenTitle title={t('meEdit.title')} />
 
       <KeyboardAwareScrollView
         contentContainerStyle={{

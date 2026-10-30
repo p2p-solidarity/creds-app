@@ -10,18 +10,19 @@ import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MarkdownDocument } from '@/components/common/MarkdownDocument';
-import {
-  SettingsBackToolbar,
-  SettingsScreenTitle,
-} from '@/components/settings/SettingsBlocks';
+import { SettingsScreenTitle } from '@/components/settings/SettingsBlocks';
+import { useTranslation } from '@/i18n';
 import { PRIVACY_POLICY_MARKDOWN } from '@/legal/privacy';
 
 export default function PrivacyPolicyPage(): ReactNode {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   return (
     <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
-      <SettingsBackToolbar onPress={() => { safeBack(); }} />
-      <SettingsScreenTitle title="Privacy Policy" />
+      <SettingsScreenTitle
+        title="Privacy Policy"
+        leadingAction={{ accessibilityLabel: t('common.back'), onPress: () => { safeBack(); } }}
+      />
       <MarkdownDocument source={PRIVACY_POLICY_MARKDOWN} />
     </View>
   );

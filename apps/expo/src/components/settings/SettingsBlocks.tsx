@@ -396,35 +396,6 @@ export function SettingsBlockInfoRow({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Screen back toolbar — chevron.left + "Done" (or custom title), 16pt
-// ─────────────────────────────────────────────────────────────────────────────
-
-export function SettingsBackToolbar({
-  title = 'Settings',
-  onPress,
-}: {
-  title?: string;
-  onPress: () => void;
-}) {
-  const c = useThemeColors();
-  return (
-    <View className="flex-row items-center" style={{ paddingHorizontal: 12, paddingVertical: 10 }}>
-      <PressableScale
-        onPress={onPress}
-        accessibilityRole="button"
-        accessibilityLabel="Back"
-        className="flex-row items-center"
-        style={{ paddingHorizontal: 4, paddingVertical: 8 }}>
-        <SfIcon name="chevron.left" size={16} weight="semibold" color={c.text1} />
-        <Text className="text-[16px] text-text1" style={{ marginLeft: 4 }}>
-          {title}
-        </Text>
-      </PressableScale>
-    </View>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Screen title — inline nav title (17pt semibold textPrimary, centered).
 // Optional leading/trailing actions render pinned 44×44 icon buttons on the
 // same row so the title stays optically centered.
@@ -468,7 +439,7 @@ export function SettingsScreenTitle({
           scaleTo={SCALE.icon}
           accessibilityRole="button"
           accessibilityLabel={leadingAction.accessibilityLabel}
-          containerStyle={{ position: 'absolute', left: 8, top: 0, bottom: 0, width: 44 }}
+          containerStyle={{ position: 'absolute', left: 8, top: 0, bottom: NAV_ACTION_BOTTOM, width: 44 }}
           style={NAV_ACTION_HIT}>
           <SfIcon
             name={leadingAction.icon ?? 'chevron.left'}
@@ -490,7 +461,7 @@ export function SettingsScreenTitle({
           scaleTo={SCALE.icon}
           accessibilityRole="button"
           accessibilityLabel={trailingAction.accessibilityLabel}
-          containerStyle={{ position: 'absolute', right: 8, top: 0, bottom: 0, width: 44 }}
+          containerStyle={{ position: 'absolute', right: 8, top: 0, bottom: NAV_ACTION_BOTTOM, width: 44 }}
           style={NAV_ACTION_HIT}>
           <SfIcon name={trailingAction.icon} size={22} color={c.text1} />
         </PressableScale>
@@ -498,6 +469,12 @@ export function SettingsScreenTitle({
     </View>
   );
 }
+
+/**
+ * The title row pads 4 above and 12 below; stopping the action column 8 short
+ * of the bottom centres the icon on the title text, not on the padded box.
+ */
+const NAV_ACTION_BOTTOM = 8;
 
 /** Fills the pinned 44pt column so the whole column is the touch target. */
 const NAV_ACTION_HIT: ViewStyle = { flex: 1, alignItems: 'center', justifyContent: 'center' };

@@ -13,7 +13,6 @@ import {
   invalidateCachedNostrResult,
 } from '@/badges/badgeStatusCache';
 import {
-  SettingsBackToolbar,
   SettingsBlockDangerRow,
   SettingsBlockRow,
   SettingsBlockSection,
@@ -125,8 +124,10 @@ export default function DeveloperSettings() {
   if (!developerMode) {
     return (
       <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
-        <SettingsBackToolbar onPress={() => { safeBack('/settings'); }} />
-        <SettingsScreenTitle title={t('developer.title')} />
+        <SettingsScreenTitle
+          title={t('developer.title')}
+          leadingAction={{ accessibilityLabel: t('common.back'), onPress: () => { safeBack('/settings'); } }}
+        />
         <ThemedText variant="caption" tone="secondary" className="px-4 pt-6">
           {t('developer.locked')}
         </ThemedText>
@@ -136,8 +137,10 @@ export default function DeveloperSettings() {
 
   return (
     <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
-      <SettingsBackToolbar onPress={() => { safeBack('/settings'); }} />
-      <SettingsScreenTitle title={t('developer.title')} />
+      <SettingsScreenTitle
+        title={t('developer.title')}
+        leadingAction={{ accessibilityLabel: t('common.back'), onPress: () => { safeBack('/settings'); } }}
+      />
 
       <ScrollView
         className="flex-1"

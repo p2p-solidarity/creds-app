@@ -20,7 +20,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { InfoButton } from '@/components/common/InfoSheet';
 import {
-  SettingsBackToolbar,
   SettingsBlockInfoRow,
   SettingsBlockRow,
   SettingsBlockSection,
@@ -250,8 +249,10 @@ export default function BackupSettings() {
 
   return (
     <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
-      <SettingsBackToolbar onPress={() => { safeBack('/settings'); }} />
-      <SettingsScreenTitle title={t('backup.title')} />
+      <SettingsScreenTitle
+        title={t('backup.title')}
+        leadingAction={{ accessibilityLabel: t('common.back'), onPress: () => { safeBack('/settings'); } }}
+      />
 
       <ScrollView
         className="flex-1"

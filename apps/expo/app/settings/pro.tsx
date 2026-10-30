@@ -7,7 +7,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
 import {
-  SettingsBackToolbar,
   SettingsEnter,
   SettingsScreenTitle,
 } from '@/components/settings/SettingsBlocks';
@@ -138,8 +137,10 @@ export default function ProSettingsScreen() {
 
   return (
     <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
-      <SettingsBackToolbar onPress={() => { safeBack('/settings'); }} />
-      <SettingsScreenTitle title={t('pro.title')} />
+      <SettingsScreenTitle
+        title={t('pro.title')}
+        leadingAction={{ accessibilityLabel: t('common.back'), onPress: () => { safeBack('/settings'); } }}
+      />
 
       <ScrollView
         className="flex-1"

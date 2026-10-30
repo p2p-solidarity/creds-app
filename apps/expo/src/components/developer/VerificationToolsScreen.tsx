@@ -18,7 +18,6 @@ import {
   VerifiedCredentialRow,
 } from '@/components/me';
 import {
-  SettingsBackToolbar,
   SettingsScreenTitle,
 } from '@/components/settings/SettingsBlocks';
 import { ThemedText } from '@/components/themed';
@@ -70,8 +69,10 @@ export function VerificationToolsScreen({
 
   return (
     <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
-      <SettingsBackToolbar onPress={onBack} />
-      <SettingsScreenTitle title={t('developer.verification.title')} />
+      <SettingsScreenTitle
+        title={t('developer.verification.title')}
+        leadingAction={{ accessibilityLabel: t('common.back'), onPress: onBack }}
+      />
 
       <ScrollView contentContainerStyle={{ paddingTop: 12, paddingBottom: 100 }}>
         <View className="gap-8">

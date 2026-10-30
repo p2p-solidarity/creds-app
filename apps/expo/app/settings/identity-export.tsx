@@ -19,7 +19,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { SfIcon } from '@/components/icons/SfIcon';
 import {
-  SettingsBackToolbar,
   SettingsBlockInfoRow,
   SettingsBlockSection,
   SettingsScreenTitle,
@@ -135,8 +134,10 @@ export default function IdentityExportSettings() {
 
   return (
     <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
-      <SettingsBackToolbar onPress={() => { safeBack('/settings'); }} />
-      <SettingsScreenTitle title={t('identityExport.title')} />
+      <SettingsScreenTitle
+        title={t('identityExport.title')}
+        leadingAction={{ accessibilityLabel: t('common.back'), onPress: () => { safeBack('/settings'); } }}
+      />
 
       <KeyboardAwareScrollView
         style={{ flex: 1 }}

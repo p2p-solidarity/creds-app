@@ -5,7 +5,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { InfoButton } from '@/components/common/InfoSheet';
 import {
-  SettingsBackToolbar,
   SettingsEnter,
   SettingsScreenTitle,
 } from '@/components/settings/SettingsBlocks';
@@ -111,8 +110,10 @@ export default function UsernameSettings(): ReactNode {
 
   return (
     <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
-      <SettingsBackToolbar onPress={() => { safeBack('/settings'); }} />
-      <SettingsScreenTitle title={t('settingsUsername.title')} />
+      <SettingsScreenTitle
+        title={t('settingsUsername.title')}
+        leadingAction={{ accessibilityLabel: t('common.back'), onPress: () => { safeBack('/settings'); } }}
+      />
 
       <KeyboardAwareScrollView
         style={{ flex: 1 }}

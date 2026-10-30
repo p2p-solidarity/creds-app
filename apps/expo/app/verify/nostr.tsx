@@ -21,7 +21,7 @@ import {
   PublishOutcomeStep,
   relayNodeStatuses,
 } from '@/components/publish/PublishOutcomeStep';
-import { SettingsBackToolbar, SettingsScreenTitle } from '@/components/settings/SettingsBlocks';
+import { SettingsScreenTitle } from '@/components/settings/SettingsBlocks';
 import { ThemedButton, ThemedSurface, ThemedText, ThemedTextInput } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { showError } from '@/feedback/appAlert';
@@ -219,13 +219,10 @@ function PublishPageScreen(): ReactNode {
 
   return (
     <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
-      <SettingsBackToolbar
-        title={t('nostrConnect.cancel')}
-        onPress={() => {
-          safeBack();
-        }}
+      <SettingsScreenTitle
+        title={t('nostrConnect.title')}
+        leadingAction={{ icon: 'xmark', accessibilityLabel: t('common.cancel'), onPress: () => { safeBack(); } }}
       />
-      <SettingsScreenTitle title={t('nostrConnect.title')} />
 
       <KeyboardAwareScrollView
         contentContainerStyle={{
@@ -467,13 +464,10 @@ function GateScreen({
   const insets = useSafeAreaInsets();
   return (
     <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
-      <SettingsBackToolbar
-        title={t('nostrConnect.cancel')}
-        onPress={() => {
-          safeBack();
-        }}
+      <SettingsScreenTitle
+        title={t('nostrConnect.title')}
+        leadingAction={{ icon: 'xmark', accessibilityLabel: t('common.cancel'), onPress: () => { safeBack(); } }}
       />
-      <SettingsScreenTitle title={t('nostrConnect.title')} />
       <View
         style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, padding: 32 }}>
         <ThemedText variant="bodyMedium" tone="secondary" style={{ textAlign: 'center' }}>

@@ -94,7 +94,7 @@ export default function SettingsHub() {
       <SettingsScreenTitle
         title={t('settingsHub.title')}
         leadingAction={{
-          accessibilityLabel: 'Back',
+          accessibilityLabel: t('common.back'),
           onPress: () => { safeBack(); },
         }}
       />
