@@ -27,7 +27,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { IssuerBadge } from '@/components/credentials/IssuerBadge';
 import { PresentationProofQr } from '@/components/credentials/PresentationProofQr';
 import { PresentationSheet } from '@/components/credentials/PresentationSheet';
-import { hasPassportShowWitnessSafe } from '@/passport/showWitnessVault';
 import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ON_DARK, ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
@@ -52,10 +51,7 @@ import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
 import { useIdentityData, type ProvableClaimEntity } from '@/identity';
 import { requireSensitiveAction } from '@/keychain/biometricGatekeeper';
-import {
-  filterPassportShowPresentationClaims,
-  selectPassportShowPresentationClaims,
-} from '@/passport/presentationClaims';
+import { filterPassportShowPresentationClaims } from '@/passport/presentationClaims';
 import { usePreferences } from '@/settings/preferences';
 
 // MARK: - Helpers (Swift parity)
@@ -389,16 +385,13 @@ export default function CredentialDetailScreen() {
     return allClaims.filter((c) => c.identityCardId === credential.id);
   }, [allClaims, credential]);
 
-  // OpenAC-v3 passports with a vaulted show witness present a FRESH
-  // openac_show proof in the sheet instead of replaying the (huge)
-  // enrollment envelope — only show claim rows backed by that circuit.
-  const passportShowEligible = useMemo(
-    () =>
-      credential !== undefined &&
-      credential.metadataTags.includes('passport-openac-v3') &&
-      hasPassportShowWitnessSafe(credential.id),
-    [credential]
-  );
+  // A passport is shown in person through its L3 badge on the Page (10 §4);
+  // the multi-frame proof QR that used to present it here is gone, and the
+  // Pear hand-over that replaces it is not built yet — so no present CTA.
+  const isPassportCredential =
+    credential !== undefined &&
+    (credential.metadataTags.includes('passport-openac-v3') ||
+      credential.metadataTags.includes('passport-noir'));
 
   // Narrow on the TAG alone, never on the device witness: `openac_show` can
   // only ever disclose age/nationality, so a witness-less device must not be
@@ -429,21 +422,15 @@ export default function CredentialDetailScreen() {
   );
 
   const selectedClaimsForPresentation = useMemo(
-    () =>
-      passportShowEligible
-        ? selectPassportShowPresentationClaims(
-            presentationClaimRows,
-            selectedClaimIdsForPresentation
-          )
-        : selectPresentationClaims(presentationClaimRows, selectedClaimIdsForPresentation),
-    [passportShowEligible, presentationClaimRows, selectedClaimIdsForPresentation]
+    () => selectPresentationClaims(presentationClaimRows, selectedClaimIdsForPresentation),
+    [presentationClaimRows, selectedClaimIdsForPresentation]
   );
 
   const presentation = useMemo<{
     readonly pages: readonly PresentationQRPage[];
     readonly error?: string;
   }>(() => {
-    if (!credential || passportShowEligible || selectedClaimsForPresentation.length === 0) {
+    if (!credential || isPassportCredential || selectedClaimsForPresentation.length === 0) {
       return { pages: [] };
     }
     const result = buildPresentationProofQrPages({
@@ -454,7 +441,7 @@ export default function CredentialDetailScreen() {
     return result.ok
       ? { pages: result.value }
       : { pages: [], error: t(disclosureErrorI18nKey(result.error)) };
-  }, [credential, passportShowEligible, selectedClaimsForPresentation, presentationClaimRows, t]);
+  }, [credential, isPassportCredential, selectedClaimsForPresentation, presentationClaimRows, t]);
 
   const status = useMemo<string>(() => {
     if (!credential) return '';
@@ -481,14 +468,7 @@ export default function CredentialDetailScreen() {
   const accent = levelAccent(trustDisplay.tone);
   const trustBadge = issuerTrustBadge(credential, t);
   const isExpired = credential.expiresAt != null && credential.expiresAt.getTime() < Date.now();
-  // An openac-v3 credential without this device's show-witness cannot produce
-  // an honest presentation (buildPresentationProofJson refuses it). Disable the
-  // CTA rather than letting it consume a Face ID prompt and stamp
-  // `lastPresentedAt` for a presentation that provably never happens.
-  const cannotPresentWithoutWitness =
-    credential.metadataTags.includes('passport-openac-v3') && !passportShowEligible;
-  const presentDisabled =
-    selectedClaimsForPresentation.length === 0 || cannotPresentWithoutWitness;
+  const presentDisabled = selectedClaimsForPresentation.length === 0;
 
   const onPresent = () => {
     void (async () => {
@@ -701,9 +681,9 @@ export default function CredentialDetailScreen() {
               </View>
             ) : (
               <View className="px-4" style={{ gap: 16 }}>
-                {passportShowEligible ? (
+                {isPassportCredential ? (
                   <ThemedText variant="bodySmall" tone="tertiary">
-                    {t('passportShow.inlineHint')}
+                    {t('credentialDetail.passportOnPage')}
                   </ThemedText>
                 ) : (
                   <PresentationProofQr
@@ -733,12 +713,14 @@ export default function CredentialDetailScreen() {
 
       {/* Present bar */}
       <View className="bg-pageBg px-4 pt-3" style={{ paddingBottom: 12 + insets.bottom }}>
-        <ThemedButton
-          label={t('credentialDetail.presentProof')}
-          fullWidth
-          disabled={presentDisabled}
-          onPress={onPresent}
-        />
+        {isPassportCredential ? null : (
+          <ThemedButton
+            label={t('credentialDetail.presentProof')}
+            fullWidth
+            disabled={presentDisabled}
+            onPress={onPresent}
+          />
+        )}
         <View className="mt-2 items-center">
           <PressableScale
             onPress={onRegenerate}
@@ -759,7 +741,6 @@ export default function CredentialDetailScreen() {
         onDismiss={() => {
           setPresenting(false);
         }}
-        passportShowEligible={passportShowEligible}
         productMode={isProductContext}
       />
     </View>

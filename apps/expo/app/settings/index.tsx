@@ -89,11 +89,6 @@ export default function SettingsHub() {
           {/* Account */}
           <SettingsBlockSection title={t('settingsHub.accountIdentity')}>
             <SettingsBlockRow
-              icon="person.text.rectangle"
-              title={t('settingsHub.identityProfile')}
-              onPress={() => { router.push('/me/edit'); }}
-            />
-            <SettingsBlockRow
               icon="key.fill"
               title={t('settingsHub.passkeys')}
               trailingText={passkeyCount === null ? t('settingsHub.passkeysLoading') : passkeyCount.ok
@@ -108,7 +103,13 @@ export default function SettingsHub() {
             <SettingsBlockRow
               icon="icloud"
               title={t('settingsHub.identityExport')}
+              trailingText={backupEnabled ? t('common.on') : t('common.off')}
               onPress={() => { router.push('/settings/backup'); }}
+            />
+            <SettingsBlockRow
+              icon="key.horizontal"
+              title={t('settingsHub.recoveryPhrase')}
+              onPress={() => { router.push('/settings/identity-export'); }}
             />
           </SettingsBlockSection>
 
@@ -152,12 +153,6 @@ export default function SettingsHub() {
               title={t('settingsHub.importContacts')}
               onPress={() => { router.push('/contacts/import-vcf'); }}
             />
-            <SettingsBlockRow
-              icon="icloud"
-              title={t('settingsHub.cloudBackup')}
-              trailingText={backupEnabled ? t('common.on') : t('common.off')}
-              onPress={() => { router.push('/settings/data-sync'); }}
-            />
           </SettingsBlockSection>
 
           <SettingsBlockSection title={t('settingsHub.advancedSection')}>
@@ -187,8 +182,8 @@ export default function SettingsHub() {
               />
               <SettingsBlockRow
                 icon="hand.raised"
-                title={t('settingsHub.privacy')}
-                onPress={() => { router.push('/settings/privacy'); }}
+                title={t('settingsHub.privacyPolicy')}
+                onPress={() => { router.push('/legal/privacy'); }}
               />
               <Pressable
                 onPress={onVersionTap}

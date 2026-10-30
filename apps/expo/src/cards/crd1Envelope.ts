@@ -8,75 +8,18 @@
  *   legacy: base64url JSON JWT            (~1.4× payload, EC level L)
  *   CRD1:   CBOR → COSE_Sign1 → zlib → Base45, EC level Q, ≤2,420 chars
  *
- * Fallback contract: `buildCrd1CardWire` returns null when the signer has no
- * raw-message capability, when the pack exceeds QR capacity, or when claim
- * assembly/signing fails — the runtime then falls back to the legacy JWT
- * wire (still emitted by `encodeEnvelopeToWire`, still parsed by every
- * scanner in the field). Old wires keep scanning forever; CRD1 is the
- * preferred emission, not a flag day.
+ * Decode only: the app stopped emitting card wires (10 §4); `verifyCrd1Wire`
+ * keeps reading CRD1 packs already in the field for one version's transition.
  */
 import {
   didKeyFromJwk,
   err,
   ok,
-  CRD1_MAX_VALIDITY_SECONDS,
   decodeCrd1,
-  encodeCrd1,
   type Crd1Claims,
   type PublicKeyJWK,
   type Result,
 } from '@solidarity/shared';
-
-import { buildDidSignedClaims } from '@/cards/didSignedCredentialPayload';
-import type { EnvelopeWireResult } from '@/cards/qrEnvelope';
-import type { SolidarityQrPayloadOptions } from '@/cards/solidarityQrTypes';
-import type { BusinessCard } from '@solidarity/shared';
-
-export interface Crd1CardWireResult extends EnvelopeWireResult {
-  readonly chars: number;
-  readonly qrVersion: number;
-  readonly shareId: string;
-}
-
-/**
- * Build the CRD1 wire for a card share. Returns null (→ legacy-JWT fallback)
- * rather than throwing: a QR share must never fail outright because the
- * newer framing didn't fit or the signer lacks `signRaw`.
- */
-export async function buildCrd1CardWire(
-  card: BusinessCard,
-  options: SolidarityQrPayloadOptions
-): Promise<Crd1CardWireResult | null> {
-  const signer = options.signer;
-  const signRaw = signer?.signRaw;
-  if (!signer || !signRaw) return null;
-
-  try {
-    const assembled = buildDidSignedClaims(card, options);
-    const iat = assembled.issuedAt;
-    const requestedExp = options.expirationDate
-      ? Math.round(options.expirationDate.getTime() / 1000)
-      : iat + CRD1_MAX_VALIDITY_SECONDS;
-    const claims: Crd1Claims = {
-      ...assembled.payload,
-      iss: assembled.issuerDid,
-      iat,
-      exp: Math.min(requestedExp, iat + CRD1_MAX_VALIDITY_SECONDS),
-    };
-    const outcome = await encodeCrd1(claims, assembled.issuerDid, signRaw);
-    if (!outcome.ok) return null;
-    return {
-      wire: outcome.wire,
-      // CREDS.md §18: CRD1 targets QR alphanumeric mode at EC level Q.
-      startingLevel: 'Q',
-      chars: outcome.chars,
-      qrVersion: outcome.qrVersion,
-      shareId: assembled.shareId,
-    };
-  } catch {
-    return null;
-  }
-}
 
 export interface Crd1VerifiedWire {
   readonly claims: Crd1Claims;
