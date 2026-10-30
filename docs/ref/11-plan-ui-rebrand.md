@@ -28,6 +28,17 @@
 | **R4 動態** | 核心流程進場／退場／layout 轉場（`motion.ts`、`PressableScale`）：AddLink、LinksStep、verify/social、People 詳細頁、Settings；成功打勾 | 錄影抽幀或連續截圖 |
 | **R5 收尾** | 5 條 user story 模擬器走一遍；`bun run typecheck && bun run lint && bun run test` | `…-r5-stories/result.md` |
 
+## 1.1 執行紀錄與偏差（2026-10-30）
+
+- **R1**：刪 `/cards/edit`、`/settings/{share-settings,privacy,dids,groups}`、`/groups/*`、`/id/*`、`/me/evidence-pack`、Present「證明」模式、`PassportShowPresentation`、CRD1／evidence pack 產生端。Settings 19→14 頁；「身分匯出（24 字）」原本沒有入口，接回帳號區。憑證詳情頁的護照不再出示（R-D7）。
+  - **偏差**：`qrChunking`／`qrCompression` 測試**保留**——websign 仍用 sqc1（10 §4 明文保留到 08 上線）。`encodeEnvelopeToWire`／`buildSolidarityQrPayload` 保留，因為 `envelopeHandler` 的解碼安全測試用它們產測資；`solidarityQrPayload`／`qrEnvelopeWire`／`crd1Envelope`／`presentModel` 測試刪除。
+  - 留給 passport session：`src/passport/useShowPresentation.ts` 已無呼叫者；`scan/showPresentationHandler` 與 `PassportShowChallengeSheet` 仍在（安全路徑，未動）。
+- **R2**：`radius.ts` + tailwind 角色 class；全 App 數字圓角清零（剩 0 = 刻意直角、Page 模板半徑、手機框 24）。ThemedSurface `elevated` 用 `shadow('lift')`。People 空狀態的 S 弧形圖換成 creds.id 雙環標格子。
+- **R3**：`AddLinkSheet` 共用（Page／onboarding／Me › Edit）。Page：「＋ 新增連結」放在連結列最上方與空狀態，直接開 sheet，加上即存（`quickAddLink`），可驗證平台接 `SocialVerifyPanel`。圖示＝`linkPreview`（沿用 ssrf session 的 `createPublicPageFetch`，cherry-pick 742a7755）＋本機快取。頭貼：沒有簽章頭貼也沒有本機頭貼 → 同一次簽章帶上；有 → 一鍵替換。onboarding 可連加多條，一次簽名。
+  - 步數（從 Page 到綠勾）：舊 ≈12（＋新增 → 連結格 → Me › Edit → 貼上/選平台 → 加入 → 儲存 Face ID → 回 Page → 找驗證 chip → 複製並打開 → 貼 → 回來 → 加上綠勾 Face ID）；新 6（＋新增連結 → 貼上 → 加上 → 加上綠勾 → 複製並打開 → 回來後加上綠勾）。
+  - 模擬器沒有 App Attest：`deviceAttestSupported()` 為 false，驗證按鈕不顯示——綠勾那段只能實機驗。
+- **R4**：`motion.ts` 新增 `fadeOutSettle`、`LIST_LAYOUT`；People 詳細頁、Settings 首頁進場；可編輯連結列 enter/exit/layout；ThemedButton／名片翻面／編譯完成徽章改用 SPRING token。
+
 ## 2. 不做（這一刀）
 
 - Pear 當面護照出示（R-D7）。
