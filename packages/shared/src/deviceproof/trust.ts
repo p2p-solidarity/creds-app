@@ -26,11 +26,11 @@ export const CREDS_ANDROID_SIGNATURE_DIGESTS_HEX: readonly string[] = [
 export const CREDS_NOTARY_ORIGIN = 'https://creds-notary.gimmychang.workers.dev';
 
 /**
- * Hex pubkey(s) of the creds.id Pro notary's Nostr key. Empty until the
- * notary key is provisioned (`apps/notary/scripts/witness-key.ts`): until
- * then no notary witness counts.
+ * Hex pubkey(s) of the creds.id Pro notary's Nostr key (creds-notary Worker
+ * secret `NOTARY_NSEC`, made by `apps/notary/scripts/witness-key.ts`,
+ * provisioned 2026-10-30). A notary witness from any other key does not count.
  */
-export const CREDS_NOTARY_WITNESS_PUBKEYS: readonly string[] = [];
+export const CREDS_NOTARY_WITNESS_PUBKEYS: readonly string[] = ['408e4005c978f0e37931b71cbe182a65f21b4e37ad47051731ceae1e4f4e289c'];
 
 export const CREDS_DEVICE_TRUST: DeviceProofTrust = {
   appleAppId: CREDS_APPLE_APP_ID,

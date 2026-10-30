@@ -19,11 +19,12 @@ export const LICENSE_MAX_SECONDS = 7 * 86_400;
 const SKEW_SECONDS = 300;
 
 /**
- * did:key(s) of the creds.id license signing key. Empty until the worker's
- * key is provisioned (`airmeishi-backend/scripts/license-key.ts`): with no
- * pinned issuer every license fails closed.
+ * did:key(s) of the creds.id license signing key (solidarity-id Worker
+ * secret `LICENSE_SIGNING_KEY`, made by
+ * `airmeishi-backend/scripts/license-key.ts`, provisioned 2026-10-30).
+ * A license from any other key fails closed.
  */
-export const CREDS_LICENSE_ISSUERS: readonly string[] = [];
+export const CREDS_LICENSE_ISSUERS: readonly string[] = ['did:key:zDnaes2SfS91nr5v4Dz4fwExpjL3BSpzUTsDFpyJpXhJ1uLBN'];
 
 const licenseSchema = z
   .object({
