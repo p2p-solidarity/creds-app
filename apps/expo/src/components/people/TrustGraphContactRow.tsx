@@ -2,14 +2,13 @@ import type { ReactNode } from 'react';
 import { View } from 'react-native';
 
 import { Colors } from '@/constants/Colors';
-import { Radius } from '@/constants/radius';
 
 import { ContactRow, type ContactRowProps } from './ContactRow';
 
 /**
- * Compatibility name for the manifest-backed contact row. The v3 Contacts
- * surface deliberately removes the legacy avatar/job/radar treatment and
- * keeps only name, real source context, selection state, and a chevron.
+ * Compatibility name for the manifest-backed contact row: initial avatar,
+ * name, real source context, selection state, and a chevron — the same
+ * layout as a saved Page row, so both kinds read as one list.
  */
 export type TrustGraphContactRowProps = ContactRowProps;
 
@@ -17,7 +16,6 @@ export function TrustGraphContactRow(props: TrustGraphContactRowProps): ReactNod
   return (
     <View
       style={{
-        borderRadius: Radius.group,
         borderBottomWidth: 0.5,
         borderBottomColor: Colors.divider,
       }}

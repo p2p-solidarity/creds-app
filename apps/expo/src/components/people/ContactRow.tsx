@@ -3,6 +3,7 @@ import { View } from 'react-native';
 
 import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
+import { PageAvatar } from '@/components/people/PageAvatar';
 import { ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { Radius } from '@/constants/radius';
@@ -40,11 +41,10 @@ export function ContactRow({
       accessibilityRole="button"
       accessibilityLabel={contact.name}
       accessibilityState={selectionMode ? { selected } : undefined}
-      className="flex-row items-center"
-      style={{ minHeight: 58 }}
+      className="flex-row items-center gap-3 py-3"
     >
       {selectionMode ? (
-        <View style={{ width: 34, alignItems: 'flex-start' }}>
+        <View style={{ width: 22 }}>
           <View
             style={{
               width: 22,
@@ -64,21 +64,20 @@ export function ContactRow({
         </View>
       ) : null}
 
-      <View style={{ flex: 1, minWidth: 0, paddingVertical: 9, gap: 1 }}>
-        <ThemedText variant="bodyMedium" numberOfLines={1}>
+      <PageAvatar avatar={null} displayName={contact.name} size={38} />
+      <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+        <ThemedText variant="bodyLarge" numberOfLines={1}>
           {contact.name}
         </ThemedText>
         {source ? (
-          <ThemedText variant="bodySmall" tone="secondary" numberOfLines={1}>
+          <ThemedText variant="caption" tone="tertiary" numberOfLines={1}>
             {source}
           </ThemedText>
         ) : null}
       </View>
 
       {!selectionMode ? (
-        <View style={{ width: 32, height: 44, alignItems: 'flex-end', justifyContent: 'center' }}>
-          <SfIcon name="chevron.right" size={13} color={Colors.text3} />
-        </View>
+        <SfIcon name="chevron.right" size={12} weight="semibold" color={Colors.text3} />
       ) : null}
     </PressableScale>
   );

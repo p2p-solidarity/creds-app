@@ -63,9 +63,12 @@ function VerifiedPageRow({
         <ThemedText variant="bodyLarge" numberOfLines={1}>
           {snapshot.record.displayName}
         </ThemedText>
-        <ThemedText variant="caption" tone="tertiary" numberOfLines={1}>
-          {relativeAtLabel(snapshot.verifiedAt, t)}
-        </ThemedText>
+        <View className="flex-row items-center" style={{ gap: 6 }}>
+          <PageKindLabel />
+          <ThemedText variant="caption" tone="tertiary" numberOfLines={1} style={{ flexShrink: 1 }}>
+            {relativeAtLabel(snapshot.verifiedAt, t)}
+          </ThemedText>
+        </View>
       </View>
       <SfIcon name="chevron.right" size={12} weight="semibold" color={Colors.text3} />
     </PressableScale>
@@ -104,9 +107,12 @@ function DeclaredPageRow({
         <ThemedText variant="bodyLarge" numberOfLines={1}>
           {displayTitle}
         </ThemedText>
-        <ThemedText variant="caption" tone="tertiary" numberOfLines={1}>
-          {`${linkDisplay('', snapshot.sourceUrl).text} · ${relativeAtLabel(snapshot.importedAt, t)}`}
-        </ThemedText>
+        <View className="flex-row items-center" style={{ gap: 6 }}>
+          <PageKindLabel />
+          <ThemedText variant="caption" tone="tertiary" numberOfLines={1} style={{ flexShrink: 1 }}>
+            {`${linkDisplay('', snapshot.sourceUrl).text} · ${relativeAtLabel(snapshot.importedAt, t)}`}
+          </ThemedText>
+        </View>
       </View>
       <View
         className="rounded-full border border-divider px-2 py-0.5"
@@ -121,7 +127,17 @@ function DeclaredPageRow({
   );
 }
 
-
+/** Marks a row as a saved Page, so it reads apart from a contact's source line. */
+function PageKindLabel(): ReactNode {
+  const { t } = useTranslation();
+  return (
+    <View className="rounded bg-searchBg px-1.5">
+      <ThemedText variant="caption" tone="secondary">
+        {t('peopleList.pageLabel')}
+      </ThemedText>
+    </View>
+  );
+}
 
 /** Shared by both row kinds — `verifiedAt` for a verified row, `importedAt`
  * for a declared row; the bucketing math is identical either way. */
