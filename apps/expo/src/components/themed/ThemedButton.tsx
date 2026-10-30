@@ -183,7 +183,15 @@ export function ThemedButton({
               numberOfLines={1}
               adjustsFontSizeToFit
               minimumFontScale={0.85}
-              style={{ color: cfg.fg, fontSize: size === 'sm' ? 13 : 16, fontFamily: textFont(cfg.weight) }}>
+              // iOS gives a shrinkable label the full row width and draws it
+              // left-aligned; centre it inside its own box too.
+              style={{
+                color: cfg.fg,
+                fontSize: size === 'sm' ? 13 : 16,
+                fontFamily: textFont(cfg.weight),
+                textAlign: 'center',
+                flexShrink: 1,
+              }}>
               {label}
             </Text>
           </>
