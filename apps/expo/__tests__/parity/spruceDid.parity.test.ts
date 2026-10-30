@@ -495,8 +495,8 @@ describe('SpruceID DID Nitro module — JS-side wiring', () => {
     driver.sessionPrimes.length = 0;
     (globalThis as { __SPRUCE_DID_TEST_PLATFORM__?: string }).__SPRUCE_DID_TEST_PLATFORM__ = 'ios';
     try {
-      await signOpenAcDeviceBindingDigest(new Uint8Array(32).fill(5));
-      await signOpenAcDeviceBindingDigest(new Uint8Array(32).fill(6));
+      await signRawEs256(new Uint8Array(32).fill(5));
+      await signRawEs256(new Uint8Array(32).fill(6));
       // The live prompt ran ON the native sign context (so the keychain ACL
       // does not ask again), once, and no second expo sheet was stacked.
       expect(driver.sessionPrimes.length).toBe(1);

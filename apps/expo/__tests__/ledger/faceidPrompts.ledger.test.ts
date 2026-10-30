@@ -413,26 +413,18 @@ const STORIES: readonly Story[] = [
   },
   {
     id: '5',
-    label: '證明：護照（綁定簽章→存→npub 綁定→公開揭露）→ 下一個動作',
+    label: '護照（存→公開揭露）→ 下一個動作；P2 後裝置聲明用裝置金鑰，不問 Face ID',
     setup: async () => {
       await freshIdentity();
       await save(1);
     },
     intents: [
       {
-        name: 'proof: device-binding signature',
-        run: async () => void (await signingKey.signOpenAcDeviceBindingDigest(new Uint8Array(32).fill(1))),
-      },
-      {
         name: 'save passport (issueCredential gate)',
         run: async () => {
           const g = await requireSensitiveAction('issueCredential', 'save passport');
           if (!g.success) throw new Error('denied');
         },
-      },
-      {
-        name: 'npub binding (device-binding signature)',
-        run: async () => void (await signingKey.signOpenAcDeviceBindingDigest(new Uint8Array(32).fill(2))),
       },
       { name: 'publish public disclosure', run: passportPublicDisclosure },
       { name: 'next action: open Present QR', run: presentQr },
