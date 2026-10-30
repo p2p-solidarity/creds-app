@@ -68,7 +68,8 @@ export type VerifiedPageErrorReason =
 export interface VerifiedHandleBinding {
   readonly scheme: HandleScheme;
   readonly handle: string;
-  readonly state: BadgeState;
+  /** `checking` = the page is shown while the live two-way check is still running. */
+  readonly state: BadgeState | 'checking';
   readonly rebindGeneration?: number;
   readonly reboundAt?: number | null;
 }

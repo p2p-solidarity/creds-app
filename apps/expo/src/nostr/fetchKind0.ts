@@ -19,7 +19,13 @@
 import { subscribeEvents } from '@/nostr/nostrAdapter';
 import type { NostrKind0Content, NostrKind0Fetcher } from '@solidarity/shared';
 
-import { DEFAULT_FETCH_TIMEOUT_MS, fetchLatestKind0, parseKind0Content, type SubscribeEventsFn } from './publish';
+import {
+  DEFAULT_FETCH_TIMEOUT_MS,
+  FIRST_ANSWER_GRACE_MS,
+  fetchLatestKind0,
+  parseKind0Content,
+  type SubscribeEventsFn,
+} from './publish';
 
 export interface FetchKind0Options {
   readonly timeoutMs?: number;
@@ -43,7 +49,8 @@ export async function fetchKind0FromRelays(
     relays,
     pubkeyHex,
     opts.subscribeEventsFn ?? subscribeEvents,
-    opts.timeoutMs ?? DEFAULT_FETCH_TIMEOUT_MS
+    opts.timeoutMs ?? DEFAULT_FETCH_TIMEOUT_MS,
+    { graceMs: FIRST_ANSWER_GRACE_MS }
   );
   if (!event) return null;
   return { contentJson: parseKind0Content(event.content), created_at: event.created_at };

@@ -53,19 +53,22 @@ export function handleDeepLink(raw: string): DeepLinkRoute {
       // which screen is currently focused.
       presentVerifiedPageResult(verifyFragment(route.fragment));
       break;
-    case 'verifiedPointer':
+    case 'verifiedPointer': {
       // Short `#nostr:<npub>` form — open the sheet in its loading state,
-      // then swap in the resolved verdict once relays answer (or an honest
-      // unreachable/notFound/bindingMismatch). Fire-and-forget: the sheet is
-      // store-driven, so it doesn't matter that `handleDeepLink` returns
-      // before resolution completes. `resolveProfileByNpub` never throws.
-      presentVerifiedPageResolving();
-      void resolveProfileByNpub(route.npub).then(presentVerifiedPageResult);
+      // paint the first relay's verified page, then swap in the resolved
+      // verdict (or an honest unreachable/notFound/bindingMismatch).
+      // Fire-and-forget: the sheet is store-driven, so it doesn't matter that
+      // `handleDeepLink` returns before resolution completes.
+      // `resolveProfileByNpub` never throws.
+      const present = presentVerifiedPageResolving();
+      void resolveProfileByNpub(route.npub, { onInterim: present }).then(present);
       break;
-    case 'verifiedHandle':
-      presentVerifiedPageResolving();
-      void resolveProfileByHandle(route.handle).then(presentVerifiedPageResult);
+    }
+    case 'verifiedHandle': {
+      const present = presentVerifiedPageResolving();
+      void resolveProfileByHandle(route.handle, { onInterim: present }).then(present);
       break;
+    }
     case 'pear':
       // Task A5.4 (US-20) — reuse the Verified Page detail route: it already
       // renders the full card-exchange surface for a did with a saved

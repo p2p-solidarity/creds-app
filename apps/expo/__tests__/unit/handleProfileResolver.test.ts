@@ -75,6 +75,7 @@ describe('resolveProfileByHandle', () => {
             })),
     };
 
+    const interim: (string | undefined)[] = [];
     const result = await resolveProfileByHandle('alice', {
       io,
       fetchNostrProfile: async () => fetched,
@@ -82,8 +83,11 @@ describe('resolveProfileByHandle', () => {
         contentJson: { nip05: 'alice@creds.id', alsoKnownAs: [SUBJECT_DID] },
         created_at: 1_776_038_400,
       }),
+      onInterim: (r) => interim.push(r.kind === 'verified' ? r.handleBinding?.state : r.kind),
     });
 
+    // The page paints before the two-way check, never with its verdict.
+    expect(interim).toEqual(['checking']);
     expect(result.kind).toBe('verified');
     if (result.kind !== 'verified') return;
     expect(result.handleBinding).toEqual({

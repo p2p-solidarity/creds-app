@@ -31,6 +31,7 @@ import { verifyProfileJws, type VerifiedPageResult } from '@/scan/verifiedPageHa
 import {
   DEFAULT_FETCH_TIMEOUT_MS,
   DEFAULT_RELAYS,
+  FIRST_ANSWER_GRACE_MS,
   fetchLatestProfilePointer,
   type SubscribeEventsFn,
 } from './publish';
@@ -43,7 +44,16 @@ export interface ResolveProfileOptions {
   readonly timeoutMs?: number;
   /** DI seam for tests — a mock relay instead of the real WS client. */
   readonly subscribeEventsFn?: SubscribeEventsFn;
+  /**
+   * Called as soon as a relay delivers a page that already passes every gate
+   * the final answer would (signature, and the npub binding for
+   * `resolveProfileByNpub`), and again if a later relay has a newer one. The
+   * returned promise still settles with the final verdict.
+   */
+  readonly onInterim?: (result: VerifiedProfile) => void;
 }
+
+export type VerifiedProfile = Extract<VerifiedPageResult, { readonly kind: 'verified' }>;
 
 /**
  * Fetch + JWS-verify a profile through an npub locator. This is the
@@ -60,11 +70,22 @@ export async function fetchVerifiedProfileByNpub(
   }
 
   const relays = opts.relays ?? DEFAULT_RELAYS;
+  const onInterim = opts.onInterim;
   const { event, confirmed } = await fetchLatestProfilePointer(
     relays,
     decoded.value,
     opts.subscribeEventsFn ?? subscribeEvents,
-    opts.timeoutMs ?? DEFAULT_FETCH_TIMEOUT_MS
+    opts.timeoutMs ?? DEFAULT_FETCH_TIMEOUT_MS,
+    {
+      graceMs: FIRST_ANSWER_GRACE_MS,
+      onEvent:
+        onInterim === undefined
+          ? undefined
+          : (candidate) => {
+              const verified = verifyProfileJws(candidate.content);
+              if (verified.kind === 'verified') onInterim(verified);
+            },
+    }
   );
 
   if (!event) {
@@ -83,13 +104,23 @@ export async function resolveProfileByNpub(
   npub: string,
   opts: ResolveProfileOptions = {}
 ): Promise<VerifiedPageResult> {
-  const result = await fetchVerifiedProfileByNpub(npub, opts);
-  if (result.kind !== 'verified') return result;
-
   // The reverse-binding gate (see module doc) — the profile must claim this
   // exact npub back, or a relay could have substituted someone else's
-  // validly-signed profile.
-  if (!result.record.alsoKnownAs.includes(`nostr:${npub}`)) {
+  // validly-signed profile. Interim pages pass the same gate before painting.
+  const claimsNpub = (r: VerifiedProfile): boolean => r.record.alsoKnownAs.includes(`nostr:${npub}`);
+  const onInterim = opts.onInterim;
+  const result = await fetchVerifiedProfileByNpub(npub, {
+    ...opts,
+    onInterim:
+      onInterim === undefined
+        ? undefined
+        : (interim) => {
+            if (claimsNpub(interim)) onInterim(interim);
+          },
+  });
+  if (result.kind !== 'verified') return result;
+
+  if (!claimsNpub(result)) {
     return {
       kind: 'invalid',
       reason: 'bindingMismatch',

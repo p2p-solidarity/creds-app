@@ -101,7 +101,12 @@ export function publishWitness(event: NostrEvent, relays: readonly string[]): Pr
   return publishToRelays(event, relays, publishEvent);
 }
 
-/** Collect every matching event from `relays` until each answers EOSE (or the deadline). */
+/**
+ * Collect every matching event from `relays` until each answers EOSE (or the
+ * deadline). Deliberately no first-answer grace: these are counted sets, and
+ * a missed event can inflate a count — an owner's own witness that excludes
+ * their second npub, or a newer passport binding that moves a passport away.
+ */
 export function fetchEvents(
   relays: readonly string[],
   filter: Parameters<typeof subscribeEvents>[1],
@@ -120,12 +125,16 @@ export function fetchEvents(
       resolve([...found.values()]);
     };
     const timer = setTimeout(finish, timeoutMs);
-    const settle = () => {
+    const settled = new Set<number>();
+    // Once per relay: a dropped socket reports through both ws.onerror and ws.onclose.
+    const settle = (index: number) => {
+      if (settled.has(index)) return;
+      settled.add(index);
       pending -= 1;
       if (pending <= 0) finish();
     };
     if (relays.length === 0) finish();
-    for (const relay of relays) {
+    relays.forEach((relay, index) => {
       handles.push(
         subscribeEvents(
           relay,
@@ -133,33 +142,39 @@ export function fetchEvents(
           (event) => {
             if (eventMatchesFilter(event, filter)) found.set(event.id, event);
           },
-          settle,
-          settle,
+          () => settle(index),
+          () => settle(index),
         ),
       );
-    }
+    });
   });
 }
 
-/** Witnesses of each claim of one Page, verified and counted (shared rules). */
-export async function fetchWitnessSummaries(
-  page: { readonly subject: string; readonly subjectHex: string; readonly name: string; readonly claims: readonly string[] },
+/**
+ * Every witness event for the given claims of one Page — one multi-`#d` REQ.
+ * Needs no creds.id name, so it runs while the name is still resolving.
+ */
+export function fetchWitnessEvents(
+  subjectHex: string,
+  claims: readonly string[],
   relays: readonly string[],
-): Promise<ReadonlyMap<string, WitnessSummary>> {
-  const out = new Map<string, WitnessSummary>();
-  if (page.claims.length === 0) return out;
-  const events = await fetchEvents(relays, {
-    kinds: [WITNESS_EVENT_KIND],
-    '#d': page.claims.map((c) => witnessDTag(c, page.subjectHex)),
-  });
+): Promise<readonly NostrEvent[]> {
+  if (claims.length === 0) return Promise.resolve([]);
+  return fetchEvents(relays, { kinds: [WITNESS_EVENT_KIND], '#d': claims.map((c) => witnessDTag(c, subjectHex)) });
+}
+
+/** Witnesses of each claim of one Page, verified and counted (shared rules). */
+export function summarizeWitnessEvents(
+  events: readonly NostrEvent[],
+  page: { readonly subject: string; readonly name: string; readonly claims: readonly string[] },
+): ReadonlyMap<string, WitnessSummary> {
   const now = Math.floor(Date.now() / 1000);
-  for (const claim of page.claims) {
-    out.set(
+  return new Map(
+    page.claims.map((claim) => [
       claim,
       summarizeWitnesses(events, { subject: page.subject, claim, name: page.name }, CREDS_DEVICE_TRUST, now),
-    );
-  }
-  return out;
+    ]),
+  );
 }
 
 /**

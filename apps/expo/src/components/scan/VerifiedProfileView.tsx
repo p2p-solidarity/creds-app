@@ -120,9 +120,16 @@ export function VerifiedProfileView({ record, handleBinding }: VerifiedProfileVi
 
 function HandleBindingBadge({ binding }: { readonly binding: VerifiedHandleBinding }): ReactNode {
   const { t } = useTranslation();
-  const model = handleBadgeViewModel(binding.state);
+  const { state } = binding;
+  // The page is on screen while the live two-way check still runs: grey, never a seal.
+  const model =
+    state === 'checking'
+      ? { visual: 'checking' as const, labelKey: 'verifiedPage.handleBadge.checking' as const }
+      : handleBadgeViewModel(state);
   const style = (() => {
     switch (model.visual) {
+      case 'checking':
+        return { icon: 'clock' as const, color: Colors.text3 };
       case 'verified':
         return { icon: 'checkmark.seal.fill' as const, color: Colors.terminalGreen };
       case 'declared':
