@@ -63,7 +63,11 @@ from Run 1.
 - **Visual of the interim sheet not captured.** On this build, opening a `creds.id/@name` universal link
   lets expo-router navigate to "Unmatched Route" (`solidarity://@gimmy`), which covers the sheet. Before
   and after are the same, so this is not caused by this change; the `[perf]` logs show the sheet state
-  being set. Follow-up: add `+native-intent` (or equivalent) so `/@name` links don't route.
+  being set. Fixed afterwards by `app/+native-intent.tsx` (sheet links don't route; cold launch starts
+  at `/`).
+- **The `+native-intent` deep link fix has not been run yet** (typecheck + eslint only). It waits for
+  the joint 2.0.0 E2E pass: open `creds.id/@name` warm and cold, and check that the sheet shows instead
+  of "Unmatched Route".
 - `#nostr:<npub>` universal links did not reach the app on the simulator (the AASA presumably claims
   only `/@*`). The pointer path is covered by Run 1 + unit tests.
 - No physical device run.
@@ -71,7 +75,8 @@ from Run 1.
   reflect the older one. The web made the same trade. The 4 s budget had the same exposure for slower
   relays.
 - The web (`airmeishi-web/src/services/nostr/fetchProfilePointer.ts`) has the same double-settle bug in
-  its `fetchEvents` (`pending -= 1` per callback). Not fixed here (other repo).
+  its `fetchEvents` (`pending -= 1` per callback). Follow-up: settle each relay once there too (the
+  same fix as `publish.ts` / `witness.ts` here). Not done this round.
 
 ## Tests added (red → green)
 
