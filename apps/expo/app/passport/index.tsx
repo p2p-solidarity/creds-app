@@ -66,6 +66,7 @@ import {
 import { didKeyForCurrentIdentity, requireSensitiveAction } from '@/keychain';
 import { usePreferences } from '@/settings/preferences';
 import { useCredentialStore, type TrustLevel } from '@/credentials/store';
+import { removeCredentialAndClaims } from '@/credentials/removeCredential';
 import { isRetiredPassportCredential } from '@/credentials/trustDisplay';
 import { useActiveDid, useIdentityData } from '@/identity';
 import type { PassportReadResult } from '@solidarity/nitro-attest';
@@ -111,15 +112,6 @@ async function findSavedPassport(fingerprint: string) {
     duplicate: records.find((r) => !isRetiredPassportCredential(r)) ?? null,
     retiredIds: [...new Set(records.filter((r) => isRetiredPassportCredential(r)).map((r) => r.id))],
   };
-}
-
-async function removeRetiredPassport(id: string): Promise<void> {
-  const identity = useIdentityData.getState();
-  for (const claim of identity.provableClaims.filter((c) => c.identityCardId === id)) {
-    await identity.removeProvableClaim(claim.id);
-  }
-  await identity.removeIdentityCard(id);
-  await useCredentialStore.getState().remove(id);
 }
 
 export default function PassportSetup() {
@@ -302,7 +294,7 @@ export default function PassportSetup() {
         );
         return;
       }
-      for (const id of saved.retiredIds) await removeRetiredPassport(id);
+      for (const id of saved.retiredIds) await removeCredentialAndClaims(id);
       const cardId = uuid();
       const now = new Date();
       const issuerType = chip.isSimulated ? 'selfIssued' : 'government';

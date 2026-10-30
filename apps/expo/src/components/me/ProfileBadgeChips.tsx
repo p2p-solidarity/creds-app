@@ -28,6 +28,7 @@ import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
+import { sweepOrphanedClaims } from '@/credentials/removeCredential';
 import { useThemeColors } from '@/constants/useThemeColors';
 import { haptic } from '@/feedback/haptics';
 import { pushToast } from '@/feedback/toast';
@@ -76,6 +77,11 @@ export function ProfileBadgeChips({
   const [savingClaimId, setSavingClaimId] = useState<string | null>(null);
 
   useRefreshBindingCaches(record, publicRecord, nostrUploaded);
+
+  // Claims whose credential was removed by the old record-only remove.
+  useEffect(() => {
+    void sweepOrphanedClaims().catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     if (hydrated) return;

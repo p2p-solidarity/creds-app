@@ -19,7 +19,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { safeBack } from '@/navigation/safeBack';
 import type { SFSymbol } from 'expo-symbols';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -33,6 +33,7 @@ import { ON_DARK, ThemedButton, ThemedSurface, ThemedText } from '@/components/t
 import { Colors } from '@/constants/Colors';
 import { Radius } from '@/constants/radius';
 import { useIssuerMetadataStore } from '@/credentials/issuerStore';
+import { removeCredentialAndClaims } from '@/credentials/removeCredential';
 import { useCredentialById, useCredentialStore, type StoredCredential } from '@/credentials/store';
 import {
   credentialTrustDisplayFor,
@@ -355,7 +356,6 @@ export default function CredentialDetailScreen() {
   const manifestEntry = useCredentialStore((s) =>
     id ? s.manifest.find((m) => m.id === id) : undefined
   );
-  const remove = useCredentialStore((s) => s.remove);
   const loadDetail = useCredentialStore((s) => s.loadDetail);
   const hydrateIdentity = useIdentityData((s) => s.hydrate);
   const hydrateIssuers = useIssuerMetadataStore((s) => s.hydrate);
@@ -363,6 +363,17 @@ export default function CredentialDetailScreen() {
   const markPresented = useIdentityData((s) => s.markClaimPresented);
   const [selectedClaimIDs, setSelectedClaimIDs] = useState<ReadonlySet<string> | null>(null);
   const [presenting, setPresenting] = useState(false);
+
+  // The credential went away while this screen was open — a passport rescan
+  // replaced it underneath. Leave instead of showing 「找不到證明」.
+  const wasShown = useRef(false);
+  useEffect(() => {
+    if (credential || manifestEntry) {
+      wasShown.current = true;
+      return;
+    }
+    if (wasShown.current) safeBack();
+  }, [credential, manifestEntry]);
 
   useEffect(() => {
     void hydrateIdentity();
@@ -493,7 +504,7 @@ export default function CredentialDetailScreen() {
       });
       if (!approved) return;
       try {
-        await remove(credential.id);
+        await removeCredentialAndClaims(credential.id);
         pushToast(t('credentialDetail.removedToast'), 'success');
         safeBack();
       } catch (error) {
