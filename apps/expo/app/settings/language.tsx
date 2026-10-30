@@ -28,6 +28,7 @@ import {
   SettingsScreenTitle,
 } from '@/components/settings/SettingsBlocks';
 import { Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/radius';
 import { useTranslation } from '@/i18n';
 import { usePreferences } from '@/settings/preferences';
 
@@ -131,7 +132,7 @@ function LanguageRow({
         style={{
           paddingHorizontal: 16,
           paddingVertical: 16,
-          borderRadius: 12,
+          borderRadius: Radius.group,
           borderWidth: 1,
           gap: 16,
           backgroundColor: isSelected ? `${Colors.primaryBlue}1F` : Colors.cardBg,
@@ -142,7 +143,7 @@ function LanguageRow({
           style={{
             width: 44,
             height: 44,
-            borderRadius: 22,
+            borderRadius: Radius.pill,
             backgroundColor: Colors.searchBg,
             alignItems: 'center',
             justifyContent: 'center',

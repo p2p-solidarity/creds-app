@@ -37,7 +37,7 @@ export function AvatarEditor({
           />
           <ThemedSurface
             variant="elevated"
-            className="absolute bottom-0 right-0 h-8 w-8 items-center justify-center rounded-full">
+            className="absolute bottom-0 right-0 h-8 w-8 items-center justify-center rounded-pill">
             <SfIcon name="camera" size={14} color={Colors.text1} />
           </ThemedSurface>
         </PressableScale>

@@ -16,6 +16,7 @@ import type { ProfileRecord } from '@solidarity/shared';
 
 import type { PageLivePreviewVariant, PagePalette, PreviewMetrics } from './pagePreviewTheme';
 import { MONO } from '@/constants/fonts';
+import { Radius } from '@/constants/radius';
 
 export interface PagePreviewChromeProps {
   readonly palette: PagePalette;
@@ -46,7 +47,7 @@ export function PagePreviewHeader({
         style={{
           width: metrics.avatar,
           height: metrics.avatar,
-          borderRadius: metrics.avatar / 2,
+          borderRadius: Radius.pill,
           overflow: 'hidden',
           alignItems: 'center',
           justifyContent: 'center',

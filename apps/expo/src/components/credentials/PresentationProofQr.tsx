@@ -5,6 +5,7 @@ import QRCode from 'react-native-qrcode-svg';
 import { PresentationChunkPlaybackControls } from '@/components/me/PresentationChunkPlaybackControls';
 import { ThemedText } from '@/components/themed/ThemedText';
 import { Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/radius';
 import {
   credentialTrustDisplayFor,
   type TrustDisplayTone,
@@ -120,7 +121,7 @@ export function PresentationProofQr({
             style={{
               backgroundColor: '#FFFFFF',
               padding: 16,
-              borderRadius: 12,
+              borderRadius: Radius.card,
             }}
           >
             <QRCode
@@ -183,7 +184,7 @@ function ClaimChip({ claim }: { readonly claim: ProvableClaimEntity }): ReactNod
         gap: 6,
         paddingHorizontal: 8,
         paddingVertical: 5,
-        borderRadius: 4,
+        borderRadius: Radius.xs,
         backgroundColor: Colors.chipSurface,
         borderWidth: 1,
         borderColor: accent,
@@ -193,7 +194,7 @@ function ClaimChip({ claim }: { readonly claim: ProvableClaimEntity }): ReactNod
         style={{
           borderWidth: 0.5,
           borderColor: accent,
-          borderRadius: 2,
+          borderRadius: Radius.xs,
           paddingHorizontal: 4,
           paddingVertical: 1,
         }}

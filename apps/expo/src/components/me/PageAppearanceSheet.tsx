@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PressableScale } from '@/components/common/PressableScale';
 import { ThemedButton, ThemedSurface, ThemedText, ThemedTextInput } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/radius';
 import { useTranslation } from '@/i18n';
 import {
   PAGE_BACKGROUND_IDS,
@@ -60,7 +61,7 @@ export function PageAppearanceSheet({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View className="flex-1 justify-end" style={{ backgroundColor: Colors.overlayBg }}>
-        <View className="overflow-hidden rounded-t-2xl bg-pageBg" style={{ maxHeight: '92%' }}>
+        <View className="overflow-hidden rounded-t-sheet bg-pageBg" style={{ maxHeight: '92%' }}>
           <ScrollView
             contentContainerStyle={{
               padding: 16,
@@ -297,7 +298,7 @@ function ChoiceTile({
         minHeight: 44,
         minWidth: 88,
         paddingHorizontal: 12,
-        borderRadius: 12,
+        borderRadius: Radius.card,
         borderWidth: 1,
         borderColor: selected ? Colors.primaryBlue : Colors.divider,
         backgroundColor: selected ? Colors.chipSurface : Colors.cardBg,

@@ -30,6 +30,7 @@ import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedButton, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { useThemeColors } from '@/constants/useThemeColors';
+import { Radius } from '@/constants/radius';
 import { appAlert } from '@/feedback/appAlert';
 import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
@@ -493,7 +494,7 @@ function VerifyChip({ target }: { readonly target: SocialTarget }): ReactNode {
       style={{
         paddingVertical: 5,
         paddingHorizontal: 11,
-        borderRadius: 999,
+        borderRadius: Radius.pill,
         borderWidth: 1,
         borderColor: c.primaryBlue,
       }}>

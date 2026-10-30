@@ -68,8 +68,6 @@ module.exports = {
         xs: '2px',
         sheet: '16px',
         pill: '9999px',
-        sm2: '2px',
-        sm3: '3px',
       },
       fontFamily: {
         sans: ['Inter-Regular'],

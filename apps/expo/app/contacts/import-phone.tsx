@@ -42,6 +42,7 @@ import { SfIcon } from '@/components/icons/SfIcon';
 import { LimitedAccessBanner } from '@/components/people/LimitedAccessBanner';
 import { ThemedButton } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/radius';
 import { useTranslation } from '@/i18n';
 import {
   importDeviceContacts,
@@ -303,7 +304,7 @@ function SearchBar({
   return (
     <View style={{ paddingHorizontal: 16, paddingVertical: 8 }}>
       <View
-        className="bg-searchBg rounded-sm2 flex-row items-center"
+        className="bg-searchBg rounded-field flex-row items-center"
         style={{
           height: 40,
           paddingHorizontal: 12,
@@ -387,7 +388,7 @@ function PickerRow({
         style={{
           width: 22,
           height: 22,
-          borderRadius: 11,
+          borderRadius: Radius.pill,
           borderWidth: 1.5,
           borderColor: selected ? Colors.invertedButtonBg : Colors.text3,
           backgroundColor: selected ? Colors.invertedButtonBg : 'transparent',

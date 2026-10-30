@@ -18,6 +18,7 @@ import { BrandIcon } from '@/components/icons/BrandIcon';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedText } from '@/components/themed';
 import { PageTemplateColors } from '@/constants/Colors';
+import { Radius } from '@/constants/radius';
 import { appAlert } from '@/feedback/appAlert';
 import { useTranslation } from '@/i18n';
 import { linkDisplay, linkSecondaryLabel } from '@/profile/linkPresentation';
@@ -152,7 +153,7 @@ export function LinkCard({
           style={{
             width: metrics.linkIcon,
             height: metrics.linkIcon,
-            borderRadius: 2,
+            borderRadius: Radius.field,
             overflow: 'hidden',
             alignItems: 'center',
             justifyContent: 'center',
@@ -219,7 +220,7 @@ export function ShopRow({
               minHeight: 32,
               justifyContent: 'center',
               paddingHorizontal: 16,
-              borderRadius: 999,
+              borderRadius: Radius.pill,
               backgroundColor: PageTemplateColors.invertedButtonBg,
             }}>
             <ThemedText variant="caption" style={{ color: PageTemplateColors.invertedButtonText, fontFamily }}>
@@ -316,13 +317,13 @@ export function ItemCapsule({
           alignItems: 'center',
           justifyContent: 'center',
           paddingHorizontal: 22,
-          borderRadius: 999,
+          borderRadius: Radius.pill,
           backgroundColor: PageTemplateColors.invertedButtonBg,
         } : {
           minHeight: 34,
           justifyContent: 'center',
           paddingHorizontal: 14,
-          borderRadius: 999,
+          borderRadius: Radius.pill,
           borderWidth: 1,
           borderColor: palette.cardBorder,
           backgroundColor: palette.cardBg,

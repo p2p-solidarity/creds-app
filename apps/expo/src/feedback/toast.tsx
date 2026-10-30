@@ -142,7 +142,7 @@ function ToastItem({ toast }: { readonly toast: Toast }): ReactNode {
   return (
     <Animated.View
       style={[animStyle, styles.card]}
-      className="bg-cardBg mx-4 mt-2 rounded-2xl"
+      className="bg-cardBg mx-4 mt-2 rounded-card"
     >
       <View style={styles.row}>
         <View style={styles.iconWrap}>

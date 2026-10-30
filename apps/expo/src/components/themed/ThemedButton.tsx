@@ -36,6 +36,7 @@ import { textFont } from '@/constants/fonts';
 import { useThemeColors, type ThemeColors } from '@/constants/useThemeColors';
 import { haptic as fireHaptic, type HapticKind } from '@/feedback/haptics';
 import { ON_DARK, ON_LIGHT } from './contrast';
+import { Radius } from '@/constants/radius';
 
 export type ButtonVariant =
   | 'primary'
@@ -47,7 +48,7 @@ export type ButtonVariant =
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
 /** creds.id `--radius-button`. */
-const BUTTON_RADIUS = 6;
+const BUTTON_RADIUS = Radius.button;
 
 /** Vertical padding per Swift (.padding(.vertical, 14)). Height = padding * 2 + line. */
 const SIZE_PADDING_Y: Readonly<Record<ButtonSize, number>> = {

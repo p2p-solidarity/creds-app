@@ -24,6 +24,7 @@ import {
 } from '@/components/people/personDetailSupport';
 import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/radius';
 import { useContact, useContactStore } from '@/contacts/repository';
 import { shareContactVCard } from '@/contacts/shareContactVCard';
 import { showError } from '@/feedback/appAlert';
@@ -331,7 +332,7 @@ function AvatarCircle({
       style={{
         width: 88,
         height: 88,
-        borderRadius: 44,
+        borderRadius: Radius.pill,
         backgroundColor: Colors.gradientCream,
         borderWidth: 1,
         borderColor: Colors.divider,

@@ -137,9 +137,9 @@ export default function OnboardingFlow(): ReactNode {
         <View className="flex-1 justify-end bg-overlayBg/40">
           <ThemedSurface
             variant="elevated"
-            className="rounded-t-2xl px-6 pb-8 pt-3"
+            className="rounded-t-sheet px-6 pb-8 pt-3"
             style={{ gap: 16 }}>
-            <View className="h-1 w-9 self-center rounded-full bg-divider" />
+            <View className="h-1 w-9 self-center rounded-pill bg-divider" />
             <ThemedText variant="headlineMedium">
               @{takenName} {t('ob.handle.taken_title')}
             </ThemedText>

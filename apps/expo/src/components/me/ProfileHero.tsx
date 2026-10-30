@@ -197,7 +197,7 @@ export function ProfileAvatar({
   const initial = (displayName.trim().charAt(0) || '?').toUpperCase();
   return (
     <View
-      className="overflow-hidden rounded-full bg-warmCream"
+      className="overflow-hidden rounded-pill bg-warmCream"
       style={{ width: ME_AVATAR_SIZE, height: ME_AVATAR_SIZE }}>
       <View className="absolute inset-0 items-center justify-center">
         <ThemedText variant="headlineMedium" style={{ color: Colors.primaryBlue }}>

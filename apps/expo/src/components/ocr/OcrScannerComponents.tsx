@@ -18,6 +18,7 @@ import { Pressable, View } from 'react-native';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/radius';
 
 import type { ScanLanguage } from './scanLanguage';
 import { scanLanguageDisplayName, scanLanguageFlag } from './scanLanguage';
@@ -42,7 +43,7 @@ export function ConfidenceBadge({ confidence }: ConfidenceBadgeProps): ReactNode
         backgroundColor: `${tone}33`,
         paddingHorizontal: 8,
         paddingVertical: 4,
-        borderRadius: 6,
+        borderRadius: Radius.button,
       }}
     >
       <ThemedText variant="caption" style={{ color: tone }}>

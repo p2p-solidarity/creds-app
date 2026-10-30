@@ -7,6 +7,7 @@ import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/radius';
 import { useTranslation } from '@/i18n';
 
 export interface ContactsAddSheetProps {
@@ -58,7 +59,7 @@ export function ContactsAddSheet({
           }}
         >
           <View className="items-center gap-3 px-4 pb-4">
-            <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: Colors.divider }} />
+            <View style={{ width: 36, height: 4, borderRadius: Radius.pill, backgroundColor: Colors.divider }} />
             <ThemedText variant="titleMedium">{t('peopleList.add')}</ThemedText>
           </View>
 

@@ -8,6 +8,7 @@ import { TextInput } from 'react-native';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedSurface } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/radius';
 import { useTranslation } from '@/i18n';
 
 export function PeopleSearchField({
@@ -24,7 +25,7 @@ export function PeopleSearchField({
       className="flex-row items-center gap-2 px-3"
       style={{
         minHeight: 44,
-        borderRadius: 12,
+        borderRadius: Radius.field,
       }}
     >
       <SfIcon name="magnifyingglass" size={14} color={Colors.text2} />

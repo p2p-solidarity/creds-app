@@ -4,6 +4,7 @@ import { useRef, useState, type ReactNode } from 'react';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/radius';
 import { showError } from '@/feedback/appAlert';
 import { haptic } from '@/feedback/haptics';
 import { useTranslation } from '@/i18n';
@@ -178,7 +179,7 @@ function PhoneToComputerGlyph(): ReactNode {
       {[0, 1, 2].map((i) => (
         <View
           key={i}
-          style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: Colors.text3 }}
+          style={{ width: 4, height: 4, borderRadius: Radius.pill, backgroundColor: Colors.text3 }}
         />
       ))}
     </View>
@@ -190,7 +191,7 @@ function PhoneToComputerGlyph(): ReactNode {
       style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
       <ThemedSurface
         variant="elevated"
-        className="h-20 w-20 items-center justify-center rounded-full">
+        className="h-20 w-20 items-center justify-center rounded-pill">
         <SfIcon name="iphone" size={34} color={Colors.text2} />
       </ThemedSurface>
       {dots}
@@ -198,7 +199,7 @@ function PhoneToComputerGlyph(): ReactNode {
       {dots}
       <ThemedSurface
         variant="elevated"
-        className="h-28 w-28 items-center justify-center rounded-full">
+        className="h-28 w-28 items-center justify-center rounded-pill">
         <SfIcon name="desktopcomputer" size={52} color={Colors.primaryMauve} />
       </ThemedSurface>
     </View>

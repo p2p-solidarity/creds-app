@@ -300,7 +300,7 @@ export default function ScanScreen() {
       >
         {progress ? (
           <View
-            className="rounded-xl bg-mutedSurface px-4 py-3 items-center"
+            className="rounded-group bg-mutedSurface px-4 py-3 items-center"
           >
             <Text className="text-text2 text-[13px]">
               {t('scan.receiving', {
@@ -390,7 +390,7 @@ function ScannedResultView({
     >
       <View>
         <Text className="text-text1 text-[24px] font-medium">{t('scan.resultTitle')}</Text>
-        <View className="mt-4 rounded-xl bg-mutedSurface p-4">
+        <View className="mt-4 rounded-group bg-mutedSurface p-4">
           <Text
             selectable
             numberOfLines={6}

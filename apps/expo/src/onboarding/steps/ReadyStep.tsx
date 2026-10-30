@@ -79,7 +79,7 @@ export function ReadyStep({
           <CredsMark size={120} float />
           <ThemedText variant="headlineMedium">{t('ob.done.title')}</ThemedText>
         </View>
-        <ThemedSurface variant="outlined" padded className="gap-4 rounded-xl">
+        <ThemedSurface variant="outlined" padded className="gap-4 rounded-card">
           <ReadyRow
             state={keysGenerated ? 'done' : 'pending'}
             title={t('ob.done.passkey')}

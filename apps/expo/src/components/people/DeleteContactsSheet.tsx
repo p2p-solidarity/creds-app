@@ -77,7 +77,7 @@ export function DeleteContactsSheet({
                 }}
               >
                 <View
-                  className="items-center justify-center rounded-full bg-searchBg"
+                  className="items-center justify-center rounded-pill bg-searchBg"
                   style={{ width: 32, height: 32 }}
                 >
                   <ThemedText variant="bodySmall" tone="secondary">

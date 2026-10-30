@@ -22,7 +22,7 @@ export function SolidarityPlaceholderCard({
   subtitle,
 }: SolidarityPlaceholderCardProps) {
   return (
-    <View className="rounded-xl bg-mutedSurface px-4 py-3 gap-1">
+    <View className="rounded-group bg-mutedSurface px-4 py-3 gap-1">
       <Text
         style={{ color: Colors.text3 }}
         className="text-[11px] font-medium uppercase"

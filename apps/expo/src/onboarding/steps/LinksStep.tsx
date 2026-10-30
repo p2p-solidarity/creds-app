@@ -237,7 +237,7 @@ function ChoiceCard({
         className="flex-row items-center gap-4 px-4 py-4"
         style={{ minHeight: 76 }}>
         <View
-          className="h-11 w-11 items-center justify-center rounded-full"
+          className="h-11 w-11 items-center justify-center rounded-pill"
           style={{ backgroundColor: Colors.searchBg }}>
           <SfIcon name={icon} size={20} color={Colors.primaryMauve} />
         </View>

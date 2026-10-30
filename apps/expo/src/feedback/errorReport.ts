@@ -92,7 +92,7 @@ export function buildErrorReport(input: ErrorReportInput): ResolvedErrorReport {
 /** Full, untruncated plaintext report — used for the clipboard copy. */
 export function formatReportText(r: ResolvedErrorReport): string {
   const lines = [
-    '--- Solidarity error report ---',
+    '--- creds.id error report ---',
     `When:     ${r.when}`,
     `App:      Solid(ar)ity ${r.appVersion} (build ${r.buildVersion})`,
     `Platform: ${r.platform} ${r.osVersion}`,

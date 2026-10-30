@@ -23,6 +23,7 @@ import { SettingsBackToolbar, SettingsScreenTitle } from '@/components/settings/
 import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
 import { MONO } from '@/constants/fonts';
 import { useThemeColors } from '@/constants/useThemeColors';
+import { Radius } from '@/constants/radius';
 import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
 import { safeBack } from '@/navigation/safeBack';
@@ -243,7 +244,7 @@ function TargetRow({ target }: { readonly target: SocialTarget }): ReactNode {
         alignItems: 'center',
         gap: 12,
         padding: 12,
-        borderRadius: 2,
+        borderRadius: Radius.card,
         borderWidth: 1,
         borderColor: c.divider,
         backgroundColor: c.cardBg,
@@ -287,7 +288,7 @@ function MarkerCard({
           paddingVertical: 14,
           paddingHorizontal: 14,
           backgroundColor: c.chipSurface,
-          borderRadius: 2,
+          borderRadius: Radius.field,
         }}>
         <SfIcon name="link" size={14} color={c.primaryBlue} />
         <ThemedText variant="bodyMedium" style={{ flex: 1, fontFamily: MONO }}>

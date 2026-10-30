@@ -31,6 +31,7 @@ import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ON_DARK, ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/radius';
 import { useIssuerMetadataStore } from '@/credentials/issuerStore';
 import { useCredentialById, useCredentialStore, type StoredCredential } from '@/credentials/store';
 import {
@@ -247,7 +248,7 @@ function LevelTag({ text, accent }: { readonly text: string; readonly accent: st
       style={{
         borderWidth: 0.5,
         borderColor: accent,
-        borderRadius: 2,
+        borderRadius: Radius.xs,
         paddingHorizontal: 4,
         paddingVertical: 2,
         alignItems: 'center',
@@ -323,7 +324,7 @@ function ClaimRow({
           style={{
             width: 18,
             height: 18,
-            borderRadius: 2,
+            borderRadius: Radius.xs,
             alignItems: 'center',
             justifyContent: 'center',
             backgroundColor: selected ? Colors.terminalGreen : 'transparent',
@@ -577,13 +578,13 @@ export default function CredentialDetailScreen() {
                 paddingBottom: 24,
                 alignItems: 'center',
                 gap: 8,
-                borderRadius: 4,
+                borderRadius: Radius.xs,
               }}>
               <View
                 style={{
                   width: 56,
                   height: 56,
-                  borderRadius: 28,
+                  borderRadius: Radius.pill,
                   backgroundColor: Colors.warmCream,
                   alignItems: 'center',
                   justifyContent: 'center',

@@ -116,7 +116,7 @@ export function PublishPreviewSheet({
       {(close) => (
         <ThemedSurface
           variant="elevated"
-          className="gap-4 rounded-t-2xl px-4 pt-5"
+          className="gap-4 rounded-t-sheet px-4 pt-5"
           style={{ paddingBottom: Math.max(insets.bottom, 16) }}>
           <View className="gap-1">
             <ThemedText variant="titleLarge">{t('meEdit.preview.title')}</ThemedText>

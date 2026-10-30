@@ -165,7 +165,7 @@ function TopBar({
         accessibilityLabel={t('peopleList.done')}
         onPress={onDone}
         hitSlop={{ top: 11, bottom: 11 }}
-        className="rounded-sm2"
+        className="rounded-button"
         style={{
           backgroundColor: Colors.invertedButtonBg,
           paddingHorizontal: 16,
@@ -204,7 +204,7 @@ function NoteBlock({
         {t('personDetail.noteLabel')}
       </Text>
       <View
-        className="bg-searchBg rounded-sm2"
+        className="bg-searchBg rounded-field"
         style={{
           height: 48,
           paddingHorizontal: 12,
@@ -278,7 +278,7 @@ function ActionRow({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
-      className="rounded-sm2"
+      className="rounded-button"
       style={{
         height: 48,
         backgroundColor: bg,

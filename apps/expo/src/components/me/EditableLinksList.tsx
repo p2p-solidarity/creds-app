@@ -87,7 +87,7 @@ export function EditableLinksList({
             }}>
             <ThemedSurface
               variant="inset"
-              className="h-9 w-9 items-center justify-center rounded-sm2">
+              className="h-9 w-9 items-center justify-center rounded-button">
               <BrandIcon
                 name={brandIconForLink(link.label, link.url)}
                 size={16}
