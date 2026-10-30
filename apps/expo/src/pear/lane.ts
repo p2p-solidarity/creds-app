@@ -232,7 +232,12 @@ export function startLane(_opts: StartLaneOptions = {}): Result<LaneHandle, Lane
 
   function routeEnvelope(value: Record<string, unknown>): void {
     const topic = typeof value['topic'] === 'string' ? value['topic'] : null;
-    if (!topic) return;
+    if (!topic) {
+      // Worklet-level unhandled rejection / uncaught exception (see
+      // pear/worklet/index.js `reportFatal`) — not tied to any topic.
+      if (value['t'] === '_ctrl') console.warn('[pear:worklet]', value['message']);
+      return;
+    }
 
     if (value['t'] === '_ctrl' && typeof value['ev'] === 'string') {
       routeCtrlEnvelope(topic, value as unknown as PearCtrlEvent);
