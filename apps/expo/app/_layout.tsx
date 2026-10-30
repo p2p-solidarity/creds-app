@@ -37,7 +37,7 @@ import 'react-native-gesture-handler';
 import '../global.css';
 
 import { useEffect, useState } from 'react';
-import { Appearance, AppState } from 'react-native';
+import { Appearance, AppState, useColorScheme } from 'react-native';
 import { router, Stack } from 'expo-router';
 import * as Linking from 'expo-linking';
 import * as SplashScreen from 'expo-splash-screen';
@@ -82,6 +82,7 @@ import { hydrateZktlsProofs } from '@/zktls/store';
 import { hydratePreferences, usePreferences } from '@/settings/preferences';
 import { initMmkv, ManifestStorage } from '@/storage';
 import { PRIMARY_TAB_HREFS } from '@/navigation/primaryTabs';
+import { themeRefreshLayout } from '@/navigation/themeRefresh';
 
 import { CARDS_MANIFEST_SCOPE } from '@/cards/cardManifest';
 import { CONTACTS_MANIFEST_SCOPE } from '@/contacts/contactManifest';
@@ -154,6 +155,9 @@ export default function RootLayout() {
   useEffect(() => {
     Appearance.setColorScheme(appColorScheme === 'system' ? 'unspecified' : appColorScheme);
   }, [appColorScheme]);
+  // Re-render on the scheme RN actually applied (it lands after the pref), so
+  // the overlays mounted here repaint too; screens use `themeRefreshLayout`.
+  useColorScheme();
 
   useEffect(() => {
     let cancelled = false;
@@ -350,7 +354,7 @@ export default function RootLayout() {
         <SafeAreaProvider>
           <StatusBar style="auto" />
           <AppErrorBoundary>
-            <Stack screenOptions={{ headerShown: false }} />
+            <Stack screenOptions={{ headerShown: false }} screenLayout={themeRefreshLayout} />
           </AppErrorBoundary>
           <ToastOverlay />
           <ConfirmDialogOverlay />
