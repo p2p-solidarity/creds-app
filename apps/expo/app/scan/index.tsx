@@ -159,14 +159,14 @@ export default function ScanScreen() {
         // Self-contained offline blob — verified locally in this tick.
         presentVerifiedPageResult(verifyFragment(verifiedPageForm.fragment));
       } else if (verifiedPageForm.kind === 'pointer') {
-        // `#nostr:<npub>` short pointer — open the loading state, then swap
-        // in the resolved verdict once relays answer. resolveProfileByNpub
-        // never throws (structured invalid on any failure).
-        presentVerifiedPageResolving();
-        void resolveProfileByNpub(verifiedPageForm.npub).then(presentVerifiedPageResult);
+        // `#nostr:<npub>` short pointer — open the loading state, paint the
+        // first relay's verified page, then swap in the resolved verdict.
+        // resolveProfileByNpub never throws (structured invalid on any failure).
+        const present = presentVerifiedPageResolving();
+        void resolveProfileByNpub(verifiedPageForm.npub, { onInterim: present }).then(present);
       } else {
-        presentVerifiedPageResolving();
-        void resolveProfileByHandle(verifiedPageForm.handle).then(presentVerifiedPageResult);
+        const present = presentVerifiedPageResolving();
+        void resolveProfileByHandle(verifiedPageForm.handle, { onInterim: present }).then(present);
       }
       safeBack();
       return;

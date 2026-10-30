@@ -5,11 +5,12 @@
  * witnessed it. 「幫他見證」 publishes a witness — only on tap, because a
  * witness is a public "I know this person".
  *
- * Every row is loading / ready / error (Rule 8): no count is shown until the
- * relays answered, and a failed check says so rather than showing a stale tick.
+ * Every row is loading / ready / error (Rule 8): the rows paint at once as
+ * "checking", no count is shown until every relay answered, and a failed
+ * check says so rather than showing a stale tick.
  */
 import { useEffect, useState, type ReactNode } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { View } from 'react-native';
 
 import { SealPill } from '@/components/badges/SealPill';
 import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
@@ -22,9 +23,10 @@ import { deviceAttestSupported } from '@/witness/deviceKey';
 import {
   checkOnThisPhone,
   createWitness,
-  fetchWitnessSummaries,
+  fetchWitnessEvents,
   publishWitness,
   resolveCredsName,
+  summarizeWitnessEvents,
 } from '@/witness/witness';
 import { socialTargetForClaim, type ProfileRecord, type SocialTarget, type WitnessSummary } from '@solidarity/shared';
 
@@ -64,6 +66,9 @@ export function WitnessSection({ record }: { readonly record: ProfileRecord }): 
       setIdentity({ kind: 'ready', value: null });
       return;
     }
+    const claimList = claims.map((c) => c.claim);
+    // Witness events need no name: fetch them alongside the name lookup.
+    const witnessEvents = fetchWitnessEvents(subjectHex.value, claimList, DEFAULT_RELAYS);
     void (async () => {
       const [name, mine] = await Promise.all([
         resolveCredsName(subjectHex.value, DEFAULT_RELAYS),
@@ -77,8 +82,9 @@ export function WitnessSection({ record }: { readonly record: ProfileRecord }): 
       const page = { subject, subjectHex: subjectHex.value, name, mine };
       setIdentity({ kind: 'ready', value: page });
       setChecks(Object.fromEntries(claims.map((c) => [c.claim, 'checking' as const])));
-      void fetchWitnessSummaries({ ...page, claims: claims.map((c) => c.claim) }, DEFAULT_RELAYS)
-        .then(async (s) => {
+      void witnessEvents
+        .then(async (events) => {
+          const s = summarizeWitnessEvents(events, { ...page, claims: claimList });
           if (!live) return;
           setSummaries({ kind: 'ready', value: s });
           const authors = new Set<string>();
@@ -111,14 +117,7 @@ export function WitnessSection({ record }: { readonly record: ProfileRecord }): 
   }, [claimKey, record.alsoKnownAs]);
 
   if (claims.length === 0) return null;
-  if (identity.kind === 'loading') {
-    return (
-      <View style={{ paddingVertical: 12 }}>
-        <ActivityIndicator />
-      </View>
-    );
-  }
-  if (identity.kind === 'error' || identity.value === null) {
+  if (identity.kind === 'error' || (identity.kind === 'ready' && identity.value === null)) {
     return (
       <ThemedSurface variant="inset" style={{ padding: 12 }}>
         <ThemedText variant="caption" tone="secondary">
@@ -127,10 +126,12 @@ export function WitnessSection({ record }: { readonly record: ProfileRecord }): 
       </ThemedSurface>
     );
   }
-  const page = identity.value;
-  const canWitness = !page.mine && deviceAttestSupported();
+  // While the name resolves, the rows are already on screen, each still checking.
+  const page = identity.kind === 'ready' ? identity.value : null;
+  const canWitness = page !== null && !page.mine && deviceAttestSupported();
 
   const witness = async (claim: string, target: SocialTarget) => {
+    if (page === null) return;
     setWitnessing(claim);
     const event = await createWitness(target, page.name, page.subject);
     if (!event.ok) {
@@ -164,7 +165,9 @@ export function WitnessSection({ record }: { readonly record: ProfileRecord }): 
               ) : (
                 <SealPill state="needsRecheck" label={t(check === 'missing' ? 'witness.missing' : 'witness.unreachable')} />
               )}
-              {summaries.kind === 'loading' ? null : summaries.kind === 'error' ? (
+              {summaries.kind === 'loading' ? (
+                <SealPill state="declared" label={t('witness.countChecking')} />
+              ) : summaries.kind === 'error' ? (
                 <SealPill state="declared" label={t('witness.countUnavailable')} />
               ) : (
                 <SealPill state={others > 0 ? 'verified' : 'declared'} label={t('witness.count', { count: others })} />

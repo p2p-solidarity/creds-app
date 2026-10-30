@@ -129,6 +129,35 @@ describe('resolveProfileByNpub', () => {
     expect(r.reason).toBe('unreachable');
   });
 
+  it('paints the first verified, reverse-bound page before the slowest relay answers', async () => {
+    const ev = await pointerEvent([`nostr:${NPUB}`]);
+    const interim: string[] = [];
+    const dead: SubscribeEventsFn = (relay) => ({ subscriptionId: `dead-${relay}`, close: () => undefined });
+    const fast = fakeSubscribe({ a: [ev] });
+    const started = Date.now();
+    const r = await resolveProfileByNpub(NPUB, {
+      relays: ['a', 'dead'],
+      timeoutMs: 3000,
+      subscribeEventsFn: (relay, ...rest) => (relay === 'a' ? fast : dead)(relay, ...rest),
+      onInterim: (v) => interim.push(v.record.displayName),
+    });
+    expect(Date.now() - started).toBeLessThan(1500);
+    expect(interim).toEqual(['Alice']);
+    expect(r.kind).toBe('verified');
+  });
+
+  it('never paints a relay-substituted page that does not claim the npub back', async () => {
+    const ev = await pointerEvent([]);
+    const interim: unknown[] = [];
+    const r = await resolveProfileByNpub(NPUB, {
+      relays: ['a'],
+      subscribeEventsFn: fakeSubscribe({ a: [ev] }),
+      onInterim: (v) => interim.push(v),
+    });
+    expect(interim).toEqual([]);
+    expect(r.kind).toBe('invalid');
+  });
+
   it('rejects a malformed npub before any relay call → malformedPayload', async () => {
     const r = await resolveProfileByNpub('not-an-npub', { relays: ['a'], subscribeEventsFn: fakeSubscribe({ a: [] }) });
     expect(r.kind).toBe('invalid');

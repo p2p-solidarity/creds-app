@@ -38,6 +38,12 @@ export interface ResolveProfileByHandleOptions {
   readonly schemeHint?: HandleScheme;
   readonly fetchNostrProfile?: FetchNostrProfile;
   readonly fetchKind0?: NostrKind0Fetcher;
+  /**
+   * The signed page as soon as it passed its signature and key-binding gates,
+   * before the slower two-way badge check: its binding is `checking`, never a
+   * verdict. The returned promise still settles with the final result.
+   */
+  readonly onInterim?: (result: VerifiedPageResult) => void;
 }
 
 interface ProfileRecordEnvelope {
@@ -168,6 +174,9 @@ async function readNip05Profile(
     );
   }
 
+  options.onInterim?.(
+    withBinding(fetched, { scheme: 'nip05', handle: resolution.name, state: 'checking' })
+  );
   const badge = await verifyNip05Binding(
     fetched.record,
     resolution,

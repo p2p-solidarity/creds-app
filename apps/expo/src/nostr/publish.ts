@@ -294,17 +294,23 @@ export interface Kind0FetchResult {
 }
 
 /**
- * Query every relay in `relays` for the newest event (by `created_at`)
- * matching `filter`, returning it plus whether any relay gave a definitive
- * EOSE (see `Kind0FetchResult`). Each relay gets its own bounded wait — one
- * slow/dead relay never blocks the others (`Promise.all` over independent
- * per-relay promises, each with its own timeout fallback).
- *
- * The shared per-relay racing core: `fetchLatestKind0` (badge verification)
- * and `fetchLatestProfilePointer` (the `#nostr:` short-pointer resolver)
- * both delegate here so every path resolves "the newest matching event"
- * identically instead of re-implementing the WS fan-out.
+ * Readers stop waiting this long after the first relay's EOSE instead of the
+ * full timeout — one dead relay (damus flakes ~25% on first dial) used to cost
+ * every read 4 s. Same budget as the web's `fetchProfilePointer.ts`.
  */
+export const FIRST_ANSWER_GRACE_MS = 300;
+
+export interface FetchLatestOptions {
+  /**
+   * Reads only: settle this long after the first EOSE. Omit to wait for every
+   * relay — the write path must, or a fast relay that lacks the user's kind-0
+   * would let `updateKind0AlsoKnownAs` publish over it.
+   */
+  readonly graceMs?: number;
+  /** Each strictly newer matching event, as it arrives, before the fetch settles. */
+  readonly onEvent?: (event: NostrEvent) => void;
+}
+
 /**
  * Does this event actually answer the REQ we sent?
  *
@@ -329,65 +335,90 @@ export function eventMatchesFilter(event: NostrEvent, filter: NostrFilter): bool
   return true;
 }
 
+/**
+ * Query every relay in `relays` for the newest event (by `created_at`)
+ * matching `filter`, returning it plus whether any relay gave a definitive
+ * EOSE (see `Kind0FetchResult`). Settles when every relay has answered, at
+ * `timeoutMs`, or — when `opts.graceMs` is set — that long after the first
+ * EOSE. `opts.onEvent` sees each newer event the moment it lands, so a screen
+ * can paint from the first relay and let later ones only refine it.
+ *
+ * The shared racing core: `fetchLatestKind0` (badge verification, the kind-0
+ * writer) and `fetchLatestProfilePointer` (the `#nostr:` short-pointer
+ * resolver) both delegate here so every path resolves "the newest matching
+ * event" identically instead of re-implementing the WS fan-out.
+ */
 export async function fetchLatestEvent(
   relays: readonly string[],
   filter: NostrFilter,
   subscribeFn: SubscribeEventsFn,
-  timeoutMs: number
+  timeoutMs: number,
+  opts: FetchLatestOptions = {}
 ): Promise<Kind0FetchResult> {
   if (relays.length === 0) return { event: null, confirmed: false };
 
-  const perRelay = relays.map(
-    (relay) =>
-      new Promise<Kind0FetchResult>((resolve) => {
-        let latest: NostrEvent | null = null;
-        let sawEose = false;
-        let settled = false;
-        // Mutable box (rather than a reassigned `let`) so `finish` can
-        // close the subscription even if `subscribeFn` invokes one of its
-        // callbacks synchronously, before its own return value would
-        // otherwise have been assigned.
-        const box: { handle?: SubscriptionHandle } = {};
-        const finish = (): void => {
-          if (settled) return;
-          settled = true;
-          try {
-            box.handle?.close();
-          } catch {
-            // already closed
-          }
-          resolve({ event: latest, confirmed: sawEose });
-        };
-        const timer = setTimeout(finish, timeoutMs); // timed out → not confirmed
-        box.handle = subscribeFn(
-          relay,
-          filter,
-          (event) => {
-            if (!eventMatchesFilter(event, filter)) return;
-            if (!latest || event.created_at > latest.created_at) latest = event;
-          },
-          () => {
-            // EOSE — this relay authoritatively delivered its whole result set.
-            sawEose = true;
-            clearTimeout(timer);
-            finish();
-          },
-          () => {
-            // error/notice/close before EOSE — this relay's answer is unknown.
-            clearTimeout(timer);
-            finish();
-          }
-        );
-      })
-  );
-
-  const perRelayResults = await Promise.all(perRelay);
   let best: NostrEvent | null = null;
   let confirmed = false;
-  for (const candidate of perRelayResults) {
-    if (candidate.confirmed) confirmed = true;
-    if (candidate.event && (!best || candidate.event.created_at > best.created_at)) best = candidate.event;
-  }
+  await new Promise<void>((resolve) => {
+    const handles: SubscriptionHandle[] = [];
+    let pending = relays.length;
+    let done = false;
+    let grace: ReturnType<typeof setTimeout> | undefined;
+    const finish = (): void => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      clearTimeout(grace);
+      for (const handle of handles) {
+        try {
+          handle.close();
+        } catch {
+          // already closed
+        }
+      }
+      resolve();
+    };
+    const timer = setTimeout(finish, timeoutMs); // timed out → not confirmed
+    const settled = new Set<number>();
+    // Once per relay: a dropped socket reports through both ws.onerror and
+    // ws.onclose, and counting it twice would stop before a slower relay.
+    const settle = (index: number, eose: boolean): void => {
+      if (done || settled.has(index)) return;
+      settled.add(index);
+      pending -= 1;
+      if (eose && !confirmed) {
+        confirmed = true;
+        if (opts.graceMs !== undefined) grace = setTimeout(finish, opts.graceMs);
+      }
+      if (pending <= 0) finish();
+    };
+    relays.forEach((relay, index) => {
+      // A relay answering synchronously can settle before `finish` would have
+      // its handle to close — closed here once the push lands.
+      const handle = subscribeFn(
+        relay,
+        filter,
+        (event) => {
+          if (done || !eventMatchesFilter(event, filter)) return;
+          if (best && event.created_at <= best.created_at) return;
+          best = event;
+          opts.onEvent?.(event);
+        },
+        // EOSE — this relay authoritatively delivered its whole result set.
+        () => settle(index, true),
+        // error/notice/close before EOSE — this relay's answer is unknown.
+        () => settle(index, false)
+      );
+      handles.push(handle);
+      if (done) {
+        try {
+          handle.close();
+        } catch {
+          // already closed
+        }
+      }
+    });
+  });
   return { event: best, confirmed };
 }
 
@@ -400,9 +431,10 @@ export async function fetchLatestKind0(
   relays: readonly string[],
   pubkeyHex: string,
   subscribeFn: SubscribeEventsFn,
-  timeoutMs: number
+  timeoutMs: number,
+  opts?: FetchLatestOptions
 ): Promise<Kind0FetchResult> {
-  return fetchLatestEvent(relays, { kinds: [KIND_METADATA], authors: [pubkeyHex], limit: 1 }, subscribeFn, timeoutMs);
+  return fetchLatestEvent(relays, { kinds: [KIND_METADATA], authors: [pubkeyHex], limit: 1 }, subscribeFn, timeoutMs, opts);
 }
 
 /**
@@ -418,13 +450,15 @@ export async function fetchLatestProfilePointer(
   relays: readonly string[],
   pubkeyHex: string,
   subscribeFn: SubscribeEventsFn,
-  timeoutMs: number
+  timeoutMs: number,
+  opts?: FetchLatestOptions
 ): Promise<Kind0FetchResult> {
   return fetchLatestEvent(
     relays,
     { kinds: [KIND_PROFILE_POINTER], authors: [pubkeyHex], '#d': [PROFILE_D_TAG], limit: 1 },
     subscribeFn,
-    timeoutMs
+    timeoutMs,
+    opts
   );
 }
 
@@ -465,6 +499,8 @@ export async function updateKind0AlsoKnownAs(opts: UpdateKind0Options): Promise<
   if (!pubkeyResult.ok) return err(pubkeyResult.error);
 
   const subscribeFn = opts.subscribeEventsFn ?? subscribeEvents;
+  // No `graceMs`: a write waits for every relay, so a fast relay that never
+  // saw the user's kind-0 cannot make us publish over it.
   const existing = await fetchLatestKind0(
     opts.relays,
     pubkeyResult.value,
