@@ -1,6 +1,6 @@
-# 11 — creds.id UI rebrand ＋ plan 10 P4／P5 精簡
+# 12 — creds.id UI rebrand ＋ plan 10 P4／P5 精簡
 
-> 2026-10-30 · 狀態：**執行中**（branch `claude/ui-rebrand-e95e94`，基於 2.0.0 `e9c4f09c`）。
+> 2026-10-30 · 狀態：**程式完成，E2E 待整合後一起跑**（branch `claude/ui-rebrand-e95e94`，基於 2.0.0 `e9c4f09c`；由主 session 統一合併進 2.0.0）。
 > Kidney 2026-10-30 盤點：底層堆得快，主線精簡（10 的 P4、P5）沒做；App 與 creds.id 網頁的圓角、細節對不起來；Reanimated 用得少；新增連結找不到第一步。這三件跟 rebrand 一起做，是目前最主要的工作。核心 ZK（護照 L3）保留但要更順。
 > 本文件只寫階段與決定；P4／P5 的「做什麼」以 10 的 §4／§5 為準。
 
@@ -38,6 +38,9 @@
   - 步數（從 Page 到綠勾）：舊 ≈12（＋新增 → 連結格 → Me › Edit → 貼上/選平台 → 加入 → 儲存 Face ID → 回 Page → 找驗證 chip → 複製並打開 → 貼 → 回來 → 加上綠勾 Face ID）；新 6（＋新增連結 → 貼上 → 加上 → 加上綠勾 → 複製並打開 → 回來後加上綠勾）。
   - 模擬器沒有 App Attest：`deviceAttestSupported()` 為 false，驗證按鈕不顯示——綠勾那段只能實機驗。
 - **R4**：`motion.ts` 新增 `fadeOutSettle`、`LIST_LAYOUT`；People 詳細頁、Settings 首頁進場；可編輯連結列 enter/exit/layout；ThemedButton／名片翻面／編譯完成徽章改用 SPRING token。
+
+- **E2E**：中途停（Kidney 決定所有 branch 合併後一起跑）。已跑：Page 空狀態、People 空狀態雙環標、新增連結 sheet、貼上網址自動偵測 GitHub＋抓到頭像。沒跑：按「加上」之後（存檔、頭貼、驗證）、Present 兩種 QR、Settings、LinksStep、R4 動態、暗色、5 條 user story。見 `docs/e2e/2026-10-30-ui-rebrand-r3/result.md`。
+- **合併注意**：face-id branch（`claude/clever-napier-5d15c2`，e1f21a5a）改了 `src/cards/solidarityQrRuntime.ts`，本 branch 刪了它（P4）→ modify/delete 衝突，保留刪除；合併後 `signOwnCardJwt`／`signOwnCardRaw` 只剩測試在用。i18n 兩支 locale 三個 branch 都有改，`git merge-tree` 試合沒有衝突。
 
 ## 2. 不做（這一刀）
 
