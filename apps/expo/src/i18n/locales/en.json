@@ -1006,6 +1006,7 @@
   "meEdit.avatar.close": "Close profile photo choices",
   "meEdit.avatar.change": "Change profile photo",
   "meEdit.avatar.library": "Choose from library",
+  "meEdit.avatar.libraryHint": "Only on this phone; visitors see a picture from your links",
   "meEdit.avatar.bluesky": "Use Bluesky avatar",
   "meEdit.avatar.blueskyHint": "Publishes the photo already on your Bluesky account",
   "meEdit.avatar.remove": "Remove",

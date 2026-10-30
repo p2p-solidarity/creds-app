@@ -1006,6 +1006,7 @@
   "meEdit.avatar.close": "關閉個人照片選項",
   "meEdit.avatar.change": "更換個人照片",
   "meEdit.avatar.library": "從照片圖庫選擇",
+  "meEdit.avatar.libraryHint": "只顯示在這台手機；訪客看到的是你連結裡的頭像",
   "meEdit.avatar.bluesky": "使用 Bluesky 頭像",
   "meEdit.avatar.blueskyHint": "發布你目前在 Bluesky 使用的照片",
   "meEdit.avatar.remove": "移除",

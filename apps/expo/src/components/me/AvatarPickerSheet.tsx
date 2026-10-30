@@ -146,6 +146,7 @@ export function AvatarPickerSheet({
                 <AvatarActionRow
                   icon="photo"
                   label={t('meEdit.avatar.library')}
+                  detail={t('meEdit.avatar.libraryHint')}
                   onPress={onChooseLibrary}
                 />
                 {canUseBluesky ? (

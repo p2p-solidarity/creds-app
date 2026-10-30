@@ -1,6 +1,10 @@
 # 12 — Publishing a photo as the Page's picture (plan, 2026-10-30)
 
-Status: **plan, not built.** Asked by Kidney 2026-10-30 ("Plan photo hosting") after 「怎麼沒有我的頭貼」.
+Status: **dropped 2026-10-30 — Kidney's call: no photo hosting.** A Page's picture is the one the owner picks from
+their links / Bluesky (already built, signed into the Page, shown by other phones through `PageAvatar`). An album photo
+stays on the phone, and the picker says so (`meEdit.avatar.libraryHint`). Kept for the record in case hosting comes
+back. Still open: the web Page shows initials only (§1) — showing the signed picture there needs a first-party,
+https-guarded image proxy like `/api/youtube/thumb`.
 
 ## 1. Today
 
