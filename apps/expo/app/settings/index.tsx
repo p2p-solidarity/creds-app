@@ -24,6 +24,7 @@ import {
   SettingsBlockToggleRow,
   SettingsScreenTitle,
 } from '@/components/settings/SettingsBlocks';
+import { CredsMark } from '@/components/brand/CredsMark';
 import { SettingsResetSection } from '@/components/settings/SettingsResetSection';
 import { useRecentUpdatesStore } from '@/contacts/recentUpdates';
 import { readPasskeyCount } from '@/identity/passkeyRegistry';
@@ -145,6 +146,7 @@ export default function SettingsHub() {
           <SettingsBlockSection index={2} title={t('settingsHub.plan')}>
             <SettingsBlockRow
               icon="sparkles"
+              leading={<CredsMark size={16} />}
               title={t('settingsHub.plan')}
               onPress={() => { router.push('/settings/pro'); }}
             />

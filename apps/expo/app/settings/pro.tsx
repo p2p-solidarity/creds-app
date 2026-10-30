@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, Platform, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CredsMark } from '@/components/brand/CredsMark';
 import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
 import {
@@ -179,11 +180,7 @@ export default function ProSettingsScreen() {
                 <View
                   className="items-center justify-center rounded-pill"
                   style={{ width: 44, height: 44, backgroundColor: Colors.cardSurface }}>
-                  <SfIcon
-                    name={isPro ? 'checkmark.seal.fill' : 'sparkles'}
-                    size={19}
-                    color={Colors.primaryMauve}
-                  />
+                  <CredsMark size={26} />
                 </View>
               </View>
               <ThemedText variant="bodySmall" tone="secondary" className="pt-4">

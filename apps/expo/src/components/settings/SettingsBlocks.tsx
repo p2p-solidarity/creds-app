@@ -107,6 +107,8 @@ export function SettingsBlockSection({
 
 export interface SettingsBlockRowProps {
   icon: SFSymbol;
+  /** Drawn in the icon slot instead of `icon` — e.g. the creds mark on 方案. */
+  leading?: ReactNode;
   title: string;
   subtitle?: string;
   trailingText?: string;
@@ -119,6 +121,7 @@ export interface SettingsBlockRowProps {
 
 export function SettingsBlockRow({
   icon,
+  leading,
   title,
   subtitle,
   trailingText,
@@ -148,7 +151,7 @@ export function SettingsBlockRow({
           justifyContent: 'center',
           marginRight: 12,
         }}>
-        <SfIcon name={icon} size={14} color={resolvedIcon} />
+        {leading ?? <SfIcon name={icon} size={14} color={resolvedIcon} />}
       </View>
 
       <View className="flex-1">
