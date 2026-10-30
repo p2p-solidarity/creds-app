@@ -29,7 +29,7 @@
  */
 import { useLocalSearchParams } from 'expo-router';
 import { safeBack } from '@/navigation/safeBack';
-import { useEffect, useMemo, useReducer, useState } from 'react';
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { Modal, Pressable, Text, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -257,7 +257,23 @@ export default function PassportSetup() {
     }
   };
 
+  // `isLoading` only turns on after the Face ID gate, so a second tap on Save
+  // (or one inside the biometric grace window, where the gate returns at
+  // once) ran a second save that also found no saved passport — two
+  // credentials, two statements, 4 + 4 claims. This ref closes that window
+  // synchronously.
+  const persisting = useRef(false);
   const onPersist = async () => {
+    if (persisting.current) return;
+    persisting.current = true;
+    try {
+      await persist();
+    } finally {
+      persisting.current = false;
+    }
+  };
+
+  const persist = async () => {
     if (!state.draft || !state.chip) {
       pushToast(
         developerMode ? 'Passport flow not complete' : t('passportSetup.error.details'),
