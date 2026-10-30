@@ -43,8 +43,7 @@
         "com.apple.developer.pass-type-identifiers": [
           "$(TeamIdentifierPrefix)pass.kidneyweakx.airmeishi"
         ],
-        "aps-environment": "production",
-        "com.apple.developer.devicecheck.appattest-environment": "production"
+        "aps-environment": "production"
       },
       "infoPlist": {
         "CFBundleDisplayName": "creds.id",
