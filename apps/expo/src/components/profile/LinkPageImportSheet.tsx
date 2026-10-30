@@ -34,7 +34,7 @@ import { TextInput, View } from 'react-native';
 import { KeyboardAwareScrollView, KeyboardStickyView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ModalSheet } from '@/components/common/ModalSheet';
+import { ModalSheet, sheetTopInset } from '@/components/common/ModalSheet';
 import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedButton, ThemedText } from '@/components/themed';
@@ -151,7 +151,7 @@ function LinkPageImportSheetContent({
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.pageBg, paddingTop: insets.top }}>
+    <View style={{ flex: 1, backgroundColor: Colors.pageBg, paddingTop: sheetTopInset(insets.top) }}>
       <Toolbar title={sheetTitle} onCancel={onClose} />
 
       <KeyboardAwareScrollView

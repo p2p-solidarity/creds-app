@@ -40,6 +40,13 @@ export interface ModalSheetProps {
   readonly children: ReactNode;
 }
 
+/** Top padding for sheet content that read the WINDOW's insets (a hook
+ *  called outside the sheet): an iOS sheet already starts below the status
+ *  bar, so padding by the window inset leaves an empty band at its top. */
+export function sheetTopInset(windowTop: number): number {
+  return Platform.OS === 'ios' ? 0 : windowTop;
+}
+
 export function ModalSheet({
   visible,
   onRequestClose,

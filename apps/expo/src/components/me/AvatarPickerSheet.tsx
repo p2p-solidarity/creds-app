@@ -1,5 +1,6 @@
 import { Image } from 'expo-image';
-import { ActivityIndicator, Modal, ScrollView, View } from 'react-native';
+import { ActivityIndicator, ScrollView, View } from 'react-native';
+import { ModalSheet, sheetTopInset } from '@/components/common/ModalSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { ReactNode } from 'react';
 
@@ -51,15 +52,13 @@ export function AvatarPickerSheet({
   const close = loading ? () => undefined : onClose;
 
   return (
-    <Modal
+    <ModalSheet
       visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
       onRequestClose={close}>
       {visible ? (
         <View
           className="flex-1 bg-pageBg"
-          style={{ paddingTop: insets.top, paddingBottom: insets.bottom + 12 }}>
+          style={{ paddingTop: sheetTopInset(insets.top), paddingBottom: insets.bottom + 12 }}>
           <View className="min-h-14 flex-row items-center justify-between border-b border-divider px-4">
             <View style={{ width: 44 }} />
             <ThemedText variant="titleMedium">{t('meEdit.avatar.title')}</ThemedText>
@@ -169,7 +168,7 @@ export function AvatarPickerSheet({
           </ScrollView>
         </View>
       ) : null}
-    </Modal>
+    </ModalSheet>
   );
 }
 

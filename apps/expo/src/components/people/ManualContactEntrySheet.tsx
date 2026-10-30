@@ -24,7 +24,7 @@ import {
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ModalSheet } from '@/components/common/ModalSheet';
+import { ModalSheet, sheetTopInset } from '@/components/common/ModalSheet';
 import { Colors } from '@/constants/Colors';
 import { useContactStore } from '@/contacts/repository';
 import { showError } from '@/feedback/appAlert';
@@ -149,7 +149,7 @@ function ManualContactEntryContent({
 
   return (
     <View style={{ flex: 1, backgroundColor: Colors.pageBg }}>
-      <View style={{ paddingTop: insets.top }}>
+      <View style={{ paddingTop: sheetTopInset(insets.top) }}>
         <Toolbar
           onCancel={onClose}
           onSave={onSave}

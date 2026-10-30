@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
-import { Modal, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
+import { ModalSheet, sheetTopInset } from '@/components/common/ModalSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PressableScale } from '@/components/common/PressableScale';
@@ -184,8 +185,10 @@ function PendingLeaveCardsSheet({
   };
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
+    <ModalSheet
+      visible={visible}
+      onRequestClose={onClose}>
+      <View className="flex-1 bg-pageBg" style={{ paddingTop: sheetTopInset(insets.top) }}>
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 24, gap: 14 }}>
           <View className="flex-row items-center justify-between">
             <ThemedText variant="titleLarge">{t('peopleList.pendingTitle')}</ThemedText>
@@ -237,6 +240,6 @@ function PendingLeaveCardsSheet({
           ))}
         </ScrollView>
       </View>
-    </Modal>
+    </ModalSheet>
   );
 }

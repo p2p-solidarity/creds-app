@@ -5,7 +5,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ModalSheet } from '@/components/common/ModalSheet';
+import { ModalSheet, sheetTopInset } from '@/components/common/ModalSheet';
 import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedButton, ThemedChoiceChip, ThemedSurface, ThemedText, ThemedTextInput } from '@/components/themed';
@@ -383,7 +383,7 @@ function PageBlockEditorContent({ block, onClose }: { readonly block: PageBlock;
   };
   return (
     <ModalSheet visible onRequestClose={onClose}>
-      <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
+      <View className="flex-1 bg-pageBg" style={{ paddingTop: sheetTopInset(insets.top) }}>
         <KeyboardAwareScrollView
           keyboardShouldPersistTaps="handled"
           bottomOffset={16}

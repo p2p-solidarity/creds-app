@@ -8,7 +8,7 @@ import { View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ModalSheet } from '@/components/common/ModalSheet';
+import { ModalSheet, sheetTopInset } from '@/components/common/ModalSheet';
 import { ThemedButton, ThemedText, ThemedTextInput } from '@/components/themed';
 import { haptic } from '@/feedback/haptics';
 import { pushToast } from '@/feedback/toast';
@@ -58,7 +58,7 @@ function BioEditor({ initial, onClose }: { readonly initial: string; readonly on
   };
 
   return (
-    <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
+    <View className="flex-1 bg-pageBg" style={{ paddingTop: sheetTopInset(insets.top) }}>
       <SheetHeader title={t('pageBio.title')} canGoBack={false} onClose={onClose} />
       <KeyboardAwareScrollView
         keyboardShouldPersistTaps="handled"

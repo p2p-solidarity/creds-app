@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { Modal, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
+import { ModalSheet, sheetTopInset } from '@/components/common/ModalSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
@@ -26,19 +27,16 @@ export function DeleteContactsSheet({
   const insets = useSafeAreaInsets();
 
   return (
-    <Modal
+    <ModalSheet
       visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
       onRequestClose={() => {
         if (!deleting) onClose();
-      }}
-    >
+      }}>
       <View
         style={{
           flex: 1,
           backgroundColor: Colors.pageBg,
-          paddingTop: insets.top,
+          paddingTop: sheetTopInset(insets.top),
         }}
       >
         <ScrollView
@@ -118,7 +116,7 @@ export function DeleteContactsSheet({
           />
         </View>
       </View>
-    </Modal>
+    </ModalSheet>
   );
 }
 

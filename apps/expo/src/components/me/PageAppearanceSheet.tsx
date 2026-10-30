@@ -18,7 +18,7 @@ import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown, useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ModalSheet } from '@/components/common/ModalSheet';
+import { ModalSheet, sheetTopInset } from '@/components/common/ModalSheet';
 import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedButton, ThemedChoiceChip, ThemedText, ThemedTextInput } from '@/components/themed';
@@ -123,7 +123,7 @@ function DesignScreen({
     : SlideOutDown.duration(DURATION.exit).easing(EASE_OUT);
 
   return (
-    <KeyboardAvoidingView behavior="padding" automaticOffset className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
+    <KeyboardAvoidingView behavior="padding" automaticOffset className="flex-1 bg-pageBg" style={{ paddingTop: sheetTopInset(insets.top) }}>
       <SheetHeader title={t('pageDesign.design')} canGoBack={false} onClose={onClose} />
       <View style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ paddingVertical: 20, paddingBottom: 32 }}>

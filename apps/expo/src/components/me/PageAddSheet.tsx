@@ -18,7 +18,7 @@ import { useRef, useState, type ReactNode } from 'react';
 import { Platform, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ModalSheet } from '@/components/common/ModalSheet';
+import { ModalSheet, sheetTopInset } from '@/components/common/ModalSheet';
 import type { BrandBadgeName } from '@/components/icons/BrandBadge';
 import { ThemedButton, ThemedText, ThemedTextInput } from '@/components/themed';
 import { haptic } from '@/feedback/haptics';
@@ -286,7 +286,7 @@ function AddMenu({
   const shownSections = needle.length === 0 ? sections : sections.filter(matches);
 
   return (
-    <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
+    <View className="flex-1 bg-pageBg" style={{ paddingTop: sheetTopInset(insets.top) }}>
       <SheetHeader title={t('pageAdd.title')} canGoBack={false} onClose={() => { finish(); }} />
       <ScrollView
         keyboardShouldPersistTaps="handled"

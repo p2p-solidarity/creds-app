@@ -17,11 +17,11 @@ import { type ReactNode, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Linking,
-  Modal,
   Pressable,
   ScrollView,
   View,
 } from 'react-native';
+import { ModalSheet, sheetTopInset } from '@/components/common/ModalSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { SfIcon } from '@/components/icons/SfIcon';
@@ -53,14 +53,12 @@ export function ProofPresentationFlowSheet({
   onClose,
 }: ProofPresentationFlowSheetProps): ReactNode {
   return (
-    <Modal
+    <ModalSheet
       visible={visible}
-      animationType="slide"
       presentationStyle="formSheet"
-      onRequestClose={onClose}
-    >
+      onRequestClose={onClose}>
       <FlowBody requestPayload={requestPayload} onClose={onClose} />
-    </Modal>
+    </ModalSheet>
   );
 }
 
@@ -107,7 +105,7 @@ function FlowBody({
 
   return (
     <View
-      style={{ flex: 1, backgroundColor: Colors.pageBg, paddingTop: insets.top }}
+      style={{ flex: 1, backgroundColor: Colors.pageBg, paddingTop: sheetTopInset(insets.top) }}
     >
       <Toolbar onClose={onClose} />
 

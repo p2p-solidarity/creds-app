@@ -12,7 +12,7 @@ import { useState, type ReactNode } from 'react';
 import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ModalSheet } from '@/components/common/ModalSheet';
+import { ModalSheet, sheetTopInset } from '@/components/common/ModalSheet';
 import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedButton, ThemedText } from '@/components/themed';
@@ -49,7 +49,7 @@ function InfoSheetContent({
           padding: 24,
           // iOS sheets report top 0; Android modals fill the window, so the
           // status bar inset has to be cleared here.
-          paddingTop: insets.top + 24,
+          paddingTop: sheetTopInset(insets.top) + 24,
           paddingBottom: insets.bottom + 24,
           gap: 16,
         }}>

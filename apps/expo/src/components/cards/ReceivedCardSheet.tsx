@@ -10,7 +10,8 @@
  * attached until the Contact is persisted from the app root.
  */
 import { useState, type ReactNode } from 'react';
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
+import { ModalSheet, sheetTopInset } from '@/components/common/ModalSheet';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -63,12 +64,9 @@ export function ReceivedCardSheet({
   onDismiss,
 }: ReceivedCardSheetProps): ReactNode {
   return (
-    <Modal
+    <ModalSheet
       visible={visible && card !== null}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onDismiss}
-    >
+      onRequestClose={onDismiss}>
       {card ? (
         <ReceivedCardContent
           card={card}
@@ -81,7 +79,7 @@ export function ReceivedCardSheet({
           onDismiss={onDismiss}
         />
       ) : null}
-    </Modal>
+    </ModalSheet>
   );
 }
 
@@ -144,7 +142,7 @@ function ReceivedCardContent({
 
   return (
     <View style={{ flex: 1, backgroundColor: Colors.pageBg }}>
-      <View style={{ paddingTop: insets.top }}>
+      <View style={{ paddingTop: sheetTopInset(insets.top) }}>
         <Toolbar onDone={onDismiss} />
       </View>
 

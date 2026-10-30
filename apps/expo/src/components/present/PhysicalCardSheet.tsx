@@ -1,6 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import type { ReactNode } from 'react';
-import { Modal, ScrollView, Switch, View } from 'react-native';
+import { ScrollView, Switch, View } from 'react-native';
+import { ModalSheet, sheetTopInset } from '@/components/common/ModalSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PressableScale } from '@/components/common/PressableScale';
@@ -41,13 +42,10 @@ export function PhysicalCardSheet({
   const setPreference = usePreferences((state) => state.set);
 
   return (
-    <Modal
+    <ModalSheet
       visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
-    >
-      <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
+      onRequestClose={onClose}>
+      <View className="flex-1 bg-pageBg" style={{ paddingTop: sheetTopInset(insets.top) }}>
         <ScrollView
           contentContainerStyle={{
             paddingHorizontal: 16,
@@ -124,7 +122,7 @@ export function PhysicalCardSheet({
           />
         </View>
       </View>
-    </Modal>
+    </ModalSheet>
   );
 }
 

@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CopyableAddress } from '@/components/common/CopyableAddress';
 import { InfoButton } from '@/components/common/InfoSheet';
-import { ModalSheet } from '@/components/common/ModalSheet';
+import { ModalSheet, sheetTopInset } from '@/components/common/ModalSheet';
 import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { SettingsScreenTitle } from '@/components/settings/SettingsBlocks';
@@ -239,7 +239,7 @@ function PasskeyDetails({ entry, title, subtitle, isLast, onClose, onChanged }: 
 
   return (
     <View className="flex-1 bg-pageBg">
-      <KeyboardAwareScrollView bottomOffset={16} keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 24, paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24, gap: 16 }}>
+      <KeyboardAwareScrollView bottomOffset={16} keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 24, paddingTop: sheetTopInset(insets.top) + 24, paddingBottom: insets.bottom + 24, gap: 16 }}>
         <ThemedText variant="titleLarge">{title}</ThemedText>
         <ThemedText variant="bodyMedium" tone="secondary">{subtitle}</ThemedText>
         {entry.meta ? (

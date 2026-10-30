@@ -24,7 +24,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ModalSheet } from '@/components/common/ModalSheet';
+import { ModalSheet, sheetTopInset } from '@/components/common/ModalSheet';
 import { PressableScale } from '@/components/common/PressableScale';
 import { LinkIcon } from '@/components/icons/LinkIcon';
 import { SfIcon } from '@/components/icons/SfIcon';
@@ -259,7 +259,7 @@ export function AddLinkFlow({
   const inputModel = linkInputModelFor(draft.preset);
 
   return (
-    <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
+    <View className="flex-1 bg-pageBg" style={{ paddingTop: sheetTopInset(insets.top) }}>
       <SheetHeader
         title={t(editing ? 'meEdit.linkSheet.editTitle' : step.kind === 'added' ? 'meEdit.linkSheet.addedTitle' : 'meEdit.linkSheet.addTitle')}
         canGoBack={!editing && (step.kind === 'details' || (onExit !== undefined && step.kind === 'compose'))}
