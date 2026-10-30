@@ -1,6 +1,6 @@
 # 11 — 護照 ZK（passport-noir OpenAC v3）檢討 plan
 
-> 2026-10-30 · 狀態：**plan 已定案（§0.1、§9 全部採用建議）；P0、P1、P3 完成（`docs/e2e/2026-10-30-passport-p0`、`-p1`、`-p3`；P1 兩支實機 E2E 與 P3 真護照晶片調查尚未做）；passport-noir v0.5.0 已發布，待封存；下一步 P2**。安全路徑，size **L**。
+> 2026-10-30 · 狀態：**plan 已定案（§0.1、§9 全部採用建議）；P0、P1、P3 完成（`docs/e2e/2026-10-30-passport-p0`、`-p1`、`-p3`；P1 兩支實機 E2E 與 P3 真護照晶片調查尚未做）；passport-noir v0.5.0 已發布並封存（2026-10-30，保留原名不改 legacy）；下一步 P2**。安全路徑，size **L**。
 > 與 10 的關係：取代 10 §3.11 裡關於護照的幾條（nullifier、晶片簽章不強制、網頁不驗護照 ZK）、§4 的「護照 ZK 當面出示改走 Pear」、§5。10 的其他決定不變。
 > 程式碼基準：creds-app `e9c4f09c`、passport-noir `2c58ade`（v0.4.0）。
 
