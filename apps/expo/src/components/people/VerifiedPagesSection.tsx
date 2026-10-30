@@ -38,6 +38,7 @@ import { View } from 'react-native';
 
 import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
+import { PageAvatar } from '@/components/people/PageAvatar';
 import { ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { useTranslation } from '@/i18n';
@@ -112,14 +113,7 @@ function VerifiedPageRow({
         borderBottomColor: Colors.divider,
       }}
     >
-      <View
-        className="items-center justify-center overflow-hidden rounded-full bg-searchBg"
-        style={{ width: 38, height: 38 }}
-      >
-        <ThemedText variant="bodyMedium" tone="secondary">
-          {initial(snapshot.record.displayName)}
-        </ThemedText>
-      </View>
+      <PageAvatar avatar={snapshot.record.avatar} displayName={snapshot.record.displayName} size={38} />
       <View className="flex-1" style={{ gap: 2 }}>
         <ThemedText variant="bodyLarge" numberOfLines={1}>
           {snapshot.record.displayName}
@@ -185,11 +179,6 @@ function DeclaredPageRow({
 }
 
 
-
-function initial(displayName: string): string {
-  const trimmed = displayName.trim();
-  return trimmed.length === 0 ? '?' : trimmed.charAt(0).toUpperCase();
-}
 
 /** Shared by both row kinds — `verifiedAt` for a verified row, `importedAt`
  * for a declared row; the bucketing math is identical either way. */

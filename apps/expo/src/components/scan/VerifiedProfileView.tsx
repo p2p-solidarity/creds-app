@@ -21,6 +21,7 @@ import { PressableScale } from '@/components/common/PressableScale';
 import { handleBadgeViewModel } from '@/badges/handleBadgeDisplay';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { PageLivePreview } from '@/components/me/PageLivePreview';
+import { PageAvatar } from '@/components/people/PageAvatar';
 import { ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { appAlert } from '@/feedback/appAlert';
@@ -65,8 +66,11 @@ export function VerifiedProfileView({ record, handleBinding }: VerifiedProfileVi
         </View>
       ) : (
         <>
-          <View style={{ gap: 4 }}>
-            <ThemedText variant="titleLarge">{record.displayName}</ThemedText>
+          <View className="flex-row items-center" style={{ gap: 12 }}>
+            <PageAvatar avatar={record.avatar} displayName={record.displayName} size={56} />
+            <ThemedText variant="titleLarge" style={{ flex: 1 }}>
+              {record.displayName}
+            </ThemedText>
           </View>
 
           {record.bio.length > 0 ? (
