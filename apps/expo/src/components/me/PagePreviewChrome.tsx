@@ -15,6 +15,7 @@ import { PageChromeColors, PagePalettes } from '@/constants/Colors';
 import { useTranslation } from '@/i18n';
 import type { PageAppearance } from '@/page/pageDesign';
 import { resolveProfileAvatarSource } from '@/profile/avatar';
+import { publicHttpsUrl } from '@/profile/httpsOwnership';
 import { brandIconForLink } from '@/profile/linkPresentation';
 import type { ProfileRecord } from '@solidarity/shared';
 
@@ -41,7 +42,11 @@ export function PagePreviewHeader({
   readonly handle: string | null;
 }): ReactNode {
   const { t } = useTranslation();
-  const avatarUrl = resolveProfileAvatarSource(record.avatar, null);
+  // Someone else's Page: their avatar URL is fetched by this phone, so it
+  // passes the same https-only / no-private-IP guard as link checks.
+  const avatarUrl = variant === 'public'
+    ? (record.avatar === null ? null : publicHttpsUrl(record.avatar)?.toString() ?? null)
+    : resolveProfileAvatarSource(record.avatar, null);
   const trimmedHandle = handle?.trim() ?? '';
   const headline = variant === 'public' ? 'headlineLarge' : 'headlineMedium';
   const marks = cardMarks(record.links);

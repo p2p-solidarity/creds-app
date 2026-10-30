@@ -3,7 +3,7 @@
  * verified" presentation (1.3.3 Task A2.3, US-11). Used by both
  * `VerifiedPageResultSheet` (fresh scan result) and the People detail
  * screen (`app/people/profile/[did].tsx`, a persisted snapshot) so the two
- * never drift — same displayName/bio/links layout either way.
+ * never drift — both show the person's Page itself (`PageLivePreview`).
  *
  * When the page arrived through a live handle read, `handleBinding` carries
  * the fresh bidirectional gate verdict and is rendered separately: only an
@@ -15,17 +15,11 @@ import { View } from 'react-native';
 
 import { handleBadgeViewModel } from '@/badges/handleBadgeDisplay';
 import { PageLivePreview } from '@/components/me/PageLivePreview';
-import { PageAvatar } from '@/components/people/PageAvatar';
-import {
-  ChipBase,
-  PersonHeroCard,
-  PersonLinksCard,
-  buildLinkRows,
-} from '@/components/people/personDetailSupport';
+import { ChipBase } from '@/components/people/personDetailSupport';
 import { WitnessSection } from '@/components/scan/WitnessSection';
-import { ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { useTranslation } from '@/i18n';
+import { createInitialPageDesign } from '@/page/pageDesign';
 import type { VerifiedHandleBinding } from '@/scan/verifiedPageHandler';
 import type { ProfileRecord } from '@solidarity/shared';
 
@@ -34,53 +28,33 @@ export interface VerifiedProfileViewProps {
   readonly handleBinding?: VerifiedHandleBinding;
 }
 
-/** Opens on the same name card a contact does (`PersonHeroCard`): avatar,
- *  name, bio and the signature / handle chips, then this phone's checks,
- *  then the published Page or its links as tappable rows. */
+/** Opens on the person's Page exactly as visitors see it — their published
+ *  design, or the default Page of their signed links when they never
+ *  designed one — then the signature / handle chips and this phone's checks. */
 export function VerifiedProfileView({ record, handleBinding }: VerifiedProfileViewProps): ReactNode {
   const { t } = useTranslation();
-  const linkRows = useMemo(() => buildLinkRows(record.links), [record.links]);
+  const design = useMemo(() => record.page ?? createInitialPageDesign(), [record.page]);
   return (
     <View style={{ gap: 16 }}>
-      <PersonHeroCard>
-        <PageAvatar avatar={record.avatar} displayName={record.displayName} size={88} />
-        <ThemedText variant="headlineMedium" numberOfLines={2} style={{ textAlign: 'center' }}>
-          {record.displayName}
-        </ThemedText>
-        {record.bio.length > 0 ? (
-          <ThemedText variant="bodySmall" tone="secondary" numberOfLines={3} style={{ textAlign: 'center' }}>
-            {record.bio}
-          </ThemedText>
-        ) : null}
-        <View className="flex-row flex-wrap items-center justify-center gap-2">
-          <ChipBase
-            icon="checkmark.seal.fill"
-            iconColor={Colors.terminalGreen}
-            labelColor={Colors.terminalGreen}
-            label={t('verifiedPage.signatureValid')}
-          />
-          {handleBinding ? <HandleBindingBadge binding={handleBinding} /> : null}
-        </View>
-      </PersonHeroCard>
+      <PageLivePreview
+        record={record}
+        blocks={design.blocks}
+        appearance={design.appearance}
+        variant="public"
+        handle={handleBinding?.handle ?? null}
+      />
+
+      <View className="flex-row flex-wrap items-center gap-2">
+        <ChipBase
+          icon="checkmark.seal.fill"
+          iconColor={Colors.terminalGreen}
+          labelColor={Colors.terminalGreen}
+          label={t('verifiedPage.signatureValid')}
+        />
+        {handleBinding ? <HandleBindingBadge binding={handleBinding} /> : null}
+      </View>
 
       <WitnessSection record={record} />
-
-      {record.page ? (
-        <View style={{ gap: 8 }}>
-          <ThemedText variant="caption" tone="tertiary">
-            {t('pageDesign.publishedPage')}
-          </ThemedText>
-          <PageLivePreview
-            record={record}
-            blocks={record.page.blocks}
-            appearance={record.page.appearance}
-            variant="public"
-            handle={handleBinding?.handle ?? null}
-          />
-        </View>
-      ) : (
-        <PersonLinksCard rows={linkRows} />
-      )}
     </View>
   );
 }

@@ -21,3 +21,13 @@ Simulator: iPhone 18 Pro (iOS 27), dev client + metro from this checkout.
   blob verbatim, so they should ride along — not exercised).
 - Full `bun run test`.
 - Declared (link-page import) entries can't take local details yet.
+
+## Saved Page detail = the person's Page
+- Tapping a saved Page opens their Page as visitors see it (`PageLivePreview`
+  public; default links Page when they never designed one), then the
+  signature chip, this phone's checks, your info, card exchange.
+  `page-as-preview-top.png`, `page-as-preview-bottom.png`, `page-as-preview-dark.png`.
+- Public-variant avatar now goes through `publicHttpsUrl` (someone else's URL).
+- Not run: the scan-result sheet / Pear connect screens, which share
+  `VerifiedProfileView` and change the same way; a Page with a real avatar
+  image and a custom published design.
