@@ -3,6 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { Image, TextInput, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import Animated, { useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { animalImageSource } from '@/cards/animals';
@@ -24,10 +25,12 @@ import {
 } from '@/components/people/personDetailSupport';
 import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/radius';
 import { useContact, useContactStore } from '@/contacts/repository';
 import { shareContactVCard } from '@/contacts/shareContactVCard';
 import { showError } from '@/feedback/appAlert';
 import { haptic } from '@/feedback/haptics';
+import { fadeUpIn } from '@/feedback/motion';
 import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
 import { safeBack } from '@/navigation/safeBack';
@@ -42,6 +45,7 @@ export default function PersonDetailScreen(): ReactNode {
   const upsert = useContactStore((state) => state.upsert);
   const remove = useContactStore((state) => state.remove);
   const loadDetail = useContactStore((state) => state.loadDetail);
+  const reduceMotion = useReducedMotion();
   const insets = useSafeAreaInsets();
   const noteInputRef = useRef<TextInput>(null);
 
@@ -126,23 +130,35 @@ export default function PersonDetailScreen(): ReactNode {
         bottomOffset={16}
         contentContainerStyle={{ paddingTop: 8, paddingBottom: 32, gap: 16 }}
       >
-        <HeroCard
-          contact={contact}
-          displayName={displayName}
-          sourceTag={sourceTag}
-          onEditNote={() => { noteInputRef.current?.focus(); }}
-        />
-        {contact ? <ContactMethodsSection contact={contact} /> : null}
-        {contact && source ? <ContactMetadataSection contact={contact} source={source} /> : null}
-        {contact ? (
-          <NotesSection
+        <Animated.View entering={fadeUpIn(0, reduceMotion)}>
+          <HeroCard
             contact={contact}
-            inputRef={noteInputRef}
-            onSave={onSaveNote}
+            displayName={displayName}
+            sourceTag={sourceTag}
+            onEditNote={() => { noteInputRef.current?.focus(); }}
           />
+        </Animated.View>
+        {contact ? (
+          <Animated.View entering={fadeUpIn(1, reduceMotion)}>
+            <ContactMethodsSection contact={contact} />
+          </Animated.View>
+        ) : null}
+        {contact && source ? (
+          <Animated.View entering={fadeUpIn(2, reduceMotion)}>
+            <ContactMetadataSection contact={contact} source={source} />
+          </Animated.View>
         ) : null}
         {contact ? (
-          <View style={{ paddingHorizontal: HORIZONTAL_PADDING }}>
+          <Animated.View entering={fadeUpIn(3, reduceMotion)}>
+            <NotesSection
+              contact={contact}
+              inputRef={noteInputRef}
+              onSave={onSaveNote}
+            />
+          </Animated.View>
+        ) : null}
+        {contact ? (
+          <Animated.View entering={fadeUpIn(4, reduceMotion)} style={{ paddingHorizontal: HORIZONTAL_PADDING }}>
             <ThemedButton
               fullWidth
               variant="secondary"
@@ -151,7 +167,7 @@ export default function PersonDetailScreen(): ReactNode {
               loading={sharing}
               onPress={onShare}
             />
-          </View>
+          </Animated.View>
         ) : null}
       </KeyboardAwareScrollView>
 
@@ -331,7 +347,7 @@ function AvatarCircle({
       style={{
         width: 88,
         height: 88,
-        borderRadius: 44,
+        borderRadius: Radius.pill,
         backgroundColor: Colors.gradientCream,
         borderWidth: 1,
         borderColor: Colors.divider,

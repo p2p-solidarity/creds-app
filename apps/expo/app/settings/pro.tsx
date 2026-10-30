@@ -13,6 +13,7 @@ import {
 } from '@/components/settings/SettingsBlocks';
 import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/radius';
 import { haptic } from '@/feedback/haptics';
 import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
@@ -149,7 +150,7 @@ export default function ProSettingsScreen() {
               colors={[Colors.heroGradientStart, Colors.heroGradientEnd]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={{ borderRadius: 12, overflow: 'hidden', padding: 18 }}>
+              style={{ borderRadius: Radius.card, overflow: 'hidden', padding: 18 }}>
               <View className="flex-row items-center justify-between gap-3">
                 <View className="gap-1">
                   <ThemedText variant="titleLarge">
@@ -175,7 +176,7 @@ export default function ProSettingsScreen() {
                   )}
                 </View>
                 <View
-                  className="items-center justify-center rounded-full"
+                  className="items-center justify-center rounded-pill"
                   style={{ width: 44, height: 44, backgroundColor: Colors.cardSurface }}>
                   <SfIcon
                     name={isPro ? 'checkmark.seal.fill' : 'sparkles'}
@@ -191,7 +192,7 @@ export default function ProSettingsScreen() {
           </SettingsEnter>
 
           {status === 'grace' ? (
-            <ThemedSurface variant="inset" className="flex-row items-start gap-2.5 rounded-xl px-4 py-3">
+            <ThemedSurface variant="inset" className="flex-row items-start gap-2.5 rounded-card px-4 py-3">
               <SfIcon name="wifi.slash" size={14} color={Colors.text3} />
               <ThemedText variant="caption" tone="secondary" style={{ flex: 1 }}>
                 {t('pro.graceNotice')}
@@ -303,7 +304,7 @@ function PlanCard({
   return (
     <ThemedSurface
       variant={featured ? 'outlined' : 'card'}
-      className="gap-3 rounded-2xl p-4"
+      className="gap-3 rounded-card p-4"
       style={featured ? { borderColor: Colors.primaryMauve, borderWidth: 1.5 } : undefined}>
       <View className="flex-row items-baseline justify-between gap-3">
         <ThemedText variant="titleMedium">{title}</ThemedText>

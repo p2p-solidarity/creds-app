@@ -43,6 +43,7 @@ import {
 } from '@/components/settings/SettingsBlocks';
 import { Colors } from '@/constants/Colors';
 import { useThemeColors } from '@/constants/useThemeColors';
+import { Radius } from '@/constants/radius';
 import { useTranslation } from '@/i18n';
 import {
   BIOMETRIC_GATE_MODES,
@@ -291,7 +292,7 @@ function GateSkeleton({ label }: { readonly label: string }) {
       >
         <SfIcon name="faceid" size={14} color={Colors.text3} />
       </View>
-      <View style={{ height: 12, width: 160, backgroundColor: Colors.divider, borderRadius: 4 }} />
+      <View style={{ height: 12, width: 160, backgroundColor: Colors.divider, borderRadius: Radius.xs }} />
     </View>
   );
 }

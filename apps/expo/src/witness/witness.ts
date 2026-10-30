@@ -26,24 +26,24 @@ import {
   type WitnessStatement,
   type WitnessSummary,
 } from '@solidarity/shared';
+import { fetch as expoFetch } from 'expo/fetch';
 
 import { publishEvent, subscribeEvents, type NostrEvent, type SubscriptionHandle } from '@/nostr/nostrAdapter';
 import { eventMatchesFilter, publishToRelays, type PublishReport } from '@/nostr/publish';
 import { fetchKind0FromRelays } from '@/nostr/fetchKind0';
 import { getNostrPubkey, npubEncode, signNostrEvent } from '@/nostr/userKey';
 import { NIP05_SERVICE_ORIGIN } from '@/nip05/client';
+import { createPublicPageFetch } from '@/profile/httpsOwnership';
 
 import { dropDeviceKey, signWithDeviceKey, type DeviceKeyFailure } from './deviceKey';
 
-/** Pages served to a phone: follow redirects, read as text, never throw. */
-export const fetchPublicPage: PageFetch = async (url) => {
-  try {
-    const res = await fetch(url, { redirect: 'follow', headers: { Accept: 'text/html' } });
-    return ok({ status: res.status, body: res.status === 200 ? await res.text() : '' });
-  } catch {
-    return err('network');
-  }
-};
+/**
+ * Pages served to a phone. The host comes from someone else's Page, so every
+ * hop goes through the https-only / no-private-IP guard. `expo/fetch` by name,
+ * not the global: with EXPO_PUBLIC_USE_RN_FETCH the global is RN's fetch,
+ * which follows redirects natively whatever `redirect` says.
+ */
+export const fetchPublicPage: PageFetch = createPublicPageFetch(expoFetch);
 
 /** Tier 4: does `target`'s public page name `creds.id/@<name>` right now, fetched by this phone? */
 export function checkOnThisPhone(target: SocialTarget, name: string): Promise<Result<void, MarkerCheckFailure>> {

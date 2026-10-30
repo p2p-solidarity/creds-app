@@ -7,9 +7,12 @@ import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedText } from '@/components/themed';
 import { useThemeColors } from '@/constants/useThemeColors';
+import { haptic } from '@/feedback/haptics';
 import { fadeUpIn } from '@/feedback/motion';
+import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
 import type { LinkVisibility } from '@/profile/projection';
+import { applyPagePhoto, quickAddLink } from '@/profile/quickAddLink';
 import type { ProfileRecord } from '@solidarity/shared';
 import type { PublicPageShareSource } from './meProfileModel';
 
@@ -21,6 +24,7 @@ import { ProfileBadgeChips } from './ProfileBadgeChips';
 import { ProfileHero } from './ProfileHero';
 import { ProfileLinksList } from './ProfileLinksList';
 import { ProfileSectionsList } from './ProfileSectionsList';
+import { AddLinkSheet } from './AddLinkSheet';
 import { PageAddSheet } from './PageAddSheet';
 import { PageAppearanceSheet } from './PageAppearanceSheet';
 import { PageLapsedCheckAlert } from './PageLapsedCheckAlert';
@@ -44,7 +48,6 @@ export interface MeProfilePageProps {
   readonly bottomInset: number;
   readonly onEdit: () => void;
   readonly onEditAvatar: () => void;
-  readonly onAddLink: () => void;
   readonly onImportLinks: () => void;
   readonly onOpenSettings: () => void;
   readonly onOpenBindings: () => void;
@@ -62,7 +65,6 @@ export function MeProfilePage({
   bottomInset,
   onEdit,
   onEditAvatar,
-  onAddLink,
   onImportLinks,
   onOpenSettings,
   onOpenBindings,
@@ -74,6 +76,11 @@ export function MeProfilePage({
   // The tab's one add entry point: links, sections and attestations all start
   // from the same "＋ 新增" sheet instead of three per-group buttons.
   const [addOpen, setAddOpen] = useState(false);
+  // Links open the shared add sheet in place: add → saved → check, no detour.
+  const [linkSheetOpen, setLinkSheetOpen] = useState(false);
+  const openAddLink = () => {
+    setLinkSheetOpen(true);
+  };
   // The preview's `.pub-handle` line shows the page's REAL address, or
   // nothing at all while one is still unpublished.
   const shareSelection = useProfileShareSelection(
@@ -116,7 +123,8 @@ export function MeProfilePage({
           links={record.links}
           linkVisibility={linkVisibility}
           onEdit={onEdit}
-          onAdd={() => {
+          onAddLink={openAddLink}
+          onAddMore={() => {
             setAddOpen(true);
           }}
           onImportLinks={onImportLinks}
@@ -163,9 +171,28 @@ export function MeProfilePage({
         onClose={() => {
           setAddOpen(false);
         }}
-        onAddLink={onAddLink}
+        onAddLink={openAddLink}
         onImportLinks={onImportLinks}
         onAddProof={onOpenBindings}
+      />
+
+      <AddLinkSheet
+        visible={linkSheetOpen}
+        initialLink={null}
+        onSave={async (link) => {
+          const added = await quickAddLink({ label: link.label, url: link.url });
+          if (added.ok) {
+            haptic('success');
+            return { kind: 'saved', ...added.value };
+          }
+          if (added.error === 'duplicate') pushToast(t('meEdit.linkSheet.duplicate'), 'warning');
+          else if (added.error === 'saveFailed') pushToast(t('meEdit.saveFailed'), 'error');
+          return { kind: 'failed' };
+        }}
+        onUseAvatar={applyPagePhoto}
+        onClose={() => {
+          setLinkSheetOpen(false);
+        }}
       />
 
       <PageAppearanceSheet

@@ -75,7 +75,7 @@ export default function SettingsHub() {
         contentContainerStyle={{ paddingTop: 24, paddingBottom: 60 + insets.bottom }}
       >
         <View className="gap-6">
-          <SettingsBlockSection title={t('settingsHub.publicPage')}>
+          <SettingsBlockSection index={0} title={t('settingsHub.publicPage')}>
             <SettingsBlockRow
               icon="at"
               title={t('settingsHub.myUsername')}
@@ -87,12 +87,7 @@ export default function SettingsHub() {
           </SettingsBlockSection>
 
           {/* Account */}
-          <SettingsBlockSection title={t('settingsHub.accountIdentity')}>
-            <SettingsBlockRow
-              icon="person.text.rectangle"
-              title={t('settingsHub.identityProfile')}
-              onPress={() => { router.push('/me/edit'); }}
-            />
+          <SettingsBlockSection index={1} title={t('settingsHub.accountIdentity')}>
             <SettingsBlockRow
               icon="key.fill"
               title={t('settingsHub.passkeys')}
@@ -108,11 +103,17 @@ export default function SettingsHub() {
             <SettingsBlockRow
               icon="icloud"
               title={t('settingsHub.identityExport')}
+              trailingText={backupEnabled ? t('common.on') : t('common.off')}
               onPress={() => { router.push('/settings/backup'); }}
+            />
+            <SettingsBlockRow
+              icon="key.horizontal"
+              title={t('settingsHub.recoveryPhrase')}
+              onPress={() => { router.push('/settings/identity-export'); }}
             />
           </SettingsBlockSection>
 
-          <SettingsBlockSection title={t('settingsHub.plan')}>
+          <SettingsBlockSection index={2} title={t('settingsHub.plan')}>
             <SettingsBlockRow
               icon="sparkles"
               title={t('settingsHub.plan')}
@@ -120,7 +121,7 @@ export default function SettingsHub() {
             />
           </SettingsBlockSection>
 
-          <SettingsBlockSection title={t('settingsHub.preferences')}>
+          <SettingsBlockSection index={3} title={t('settingsHub.preferences')}>
             <SettingsBlockRow
               icon="paintbrush"
               title={t('settingsHub.appearance')}
@@ -138,7 +139,7 @@ export default function SettingsHub() {
             />
           </SettingsBlockSection>
 
-          <SettingsBlockSection title={t('settingsHub.data')}>
+          <SettingsBlockSection index={4} title={t('settingsHub.data')}>
             <SettingsBlockRow
               icon="square.and.arrow.up"
               title={t('settingsHub.exportContacts')}
@@ -152,15 +153,9 @@ export default function SettingsHub() {
               title={t('settingsHub.importContacts')}
               onPress={() => { router.push('/contacts/import-vcf'); }}
             />
-            <SettingsBlockRow
-              icon="icloud"
-              title={t('settingsHub.cloudBackup')}
-              trailingText={backupEnabled ? t('common.on') : t('common.off')}
-              onPress={() => { router.push('/settings/data-sync'); }}
-            />
           </SettingsBlockSection>
 
-          <SettingsBlockSection title={t('settingsHub.advancedSection')}>
+          <SettingsBlockSection index={5} title={t('settingsHub.advancedSection')}>
             {developerMode ? (
               <SettingsBlockRow
                 icon="hammer"
@@ -187,8 +182,8 @@ export default function SettingsHub() {
               />
               <SettingsBlockRow
                 icon="hand.raised"
-                title={t('settingsHub.privacy')}
-                onPress={() => { router.push('/settings/privacy'); }}
+                title={t('settingsHub.privacyPolicy')}
+                onPress={() => { router.push('/legal/privacy'); }}
               />
               <Pressable
                 onPress={onVersionTap}

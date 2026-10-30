@@ -25,11 +25,12 @@ import {
   subscribeBadgeStatusCache,
 } from '@/badges/badgeStatusCache';
 import { PressableScale } from '@/components/common/PressableScale';
-import { BrandIcon } from '@/components/icons/BrandIcon';
+import { LinkIcon } from '@/components/icons/LinkIcon';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedButton, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { useThemeColors } from '@/constants/useThemeColors';
+import { Radius } from '@/constants/radius';
 import { appAlert } from '@/feedback/appAlert';
 import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
@@ -57,9 +58,9 @@ import {
   FIELD_ROW_HEIGHT,
   FIELD_ROW_STRIDE,
   ICON_TILE_GLYPH,
+  ICON_TILE_SIZE,
   ROW_GAP,
   fieldRowStyle,
-  iconTileStyle,
   isNostrProfileUrlForNpub,
   recordClaimsAtprotoHandle,
   reorderByIndex,
@@ -79,8 +80,10 @@ export interface ProfileLinksListProps {
   readonly links: readonly ProfileLink[];
   readonly linkVisibility: readonly LinkVisibility[];
   readonly onEdit: () => void;
-  /** Opens the tab's single "＋ 新增" sheet (links, sections, attestations). */
-  readonly onAdd: () => void;
+  /** Opens the shared add-link sheet — the Page's first, most common action. */
+  readonly onAddLink: () => void;
+  /** Opens the "＋ 新增" sheet for sections and attestations. */
+  readonly onAddMore: () => void;
   readonly onImportLinks?: () => void;
 }
 
@@ -88,7 +91,8 @@ export function ProfileLinksList({
   links,
   linkVisibility,
   onEdit,
-  onAdd,
+  onAddLink,
+  onAddMore,
   onImportLinks,
 }: ProfileLinksListProps): ReactNode {
   const { t } = useTranslation();
@@ -165,16 +169,24 @@ export function ProfileLinksList({
   const verifyTargetFor = (link: ProfileLink): SocialTarget | null =>
     canProve && record !== null && pillFor(link) === null ? socialTargetForLink(link.url) : null;
 
-  // The Page tab's only add button. It lives where the links group ends — in
-  // the empty state or under the last row — and opens one sheet for links,
-  // sections and attestations alike.
-  const addAction = (
+  // Adding a link is the Page's main action, so it leads the list (Linktree's
+  // big "+ Add"); sections and attestations share the quieter button below.
+  const addLinkAction = (
     <ThemedButton
-      label={t('mePage.add')}
+      label={t('mePage.addLink')}
       leadingIcon={<SfIcon name="plus" size={15} color={c.pageBg} />}
       haptic="tap"
       fullWidth
-      onPress={onAdd}
+      onPress={onAddLink}
+    />
+  );
+  const addMoreAction = (
+    <ThemedButton
+      label={t('mePage.addMore')}
+      variant="dottedOutline"
+      haptic="tap"
+      fullWidth
+      onPress={onAddMore}
     />
   );
 
@@ -184,7 +196,7 @@ export function ProfileLinksList({
         <PageEmptyState
           title={t('mePage.noLinks')}
           message={t('mePage.noLinksHint')}
-          action={addAction}
+          action={addLinkAction}
           {...(onImportLinks
             ? { secondaryAction: { label: t('mePage.importLinks'), onPress: onImportLinks } }
             : {})}
@@ -195,6 +207,7 @@ export function ProfileLinksList({
 
   return (
     <View className="gap-5 px-4">
+      {addLinkAction}
       <LinkRowsSection
         title={t('mePage.publicPage')}
         entries={sections.publicLinks}
@@ -232,7 +245,7 @@ export function ProfileLinksList({
           <SfIcon name="chevron.right" size={13} color={Colors.text3} />
         </PressableScale>
       ) : null}
-      {addAction}
+      {addMoreAction}
     </View>
   );
 }
@@ -325,13 +338,13 @@ function LinkRowsSection({
                     paddingVertical: 8,
                     paddingRight: 12,
                   }}>
-                  <View style={iconTileStyle(c.chipSurface)}>
-                    <BrandIcon
-                      name={linkDisplay(link.label, link.url).brand}
-                      size={ICON_TILE_GLYPH}
-                      color={Colors.primaryBlue}
-                    />
-                  </View>
+                  <LinkIcon
+                    label={link.label}
+                    url={link.url}
+                    size={ICON_TILE_SIZE}
+                    glyph={ICON_TILE_GLYPH}
+                    surface={c.chipSurface}
+                  />
                   <View style={{ flex: 1, gap: 1 }}>
                     <ThemedText variant="bodyMedium" numberOfLines={1} ellipsizeMode="middle">
                       {linkDisplay(link.label, link.url).text}
@@ -493,7 +506,7 @@ function VerifyChip({ target }: { readonly target: SocialTarget }): ReactNode {
       style={{
         paddingVertical: 5,
         paddingHorizontal: 11,
-        borderRadius: 999,
+        borderRadius: Radius.pill,
         borderWidth: 1,
         borderColor: c.primaryBlue,
       }}>

@@ -159,7 +159,7 @@ function ResolvingView({
 function InvalidCard({ reason }: { readonly reason: VerifiedPageErrorReason }): ReactNode {
   const { t } = useTranslation();
   return (
-    <View className="gap-3 rounded-xl border border-divider p-4">
+    <View className="gap-3 rounded-card border border-divider p-4">
       <View className="flex-row items-center" style={{ gap: 8 }}>
         <SfIcon name="xmark.seal.fill" size={18} color={Colors.destructive} />
         <ThemedText variant="titleMedium" style={{ color: Colors.destructive }}>

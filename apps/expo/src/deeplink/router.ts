@@ -9,6 +9,8 @@ import { resolveProfileByNpub } from '@/nostr/resolveProfile';
 import { presentVerifiedPageResolving, presentVerifiedPageResult } from '@/scan/verifiedPageResult';
 import { verifyFragment } from '@/scan/verifiedPageHandler';
 import { isDeveloperOnlyDeepLinkKind } from '@/scan/technicalFlowGate';
+import { pushToast } from '@/feedback/toast';
+import { translate } from '@/i18n';
 import { usePreferences } from '@/settings/preferences';
 import { presentWebSignEntry } from '@/websign/pendingRequest';
 
@@ -34,7 +36,9 @@ export function handleDeepLink(raw: string): DeepLinkRoute {
       router.push({ pathname: '/people/[id]', params: { id: route.cardId } });
       break;
     case 'groupInvite':
-      router.push({ pathname: '/settings/groups', params: { invite: route.token } });
+      // Groups were frozen (06-plan) and their screens removed (10 §5); an old
+      // invite link says so instead of opening nothing.
+      pushToast(translate('deeplink.groupsRetired'), 'info');
       break;
     case 'oidc':
       router.push({ pathname: '/oidc/consent', params: { q: route.query } });

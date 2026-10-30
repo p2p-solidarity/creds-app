@@ -25,6 +25,7 @@ import { CREDS_MARK, CREDS_RING } from '@/components/brand/credsLogo';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { readableTextOn } from '@/components/themed/contrast';
 import { Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/radius';
 import { EASE_OUT, SPRING, TIMING } from '@/feedback/motion';
 
 /** How far each ring stands open while waiting. */
@@ -117,7 +118,7 @@ export function SignSeal({ size, state }: { readonly size: number; readonly stat
       <View
         style={[
           styles.badge,
-          { width: badge, height: badge, borderRadius: badge / 2, backgroundColor: accent, borderColor: Colors.pageBg },
+          { width: badge, height: badge, borderRadius: Radius.pill, backgroundColor: accent, borderColor: Colors.pageBg },
         ]}>
         <Animated.View style={[styles.center, glyphStyle]}>
           <SfIcon

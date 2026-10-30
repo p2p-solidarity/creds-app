@@ -10,9 +10,11 @@ import { Modal, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ON_DARK } from '@/components/themed/contrast';
 import { ThemedButton } from '@/components/themed/ThemedButton';
 import { ThemedText } from '@/components/themed/ThemedText';
 import { Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/radius';
 import { useTranslation } from '@/i18n';
 
 export interface PassportShowChallengeSheetProps {
@@ -44,7 +46,7 @@ export function PassportShowChallengeSheet({
         </ThemedText>
         {challengeJson ? (
           <View
-            style={{ backgroundColor: '#FFFFFF', padding: 16, borderRadius: 12 }}
+            style={{ backgroundColor: ON_DARK, padding: 16, borderRadius: Radius.card }}
           >
             <QRCode
               value={challengeJson}

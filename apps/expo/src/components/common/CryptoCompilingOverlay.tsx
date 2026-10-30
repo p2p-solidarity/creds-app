@@ -27,6 +27,7 @@ import { Colors } from '@/constants/Colors';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { haptic } from '@/feedback/haptics';
 import { MONO } from '@/constants/fonts';
+import { SPRING, TIMING } from '@/feedback/motion';
 
 type Stage = 'init' | 'proving' | 'done';
 
@@ -92,8 +93,8 @@ export function CryptoCompilingOverlay({
   useEffect(() => {
     if (!visible || stage !== 'done') return;
     cursorOpacity.value = 0;
-    verifiedScale.value = withSpring(1, { damping: 6, stiffness: 120 });
-    verifiedOpacity.value = withTiming(1, { duration: 200 });
+    verifiedScale.value = withSpring(1, SPRING.zoom);
+    verifiedOpacity.value = withTiming(1, TIMING.fast);
     haptic('success');
     const doneT = setTimeout(() => {
       onDone?.();

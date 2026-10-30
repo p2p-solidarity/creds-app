@@ -1,7 +1,6 @@
-import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState, type ReactNode } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { View } from 'react-native';
 import Animated, {
   SensorType,
   clamp,
@@ -18,51 +17,12 @@ import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedButton, ThemedText } from '@/components/themed';
 import { CardMetalColors, Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/radius';
+import { DURATION, EASE_OUT, IDLE, SPRING } from '@/feedback/motion';
 
-/** `.metal` — credit-card proportions and the mock's 18pt corner. */
+/** `.metal` — credit-card proportions; corners follow the card role. */
 const CARD_ASPECT_RATIO = 1.586;
-const CARD_RADIUS = 18;
-/** `.m-qr` — 70pt plate, 5pt inset around the code. */
-const CARD_QR_SIZE = 70;
-const CARD_QR_PADDING = 5;
-
-export type CardQrState =
-  | { readonly kind: 'loading' }
-  | { readonly kind: 'ready'; readonly uri: string }
-  | { readonly kind: 'error' };
-
-function CardQr({ state }: { readonly state: CardQrState }): ReactNode {
-  let content: ReactNode;
-  if (state.kind === 'ready') {
-    content = (
-      <Image
-        source={{ uri: state.uri }}
-        contentFit="contain"
-        style={{ width: CARD_QR_SIZE - CARD_QR_PADDING * 2, height: CARD_QR_SIZE - CARD_QR_PADDING * 2 }}
-      />
-    );
-  } else if (state.kind === 'loading') {
-    content = <ActivityIndicator size="small" color={Colors.primaryMauve} />;
-  } else {
-    content = <SfIcon name="exclamationmark.triangle" size={20} color={Colors.destructive} />;
-  }
-
-  return (
-    <View
-      style={{
-        width: CARD_QR_SIZE,
-        height: CARD_QR_SIZE,
-        borderRadius: 7,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: CardMetalColors.qrPlate,
-        padding: CARD_QR_PADDING,
-      }}>
-      {content}
-    </View>
-  );
-}
-
+const CARD_RADIUS = Radius.card;
 /** `.etch` — engraved lettering: pale steel type with a shadow under it. */
 const ETCH_TEXT = {
   color: CardMetalColors.etch,
@@ -78,7 +38,7 @@ function CardSheen({ enabled }: { readonly enabled: boolean }): ReactNode {
   useEffect(() => {
     progress.value = -1;
     if (!enabled || reduceMotion) return;
-    progress.value = withDelay(260, withTiming(1, { duration: 900 }));
+    progress.value = withDelay(DURATION.enter, withTiming(1, { duration: IDLE.enterMs, easing: EASE_OUT }));
   }, [enabled, progress, reduceMotion]);
 
   const style = useAnimatedStyle(() => ({
@@ -120,7 +80,7 @@ function useCardMotion(isFlipped: boolean) {
   useEffect(() => {
     flip.value = reduceMotion
       ? isFlipped ? 180 : 0
-      : withSpring(isFlipped ? 180 : 0, { damping: 18, stiffness: 150 });
+      : withSpring(isFlipped ? 180 : 0, SPRING.gentle);
   }, [flip, isFlipped, reduceMotion]);
 
   useEffect(() => {
@@ -158,10 +118,9 @@ interface PresentCardVisualProps {
   readonly name: string | null;
   /** Printed under the name in mono — the page address this card hands over. */
   readonly displayUrl: string;
-  /** What the QR carries this time, e.g. "name + 2 fields". */
+  /** Which QR the plate below shows, e.g. "Online page". */
   readonly summary: string;
   readonly scanHint: string;
-  readonly qrState: CardQrState;
   readonly flipLabel: string;
   readonly physicalCardLabel: string;
   readonly onOpenPhysicalCard: () => void;
@@ -229,7 +188,6 @@ export function PresentCardVisual(props: PresentCardVisualProps): ReactNode {
               <View
                 className="flex-row items-end"
                 style={{ gap: 12, marginTop: 'auto' }}>
-                <CardQr state={props.qrState} />
                 <View className="min-w-0 flex-1">
                   <ThemedText variant="bodySmall" numberOfLines={1} style={ETCH_TEXT}>
                     {props.summary}

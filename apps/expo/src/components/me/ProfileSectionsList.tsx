@@ -11,6 +11,7 @@ import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedButton, ThemedSurface, ThemedText, ThemedTextInput } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { useThemeColors } from '@/constants/useThemeColors';
+import { Radius } from '@/constants/radius';
 import { useTranslation } from '@/i18n';
 import { haptic } from '@/feedback/haptics';
 import { fadeUpIn } from '@/feedback/motion';
@@ -454,7 +455,7 @@ function PageBlockEditorContent({ block, onClose }: { readonly block: PageBlock;
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderWidth: 1,
-                    borderRadius: 12,
+                    borderRadius: Radius.card,
                     borderColor: style === option ? Colors.primaryBlue : Colors.divider,
                     backgroundColor: style === option ? Colors.chipSurface : Colors.cardBg,
                   }}>

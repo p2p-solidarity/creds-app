@@ -81,7 +81,7 @@ export default function DeclaredPageDetailScreen(): ReactNode {
           </View>
 
           <View
-            className="flex-row items-center rounded-lg border border-divider"
+            className="flex-row items-center rounded-card border border-divider"
             style={{ borderStyle: 'dashed', gap: 8, paddingHorizontal: 10, paddingVertical: 8, alignSelf: 'flex-start' }}
           >
             <SfIcon name="questionmark.circle" size={14} color={Colors.text2} />

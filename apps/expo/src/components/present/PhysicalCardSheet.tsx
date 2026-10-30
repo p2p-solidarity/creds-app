@@ -8,6 +8,7 @@ import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
 import { CardMetalColors, Colors } from '@/constants/Colors';
 import { useThemeColors } from '@/constants/useThemeColors';
+import { Radius } from '@/constants/radius';
 import { useTranslation } from '@/i18n';
 import type { PhysicalCardMaterial } from '@/present/presentModel';
 import { usePreferences } from '@/settings/preferences';
@@ -164,7 +165,7 @@ function MaterialOption({
           colors={materialGradient(material)}
           start={{ x: 0, y: 0.5 }}
           end={{ x: 1, y: 0.5 }}
-          style={{ width: 34, height: 22, borderRadius: 5 }}
+          style={{ width: 34, height: 22, borderRadius: Radius.xs }}
         />
         <View className="flex-row items-center" style={{ gap: 4 }}>
           {selected ? (

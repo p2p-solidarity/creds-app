@@ -301,7 +301,7 @@ function FieldRow({
         {label}
       </Text>
       <View
-        className="rounded-sm2 bg-searchBg"
+        className="rounded-field bg-searchBg"
         style={{
           height: 44,
           paddingHorizontal: 12,

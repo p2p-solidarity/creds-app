@@ -59,9 +59,15 @@ module.exports = {
         radarRing: 'var(--color-radarRing, rgba(191,128,167,0.3))',
         radarGlow: 'var(--color-radarGlow, rgba(191,128,167,0.15))',
       },
+      // creds.id radius roles (src/constants/radius.ts) — keep the two in step.
       borderRadius: {
-        sm2: '2px',
-        sm3: '3px',
+        button: '6px',
+        card: '12px',
+        group: '12px',
+        field: '2px',
+        xs: '2px',
+        sheet: '16px',
+        pill: '9999px',
       },
       fontFamily: {
         sans: ['Inter-Regular'],

@@ -7,6 +7,7 @@ import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/radius';
 import { contactFromLeaveCard, useLeaveCardStore } from '@/contacts/leaveCardInbox';
 import { useContactStore } from '@/contacts/repository';
 import { useRecentUpdatesStore, type RecentProfileChange } from '@/contacts/recentUpdates';
@@ -37,7 +38,7 @@ export function ContactsActivitySections({ onContactAdded }: { readonly onContac
             <ThemedSurface
               variant="card"
               style={{
-                borderRadius: 0,
+                borderRadius: Radius.group,
                 borderWidth: 0.5,
                 borderColor: Colors.primaryBlue,
                 backgroundColor: Colors.chipSurface,
@@ -72,7 +73,7 @@ export function ContactsActivitySections({ onContactAdded }: { readonly onContac
           {hasRecentUpdates ? (
             <ThemedSurface
               variant="card"
-              style={{ overflow: 'hidden', borderRadius: 0, borderWidth: 0.5 }}
+              style={{ overflow: 'hidden', borderRadius: Radius.group, borderWidth: 0.5 }}
             >
               <View className="flex-row items-center">
                 <PressableScale

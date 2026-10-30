@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedSurface, ThemedText } from '@/components/themed';
 import { useThemeColors } from '@/constants/useThemeColors';
+import { Radius } from '@/constants/radius';
 import { useTranslation } from '@/i18n';
 import type { HttpsOwnershipEvidence } from '@/profile/httpsOwnership';
 
@@ -29,7 +30,7 @@ export function HttpsOwnershipCard({
           style={{
             width: 32,
             height: 32,
-            borderRadius: 10,
+            borderRadius: Radius.card,
             alignItems: 'center',
             justifyContent: 'center',
             backgroundColor: c.searchBg,

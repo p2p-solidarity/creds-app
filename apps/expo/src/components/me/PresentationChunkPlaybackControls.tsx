@@ -13,6 +13,7 @@ import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedText } from '@/components/themed/ThemedText';
 import { Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/radius';
 import { haptic } from '@/feedback/haptics';
 
 export interface PresentationChunkPlaybackControlsProps {
@@ -57,7 +58,7 @@ export function PresentationChunkPlaybackControls({
       <View
         style={{
           height: 4,
-          borderRadius: 2,
+          borderRadius: Radius.xs,
           backgroundColor: Colors.divider,
           overflow: 'hidden',
         }}
@@ -145,7 +146,7 @@ function ChunkControlButton({
         height: HIT_SIZE,
         alignItems: 'center',
         justifyContent: 'center',
-        borderRadius: 8,
+        borderRadius: Radius.button,
         borderWidth: 1,
         borderColor: disabled ? Colors.divider : Colors.terminalGreen,
       }}

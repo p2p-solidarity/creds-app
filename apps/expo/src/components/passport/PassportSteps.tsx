@@ -32,7 +32,7 @@ import { BulletGuaranteeRow } from '@/components/passport/BulletGuaranteeRow';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedButton } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
-import { TIMING } from '@/feedback/motion';
+import { SPRING, TIMING } from '@/feedback/motion';
 import {
   credentialTrustDisplayFor,
   passportTrustLevelFromProof,
@@ -45,6 +45,7 @@ import type {
 } from '@/passport/pipeline';
 import { DEFAULT_DISCLOSURE_POLICY } from '@/passport/zkInputs';
 import { MONO, textFont } from '@/constants/fonts';
+import { Radius } from '@/constants/radius';
 
 export function NfcStep({
   busy,
@@ -89,7 +90,7 @@ export function NfcStep({
         ? 'Bring your passport close to the device to read NFC chip data.'
         : t('passportSetup.nfc.ready');
   return (
-    <View className="bg-mutedSurface gap-3 rounded-xl p-3.5">
+    <View className="bg-mutedSurface gap-3 rounded-group p-3.5">
       <NfcVisual busy={busy} success={chip !== null} />
       <Text className="text-text2 px-6 text-center text-[15px]">{status}</Text>
       {busy ? (
@@ -169,13 +170,13 @@ const progressStyles = StyleSheet.create({
   track: {
     width: '85%',
     height: 6,
-    borderRadius: 3,
+    borderRadius: Radius.xs,
     backgroundColor: 'rgba(255,255,255,0.08)',
     overflow: 'hidden',
   },
   fill: {
     height: '100%',
-    borderRadius: 3,
+    borderRadius: Radius.xs,
   },
 });
 
@@ -288,7 +289,7 @@ function SuccessCheck() {
   const opacity = useSharedValue(0);
   useEffect(() => {
     opacity.value = withTiming(1, TIMING.enter);
-    if (!reduceMotion) scale.value = withSpring(1, { duration: 200, dampingRatio: 0.8 });
+    if (!reduceMotion) scale.value = withSpring(1, SPRING.gentle);
   }, [opacity, reduceMotion, scale]);
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
@@ -330,7 +331,7 @@ function ChipSnapshotCard({
   const { t } = useTranslation();
   if (!developerMode) {
     return (
-      <View className="rounded-xl p-3" style={{ backgroundColor: Colors.mutedSurface, gap: 4 }}>
+      <View className="rounded-group p-3" style={{ backgroundColor: Colors.mutedSurface, gap: 4 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <SfIcon name="checkmark.circle.fill" size={14} color={Colors.terminalGreen} />
           <Text style={{ color: Colors.terminalGreen, fontSize: 12, fontWeight: '600' }}>
@@ -345,7 +346,7 @@ function ChipSnapshotCard({
   }
 
   return (
-    <View className="rounded-xl p-3" style={{ backgroundColor: Colors.mutedSurface, gap: 8 }}>
+    <View className="rounded-group p-3" style={{ backgroundColor: Colors.mutedSurface, gap: 8 }}>
       {chip.isSimulated ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <SfIcon name="exclamationmark.triangle.fill" size={14} color="#FF9500" />
@@ -522,7 +523,7 @@ function ProofResultCard({
     const unavailable = proof.generationFailed;
     return (
       <View
-        className="mx-4 rounded-xl p-3"
+        className="mx-4 rounded-card p-3"
         style={{ backgroundColor: Colors.mutedSurface, gap: 4 }}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -581,7 +582,7 @@ function ProofResultCard({
       : 'checkmark.seal.fill';
   return (
     <View
-      className="mx-4 rounded-xl p-3"
+      className="mx-4 rounded-card p-3"
       style={{ backgroundColor: Colors.mutedSurface, gap: 4 }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -597,7 +598,7 @@ function ProofResultCard({
             paddingHorizontal: 6,
             paddingVertical: 2,
             backgroundColor: `${accent}26`,
-            borderRadius: 4,
+            borderRadius: Radius.xs,
           }}
         >
           {trustDisplay.level}
@@ -703,7 +704,7 @@ export function PersistStep({
   const { t } = useTranslation();
   const fallback = proof?.generationFailed === true;
   return (
-    <View className="bg-mutedSurface gap-3 rounded-xl p-3.5">
+    <View className="bg-mutedSurface gap-3 rounded-group p-3.5">
       <Text className="text-text2 text-center text-[15px]">
         {developerMode
           ? 'Credential is ready. Save it to your identity wallet.'

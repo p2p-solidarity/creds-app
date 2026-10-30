@@ -39,6 +39,7 @@ import { MONO, textFont } from '@/constants/fonts';
 import { useTranslation } from '@/i18n';
 
 import { ThemedText } from './ThemedText';
+import { Radius } from '@/constants/radius';
 
 export type TextInputKind = 'text' | 'url' | 'handle' | 'secret' | 'did';
 
@@ -55,7 +56,7 @@ interface KindConfig {
 
 /** creds.id `.field-input`: 16pt side padding, `--radius-field`. */
 const FIELD_PAD_X = 16;
-const FIELD_RADIUS = 2;
+const FIELD_RADIUS = Radius.field;
 const KIND_CONFIG: Readonly<Record<TextInputKind, KindConfig>> = {
   text: {},
   url: {

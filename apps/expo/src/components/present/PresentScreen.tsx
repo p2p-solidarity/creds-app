@@ -1,64 +1,36 @@
+/**
+ * Present tab — one card (10 §4): the metal card, the QR plate in its
+ * online or offline form, and the public links that QR hands over. Scanning
+ * someone else lives in the header.
+ */
 import Animated, { useReducedMotion } from 'react-native-reanimated';
-import { fadeUpIn } from '@/feedback/motion';
 import { router } from 'expo-router';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import type { ReactNode } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { ProfileRecord } from '@solidarity/shared';
-import { useCardStore, useMyCardDetail } from '@/cards/cardManager';
-import { PressableScale } from '@/components/common/PressableScale';
-import { BrandIcon } from '@/components/icons/BrandIcon';
-import { SfIcon } from '@/components/icons/SfIcon';
+
+import { LinkIcon } from '@/components/icons/LinkIcon';
+import type { PublicPageShareSource } from '@/components/me/meProfileModel';
+import { MeProfileGate } from '@/components/me/MeProfileGate';
 import { PageHeaderAction } from '@/components/me/PageHeaderAction';
 import { PageSectionLabel } from '@/components/me/PageSectionLabel';
-import { ROW_RADIUS, blockRowStyle } from '@/components/me/pageRowStyles';
-import { PresentAttestationsMode as AttestationsMode } from '@/components/present/PresentAttestations';
-import {
-  PresentCard,
-  PresentCardPresetControls,
-  PresentCardWithPageUrl,
-} from '@/components/present/PresentCard';
-import type { PublicPageShareSource } from '@/components/me/meProfileModel';
-import {
-  ThemedButton,
-  ThemedSurface,
-  ThemedText,
-} from '@/components/themed';
-import { Colors } from '@/constants/Colors';
+import { PresentCard } from '@/components/present/PresentCard';
+import { ThemedSurface, ThemedText } from '@/components/themed';
+import { Radius } from '@/constants/radius';
 import { useThemeColors } from '@/constants/useThemeColors';
-import { useCredentialStore } from '@/credentials/store';
+import { fadeUpIn } from '@/feedback/motion';
 import { useTranslation } from '@/i18n';
-import { useDisplayClaims, useIdentityData } from '@/identity';
-import { filterAvailablePassportPresentationClaims } from '@/passport/presentationClaims';
-import {
-  buildPresentModel,
-  resolvePresentAttestationsState,
-  resolvePresentCardState,
-  type PresentCardOnlyField,
-  type PresentModel,
-} from '@/present/presentModel';
+import { presentPublicLinks, type PresentPublicLink } from '@/present/presentModel';
 import { linkDisplay, linkSecondaryLabel } from '@/profile/linkPresentation';
 import { useProfileStore } from '@/profile/store';
-import { usePreferences } from '@/settings/preferences';
-type PresentMode = 'card' | 'attestations';
+
 export function PresentScreen(): ReactNode {
   const insets = useSafeAreaInsets();
-  const [mode, setMode] = useState<PresentMode>('card');
-  const [cardHydrationError, setCardHydrationError] = useState(false);
-  const [cardRetryNonce, setCardRetryNonce] = useState(0);
-  const [identityHydrationError, setIdentityHydrationError] = useState(false);
-  const [identityRetryNonce, setIdentityRetryNonce] = useState(0);
-
-  const manifest = useCardStore((state) => state.manifest);
-  const detailsHydrated = useCardStore((state) => state.detailsHydrated);
-  const hydrateCards = useCardStore((state) => state.hydrate);
-  const card = useMyCardDetail();
-  const preferences = usePreferences();
-
   const record = useProfileStore((state) => state.record);
-  const jws = useProfileStore((state) => state.jws);
+  const status = useProfileStore((state) => state.status);
   const linkVisibility = useProfileStore((state) => state.linkVisibility);
   const shared = useProfileStore((state) => state.shared);
+  const jws = useProfileStore((state) => state.jws);
   const published = useProfileStore((state) => state.published);
   const nostrPublishedJws = useProfileStore((state) => state.nostrPublishedJws);
   const shareRecord = shared?.record ?? record;
@@ -67,78 +39,7 @@ export function PresentScreen(): ReactNode {
     ? { record: published.record, jws: published.jws }
     : null;
   const nostrShortUrlReady = published !== null && nostrPublishedJws === published.jws;
-  const trimmedOwnerName = record?.displayName.trim();
-
-  const hydrateIdentity = useIdentityData((state) => state.hydrate);
-  const identityHydrated = useIdentityData((state) => state.hydrated);
-  const credentialDetails = useCredentialStore((state) => state.details);
-  const displayClaims = useDisplayClaims();
-  const availableCredentialIds = useMemo(
-    () => new Set(credentialDetails.keys()),
-    [credentialDetails]
-  );
-  // Narrowing is a property of the CREDENTIAL's circuit, not of this device:
-  // `openac_show` can only ever disclose age/nationality, wherever it is
-  // presented from. Gating this on the local witness made a witness-less
-  // device (a restore, or a swallowed enrollment save) render the full
-  // four-claim set and offer disclosures it cannot prove — the gate failed
-  // OPEN. Whether this device can actually present is a separate question,
-  // answered by `passportShowEligible` in PresentAttestations.
-  const passportShowCredentialIds = useMemo(
-    () => new Set(
-      Array.from(credentialDetails.values())
-        .filter((credential) =>
-          credential.metadataTags.includes('passport-openac-v3')
-        )
-        .map((credential) => credential.id)
-    ),
-    [credentialDetails]
-  );
-  const passportClaims = filterAvailablePassportPresentationClaims(
-    displayClaims,
-    availableCredentialIds,
-    passportShowCredentialIds,
-  );
-
-  useEffect(() => {
-    let active = true;
-    setCardHydrationError(false);
-    void hydrateCards().catch(() => {
-      if (active) setCardHydrationError(true);
-    });
-    return () => {
-      active = false;
-    };
-  }, [cardRetryNonce, hydrateCards]);
-
-  useEffect(() => {
-    let active = true;
-    setIdentityHydrationError(false);
-    void hydrateIdentity().catch(() => {
-      if (active) setIdentityHydrationError(true);
-    });
-    return () => {
-      active = false;
-    };
-  }, [hydrateIdentity, identityRetryNonce]);
-
-  const cardState = resolvePresentCardState({
-    detailsHydrated,
-    hasManifest: manifest.length > 0,
-    card,
-    hasError: cardHydrationError,
-  });
-  const model = buildPresentModel({
-    cardState,
-    links: record?.links ?? [],
-    linkVisibility,
-    preferences,
-  });
-  const attestationsState = resolvePresentAttestationsState({
-    hydrated: identityHydrated,
-    hasError: identityHydrationError,
-    claimCount: passportClaims.length,
-  });
+  const ownerName = record?.displayName.trim() ?? '';
 
   return (
     <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
@@ -148,30 +49,24 @@ export function PresentScreen(): ReactNode {
           paddingHorizontal: 16,
           paddingTop: 12,
           paddingBottom: 100 + insets.bottom,
-          gap: 16,
+          gap: 20,
         }}
       >
-        <PresentSegmentedControl mode={mode} onChange={setMode} />
-        {mode === 'card' ? (
-          <CardMode
-            model={model}
-            ownerName={
-              trimmedOwnerName !== undefined && trimmedOwnerName.length > 0
-                ? trimmedOwnerName
-                : null
-            }
-            shareRecord={shareRecord}
-            shareJws={shareJws}
-            publicPage={publicPage}
-            nostrShortUrlReady={nostrShortUrlReady}
-            onRetry={() => { setCardRetryNonce((value) => value + 1); }}
-          />
+        {status === 'ready' && shareRecord && shareJws ? (
+          <>
+            <PresentCard
+              ownerName={ownerName.length > 0 ? ownerName : null}
+              shareRecord={shareRecord}
+              shareJws={shareJws}
+              publicPage={publicPage}
+              nostrShortUrlReady={nostrShortUrlReady}
+            />
+            <PublicPageSection links={presentPublicLinks(record?.links ?? [], linkVisibility)} />
+          </>
         ) : (
-          <AttestationsMode
-            claims={passportClaims}
-            credentials={credentialDetails}
-            state={attestationsState}
-            onRetry={() => { setIdentityRetryNonce((value) => value + 1); }}
+          <MeProfileGate
+            onCreatePage={() => { router.push('/me/edit'); }}
+            onSetUpIdentity={() => { router.push('/onboarding?replay=1'); }}
           />
         )}
       </ScrollView>
@@ -203,114 +98,19 @@ function PresentHeader({ onScan }: { readonly onScan: () => void }): ReactNode {
   );
 }
 
-function PresentSegmentedControl({
-  mode,
-  onChange,
-}: {
-  readonly mode: PresentMode;
-  readonly onChange: (mode: PresentMode) => void;
-}): ReactNode {
-  const { t } = useTranslation();
-  const colors = useThemeColors();
-  const options: readonly { readonly mode: PresentMode; readonly label: string }[] = [
-    { mode: 'card', label: t('present.card') },
-    { mode: 'attestations', label: t('present.attestations') },
-  ];
-
-  return (
-    <ThemedSurface
-      accessibilityRole="tablist"
-      variant="inset"
-      className="flex-row"
-      style={{ borderRadius: ROW_RADIUS, padding: 4 }}
-    >
-      {options.map((option) => {
-        const selected = option.mode === mode;
-        return (
-          <PressableScale
-            key={option.mode}
-            fill
-            haptic="tap"
-            accessibilityRole="tab"
-            accessibilityState={{ selected }}
-            accessibilityLabel={option.label}
-            onPress={() => { onChange(option.mode); }}
-            style={{
-              minHeight: 44,
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: selected ? colors.invertedButtonBg : 'transparent',
-              borderRadius: ROW_RADIUS,
-            }}
-          >
-            <ThemedText
-              variant="label"
-              style={{ color: selected ? colors.invertedButtonText : colors.text2 }}
-            >
-              {option.label}
-            </ThemedText>
-          </PressableScale>
-        );
-      })}
-    </ThemedSurface>
-  );
-}
-
-function CardMode({
-  model,
-  ownerName,
-  shareRecord,
-  shareJws,
-  publicPage,
-  nostrShortUrlReady,
-  onRetry,
-}: {
-  readonly model: PresentModel;
-  readonly ownerName: string | null;
-  readonly shareRecord: ProfileRecord | null;
-  readonly shareJws: string | null;
-  readonly publicPage: PublicPageShareSource | null;
-  readonly nostrShortUrlReady: boolean;
-  readonly onRetry: () => void;
-}): ReactNode {
-  return (
-    <View className="gap-5">
-      {model.cardState.kind === 'ready' ? (
-        shareRecord !== null && shareJws !== null ? (
-          <PresentCardWithPageUrl
-            model={model}
-            ownerName={ownerName}
-            shareRecord={shareRecord}
-            shareJws={shareJws}
-            publicPage={publicPage}
-            nostrShortUrlReady={nostrShortUrlReady}
-          />
-        ) : (
-          <PresentCard model={model} ownerName={ownerName} page={null} />
-        )
-      ) : null}
-      <PublicPageSection model={model} />
-      <CardOnlySection
-        model={model}
-        onRetry={onRetry}
-      />
-    </View>
-  );
-}
-
-function PublicPageSection({ model }: { readonly model: PresentModel }): ReactNode {
+function PublicPageSection({ links }: { readonly links: readonly PresentPublicLink[] }): ReactNode {
   const { t } = useTranslation();
   return (
     <View className="gap-3">
       <PageSectionLabel title={t('present.publicPage')} />
-      {model.publicLinks.length === 0 ? (
+      {links.length === 0 ? (
         <ThemedSurface variant="outlined" padded>
           <ThemedText variant="bodyMedium" tone="tertiary">
             {t('present.noPublicLinks')}
           </ThemedText>
         </ThemedSurface>
       ) : (
-        <PublicLinkGroup links={model.publicLinks} />
+        <PublicLinkGroup links={links} />
       )}
     </View>
   );
@@ -325,12 +125,12 @@ function PublicPageSection({ model }: { readonly model: PresentModel }): ReactNo
 function PublicLinkGroup({
   links,
 }: {
-  readonly links: PresentModel['publicLinks'];
+  readonly links: readonly PresentPublicLink[];
 }): ReactNode {
   const colors = useThemeColors();
   const reduceMotion = useReducedMotion();
   return (
-    <View style={{ borderRadius: ROW_RADIUS, overflow: 'hidden', backgroundColor: colors.mutedSurface }}>
+    <View style={{ borderRadius: Radius.group, overflow: 'hidden', backgroundColor: colors.mutedSurface }}>
       {links.map(({ link, sourceIndex }, index) => (
         <Animated.View
           entering={fadeUpIn(index, reduceMotion)}
@@ -345,22 +145,7 @@ function PublicLinkGroup({
             borderTopColor: colors.divider,
           }}
         >
-          <View
-            style={{
-              width: 26,
-              height: 26,
-              borderRadius: 13,
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: colors.chipSurface,
-            }}
-          >
-            <BrandIcon
-              name={linkDisplay(link.label, link.url).brand}
-              size={15}
-              color={Colors.primaryBlue}
-            />
-          </View>
+          <LinkIcon label={link.label} url={link.url} size={26} glyph={15} surface={colors.chipSurface} />
           <View style={{ flex: 1, gap: 1 }}>
             <ThemedText variant="bodyMedium" numberOfLines={1} ellipsizeMode="middle">
               {linkDisplay(link.label, link.url).text}
@@ -373,120 +158,6 @@ function PublicLinkGroup({
           </View>
         </Animated.View>
       ))}
-    </View>
-  );
-}
-
-function CardOnlySection({
-  model,
-  onRetry,
-}: {
-  readonly model: PresentModel;
-  readonly onRetry: () => void;
-}): ReactNode {
-  const { t } = useTranslation();
-  const setPreference = usePreferences((state) => state.set);
-
-  return (
-    <View className="gap-3">
-      <PageSectionLabel title={t('present.cardOnly')} />
-      {model.cardState.kind === 'loading' ? (
-        <ThemedSurface
-          variant="outlined"
-          padded
-          className="items-center gap-3"
-        >
-          <ActivityIndicator />
-          <ThemedText variant="bodySmall" tone="tertiary">
-            {t('present.loadingCard')}
-          </ThemedText>
-        </ThemedSurface>
-      ) : null}
-      {model.cardState.kind === 'error' ? (
-        <ThemedSurface variant="outlined" padded className="gap-3">
-          <ThemedText variant="bodyMedium" tone="error">
-            {t('present.cardLoadError')}
-          </ThemedText>
-          <ThemedButton
-            label={t('present.retry')}
-            variant="secondary"
-            onPress={onRetry}
-          />
-        </ThemedSurface>
-      ) : null}
-      {model.cardState.kind === 'empty' ? (
-        <ThemedSurface variant="outlined" padded className="gap-4">
-          <View className="flex-row items-center" style={{ gap: 10 }}>
-            <SfIcon name="person.text.rectangle" size={20} color={Colors.text3} />
-            <ThemedText variant="bodyMedium" tone="tertiary" style={{ flex: 1 }}>
-              {t('present.noCard')}
-            </ThemedText>
-          </View>
-          <ThemedButton
-            label={t('present.createCard')}
-            variant="secondary"
-            fullWidth
-            onPress={() => { router.push('/cards/edit'); }}
-          />
-        </ThemedSurface>
-      ) : null}
-      {model.cardState.kind === 'ready' ? (
-        <>
-          {/* No row for the name. It is always on the card and cannot be
-              switched off, so listing it among switches reads as a toggle
-              that is stuck — the mock keeps this list purely optional
-              fields and lets the card itself show the name. */}
-          {model.cardOnlyFields.map((field) => (
-            <CardFieldToggle
-              key={field.field}
-              field={field}
-              onValueChange={(value) => {
-                setPreference(field.preferenceKey, value);
-              }}
-            />
-          ))}
-          {model.cardOnlyFields.length === 0 ? (
-            <ThemedSurface variant="outlined" padded>
-              <ThemedText variant="bodyMedium" tone="tertiary">
-                {t('present.noOptionalCardFields')}
-              </ThemedText>
-            </ThemedSurface>
-          ) : null}
-          <PresentCardPresetControls model={model} />
-        </>
-      ) : null}
-    </View>
-  );
-}
-
-/** `.tglrow` — label, the value you are about to hand over, and the switch.
- *  No leading icon: the mock's toggle rows carry none. */
-function CardFieldToggle({
-  field,
-  onValueChange,
-}: {
-  readonly field: PresentCardOnlyField;
-  readonly onValueChange: (value: boolean) => void;
-}): ReactNode {
-  const { t } = useTranslation();
-  const colors = useThemeColors();
-  return (
-    <View style={blockRowStyle(colors)}>
-      <View className="flex-1" style={{ gap: 1 }}>
-        <ThemedText variant="bodyMedium">
-          {t(`present.field.${field.field}`)}
-        </ThemedText>
-        <ThemedText variant="caption" tone="secondary" numberOfLines={1}>
-          {field.values.join(' · ')}
-        </ThemedText>
-      </View>
-      <Switch
-        accessibilityLabel={t(`present.field.${field.field}`)}
-        value={field.selected}
-        onValueChange={onValueChange}
-        trackColor={{ false: colors.divider, true: colors.primaryMauve }}
-        thumbColor={colors.cardBg}
-      />
     </View>
   );
 }

@@ -1,3 +1,5 @@
+import { err, ok, type PageFetch } from '@solidarity/shared';
+
 const MAX_PROOF_BYTES = 64 * 1024;
 const MAX_ORIGINS = 6;
 const DEFAULT_TIMEOUT_MS = 5_000;
@@ -33,6 +35,7 @@ function isPrivateIpv4(hostname: string): boolean {
   return (
     a === 0 ||
     a === 10 ||
+    (a === 100 && b >= 64 && b <= 127) ||
     a === 127 ||
     (a === 169 && b === 254) ||
     (a === 172 && b >= 16 && b <= 31) ||
@@ -41,10 +44,16 @@ function isPrivateIpv4(hostname: string): boolean {
   );
 }
 
-function candidateFor(raw: string): Candidate | null {
+/**
+ * The URL when this phone may connect to it: https, no credentials, not
+ * localhost, not an IP literal (private IPv4 or any IPv6). `base` resolves a
+ * redirect's relative Location. A hostname that only resolves to a private
+ * address is not caught here — this checks what the URL names, not DNS.
+ */
+export function publicHttpsUrl(raw: string, base?: string): URL | null {
   try {
-    const url = new URL(raw);
-    const hostname = url.hostname.toLowerCase();
+    const url = new URL(raw, base);
+    const hostname = url.hostname.toLowerCase().replace(/\.$/u, '');
     if (
       url.protocol !== 'https:' ||
       url.username.length > 0 ||
@@ -56,10 +65,15 @@ function candidateFor(raw: string): Candidate | null {
     ) {
       return null;
     }
-    return { origin: url.origin, pageUrl: url.href };
+    return url;
   } catch {
     return null;
   }
+}
+
+function candidateFor(raw: string): Candidate | null {
+  const url = publicHttpsUrl(raw);
+  return url ? { origin: url.origin, pageUrl: url.href } : null;
 }
 
 function canonicalUrl(raw: string): string | null {
@@ -99,8 +113,9 @@ function hasReciprocalRelMe(
 }
 
 async function readBodyBounded(
-  response: Response,
+  response: { readonly body: ReadableStream<Uint8Array> | null },
   controller: AbortController,
+  maxBytes = MAX_PROOF_BYTES,
 ): Promise<string | null> {
   const body = response.body;
   if (!body) return null;
@@ -112,8 +127,8 @@ async function readBodyBounded(
     const next = await reader.read();
     if (next.done) break;
     total += next.value.byteLength;
-    if (total > MAX_PROOF_BYTES) {
-      await reader.cancel('HTTPS ownership proof exceeded byte limit');
+    if (total > maxBytes) {
+      await reader.cancel('response exceeded byte limit');
       controller.abort();
       return null;
     }
@@ -207,6 +222,82 @@ async function performVerification({
   return (await Promise.all(checks)).filter(
     (item): item is HttpsOwnershipEvidence => item !== null,
   );
+}
+
+// ─── Public page fetch (p2p witness tier 4) ──────────────────────────────────
+//
+// The host comes from someone else's Page, so every hop is checked before the
+// phone connects to it. The transport must not follow redirects itself
+// (`expo/fetch` honors `redirect: 'manual'`; RN's own fetch does not), so the
+// loop below sees each Location and checks it first.
+
+/** Big enough for a GitHub or X profile page, small enough to hold in memory. */
+export const MAX_PUBLIC_PAGE_BYTES = 4 * 1024 * 1024;
+export const MAX_PUBLIC_PAGE_REDIRECTS = 5;
+const PUBLIC_PAGE_TIMEOUT_MS = 10_000;
+
+/** A fetch that returns 3xx responses instead of following them. */
+export type ManualRedirectFetch = (
+  url: string,
+  init: {
+    readonly redirect: 'manual';
+    readonly headers: Readonly<Record<string, string>>;
+    readonly signal: AbortSignal;
+  },
+) => Promise<{
+  readonly status: number;
+  readonly url: string;
+  readonly headers: { get(name: string): string | null };
+  readonly body: ReadableStream<Uint8Array> | null;
+}>;
+
+/**
+ * A `PageFetch` that only connects to `publicHttpsUrl` targets, checks every
+ * redirect hop the same way, and caps the body. A refused or over-long
+ * redirect chain reports its 3xx status; a refused first URL, an oversized
+ * body or a transport error is `network`.
+ */
+export function createPublicPageFetch(
+  fetchImpl: ManualRedirectFetch,
+  timeoutMs = PUBLIC_PAGE_TIMEOUT_MS,
+): PageFetch {
+  return async (raw) => {
+    const first = publicHttpsUrl(raw);
+    if (!first) return err('network');
+    let url: URL = first;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => {
+      controller.abort();
+    }, timeoutMs);
+    try {
+      for (let hop = 0; ; hop++) {
+        const res = await fetchImpl(url.href, {
+          redirect: 'manual',
+          headers: { Accept: 'text/html' },
+          signal: controller.signal,
+        });
+        // A transport that followed a redirect on its own already connected
+        // somewhere unchecked; never read what it brought back.
+        if (res.url && new URL(res.url).href !== url.href) return err('network');
+        if (res.status >= 300 && res.status < 400) {
+          const location = res.headers.get('location');
+          const next: URL | null = location === null ? null : publicHttpsUrl(location, url.href);
+          if (!next || hop >= MAX_PUBLIC_PAGE_REDIRECTS) return ok({ status: res.status, body: '' });
+          url = next;
+          continue;
+        }
+        if (res.status !== 200) return ok({ status: res.status, body: '' });
+        const declared = Number(res.headers.get('content-length') ?? 0);
+        if (declared > MAX_PUBLIC_PAGE_BYTES) return err('network');
+        const body = await readBodyBounded(res, controller, MAX_PUBLIC_PAGE_BYTES);
+        return body === null ? err('network') : ok({ status: 200, body });
+      }
+    } catch {
+      return err('network');
+    } finally {
+      clearTimeout(timeout);
+    }
+  };
 }
 
 // ─── Module-level TTL + in-flight cache (R24) ────────────────────────────────

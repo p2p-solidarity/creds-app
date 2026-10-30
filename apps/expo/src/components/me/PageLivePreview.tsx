@@ -53,6 +53,9 @@ import {
 } from './pagePreviewTheme';
 import { ThemedText } from '@/components/themed';
 
+/** The phone mock's screen corner — a device shape, not a UI surface role. */
+const PHONE_SCREEN_RADIUS = 24;
+
 export type { PageLivePreviewVariant } from './pagePreviewTheme';
 
 export interface PageLivePreviewProps {
@@ -122,7 +125,7 @@ export function PageLivePreview({
     return (
       <View
         style={{
-          borderRadius: 24,
+          borderRadius: PHONE_SCREEN_RADIUS,
           overflow: 'hidden',
           backgroundColor: appearance.customBackground,
         }}>
@@ -136,7 +139,7 @@ export function PageLivePreview({
       ? [PageTemplateColors.pageGradientStart, PageTemplateColors.pageGradientEnd]
       : [PageTemplateColors.pageSunStart, PageTemplateColors.pageSunEnd];
     return (
-      <LinearGradient colors={colors} style={{ borderRadius: 24, overflow: 'hidden' }}>
+      <LinearGradient colors={colors} style={{ borderRadius: PHONE_SCREEN_RADIUS, overflow: 'hidden' }}>
         {content}
       </LinearGradient>
     );
@@ -153,7 +156,7 @@ export function PageLivePreview({
   // header, only on the classic templates that have no colour of their own.
   const showBrandGround = appearance.template === 'cream' || appearance.template === 'journal';
   return (
-    <View style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: templateBackground }}>
+    <View style={{ borderRadius: PHONE_SCREEN_RADIUS, overflow: 'hidden', backgroundColor: templateBackground }}>
       {showBrandGround ? (
         <LinearGradient
           colors={[PageTemplateColors.heroGradientStart, PageTemplateColors.heroGradientEnd]}

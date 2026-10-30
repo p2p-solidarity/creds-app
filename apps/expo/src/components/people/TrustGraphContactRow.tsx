@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { View } from 'react-native';
 
 import { Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/radius';
 
 import { ContactRow, type ContactRowProps } from './ContactRow';
 
@@ -16,7 +17,7 @@ export function TrustGraphContactRow(props: TrustGraphContactRowProps): ReactNod
   return (
     <View
       style={{
-        borderRadius: 0,
+        borderRadius: Radius.group,
         borderBottomWidth: 0.5,
         borderBottomColor: Colors.divider,
       }}

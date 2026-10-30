@@ -87,7 +87,7 @@ export function SettingsBlockSection({
   const body = (
     <>
       <SettingsBlockSectionHeader title={title} accessory={accessory} />
-      <View className="mx-4 overflow-hidden rounded-xl border border-divider bg-cardBg">
+      <View className="mx-4 overflow-hidden rounded-card border border-divider bg-cardBg">
         {children}
       </View>
       {footer ? <Text className="px-4 text-[12px] text-text3">{footer}</Text> : null}

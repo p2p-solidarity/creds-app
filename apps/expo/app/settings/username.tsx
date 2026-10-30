@@ -121,7 +121,7 @@ export default function UsernameSettings(): ReactNode {
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: insets.bottom + 40 }}>
         <View className="gap-4">
           <SettingsEnter index={0}>
-            <ThemedSurface variant="card" padded className="gap-4 rounded-2xl">
+            <ThemedSurface variant="card" padded className="gap-4 rounded-card">
               {/* Where the name is stored and what needs the creds.id service
                   is context, not a step — it sits behind the ⓘ. */}
               <View className="flex-row items-center gap-1.5">
@@ -165,7 +165,7 @@ export default function UsernameSettings(): ReactNode {
                         onPress={() => { setUsername(suggestion); }}
                         accessibilityRole="button"
                         accessibilityLabel={`@${suggestion}`}>
-                        <View className="rounded-full px-3 py-2" style={{ backgroundColor: Colors.searchBg }}>
+                        <View className="rounded-pill px-3 py-2" style={{ backgroundColor: Colors.searchBg }}>
                           <ThemedText variant="label">@{suggestion}</ThemedText>
                         </View>
                       </PressableScale>
