@@ -26,7 +26,7 @@ import {
 import { preparePageDesign, usePageDesignStore } from '@/page/pageDesignStore';
 import { useProGate } from '@/pro/useProGate';
 
-import { PHONE_SCREEN_RADIUS, PageLivePreview } from './PageLivePreview';
+import { PHONE_SCREEN_RADIUS, PageBlockPreview, PageLivePreview } from './PageLivePreview';
 import type { PreviewBlockEditing } from './PagePreviewBlockFrame';
 import { PageCollapsibleHeader } from './PageCollapsibleHeader';
 import { PublishChangesCard } from './PublishChangesCard';
@@ -222,24 +222,25 @@ function PageBlockEditorContent({ block, onClose }: { readonly block: PageBlock;
   const insets = useSafeAreaInsets();
   const updateBlock = usePageDesignStore((state) => state.updateBlock);
   const removeBlock = usePageDesignStore((state) => state.removeBlock);
+  const appearance = usePageDesignStore((state) => state.design.appearance);
+  const record = useProfileStore((state) => state.record);
   const [title, setTitle] = useState(block.title);
   const [style, setStyle] = useState(block.style);
   const [items, setItems] = useState<readonly PageBlockItem[]>(block.items);
   const catalog = PAGE_BLOCK_CATALOG.find((entry) => entry.type === block.type);
   if (!catalog) return null;
+  const cleanedItems = items
+    .filter((item) => item.title.trim().length > 0)
+    .map((item) => ({
+      ...item,
+      title: item.title.trim(),
+      ...(item.url?.trim() ? { url: item.url.trim() } : { url: undefined }),
+      ...(item.price?.trim() ? { price: item.price.trim() } : { price: undefined }),
+    }));
+  // The card at the top is this draft painted exactly as the Page will.
+  const draft: PageBlock = { ...block, title: title.trim() || block.title, style, items: cleanedItems };
   const save = () => {
-    updateBlock(block.id, {
-      title,
-      style,
-      items: items
-        .filter((item) => item.title.trim().length > 0)
-        .map((item) => ({
-          ...item,
-          title: item.title.trim(),
-          ...(item.url?.trim() ? { url: item.url.trim() } : { url: undefined }),
-          ...(item.price?.trim() ? { price: item.price.trim() } : { price: undefined }),
-        })),
-    });
+    updateBlock(block.id, { title, style, items: cleanedItems });
     onClose();
   };
   return (
@@ -250,6 +251,31 @@ function PageBlockEditorContent({ block, onClose }: { readonly block: PageBlock;
           bottomOffset={16}
           contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 24, gap: 18 }}>
           <ThemedText variant="titleLarge">{t('pageDesign.editSectionTitle')}</ThemedText>
+          {record !== null ? (
+            <View className="gap-2">
+              <PageBlockPreview block={draft} record={record} appearance={appearance} />
+              {cleanedItems.length === 0 && block.type !== 'leave-card' ? (
+                <ThemedText variant="caption" tone="tertiary" style={{ textAlign: 'center' }}>
+                  {t('pageDesign.previewEmptyHint')}
+                </ThemedText>
+              ) : null}
+            </View>
+          ) : null}
+          {catalog.styles.length > 1 ? (
+            <View className="gap-2">
+              <ThemedText variant="label" tone="tertiary">{t('pageDesign.style')}</ThemedText>
+              <View className="flex-row flex-wrap gap-2">
+                {catalog.styles.map((option) => (
+                  <ThemedChoiceChip
+                    key={option}
+                    label={t(`pageDesign.style.${option}`)}
+                    selected={style === option}
+                    onPress={() => { setStyle(option); }}
+                  />
+                ))}
+              </View>
+            </View>
+          ) : null}
           <ThemedTextInput
             label={t('pageDesign.sectionTitle')}
             value={title}
@@ -306,20 +332,6 @@ function PageBlockEditorContent({ block, onClose }: { readonly block: PageBlock;
               disabled={items.length >= MAX_PAGE_ITEMS_PER_BLOCK}
               onPress={() => { setItems((current) => [...current, { id: uuid(), title: '' }]); }}
             />
-          </View>
-
-          <View className="gap-2">
-            <ThemedText variant="label" tone="tertiary">{t('pageDesign.style')}</ThemedText>
-            <View className="flex-row flex-wrap gap-2">
-              {catalog.styles.map((option) => (
-                <ThemedChoiceChip
-                  key={option}
-                  label={t(`pageDesign.style.${option}`)}
-                  selected={style === option}
-                  onPress={() => { setStyle(option); }}
-                />
-              ))}
-            </View>
           </View>
 
           <ThemedButton label={t('common.save')} fullWidth disabled={!title.trim()} onPress={save} />

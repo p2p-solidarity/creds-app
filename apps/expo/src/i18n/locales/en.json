@@ -755,6 +755,7 @@
   "pageDesign.emptyBlockHint": "Tap to add content",
   "pageDesign.removeSectionConfirmTitle": "Remove “{{title}}”?",
   "pageDesign.removeSectionConfirmBody": "This section and its items leave your Page; visitors stop seeing it once you publish.",
+  "pageDesign.previewEmptyHint": "Add the first item to see it here the way your Page shows it.",
   "pageDesign.removeSection": "Remove Section",
   "pageDesign.style": "Style",
   "pageDesign.style.list": "List",

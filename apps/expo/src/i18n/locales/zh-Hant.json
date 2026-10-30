@@ -755,6 +755,7 @@
   "pageDesign.emptyBlockHint": "點這裡加內容",
   "pageDesign.removeSectionConfirmTitle": "移除「{{title}}」？",
   "pageDesign.removeSectionConfirmBody": "這個區塊和裡面的項目會從頁面拿掉，發佈後訪客就看不到了。",
+  "pageDesign.previewEmptyHint": "加上第一個項目，就會在這裡看到它在頁面上的樣子。",
   "pageDesign.removeSection": "移除這個區塊",
   "pageDesign.style": "樣式",
   "pageDesign.style.list": "清單",

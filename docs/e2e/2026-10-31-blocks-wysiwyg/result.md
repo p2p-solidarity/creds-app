@@ -20,3 +20,11 @@ Adding / removing 區塊 felt indirect, not WYSIWYG.
 
 ## Not run
 - Move / hide / remove / add taps end to end (sim tap driving was dropping taps this session); Android; dark.
+
+## Block editor: live card first (same day)
+- The edit sheet opens on `PageBlockPreview` — the draft block painted on the Page's own ground — then the
+  style choice, then title and items. Every keystroke / style tap repaints the card.
+- `02` — 音樂 block: Spotify card at the top, 大卡 / 清單 under it.
+- Known limit: for a Spotify item both `featured` styles render the same player card, so the choice shows no
+  change. Real small / medium / large sizes need a new style value in `packages/shared` profile schema and the
+  web renderer (`airmeishi-web` PageBlocks) — not done, waiting on a product call.

@@ -143,12 +143,58 @@ export function PageLivePreview({
     </View>
   );
 
-  // The ground is the web palette's: one stop is flat; the gradient template
-  // runs 165° and sun 180°, as `GRADIENT_GROUND` / `SUN_GROUND` do.
+  return <PageGround appearance={appearance}>{content}</PageGround>;
+}
+
+/**
+ * One block exactly as the Page paints it, on the Page's own ground — the
+ * block editor's live card, so a title, item or style change shows at once.
+ */
+export function PageBlockPreview({
+  block,
+  record,
+  appearance,
+}: {
+  readonly block: PageBlock;
+  readonly record: ProfileRecord;
+  readonly appearance: PageAppearance;
+}): ReactNode {
+  const palette = paletteFor(appearance);
+  const fontFamily = fontFor(appearance.font);
+  const metrics = PREVIEW_METRICS.public;
+  const items = blockItems(block, record);
+  return (
+    <PageGround appearance={appearance}>
+      <View style={{ padding: metrics.padX, gap: 4 }}>
+        <PagePreviewSectionTitle title={block.title} palette={palette} fontFamily={fontFamily} />
+        <PreviewBlockItems
+          block={block}
+          items={items}
+          palette={palette}
+          metrics={metrics}
+          textColor={palette.text}
+          fontFamily={fontFamily}
+          variant="public"
+        />
+      </View>
+    </PageGround>
+  );
+}
+
+/** The ground is the web palette's: one stop is flat; the gradient template
+ *  runs 165° and sun 180°, as `GRADIENT_GROUND` / `SUN_GROUND` do. */
+function PageGround({
+  appearance,
+  children,
+}: {
+  readonly appearance: PageAppearance;
+  readonly children: ReactNode;
+}): ReactNode {
+  const palette = paletteFor(appearance);
   const frame = { borderRadius: PHONE_SCREEN_RADIUS, overflow: 'hidden' as const };
   const [first = palette.cardBg, second, ...rest] = palette.stops;
   if (second === undefined) {
-    return <View style={[frame, { backgroundColor: first }]}>{content}</View>;
+    return <View style={[frame, { backgroundColor: first }]}>{children}</View>;
   }
   const diagonal = appearance.template === 'gradient';
   return (
@@ -157,7 +203,7 @@ export function PageLivePreview({
       start={diagonal ? { x: 0.37, y: 0 } : { x: 0.5, y: 0 }}
       end={diagonal ? { x: 0.63, y: 1 } : { x: 0.5, y: 1 }}
       style={frame}>
-      {content}
+      {children}
     </LinearGradient>
   );
 }
