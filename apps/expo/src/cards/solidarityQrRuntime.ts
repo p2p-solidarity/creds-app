@@ -13,8 +13,8 @@ import {
 import {
   didKeyForCurrentIdentity,
   publicJwk,
-  signJwt,
-  signRawEs256,
+  signOwnCardJwt,
+  signOwnCardRaw,
 } from '@/keychain/signingKey';
 
 export interface RuntimeSolidarityQrOptions {
@@ -66,11 +66,13 @@ export async function buildRuntimeSolidarityQrWire(
         didKeyForCurrentIdentity(),
         publicJwk(),
       ]);
+      // Showing your own card never asks for Face ID (Kidney, 2026-10-30) —
+      // see `signOwnCardJwt` for why this is not a gate bypass.
       const signer = {
         issuerDid,
         publicKeyJwk: jwk,
-        signJwt,
-        signRaw: async (message: Uint8Array) => (await signRawEs256(message)).signature,
+        signJwt: signOwnCardJwt,
+        signRaw: async (message: Uint8Array) => (await signOwnCardRaw(message)).signature,
       };
       // §3.3 subscription pointer — only rides the signed wires, and only
       // when the sender's Nostr binding is verified, still matches the

@@ -363,6 +363,8 @@ const {
   signOpenAcDeviceBindingDigest,
   signRawEs256,
   signJwt,
+  signOwnCardJwt,
+  signOwnCardRaw,
   deleteSigningKey,
   quiesceSigningKeyOperations,
   resetSigningKeyForTesting,
@@ -532,6 +534,17 @@ describe('SpruceID DID Nitro module — JS-side wiring', () => {
       driver.keyAuthModeResult = 'js-gated';
       await resetSigningKeyForTesting();
     }
+  });
+
+  it('showing your own card QR never prompts; every other signature still does', async () => {
+    // Own card (Present tab, Share preview): no app-level Face ID in any mode.
+    const own = await signOwnCardRaw(utf8ToBytes('own card'));
+    await signOwnCardJwt({ alg: 'ES256' }, { card: 'own' });
+    expect(own.signature.length).toBe(64);
+    expect(authCalls.length).toBe(0);
+    // The gated signers are unchanged: the next signature for anyone else asks.
+    await signRawEs256(utf8ToBytes('for a verifier'));
+    expect(authCalls.length).toBe(1);
   });
 
   it('treats a driver without keyAuthMode (older native binary) as js-gated', async () => {

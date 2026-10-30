@@ -358,15 +358,51 @@ async function jsGateApplies(alias: string): Promise<boolean> {
  * native — both branches return the same compact JWS shape the legacy
  * `@noble/curves` impl emitted.
  */
-export async function signJwt(
+export function signJwt(
   header: { alg: 'ES256'; typ?: string; kid?: string },
   payload: Readonly<Record<string, unknown>>
+): Promise<string> {
+  return signJwtWithGate(header, payload, true);
+}
+
+/**
+ * Sign the user's OWN business-card QR — the card they are about to show on
+ * their own screen — with NO app-level Face ID, in every gate mode (Kidney,
+ * 2026-10-30: showing your own QR never needs a prompt). The signature only
+ * attests "this card came from this device key"; it releases nothing to a
+ * remote peer and touches no key material. A legacy Secure-Enclave key whose
+ * keychain ACL demands presence still prompts inside the native sign — that
+ * ACL cannot be waived from JS.
+ *
+ * Only `cards/solidarityQrRuntime.ts` may call these two. Anything that signs
+ * for someone else (VC issuance, OID4VP, Pear) uses the gated `signJwt` /
+ * `signRawEs256`.
+ */
+export function signOwnCardJwt(
+  header: { alg: 'ES256'; typ?: string; kid?: string },
+  payload: Readonly<Record<string, unknown>>
+): Promise<string> {
+  return signJwtWithGate(header, payload, false);
+}
+
+/** Raw-signature twin of `signOwnCardJwt` (CRD1 COSE wire). Same rules. */
+export async function signOwnCardRaw(payload: Uint8Array): Promise<{
+  readonly signature: Uint8Array;
+  readonly publicKeyRaw: Uint8Array;
+}> {
+  return signDigestWithCurrentKey(sha256Bytes(payload), 'signOwnCardRaw', false);
+}
+
+async function signJwtWithGate(
+  header: { alg: 'ES256'; typ?: string; kid?: string },
+  payload: Readonly<Record<string, unknown>>,
+  gated: boolean
 ): Promise<string> {
   if (header.alg !== 'ES256') {
     throw new Error(`signJwt requires alg=ES256 (got ${header.alg})`);
   }
   const id = await ensureSigningKey();
-  if (await jsGateApplies(id.alias)) {
+  if (gated && (await jsGateApplies(id.alias))) {
     const allowed = await gateSign();
     if (!allowed) throw new Error('biometric authentication required');
   }
@@ -415,7 +451,7 @@ export async function signRawEs256(payload: Uint8Array): Promise<{
   readonly signature: Uint8Array;
   readonly publicKeyRaw: Uint8Array;
 }> {
-  return signDigestWithCurrentKey(sha256Bytes(payload), 'signRawEs256');
+  return signDigestWithCurrentKey(sha256Bytes(payload), 'signRawEs256', true);
 }
 
 export async function signOpenAcDeviceBindingDigest(
@@ -429,7 +465,7 @@ export async function signOpenAcDeviceBindingDigest(
       `signOpenAcDeviceBindingDigest: expected 32-byte nonce_hash (got ${nonceHash.length})`
     );
   }
-  return signDigestWithCurrentKey(nonceHash, 'signOpenAcDeviceBindingDigest');
+  return signDigestWithCurrentKey(nonceHash, 'signOpenAcDeviceBindingDigest', true);
 }
 
 export async function publicRawP256ForCurrentIdentity(): Promise<Uint8Array> {
@@ -439,7 +475,8 @@ export async function publicRawP256ForCurrentIdentity(): Promise<Uint8Array> {
 
 async function signDigestWithCurrentKey(
   digest: Uint8Array,
-  context: string
+  context: string,
+  gated: boolean
 ): Promise<{
   readonly signature: Uint8Array;
   readonly publicKeyRaw: Uint8Array;
@@ -449,7 +486,7 @@ async function signDigestWithCurrentKey(
   // of re-prompting per call; keys with a native ACL are gated by the OS
   // prompt inside the sign itself (single-layer gate, phase 4).
   const id = await ensureSigningKey();
-  if (await jsGateApplies(id.alias)) {
+  if (gated && (await jsGateApplies(id.alias))) {
     const allowed = await gateSign();
     if (!allowed) throw new Error('biometric authentication required');
   }
