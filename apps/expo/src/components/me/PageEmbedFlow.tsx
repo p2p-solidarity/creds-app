@@ -77,7 +77,9 @@ export function PageEmbedFlow({ kind, initialUrl = null, onBack, onDone }: PageE
   const ready = typed && urlError === null && blocked === null;
 
   const itemTitle = title.trim()
-    || (kind === 'music' && media !== null ? mediaDefaultTitle(media, t) : t('pageAdd.form.defaultButton'));
+    || (kind === 'form'
+      ? t('pageAdd.form.defaultButton')
+      : media !== null ? mediaDefaultTitle(media, t) : t('pageAdd.music.blockTitle'));
   const blockTitle = sectionTitle.trim()
     || t(kind === 'form' ? 'pageAdd.form.defaultTitle' : media?.kind === 'spotify' ? 'pageAdd.music.blockTitle' : 'pageAdd.music.videoBlockTitle');
 

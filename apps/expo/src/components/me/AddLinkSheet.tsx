@@ -332,8 +332,9 @@ export function AddLinkFlow({
               inlinePrefix={inputModel.prefix}
               placeholder={
                 inputModel.handle
-                  // `threads.com/@` already carries the @ the placeholder starts with.
-                  ? t('profileLink.handlePlaceholder').replace(inputModel.prefix.endsWith('@') ? /^@/u : /^$/u, '')
+                  // The prefix shows the URL shape (`github.com/`, `threads.com/@`),
+                  // so the bare handle never starts with an @ of its own.
+                  ? t('profileLink.handlePlaceholder').replace(/^@/u, '')
                   : t('profileLink.urlPlaceholder')
               }
               error={inputError}
