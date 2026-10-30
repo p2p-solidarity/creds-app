@@ -1,13 +1,16 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Modal, Pressable, ScrollView, View } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { SFSymbol } from 'expo-symbols';
 
 import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
-import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
+import { ThemedButton, ThemedSurface, ThemedText, ThemedTextInput } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { Radius } from '@/constants/radius';
+import { credsNameLink } from '@/deeplink/credsName';
+import { handleDeepLink } from '@/deeplink/router';
 import { useTranslation } from '@/i18n';
 
 export interface ContactsAddSheetProps {
@@ -31,6 +34,22 @@ export function ContactsAddSheet({
 }: ContactsAddSheetProps): ReactNode {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const [name, setName] = useState('');
+  const [nameError, setNameError] = useState<string | null>(null);
+
+  // Opens their Page in the verified-page sheet: this phone checks each of
+  // their links itself, and 「幫他見證」 is one tap from there.
+  const openName = (): void => {
+    const link = credsNameLink(name);
+    if (link === null) {
+      setNameError(t('peopleList.credsNameInvalid'));
+      return;
+    }
+    setName('');
+    setNameError(null);
+    onClose();
+    handleDeepLink(link);
+  };
 
   const choose = (action: () => void): void => {
     onClose();
@@ -44,7 +63,7 @@ export function ContactsAddSheet({
       transparent
       onRequestClose={onClose}
     >
-      <View className="flex-1 justify-end" style={{ backgroundColor: Colors.overlayBg }}>
+      <KeyboardAvoidingView behavior="padding" className="flex-1 justify-end" style={{ backgroundColor: Colors.overlayBg }}>
         <Pressable className="flex-1" onPress={onClose} accessibilityRole="button" accessibilityLabel={t('common.close')} />
         <ThemedSurface
           variant="elevated"
@@ -63,7 +82,35 @@ export function ContactsAddSheet({
             <ThemedText variant="titleMedium">{t('peopleList.add')}</ThemedText>
           </View>
 
-          <ScrollView contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}>
+          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}>
+            <View style={{ gap: 8 }}>
+              <ThemedTextInput
+                value={name}
+                onChangeText={(value) => {
+                  setName(value);
+                  setNameError(null);
+                }}
+                kind="handle"
+                // Names are ASCII; a Zhuyin / kana keyboard would compose them away.
+                keyboardType="ascii-capable"
+                label={t('peopleList.credsNameLabel')}
+                inlinePrefix="creds.id/@"
+                placeholder={t('peopleList.credsNamePlaceholder')}
+                error={nameError}
+                hint={t('peopleList.credsNameHint')}
+                showPaste
+                showClear
+                returnKeyType="go"
+                onSubmitEditing={openName}
+              />
+              <ThemedButton
+                fullWidth
+                label={t('peopleList.credsNameOpen')}
+                disabled={name.trim() === ''}
+                onPress={openName}
+              />
+            </View>
+
             <ThemedSurface variant="card">
               <ContactsActionRow
                 icon="qrcode.viewfinder"
@@ -112,7 +159,7 @@ export function ContactsAddSheet({
             />
           </View>
         </ThemedSurface>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

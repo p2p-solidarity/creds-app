@@ -2,7 +2,12 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ActivityIndicator, ScrollView, View } from 'react-native';
-import Animated, { useReducedMotion } from 'react-native-reanimated';
+import Animated, {
+  interpolate,
+  useAnimatedStyle,
+  useReducedMotion,
+  type SharedValue,
+} from 'react-native-reanimated';
 import { FlashList } from '@shopify/flash-list';
 import ReanimatedSwipeable, {
   SwipeDirection,
@@ -28,6 +33,7 @@ import { TrustGraphContactRow } from '@/components/people/TrustGraphContactRow';
 import { LinkPageImportSheet, type LinkPageImportResult } from '@/components/profile/LinkPageImportSheet';
 import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/radius';
 import { useThemeColors } from '@/constants/useThemeColors';
 import { useTranslation } from '@/i18n';
 import { useContactStore, type ContactManifestEntry } from '@/contacts/repository';
@@ -393,8 +399,8 @@ function PeopleRow({
       friction={2}
       rightThreshold={48}
       overshootRight={false}
-      renderRightActions={() => (
-        <SwipeDeleteAction onPress={onSwipeDelete} />
+      renderRightActions={(progress) => (
+        <SwipeDeleteAction progress={progress} onPress={onSwipeDelete} />
       )}
       onSwipeableOpen={(direction) => {
         if (direction === SwipeDirection.RIGHT) haptic('warning');
@@ -405,29 +411,52 @@ function PeopleRow({
   );
 }
 
-function SwipeDeleteAction({ onPress }: { readonly onPress: () => void }) {
+/** Width the row slides aside to uncover the delete button. */
+const SWIPE_ACTION_WIDTH = 84;
+
+/**
+ * The swipe's delete button: an inset rounded tile (not a full-height red
+ * slab) that grows in with the swipe, so a half swipe reads as a hint and a
+ * full one as the button.
+ */
+function SwipeDeleteAction({
+  progress,
+  onPress,
+}: {
+  readonly progress: SharedValue<number>;
+  readonly onPress: () => void;
+}) {
   const { t } = useTranslation();
+  const reduceMotion = useReducedMotion();
+  const reveal = useAnimatedStyle(() => ({
+    opacity: interpolate(progress.value, [0, 0.5, 1], [0, 0.6, 1], 'clamp'),
+    transform: [{ scale: reduceMotion ? 1 : interpolate(progress.value, [0, 1], [0.82, 1], 'clamp') }],
+  }));
   return (
-    <PressableScale
-      haptic="warning"
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={t('peopleList.deleteContactA11y')}
-      style={{
-        width: 88,
-        backgroundColor: Colors.destructive,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      <SfIcon name="trash" size={18} color={Colors.invertedButtonText} />
-      <ThemedText
-        variant="caption"
-        style={{ color: Colors.invertedButtonText, marginTop: 4 }}
-      >
-        {t('peopleList.delete')}
-      </ThemedText>
-    </PressableScale>
+    <View style={{ width: SWIPE_ACTION_WIDTH, paddingVertical: 6, paddingLeft: 6, paddingRight: 16 }}>
+      <Animated.View style={[{ flex: 1 }, reveal]}>
+        <PressableScale
+          fill
+          haptic="warning"
+          onPress={onPress}
+          accessibilityRole="button"
+          accessibilityLabel={t('peopleList.deleteContactA11y')}
+          style={{
+            flex: 1,
+            borderRadius: Radius.card,
+            backgroundColor: Colors.destructive,
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 3,
+          }}
+        >
+          <SfIcon name="trash" size={17} color={Colors.invertedButtonText} />
+          <ThemedText variant="caption" style={{ color: Colors.invertedButtonText, fontSize: 11 }}>
+            {t('peopleList.delete')}
+          </ThemedText>
+        </PressableScale>
+      </Animated.View>
+    </View>
   );
 }
 
