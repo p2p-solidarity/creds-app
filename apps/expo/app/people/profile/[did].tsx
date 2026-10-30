@@ -27,6 +27,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { safeBack } from '@/navigation/safeBack';
 import type { ReactNode } from 'react';
 import { ScrollView, View } from 'react-native';
+import Animated, { useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PressableScale } from '@/components/common/PressableScale';
@@ -37,6 +38,7 @@ import { VerifiedProfileView } from '@/components/scan/VerifiedProfileView';
 import { ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { isValidPearDid } from '@/deeplink/parser';
+import { fadeUpIn } from '@/feedback/motion';
 import { useTranslation } from '@/i18n';
 import { useProfileSnapshot } from '@/people/profileSnapshots';
 
@@ -45,28 +47,39 @@ export default function VerifiedProfileDetailScreen(): ReactNode {
   const { did } = useLocalSearchParams<{ did: string }>();
   const snapshot = useProfileSnapshot(did);
   const insets = useSafeAreaInsets();
+  const reduceMotion = useReducedMotion();
 
+  // Same chrome and section cascade as the contact detail
+  // (`app/people/[id].tsx`): 56pt top bar, 16pt gutters, each section
+  // entering on `fadeUpIn(index)` — a saved Page reads as the same kind of
+  // person page as a contact, not a separate screen type.
   return (
     <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
-      <View className="flex-row items-center" style={{ paddingHorizontal: 16, height: 44 }}>
+      <View className="flex-row items-center px-3" style={{ height: 56 }}>
         <PressableScale
-          haptic="tap"
           onPress={() => { safeBack(); }}
           accessibilityRole="button"
-          style={{ width: 44, height: 44, alignItems: 'flex-start', justifyContent: 'center' }}
+          accessibilityLabel={t('personDetail.back')}
+          style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
         >
-          <SfIcon name="chevron.left" size={18} color={Colors.text1} />
+          <SfIcon name="chevron.left" size={24} color={Colors.text1} />
         </PressableScale>
       </View>
 
       {snapshot ? (
-        <ScrollView contentContainerStyle={{ padding: 16, gap: 24 }}>
-          <VerifiedProfileView record={snapshot.record} />
-          <CardExchangeSection did={snapshot.did} verifiedDisplayName={snapshot.record.displayName} />
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 32, gap: 16 }}>
+          <Animated.View entering={fadeUpIn(0, reduceMotion)}>
+            <VerifiedProfileView record={snapshot.record} />
+          </Animated.View>
+          <Animated.View entering={fadeUpIn(1, reduceMotion)}>
+            <CardExchangeSection did={snapshot.did} verifiedDisplayName={snapshot.record.displayName} />
+          </Animated.View>
         </ScrollView>
       ) : did && isValidPearDid(did) ? (
-        <ScrollView contentContainerStyle={{ padding: 16, gap: 24 }}>
-          <PearConnectSection did={did} />
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 32, gap: 16 }}>
+          <Animated.View entering={fadeUpIn(0, reduceMotion)}>
+            <PearConnectSection did={did} />
+          </Animated.View>
         </ScrollView>
       ) : (
         <View className="flex-1 items-center justify-center gap-2 px-8">
