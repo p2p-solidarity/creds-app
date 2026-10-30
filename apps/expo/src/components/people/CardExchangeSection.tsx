@@ -292,7 +292,7 @@ function DisabledPearExchange(): ReactNode {
           variant="secondary"
           fullWidth
           onPress={() => {
-            router.push('/settings/connections');
+            router.push('/settings');
           }}
         />
       </ThemedSurface>

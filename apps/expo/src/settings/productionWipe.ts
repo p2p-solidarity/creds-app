@@ -188,7 +188,7 @@ function scrubAndVerifyPersistentData(): LocalDeletionResult {
 }
 
 /**
- * Reset App Data (Settings → Reset Options): clears every durable MMKV record
+ * Reset App Data (Settings → Reset): clears every durable MMKV record
  * and the in-memory store mirrors hydrated from them, then rehydrates the Page
  * store so it cannot stay stuck at `loading`. Keychain-backed recovery/signing
  * keys are deliberately preserved — that is what separates this from

@@ -2,8 +2,13 @@
  * v2 Settings hub. The public page is deliberately first because its username
  * is the account's shareable address. Protocol inspectors and credential tools
  * remain behind the five-tap Developer Options unlock.
+ *
+ * Two levels at most (docs/ref/notes-settings-ia-2026-10.md): a setting with
+ * one or two controls (colour mode, language, Recent Updates, Pear exchange,
+ * the two resets) lives here as an inline row instead of its own sub-page.
  */
 import Constants from 'expo-constants';
+import i18n from 'i18next';
 import { router, useFocusEffect } from 'expo-router';
 import { safeBack } from '@/navigation/safeBack';
 import { useCallback, useRef, useState } from 'react';
@@ -15,15 +20,33 @@ import {
   SettingsBlockRow,
   SettingsBlockSection,
   SettingsBlockSectionHeader,
+  SettingsBlockSegmentRow,
+  SettingsBlockToggleRow,
   SettingsScreenTitle,
 } from '@/components/settings/SettingsBlocks';
+import { SettingsResetSection } from '@/components/settings/SettingsResetSection';
+import { useRecentUpdatesStore } from '@/contacts/recentUpdates';
 import { readPasskeyCount } from '@/identity/passkeyRegistry';
 import { haptic } from '@/feedback/haptics';
 import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
 import { publicPagePath } from '@/onboarding/publicPageUsername';
+import { stopLaneManager } from '@/pear/laneManager';
 import { advanceDeveloperUnlock } from '@/settings/developerUnlock';
-import { usePreferences } from '@/settings/preferences';
+import { type AppColorScheme, usePreferences } from '@/settings/preferences';
+
+const COLOR_MODES: readonly { readonly value: AppColorScheme; readonly labelKey: string }[] = [
+  { value: 'system', labelKey: 'appearance.colorMode.system' },
+  { value: 'light', labelKey: 'appearance.colorMode.light' },
+  { value: 'dark', labelKey: 'appearance.colorMode.dark' },
+];
+
+// Native names on purpose: someone who can't read the current language still
+// finds their own.
+const LANGUAGES: readonly { readonly value: string; readonly label: string }[] = [
+  { value: 'en', label: 'English' },
+  { value: 'zh-Hant', label: '繁體中文' },
+];
 
 export default function SettingsHub() {
   const insets = useSafeAreaInsets();
@@ -31,6 +54,12 @@ export default function SettingsHub() {
   const developerMode = usePreferences((s) => s.developerMode);
   const publicPageUsername = usePreferences((s) => s.publicPageUsername);
   const backupEnabled = usePreferences((s) => s.backupEnabled);
+  const colorScheme = usePreferences((s) => s.appColorScheme);
+  // '' = follow the device; the live i18n language still marks a segment.
+  const language = usePreferences((s) => s.language) || i18n.language;
+  const pearEnabled = usePreferences((s) => s.pearExchangeEnabled);
+  const recentUpdatesEnabled = useRecentUpdatesStore((s) => s.enabled);
+  const setRecentUpdatesEnabled = useRecentUpdatesStore((s) => s.setEnabled);
   const setPref = usePreferences((s) => s.set);
   const tapCountRef = useRef(0);
   const [passkeyCount, setPasskeyCount] = useState<ReturnType<typeof readPasskeyCount> | null>(null);
@@ -122,20 +151,39 @@ export default function SettingsHub() {
           </SettingsBlockSection>
 
           <SettingsBlockSection index={3} title={t('settingsHub.preferences')}>
-            <SettingsBlockRow
-              icon="paintbrush"
+            <SettingsBlockSegmentRow
+              icon="circle.lefthalf.filled"
               title={t('settingsHub.appearance')}
-              onPress={() => { router.push('/settings/appearance'); }}
+              options={COLOR_MODES.map((m) => ({ value: m.value, label: t(m.labelKey) }))}
+              value={colorScheme}
+              onChange={(next) => { setPref('appColorScheme', next); }}
             />
-            <SettingsBlockRow
+            <SettingsBlockSegmentRow
               icon="globe"
               title={t('settingsHub.language')}
-              onPress={() => { router.push('/settings/language'); }}
+              options={LANGUAGES}
+              value={language}
+              onChange={(next) => {
+                setPref('language', next);
+                void i18n.changeLanguage(next);
+              }}
             />
-            <SettingsBlockRow
+            <SettingsBlockToggleRow
               icon="bell"
-              title={t('settingsHub.notifications')}
-              onPress={() => { router.push('/settings/notifications'); }}
+              title={t('notifications.contactUpdates.title')}
+              subtitle={t('notifications.contactUpdates.subtitle')}
+              value={recentUpdatesEnabled}
+              onValueChange={setRecentUpdatesEnabled}
+            />
+            <SettingsBlockToggleRow
+              icon="person.2"
+              title={t('settingsHub.pearExchange')}
+              subtitle={t('settingsHub.pearExchangeSubtitle')}
+              value={pearEnabled}
+              onValueChange={(next) => {
+                if (!next) stopLaneManager();
+                setPref('pearExchangeEnabled', next);
+              }}
             />
           </SettingsBlockSection>
 
@@ -155,22 +203,18 @@ export default function SettingsHub() {
             />
           </SettingsBlockSection>
 
-          <SettingsBlockSection index={5} title={t('settingsHub.advancedSection')}>
-            {developerMode ? (
+          <SettingsResetSection index={5} />
+
+          {developerMode ? (
+            <SettingsBlockSection index={6} title={t('settingsHub.developer')}>
               <SettingsBlockRow
                 icon="hammer"
                 title={t('developer.title')}
                 subtitle={t('settingsHub.developerSubtitle')}
                 onPress={() => { router.push('/settings/developer'); }}
               />
-            ) : null}
-            <SettingsBlockRow
-              icon="arrow.counterclockwise"
-              title={t('settingsHub.advanced')}
-              subtitle={t('settingsHub.advancedSubtitle')}
-              onPress={() => { router.push('/settings/advanced'); }}
-            />
-          </SettingsBlockSection>
+            </SettingsBlockSection>
+          ) : null}
 
           <View className="gap-3">
             <SettingsBlockSectionHeader title={t('settingsHub.about')} />

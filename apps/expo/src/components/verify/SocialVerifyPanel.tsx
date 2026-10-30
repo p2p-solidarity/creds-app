@@ -1,7 +1,8 @@
 /**
  * SocialVerifyPanel — the link check of docs/ref/10 §2, click and confirm,
- * shared by the add-link sheet (right after a link is added) and the
- * `/verify/social` route (a row's 「驗證」 chip).
+ * shown by the add-link sheet right after a link is added. (A Page link row
+ * checks inline through `src/zktls/checkJobs.ts`; the old `/verify/social`
+ * route is gone.)
  *
  *   intro    → 「複製並打開 X」copies creds.id/@name and opens the bio editor
  *   waiting  → returning to the app (foreground) starts the proof by itself

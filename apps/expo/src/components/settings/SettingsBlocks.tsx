@@ -296,6 +296,70 @@ export function SettingsBlockToggleRow({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Segment row — icon + label + a 2–3 option segmented control, for a setting
+// small enough to live on the hub instead of its own sub-page
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function SettingsBlockSegmentRow<T extends string>({
+  icon,
+  title,
+  options,
+  value,
+  onChange,
+}: {
+  icon: SFSymbol;
+  title: string;
+  options: readonly { readonly value: T; readonly label: string }[];
+  value: T;
+  onChange: (next: T) => void;
+}) {
+  const c = useThemeColors();
+  return (
+    <View
+      className="flex-row items-center rounded-none border-b border-divider bg-cardBg"
+      style={{ paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 0.5 }}>
+      <View
+        style={{
+          width: 20,
+          height: 20,
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginRight: 12,
+        }}>
+        <SfIcon name={icon} size={14} color={c.text1} />
+      </View>
+      <Text className="flex-1 text-[15px] text-text1">{title}</Text>
+      <View className="bg-mutedSurface rounded-button flex-row" style={{ padding: 2 }}>
+        {options.map((option) => {
+          const active = option.value === value;
+          return (
+            <PressableScale
+              key={option.value}
+              haptic="selection"
+              onPress={() => { onChange(option.value); }}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              accessibilityLabel={`${title}: ${option.label}`}
+              className="items-center justify-center rounded-button"
+              style={{
+                minHeight: 32,
+                paddingHorizontal: 10,
+                backgroundColor: active ? c.cardBg : 'transparent',
+              }}>
+              <Text
+                className="text-[13px]"
+                style={{ color: active ? c.text1 : c.text2, fontWeight: active ? '600' : '400' }}>
+                {option.label}
+              </Text>
+            </PressableScale>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Info row — icon + label + read-only value (textSecondary, 13pt)
 // ─────────────────────────────────────────────────────────────────────────────
 
