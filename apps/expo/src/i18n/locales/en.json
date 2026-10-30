@@ -762,6 +762,7 @@
   "pageDesign.hideShort": "Hide",
   "pageDesign.showShort": "Show",
   "pageDesign.removeShort": "Remove",
+  "pageDesign.dragHint": "Long-press to drag up or down",
   "pageAdd.sectionsTitle": "Add section {{count}}/{{max}}",
   "pageDesign.emptyBlockHint": "Tap to add content",
   "pageDesign.removeSectionConfirmTitle": "Remove “{{title}}”?",

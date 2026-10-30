@@ -9,6 +9,7 @@ iPhone 18 Pro simulator, dev client + Metro from `apps/expo` (hot reload, then a
 - 4-block-editor-sheet.png — tapping the 音樂 block opens its editor: 取消 / 編輯區塊 / 儲存 top bar, one tool row 上移 下移 隱藏 移除 (上移/下移 disabled with one section), item trash inline, items `1/24`.
 - 5-hidden-block-dimmed.png — 隱藏 applies at once; back on the Page preview the block is dimmed with 「已隱藏」 and still tappable. Restored with 顯示 afterwards (draft back to published, publish card gone).
 
+- 6-drag-reordered.png — long-press a block in the preview and drag: 作品集 moved above 文字aaa, no editor opened; dragged back down afterwards. 上移 / 下移 from the sheet also checked with three sections (order restored to 音樂, 文字aaa, 作品集).
+
 ## Not run
-- 上移 / 下移 with two or more sections (only one section on this test Page; did not add one to avoid changing the draft).
 - 移除 from the sheet, the 6-section cap reached in the UI (cap covered by `pageDesign.test.ts`), dark mode, Android.

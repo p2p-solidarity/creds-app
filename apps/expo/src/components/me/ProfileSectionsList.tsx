@@ -34,7 +34,7 @@ import { preparePageDesign, usePageDesignStore } from '@/page/pageDesignStore';
 import { useProGate } from '@/pro/useProGate';
 
 import { CardSizePicker } from './CardSizePicker';
-import { PHONE_SCREEN_RADIUS, PageBlockPreview, PageLivePreview } from './PageLivePreview';
+import { PHONE_SCREEN_RADIUS, PageBlockPreview, PageLivePreview, type PreviewBlockEditing } from './PageLivePreview';
 import { PageCollapsibleHeader } from './PageCollapsibleHeader';
 import { PublishChangesCard } from './PublishChangesCard';
 import { useProfileStore } from '@/profile/store';
@@ -61,6 +61,7 @@ export function ProfileSectionsList({
   const error = usePageDesignStore((state) => state.error);
   const design = usePageDesignStore((state) => state.design);
   const blocks = usePageDesignStore((state) => state.design.blocks);
+  const moveBlock = usePageDesignStore((state) => state.moveBlock);
   const { locked } = useProGate();
   const record = useProfileStore((state) => state.record);
   const savePageDesign = useProfileStore((state) => state.savePageDesign);
@@ -92,9 +93,22 @@ export function ProfileSectionsList({
   const proLocked = (block: PageBlock): boolean =>
     locked(PAGE_BLOCK_CATALOG.find((entry) => entry.type === block.type)?.pro ?? false);
 
-  const editBlock = (block: PageBlock): void => {
-    if (proLocked(block)) openProSettings();
-    else setEditing(block);
+  const blockEditing: PreviewBlockEditing = {
+    onEdit: (block) => {
+      if (proLocked(block)) openProSettings();
+      else setEditing(block);
+    },
+    // A drop lands `destination` slots away; the store moves one step at a time.
+    onMove: (block, destination) => {
+      if (proLocked(block)) {
+        openProSettings();
+        return;
+      }
+      const from = movableBlocks.findIndex((candidate) => candidate.id === block.id);
+      if (from < 0) return;
+      const direction = destination < from ? 'up' : 'down';
+      for (let step = 0; step < Math.abs(destination - from); step += 1) moveBlock(block.id, direction);
+    },
   };
 
   const publishPageChanges = (): void => {
@@ -148,8 +162,9 @@ export function ProfileSectionsList({
         </ThemedSurface>
       ) : (
         <>
-          {/* The page itself is the editor: it paints as visitors see it and a
-              tapped block opens its editor (order, hide, remove live there);
+          {/* The page itself is the editor: it paints as visitors see it, a
+              tapped block opens its editor (order, hide, remove live there)
+              and a long-pressed one drags to a new place;
               the links block stays first and is edited from the list above.
               New sections come from the tab's ＋ 新增. */}
           <View
@@ -165,7 +180,7 @@ export function ProfileSectionsList({
               blocks={blocks}
               appearance={design.appearance}
               handle={previewHandle}
-              onEditBlock={editBlock}
+              editing={blockEditing}
             />
           </View>
         </>

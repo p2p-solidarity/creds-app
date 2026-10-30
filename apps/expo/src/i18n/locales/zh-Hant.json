@@ -762,6 +762,7 @@
   "pageDesign.hideShort": "隱藏",
   "pageDesign.showShort": "顯示",
   "pageDesign.removeShort": "移除",
+  "pageDesign.dragHint": "長按可上下拖曳",
   "pageAdd.sectionsTitle": "新增區塊 {{count}}/{{max}}",
   "pageDesign.emptyBlockHint": "點這裡加內容",
   "pageDesign.removeSectionConfirmTitle": "移除「{{title}}」？",

@@ -21,7 +21,7 @@
  */
 import { useMemo, type ReactNode } from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
-import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
+import { GestureDetector, useExclusiveGestures, usePanGesture, useTapGesture } from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedReaction,
   useAnimatedStyle,
@@ -160,36 +160,28 @@ export function DraggableRow({
   );
 }
 
-/** 44pt grip that drives the section's drag. Also exposes the reorder to
- * assistive tech as an adjustable (increment / decrement move one slot). */
-export function RowDragHandle({
+/** The section's drag pan: a long press picks the row up, neighbours step
+ * aside as it crosses their slots, release lands it and commits `onMove`. */
+function useRowDragPan({
   controller,
   index,
   itemCount,
   stride,
-  height,
-  label,
-  disabled = false,
+  disabled,
+  longPressMs,
   onMove,
-  children,
-  width = 44,
 }: {
   readonly controller: RowDragController;
   readonly index: number;
   readonly itemCount: number;
   readonly stride: number;
-  readonly height: number;
-  readonly label: string;
-  readonly disabled?: boolean;
+  readonly disabled: boolean;
+  readonly longPressMs: number;
   readonly onMove: (destination: number) => void;
-  /** Grip face; defaults to the six-dot glyph. A link row uses its avatar. */
-  readonly children?: ReactNode;
-  /** Grip width; the default fits the six-dot glyph's 44pt target. */
-  readonly width?: number;
-}): ReactNode {
-  const pan = usePanGesture({
+}) {
+  return usePanGesture({
     enabled: !disabled,
-    activateAfterLongPress: 120,
+    activateAfterLongPress: longPressMs,
     onActivate: () => {
       controller.activeIndex.value = index;
       controller.destination.value = index;
@@ -225,6 +217,104 @@ export function RowDragHandle({
       if (event.canceled) settleBack(controller);
     },
   });
+}
+
+/**
+ * A whole row as its own grip, for rows that are content rather than list
+ * items (the Page preview's blocks): a tap opens it, a long press picks it up
+ * and drags it. Exposed to assistive tech as a button plus increment /
+ * decrement to move one slot.
+ */
+export function RowDragArea({
+  controller,
+  index,
+  itemCount,
+  stride,
+  label,
+  moveLabel,
+  onPress,
+  onMove,
+  children,
+}: {
+  readonly controller: RowDragController;
+  readonly index: number;
+  readonly itemCount: number;
+  readonly stride: number;
+  readonly label: string;
+  readonly moveLabel: string;
+  readonly onPress: () => void;
+  readonly onMove: (destination: number) => void;
+  readonly children: ReactNode;
+}): ReactNode {
+  const pan = useRowDragPan({
+    controller,
+    index,
+    itemCount,
+    stride,
+    disabled: itemCount < 2,
+    longPressMs: 250,
+    onMove,
+  });
+  const tap = useTapGesture({
+    runOnJS: true,
+    onActivate: () => {
+      haptic('tap');
+      onPress();
+    },
+  });
+  const gesture = useExclusiveGestures(pan, tap);
+  return (
+    <GestureDetector gesture={gesture}>
+      <View
+        accessible
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        accessibilityHint={moveLabel}
+        accessibilityActions={[
+          { name: 'activate', label },
+          { name: 'decrement', label: moveLabel },
+          { name: 'increment', label: moveLabel },
+        ]}
+        onAccessibilityAction={(event) => {
+          const action = event.nativeEvent.actionName;
+          if (action === 'activate') onPress();
+          if (action === 'decrement' && index > 0) onMove(index - 1);
+          if (action === 'increment' && index < itemCount - 1) onMove(index + 1);
+        }}>
+        {children}
+      </View>
+    </GestureDetector>
+  );
+}
+
+/** 44pt grip that drives the section's drag. Also exposes the reorder to
+ * assistive tech as an adjustable (increment / decrement move one slot). */
+export function RowDragHandle({
+  controller,
+  index,
+  itemCount,
+  stride,
+  height,
+  label,
+  disabled = false,
+  onMove,
+  children,
+  width = 44,
+}: {
+  readonly controller: RowDragController;
+  readonly index: number;
+  readonly itemCount: number;
+  readonly stride: number;
+  readonly height: number;
+  readonly label: string;
+  readonly disabled?: boolean;
+  readonly onMove: (destination: number) => void;
+  /** Grip face; defaults to the six-dot glyph. A link row uses its avatar. */
+  readonly children?: ReactNode;
+  /** Grip width; the default fits the six-dot glyph's 44pt target. */
+  readonly width?: number;
+}): ReactNode {
+  const pan = useRowDragPan({ controller, index, itemCount, stride, disabled, longPressMs: 120, onMove });
 
   return (
     <GestureDetector gesture={pan}>

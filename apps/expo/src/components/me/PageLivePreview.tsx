@@ -27,8 +27,10 @@ import { cardSizeOf, type PageAppearance, type PageBlock } from '@/page/pageDesi
 import { richMediaForBlock } from '@/page/richMedia';
 import type { ProfileRecord } from '@solidarity/shared';
 
-import { PressableScale } from '@/components/common/PressableScale';
 import { useTranslation } from '@/i18n';
+
+import { DraggableRow, RowDragArea, resetRowDrag, useRowDragController } from './rowDrag';
+import { ROW_GAP } from './pageRowStyles';
 import {
   PagePreviewEmpty,
   PagePreviewFooter,
@@ -72,11 +74,21 @@ export interface PageLivePreviewProps {
    * the display name exactly as the mock's `.pub-handle`; omitted entirely
    * when the caller has no address to show. */
   readonly handle?: string | null;
-  /** The owner's Page tab: tapping a non-links block opens its editor, and
-   *  empty or hidden blocks still paint (hidden ones dimmed and tagged) so
-   *  they can be found. Visitors never pass it. */
-  readonly onEditBlock?: (block: PageBlock) => void;
+  /** The owner's Page tab: a tapped non-links block opens its editor and a
+   *  long-pressed one drags to a new place; empty or hidden blocks still
+   *  paint (hidden ones dimmed and tagged) so they can be found. Visitors
+   *  never pass it. */
+  readonly editing?: PreviewBlockEditing;
 }
+
+export interface PreviewBlockEditing {
+  readonly onEdit: (block: PageBlock) => void;
+  /** `destination` is a slot among the non-links blocks, links excluded. */
+  readonly onMove: (block: PageBlock, destination: number) => void;
+}
+
+/** Travel per block before a block has measured itself; real heights win. */
+const BLOCK_DRAG_STRIDE = 120;
 
 export function PageLivePreview({
   record,
@@ -84,17 +96,56 @@ export function PageLivePreview({
   appearance,
   variant = 'editor',
   handle = null,
-  onEditBlock,
+  editing,
 }: PageLivePreviewProps): ReactNode {
   const { t } = useTranslation();
+  const drag = useRowDragController();
   const palette = paletteFor(appearance);
   const fontFamily = fontFor(appearance.font);
   const metrics = PREVIEW_METRICS[variant];
   const chrome = { palette, metrics, fontFamily, variant };
   const renderedBlocks = blocks.filter(
-    (block) => (onEditBlock !== undefined && block.type !== 'links')
+    (block) => (editing !== undefined && block.type !== 'links')
       || (block.visible && (block.type === 'leave-card' || blockItems(block, record).length > 0)),
   );
+
+  const movable = editing === undefined ? [] : renderedBlocks.filter((block) => block.type !== 'links');
+
+  const renderBody = (block: PageBlock): ReactNode => {
+    const items = blockItems(block, record);
+    const editable = editing !== undefined && block.type !== 'links';
+    const empty = items.length === 0 && block.type !== 'leave-card';
+    return (
+      <>
+        {block.type === 'links' ? null : (
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+            <View style={{ flex: 1 }}>
+              <PagePreviewSectionTitle title={block.title} palette={palette} fontFamily={fontFamily} />
+            </View>
+            {editable && !block.visible ? (
+              <ThemedText variant="caption" style={{ color: palette.subtle, fontFamily }}>
+                {t('pageDesign.hiddenOnPage')}
+              </ThemedText>
+            ) : null}
+          </View>
+        )}
+        <PreviewBlockItems
+          block={block}
+          items={items}
+          palette={palette}
+          metrics={metrics}
+          textColor={palette.text}
+          fontFamily={fontFamily}
+          variant={variant}
+        />
+        {editable && empty ? (
+          <ThemedText variant="caption" style={{ color: palette.subtle, fontFamily }}>
+            {t('pageDesign.emptyBlockHint')}
+          </ThemedText>
+        ) : null}
+      </>
+    );
+  };
 
   const content = (
     <View
@@ -107,55 +158,41 @@ export function PageLivePreview({
 
       {renderedBlocks.length === 0 ? <PagePreviewEmpty {...chrome} /> : null}
 
-      {renderedBlocks.map((block) => {
-        const items = blockItems(block, record);
-        const onEdit = block.type === 'links' ? undefined : onEditBlock;
-        const editable = onEdit !== undefined;
-        const empty = items.length === 0 && block.type !== 'leave-card';
-        const body = (
-          <>
-            {block.type === 'links' ? null : (
-              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
-                <View style={{ flex: 1 }}>
-                  <PagePreviewSectionTitle title={block.title} palette={palette} fontFamily={fontFamily} />
-                </View>
-                {editable && !block.visible ? (
-                  <ThemedText variant="caption" style={{ color: palette.subtle, fontFamily }}>
-                    {t('pageDesign.hiddenOnPage')}
-                  </ThemedText>
-                ) : null}
-              </View>
-            )}
-            <PreviewBlockItems
-              block={block}
-              items={items}
-              palette={palette}
-              metrics={metrics}
-              textColor={palette.text}
-              fontFamily={fontFamily}
-              variant={variant}
-            />
-            {editable && empty ? (
-              <ThemedText variant="caption" style={{ color: palette.subtle, fontFamily }}>
-                {t('pageDesign.emptyBlockHint')}
-              </ThemedText>
-            ) : null}
-          </>
-        );
-        return (
-          <View key={block.id} style={{ marginTop: metrics.sectionGap }}>
-            {onEdit !== undefined ? (
-              <PressableScale
-                onPress={() => { onEdit(block); }}
-                accessibilityRole="button"
-                accessibilityLabel={t('pageDesign.editSection', { title: block.title })}
-                style={{ opacity: block.visible ? 1 : 0.45 }}>
-                {body}
-              </PressableScale>
-            ) : body}
-          </View>
-        );
-      })}
+      {(editing === undefined ? renderedBlocks : renderedBlocks.filter((block) => block.type === 'links')).map((block) => (
+        <View key={block.id} style={{ marginTop: metrics.sectionGap }}>
+          {renderBody(block)}
+        </View>
+      ))}
+
+      {editing !== undefined && movable.length > 0 ? (
+        // Rows sit exactly ROW_GAP apart (the drag's slot math); the rest
+        // of the section gap is padding inside each row.
+        <View style={{ marginTop: ROW_GAP, gap: ROW_GAP }}>
+          {movable.map((block, index) => (
+            <DraggableRow
+              key={`${block.id}-${String(index)}`}
+              controller={drag}
+              index={index}
+              stride={BLOCK_DRAG_STRIDE}
+              style={{ paddingTop: metrics.sectionGap - ROW_GAP }}>
+              <RowDragArea
+                controller={drag}
+                index={index}
+                itemCount={movable.length}
+                stride={BLOCK_DRAG_STRIDE}
+                label={t('pageDesign.editSection', { title: block.title })}
+                moveLabel={t('pageDesign.dragHint')}
+                onPress={() => { editing.onEdit(block); }}
+                onMove={(destination) => {
+                  editing.onMove(block, destination);
+                  resetRowDrag(drag);
+                }}>
+                <View style={{ opacity: block.visible ? 1 : 0.45 }}>{renderBody(block)}</View>
+              </RowDragArea>
+            </DraggableRow>
+          ))}
+        </View>
+      ) : null}
 
       <PagePreviewFooter appearance={appearance} {...chrome} />
     </View>
