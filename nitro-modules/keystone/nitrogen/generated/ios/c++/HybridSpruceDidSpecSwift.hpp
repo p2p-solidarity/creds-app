@@ -102,6 +102,20 @@ namespace margelo::nitro::solidarity::keystone {
       auto __value = std::move(__result.value());
       return __value;
     }
+    inline std::shared_ptr<Promise<std::string>> primeSignSession(const std::string& reason) override {
+      auto __result = _swiftPart.primeSignSession(reason);
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline void resetSignSession() override {
+      auto __result = _swiftPart.resetSignSession();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
     inline std::shared_ptr<Promise<bool>> deleteKey(const std::string& alias) override {
       auto __result = _swiftPart.deleteKey(alias);
       if (__result.hasError()) [[unlikely]] {

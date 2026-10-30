@@ -83,14 +83,16 @@ final class HybridSpruceDid: HybridSpruceDidSpec {
     /// LAContext attached (kSecUseAuthenticationContext) to native-ACL
     /// sign-path key fetches, so repeated legacy Secure-Enclave `.userPresence`
     /// signs reuse ONE Face ID evaluation inside `reuseWindow` — the native
-    /// twin of the JS grace bucket (biometric.ts GRACE_MS). `nil` until the
-    /// first native-ACL sign. It is REPLACED, never reused, once a sign on it
+    /// twin of the JS grace bucket (biometric.ts GRACE_MS). The JS gate arms
+    /// it with its own live prompt (`primeSignSession`) and drops it whenever
+    /// the JS grace is reset (`resetSignSession`), so one Face ID covers both.
+    /// `nil` until the first native-ACL sign or prime. It is REPLACED, never reused, once a sign on it
     /// cancelled or was rejected, or once the window since its first
     /// successful sign has elapsed. The pre-Fix-D process-lifetime context is
     /// what turned into the prompt-less CryptoTokenKit -5 loop
     /// (`SpruceDidSignFailureKind`).
     static var context: LAContext?
-    /// Instant of the first successful sign through `context`; nil = unarmed.
+    /// Instant of the prime or first successful sign through `context`; nil = unarmed.
     static var armedAt: Date?
     static let reuseWindow: TimeInterval = 300
   }
@@ -254,12 +256,12 @@ final class HybridSpruceDid: HybridSpruceDidSpec {
     let ctx = LAContext()
     // Deliberately NO `touchIDAuthenticationAllowableReuseDuration`: that
     // property lets a recent DEVICE UNLOCK satisfy the ACL with no prompt.
-    // For a native-ACL key this context is the ONLY gate (JS steps aside —
-    // signingKey.ts resolveKeyAuthMode), so it must not be weaker than the JS
-    // bucket, which arms only from a real in-app prompt. Reuse is anchored
-    // solely to `SignSession.armedAt`.
-    // Keychain-driven prompts read these (evaluatePolicy's reason parameter
-    // is never involved on this path); mirrors biometric.ts PROMPT_BY_REASON.
+    // For a native-ACL key this context is the native gate (the JS gate either
+    // primes it via `primeSignSession` or steps aside on older call paths), so
+    // it must not be weaker than the JS bucket, which arms only from a real
+    // in-app prompt. Reuse is anchored solely to `SignSession.armedAt`.
+    // Keychain-driven prompts read these (a primed context was already
+    // evaluated with the JS gate's reason); mirrors biometric.ts PROMPT_BY_REASON.
     ctx.localizedReason = "Authorize signing with your identity key"
     ctx.localizedFallbackTitle = "Use device passcode"
     return ctx
@@ -307,6 +309,71 @@ final class HybridSpruceDid: HybridSpruceDidSpec {
     }
     SignSession.lock.unlock()
     if owned { ctx.invalidate() }
+  }
+
+  /// Replace the session context with a fresh, unarmed one (the outgoing
+  /// context is invalidated outside the lock). Returns the new context.
+  private func replaceSignContext() -> LAContext {
+    let fresh = Self.makeSignContext()
+    SignSession.lock.lock()
+    let outgoing = SignSession.context
+    SignSession.context = fresh
+    SignSession.armedAt = nil
+    SignSession.lock.unlock()
+    outgoing?.invalidate()
+    return fresh
+  }
+
+  /// The JS gate's live prompt for a native-ACL key: evaluate the owner on a
+  /// FRESH session context and arm it, so the keychain does not ask again
+  /// inside the next signs (an evaluated context attached through
+  /// `kSecUseAuthenticationContext` satisfies the `.userPresence` ACL). Always
+  /// fresh — the JS side calls this only when it wants a live prompt, so an
+  /// armed context must never answer it silently. Runs on the serial sign
+  /// queue so it can never race a sign's own sheet on the same context.
+  func primeSignSession(reason: String) throws -> Promise<String> {
+    return Promise.parallel(SignSession.queue) {
+      let ctx = self.replaceSignContext()
+      let done = DispatchSemaphore(value: 0)
+      var code = "authentication_failed"
+      ctx.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: reason) { ok, error in
+        code = ok ? "" : Self.authErrorCode(error)
+        done.signal()
+      }
+      done.wait()
+      if code.isEmpty {
+        self.armSignContext(ctx)
+      } else {
+        self.retireSignContext(ctx)
+      }
+      return code
+    }
+  }
+
+  /// Drop the session context: the next native-ACL sign re-authenticates.
+  func resetSignSession() throws {
+    SignSession.lock.lock()
+    let outgoing = SignSession.context
+    SignSession.context = nil
+    SignSession.armedAt = nil
+    SignSession.lock.unlock()
+    outgoing?.invalidate()
+  }
+
+  /// LAError → the expo-local-authentication codes the JS gate classifies.
+  private static func authErrorCode(_ error: Error?) -> String {
+    guard let laError = error as? LAError else { return "authentication_failed" }
+    switch laError.code {
+    case .userCancel: return "user_cancel"
+    case .appCancel: return "app_cancel"
+    case .systemCancel: return "system_cancel"
+    case .userFallback: return "user_fallback"
+    case .biometryLockout: return "lockout"
+    case .biometryNotEnrolled: return "not_enrolled"
+    case .biometryNotAvailable: return "not_available"
+    case .passcodeNotSet: return "passcode_not_set"
+    default: return "authentication_failed"
+    }
   }
 
   /// A `SecKeyCreateSignature` failure, carrying the raw CFError so the

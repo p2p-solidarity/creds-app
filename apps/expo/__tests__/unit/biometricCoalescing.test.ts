@@ -20,6 +20,8 @@ await mock.module('expo-local-authentication', () => ({
 }));
 
 const bio = await import('../../src/keychain/biometric');
+// No native-ACL key in this suite: skip the lazy native-session lookup.
+bio.__setNativeSignSessionResolverForTesting(async () => null);
 
 beforeEach(() => {
   authCalls.length = 0;
@@ -36,7 +38,7 @@ describe('requireBiometric sign prompt coalescing', () => {
 
     const first = bio.requireBiometric('sign');
     const second = bio.requireBiometric('sign');
-    await Promise.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(authCalls.length).toBe(1);
     resolveAuth({ success: true });
@@ -53,7 +55,7 @@ describe('requireBiometric sign prompt coalescing', () => {
 
     const sign = bio.requireBiometric('sign');
     const present = bio.requireBiometric('present');
-    await Promise.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     // One OS sheet covers both intents — they share the grace bucket.
     expect(authCalls.length).toBe(1);

@@ -45,6 +45,14 @@ abstract class HybridSpruceDidSpec: HybridObject() {
   
   @DoNotStrip
   @Keep
+  abstract fun primeSignSession(reason: String): Promise<String>
+  
+  @DoNotStrip
+  @Keep
+  abstract fun resetSignSession(): Unit
+  
+  @DoNotStrip
+  @Keep
   abstract fun deleteKey(alias: String): Promise<Boolean>
   
   @DoNotStrip

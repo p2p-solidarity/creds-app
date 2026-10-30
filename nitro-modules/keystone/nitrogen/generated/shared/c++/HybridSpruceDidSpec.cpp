@@ -17,6 +17,8 @@ namespace margelo::nitro::solidarity::keystone {
       prototype.registerHybridMethod("generateKey", &HybridSpruceDidSpec::generateKey);
       prototype.registerHybridMethod("hasKey", &HybridSpruceDidSpec::hasKey);
       prototype.registerHybridMethod("keyAuthMode", &HybridSpruceDidSpec::keyAuthMode);
+      prototype.registerHybridMethod("primeSignSession", &HybridSpruceDidSpec::primeSignSession);
+      prototype.registerHybridMethod("resetSignSession", &HybridSpruceDidSpec::resetSignSession);
       prototype.registerHybridMethod("deleteKey", &HybridSpruceDidSpec::deleteKey);
       prototype.registerHybridMethod("listSyncableP256Keys", &HybridSpruceDidSpec::listSyncableP256Keys);
       prototype.registerHybridMethod("deleteSyncableP256Key", &HybridSpruceDidSpec::deleteSyncableP256Key);

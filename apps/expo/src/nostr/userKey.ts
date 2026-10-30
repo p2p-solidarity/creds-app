@@ -25,8 +25,9 @@
  *
  * ── Custody model — READ BEFORE CHANGING `getNostrPubkey`/`signNostrEvent`
  *
- * The root mnemonic is only retrievable through `revealMnemonicForExport
- * ()` (Face-ID gated — see `identity/rootKey.ts`'s doc). Re-deriving the
+ * The root mnemonic is only retrievable through Face-ID-gated reads in
+ * `identity/rootKey.ts` (`readMnemonicForKeyDerivation` here — access-level,
+ * follows the gate mode; showing it is the red-line `revealMnemonicForExport`). Re-deriving the
  * Nostr scalar from the mnemonic on every sign/publish call would mean
  * re-prompting Face ID every time the app wants to publish a profile
  * pointer or kind-0 event — unacceptable UX for what is a comparatively
@@ -247,8 +248,8 @@ export function hasNostrKeySync(): boolean {
 export type MnemonicRevealer = () => Promise<Result<string, string>>;
 
 async function defaultMnemonicRevealer(): Promise<Result<string, string>> {
-  const { revealMnemonicForExport } = await import('@/identity/rootKey');
-  const revealed = await revealMnemonicForExport();
+  const { readMnemonicForKeyDerivation } = await import('@/identity/rootKey');
+  const revealed = await readMnemonicForKeyDerivation();
   if (!revealed.ok) return err(revealed.error.kind);
   return ok(revealed.value);
 }
@@ -268,7 +269,7 @@ function storageErrorMessage(e: unknown): string {
 
 /**
  * Path (a): derive from the root mnemonic. Triggers exactly ONE Face-ID
- * gate (via `revealMnemonicForExport`), then persists only the derived
+ * gate (via `readMnemonicForKeyDerivation`), then persists only the derived
  * scalar — never the mnemonic itself. Idempotent: re-running with the
  * same root mnemonic re-derives and overwrites with the identical
  * scalar. Caller (A4.4 wizard) is responsible for consenting the user
@@ -295,7 +296,7 @@ async function provisionFromRootMnemonicAtEpoch(
  * ever stored behind Face ID). Same derivation and persistence as path (a),
  * minus the reveal prompt, so a new identity reaches its first publish with
  * one Face ID instead of two. Never call it with a mnemonic fetched just for
- * this: fetching IS the red-line reveal path (a) exists for.
+ * this: fetching IS the gated read path (a) exists for.
  */
 export function provisionFromFreshRootMnemonic(mnemonic: string): Promise<Result<string, string>> {
   return trackKeyWrite(provisionFromMnemonicAtEpoch(mnemonic, captureLocalDataEpoch()));

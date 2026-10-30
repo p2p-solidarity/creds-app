@@ -88,14 +88,13 @@ import {
 
 import { isBiometricAvailable } from './biometric';
 import { requireSensitiveAction } from './biometricGatekeeper';
+import {
+  SIGNING_KEY_ALIAS,
+  forgetKeyAuthMode,
+  nativeSignSession,
+  resolveKeyAuthMode,
+} from './nativeSignSession';
 import { shouldRequireNativeBiometricBinding } from './signingKeyPolicy';
-
-/**
- * Modern alias — matches the Swift app's `KeychainService.modernMasterAlias`
- * so installs that already use that namespace see one consistent identifier
- * across the JS / Swift boundary on iOS.
- */
-const SIGNING_KEY_ALIAS = 'solidarity.master.v2';
 
 /** Legacy expo-secure-store alias, used pre-SpruceID Nitro. Migrated on first launch. */
 const LEGACY_EXPO_ALIAS = 'gg.solidarity.signing.v2';
@@ -168,34 +167,7 @@ async function deleteStaleSigningKey(): Promise<void> {
     ),
   ]);
   cachedIdentity = null;
-  cachedAuthMode = null;
-}
-
-/**
- * How the active key is biometric-gated — resolved once per process from
- * the native driver. 'native-acl' = the OS prompts inside the keychain /
- * keystore sign itself (legacy SE key with .userPresence; auth-bound
- * Android key), so the JS layer must NOT stack its own prompt. Anything
- * unresolvable (older native binary without `keyAuthMode`, probe failure)
- * is 'js-gated' — fail-safe: worst case is the legacy double prompt,
- * never a missing gate.
- */
-type KeyAuthMode = 'native-acl' | 'js-gated';
-let cachedAuthMode: KeyAuthMode | null = null;
-
-async function resolveKeyAuthMode(d: SpruceDid, alias: string): Promise<KeyAuthMode> {
-  if (cachedAuthMode) return cachedAuthMode;
-  let mode: KeyAuthMode = 'js-gated';
-  try {
-    const probe = (d as { keyAuthMode?: (alias: string) => Promise<string> }).keyAuthMode;
-    if (typeof probe === 'function') {
-      mode = (await probe.call(d, alias)) === 'native-acl' ? 'native-acl' : 'js-gated';
-    }
-  } catch {
-    mode = 'js-gated';
-  }
-  cachedAuthMode = mode;
-  return mode;
+  forgetKeyAuthMode();
 }
 
 const P256_N =
@@ -366,24 +338,43 @@ async function gateSign(): Promise<boolean> {
 }
 
 /**
+ * Whether the JS gate runs before a signature (single-layer gate):
+ *   - js-gated key: always — it is the only gate.
+ *   - native-ACL key WITH a native sign session (iOS, current binary): yes —
+ *     the JS prompt runs on the native context (`nativeSignSession.ts`), so
+ *     the keychain does not ask again, and the JS grace / mode govern it.
+ *   - native-ACL key without one (Android per-use key, older binary): no —
+ *     the OS prompts inside the sign; a JS prompt would be a second sheet.
+ */
+async function jsGateApplies(alias: string): Promise<boolean> {
+  if ((await resolveKeyAuthMode(driver(), alias)) === 'js-gated') return true;
+  return (await nativeSignSession()) !== null;
+}
+
+/**
  * Sign a JWT with the active signing key, biometric-gated. The header /
  * payload are serialised here (so the caller doesn't have to worry about
  * canonical JSON), but the actual b64url + signature is produced inside
  * native — both branches return the same compact JWS shape the legacy
  * `@noble/curves` impl emitted.
  */
-export async function signJwt(
+export function signJwt(
   header: { alg: 'ES256'; typ?: string; kid?: string },
   payload: Readonly<Record<string, unknown>>
+): Promise<string> {
+  return signJwtWithGate(header, payload, true);
+}
+
+async function signJwtWithGate(
+  header: { alg: 'ES256'; typ?: string; kid?: string },
+  payload: Readonly<Record<string, unknown>>,
+  gated: boolean
 ): Promise<string> {
   if (header.alg !== 'ES256') {
     throw new Error(`signJwt requires alg=ES256 (got ${header.alg})`);
   }
   const id = await ensureSigningKey();
-  // Single-layer gate (phase 4): when the key carries a native ACL the OS
-  // prompts inside the sign itself — the JS prompt would be a second
-  // Face ID sheet for the same intent. JS gates only 'js-gated' keys.
-  if ((await resolveKeyAuthMode(driver(), id.alias)) === 'js-gated') {
+  if (gated && (await jsGateApplies(id.alias))) {
     const allowed = await gateSign();
     if (!allowed) throw new Error('biometric authentication required');
   }
@@ -432,12 +423,13 @@ export async function signRawEs256(payload: Uint8Array): Promise<{
   readonly signature: Uint8Array;
   readonly publicKeyRaw: Uint8Array;
 }> {
-  return signDigestWithCurrentKey(sha256Bytes(payload), 'signRawEs256');
+  return signDigestWithCurrentKey(sha256Bytes(payload), 'signRawEs256', true);
 }
 
 async function signDigestWithCurrentKey(
   digest: Uint8Array,
-  context: string
+  context: string,
+  gated: boolean
 ): Promise<{
   readonly signature: Uint8Array;
   readonly publicKeyRaw: Uint8Array;
@@ -447,7 +439,7 @@ async function signDigestWithCurrentKey(
   // of re-prompting per call; keys with a native ACL are gated by the OS
   // prompt inside the sign itself (single-layer gate, phase 4).
   const id = await ensureSigningKey();
-  if ((await resolveKeyAuthMode(driver(), id.alias)) === 'js-gated') {
+  if (gated && (await jsGateApplies(id.alias))) {
     const allowed = await gateSign();
     if (!allowed) throw new Error('biometric authentication required');
   }
@@ -536,7 +528,7 @@ export async function deleteSigningKey(): Promise<LocalDeletionResult> {
     operations.map((operation) => Promise.resolve().then(operation)),
   );
   cachedIdentity = null;
-  cachedAuthMode = null;
+  forgetKeyAuthMode();
   const [activeResult, ...legacyResults] = results;
   const activeDeleteFailed =
     activeResult === undefined ||

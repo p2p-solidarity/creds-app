@@ -108,6 +108,28 @@ export interface SpruceDid
    */
   keyAuthMode(alias: string): Promise<string>;
 
+  /**
+   * Authenticate the user NOW on a fresh native sign context and arm it, so
+   * the next native-ACL signs (legacy Secure Enclave `.userPresence` key)
+   * reuse this one Face ID instead of prompting inside the sign. The JS gate
+   * calls this as its live prompt for such keys, so one sheet arms both the
+   * JS grace and the native context at the same instant.
+   *
+   * Resolves '' on success, otherwise an expo-local-authentication-style code
+   * (`user_cancel`, `system_cancel`, `app_cancel`, `user_fallback`, `lockout`,
+   * `not_enrolled`, `not_available`, `passcode_not_set`,
+   * `authentication_failed`). Android resolves 'unsupported': an auth-bound
+   * keystore key needs a per-signature BiometricPrompt, nothing to share.
+   */
+  primeSignSession(reason: string): Promise<string>;
+
+  /**
+   * Drop the native sign context so the next native-ACL sign re-authenticates.
+   * Called whenever the JS grace is reset or "ask every time" is chosen.
+   * No-op on Android and for js-gated keys.
+   */
+  resetSignSession(): void;
+
   /** Tear down the key. Already absent is success; storage failures reject. */
   deleteKey(alias: string): Promise<boolean>;
 

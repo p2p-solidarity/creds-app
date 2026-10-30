@@ -211,7 +211,7 @@ describe('SensitiveAction set', () => {
 // ── 2 + 3. Modes, and the red line they cannot disarm ──────────────────────
 
 describe('gate modes', () => {
-  it('defaults to balanced — a fresh install is gated (fail closed)', () => {
+  it('holds balanced until the persisted mode is known (fail closed before hydration)', () => {
     expect(policyMod.useSensitiveActionPolicy.getState().mode).toBe('balanced');
     for (const action of policyMod.SENSITIVE_ACTIONS) {
       expect(policyMod.getSensitivePolicyFor(action).enabled).toBe(true);
@@ -261,10 +261,10 @@ describe('gate modes', () => {
     }
   });
 
-  it('resetForLocalWipe restores the fail-closed default', () => {
-    policyMod.useSensitiveActionPolicy.getState().setMode('redLineOnly');
+  it('resetForLocalWipe returns a wiped device to the fresh-install default', () => {
+    policyMod.useSensitiveActionPolicy.getState().setMode('everyTime');
     policyMod.useSensitiveActionPolicy.getState().resetForLocalWipe();
-    expect(policyMod.useSensitiveActionPolicy.getState().mode).toBe('balanced');
+    expect(policyMod.useSensitiveActionPolicy.getState().mode).toBe('redLineOnly');
   });
 
   it('persists across a relaunch (round-trip through MMKV)', () => {
@@ -357,87 +357,31 @@ describe('everyTime disables the shared grace window', () => {
   });
 });
 
-// ── 6. Migration off both older shapes, fail closed ────────────────────────
+// ── 6. Hydration: only an explicit v3 pick is kept (2026-10-30) ───────────
 
-describe('migration off the older persisted shapes', () => {
-  const ALL_OFF = {
-    issueCredential: { enabled: false },
-    presentProof: { enabled: false },
-    exportGraph: { enabled: false },
-    registerTrustAnchor: { enabled: false },
-    rotateMasterKey: { enabled: false },
-    revealRecoveryBundle: { enabled: false },
-    deleteZKIdentity: { enabled: false },
-  } as const;
-
-  it('v1: a user who had disabled every optional action lands on redLineOnly', () => {
-    kv.set(V1_KEY, JSON.stringify(ALL_OFF));
+describe('hydrating the persisted mode', () => {
+  it('no stored record → redLineOnly (the default: only key actions ask)', () => {
     policyMod.hydrateSensitiveActionPolicy();
     expect(policyMod.useSensitiveActionPolicy.getState().mode).toBe('redLineOnly');
   });
 
-  it('v1: one surviving optional action lands on balanced (fail closed)', () => {
-    kv.set(V1_KEY, JSON.stringify({ ...ALL_OFF, presentProof: { enabled: true } }));
-    policyMod.hydrateSensitiveActionPolicy();
-    expect(policyMod.useSensitiveActionPolicy.getState().mode).toBe('balanced');
+  it('an explicit everyTime / balanced pick survives the default change', () => {
+    for (const mode of ['everyTime', 'balanced'] as const) {
+      kv.set(V3_KEY, JSON.stringify({ mode }));
+      policyMod.hydrateSensitiveActionPolicy();
+      expect(policyMod.useSensitiveActionPolicy.getState().mode).toBe(mode);
+    }
   });
 
-  it('v1: red-line-only flags do NOT by themselves force a gated mode', () => {
-    // The trio gates regardless, so their v1 values carry no information about
-    // what the user wanted for the optional family.
-    kv.set(V1_KEY, JSON.stringify({ ...ALL_OFF, rotateMasterKey: { enabled: true } }));
-    policyMod.hydrateSensitiveActionPolicy();
-    expect(policyMod.useSensitiveActionPolicy.getState().mode).toBe('redLineOnly');
-  });
-
-  it('v1: a missing optional entry counts as gated (fail closed)', () => {
-    const partial = { ...ALL_OFF } as Record<string, { enabled: boolean }>;
-    delete partial['exportGraph'];
-    kv.set(V1_KEY, JSON.stringify(partial));
-    policyMod.hydrateSensitiveActionPolicy();
-    expect(policyMod.useSensitiveActionPolicy.getState().mode).toBe('balanced');
-  });
-
-  it('v1: a corrupt blob falls back to balanced', () => {
-    kv.set(V1_KEY, '{not json');
-    policyMod.hydrateSensitiveActionPolicy();
-    expect(policyMod.useSensitiveActionPolicy.getState().mode).toBe('balanced');
-  });
-
-  it('v2: enabled true becomes balanced', () => {
+  it('pre-v3 records are not explicit picks — they move to the default', () => {
+    kv.set(V1_KEY, JSON.stringify({ presentProof: { enabled: true } }));
     kv.set(V2_KEY, JSON.stringify({ enabled: true }));
     policyMod.hydrateSensitiveActionPolicy();
-    expect(policyMod.useSensitiveActionPolicy.getState().mode).toBe('balanced');
-  });
-
-  it('v2: enabled false becomes redLineOnly', () => {
-    kv.set(V2_KEY, JSON.stringify({ enabled: false }));
-    policyMod.hydrateSensitiveActionPolicy();
     expect(policyMod.useSensitiveActionPolicy.getState().mode).toBe('redLineOnly');
   });
 
-  it('v2 wins over a staler v1 blob', () => {
-    kv.set(V1_KEY, JSON.stringify(ALL_OFF));
-    kv.set(V2_KEY, JSON.stringify({ enabled: true }));
-    policyMod.hydrateSensitiveActionPolicy();
-    expect(policyMod.useSensitiveActionPolicy.getState().mode).toBe('balanced');
-  });
-
-  it('v3 wins over both older shapes', () => {
-    kv.set(V1_KEY, JSON.stringify(ALL_OFF));
-    kv.set(V2_KEY, JSON.stringify({ enabled: false }));
-    kv.set(V3_KEY, JSON.stringify({ mode: 'everyTime' }));
-    policyMod.hydrateSensitiveActionPolicy();
-    expect(policyMod.useSensitiveActionPolicy.getState().mode).toBe('everyTime');
-  });
-
-  it('an unrecognised mode string falls back to balanced', () => {
+  it('an unreadable v3 record fails closed to balanced, never to the weaker default', () => {
     kv.set(V3_KEY, JSON.stringify({ mode: 'yolo' }));
-    policyMod.hydrateSensitiveActionPolicy();
-    expect(policyMod.useSensitiveActionPolicy.getState().mode).toBe('balanced');
-  });
-
-  it('no stored record at all defaults to balanced', () => {
     policyMod.hydrateSensitiveActionPolicy();
     expect(policyMod.useSensitiveActionPolicy.getState().mode).toBe('balanced');
   });

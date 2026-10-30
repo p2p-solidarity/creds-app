@@ -46,9 +46,13 @@
  *
  * Storage:
  *   - MMKV `gg.solidarity.biometric.gate.v3` = `{"mode":"balanced"}`.
- *   - Migrates the v2 boolean and the v1 per-action blob, both fail-CLOSED.
- *   - In-memory defaults so consumers can subscribe BEFORE MMKV is ready
- *     (Rule 8 + Rule 10 — never await on first paint).
+ *   - No v3 record → `redLineOnly` (DEFAULT_MODE). The older v2 boolean
+ *     (`gate.v2`) and v1 per-action blob (`policy.v1`) are no longer read:
+ *     neither could express a pick stronger than the old default.
+ *   - Before hydration, and for a v3 record that does not parse, the store
+ *     holds `balanced` (FAIL_CLOSED_MODE) — an explicit `everyTime` /
+ *     `balanced` pick is never downgraded by a read failure. In-memory defaults
+ *     so consumers can subscribe BEFORE MMKV is ready (Rule 8 + Rule 10).
  *   - `hydrateSensitiveActionPolicy()` is called from the root layout after
  *     `initMmkv()` resolves to swap in the persisted snapshot.
  */
@@ -62,10 +66,6 @@ import {
 } from '@/settings/localDataWipeBarrier';
 
 const MMKV_KEY = 'gg.solidarity.biometric.gate.v3';
-/** Single-boolean shape that briefly preceded the three modes. */
-const LEGACY_V2_KEY = 'gg.solidarity.biometric.gate.v2';
-/** Pre-2.0.0 per-action blob. Read once for migration, never written again. */
-const LEGACY_V1_KEY = 'gg.solidarity.biometric.policy.v1';
 
 /**
  * Sensitive actions that may be gated behind a biometric prompt.
@@ -141,9 +141,12 @@ export const OPTIONAL_ACTIONS: readonly SensitiveAction[] = SENSITIVE_ACTIONS.fi
  * see nor turn off, and "off" needed a paragraph of exceptions to explain.
  *
  *   everyTime   — every sensitive action authenticates; grace window disabled.
- *   balanced    — one check covers the next five minutes (the default).
+ *   balanced    — one check covers the next five minutes.
  *   redLineOnly — only RED_LINE_ACTIONS authenticate; access-level actions
- *                 (show / export / unlock / save) never prompt.
+ *                 (show / export / unlock / save / sign) never prompt. The
+ *                 default since 2026-10-30 (Kidney: only key actions should
+ *                 ask) — the passcode / Face ID that unlocks the phone already
+ *                 guards access-level use.
  */
 export type BiometricGateMode = 'everyTime' | 'balanced' | 'redLineOnly';
 
@@ -161,8 +164,20 @@ export type SensitiveActionPolicy = Readonly<
   Record<SensitiveAction, SensitiveActionEntry>
 >;
 
-/** Fail closed: a fresh install lands on the gated middle position. */
-const DEFAULT_MODE: BiometricGateMode = 'balanced';
+/**
+ * A fresh install, a wiped device, and anyone who never picked a mode in
+ * Settings (no v3 record). Pre-v3 records (the v1 per-action blob, the v2
+ * single switch) are not explicit picks of a stronger mode — every state they
+ * could hold was the old default or a reduction of it — so they land here too.
+ */
+const DEFAULT_MODE: BiometricGateMode = 'redLineOnly';
+
+/**
+ * Used while the persisted mode is unknown (before hydration, or a v3 record
+ * that does not parse): a user who explicitly chose `balanced`/`everyTime`
+ * must never be silently downgraded by a read failure.
+ */
+const FAIL_CLOSED_MODE: BiometricGateMode = 'balanced';
 
 /**
  * Project the mode onto the per-action record the gatekeeper reads. Red-line
@@ -214,49 +229,6 @@ function applyGraceForMode(mode: BiometricGateMode): void {
 }
 
 /**
- * Fail-CLOSED migration off the v1 per-action blob.
- *
- * v1 let a user disable each action independently, which a single mode cannot
- * represent. We land on `redLineOnly` only for someone who had disabled EVERY
- * optional action — any surviving `enabled: true` (and any missing or malformed
- * entry) resolves to `balanced`, i.e. to more prompting, never less. The v1
- * `mode` field is dropped on purpose: `biometricOnly` no longer exists.
- *
- * Returns `null` when there is no legacy blob to migrate.
- */
-function migrateFromV1(raw: string | undefined): BiometricGateMode | null {
-  if (!raw) return null;
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    // A v1 blob that is not an object (null, a number, a string) tells us
-    // nothing about intent — fail closed rather than guess. An array does pass
-    // this guard (`typeof [] === 'object'`), and then reads as "every optional
-    // action missing", which the `!== false` test also resolves to gated.
-    if (typeof parsed !== 'object' || parsed === null) return DEFAULT_MODE;
-    const entries = parsed as Partial<Record<SensitiveAction, { enabled?: unknown }>>;
-    const anyGated = OPTIONAL_ACTIONS.some((action) => entries[action]?.enabled !== false);
-    return anyGated ? 'balanced' : 'redLineOnly';
-  } catch {
-    // Corrupt legacy blob — fail closed rather than silently unlocking.
-    return DEFAULT_MODE;
-  }
-}
-
-/** v2 stored a single boolean before the three modes existed. */
-function migrateFromV2(raw: string | undefined): BiometricGateMode | null {
-  if (!raw) return null;
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (typeof parsed !== 'object' || parsed === null) return DEFAULT_MODE;
-    const enabled = (parsed as { enabled?: unknown }).enabled;
-    if (typeof enabled !== 'boolean') return DEFAULT_MODE;
-    return enabled ? 'balanced' : 'redLineOnly';
-  } catch {
-    return DEFAULT_MODE;
-  }
-}
-
-/**
  * Read the persisted mode. `{ ok: false }` means MMKV itself was unreadable
  * (not "no record") — the caller must NOT latch `hydrated: true` on that, or a
  * user who chose `redLineOnly` would be shown a fail-closed `balanced` they
@@ -271,13 +243,10 @@ function readSafe(): { readonly ok: true; readonly mode: BiometricGateMode } | {
       const mode = typeof parsed === 'object' && parsed !== null
         ? (parsed as { mode?: unknown }).mode
         : undefined;
-      return { ok: true, mode: isMode(mode) ? mode : DEFAULT_MODE };
+      return { ok: true, mode: isMode(mode) ? mode : FAIL_CLOSED_MODE };
     }
-    // Walk back through the older shapes, newest first.
-    const fromV2 = migrateFromV2(mmkv.getString(LEGACY_V2_KEY));
-    if (fromV2) return { ok: true, mode: fromV2 };
-    const fromV1 = migrateFromV1(mmkv.getString(LEGACY_V1_KEY));
-    return { ok: true, mode: fromV1 ?? DEFAULT_MODE };
+    // No explicit pick (pre-v3 shapes included — see DEFAULT_MODE).
+    return { ok: true, mode: DEFAULT_MODE };
   } catch {
     return { ok: false };
   }
@@ -292,8 +261,8 @@ function writeSafe(mode: BiometricGateMode): void {
 }
 
 export const useSensitiveActionPolicy = create<PolicyState>((set) => ({
-  mode: DEFAULT_MODE,
-  policy: POLICY_BY_MODE[DEFAULT_MODE],
+  mode: FAIL_CLOSED_MODE,
+  policy: POLICY_BY_MODE[FAIL_CLOSED_MODE],
   hydrated: false,
   setMode: (mode) => {
     if (!canCommitLocalData(captureLocalDataEpoch())) return;
@@ -312,8 +281,7 @@ export const useSensitiveActionPolicy = create<PolicyState>((set) => ({
 }));
 
 /**
- * Pull the persisted mode into the live store (migrating a v1/v2 record on the
- * way). Call from the root layout after `initMmkv()` resolves. Idempotent.
+ * Pull the persisted mode into the live store. Call from the root layout after `initMmkv()` resolves. Idempotent.
  *
  * Returns whether the store is now hydrated. Boot calls this from the middle of
  * a `try` block (`app/_layout.tsx`), so a throw earlier in that block skips it
@@ -350,10 +318,10 @@ export function resetSensitiveActionPolicyForTesting(): void {
   // partially-installed module mock can hang the test runner. The
   // in-memory reset is sufficient for tests; the on-device install never
   // calls this path.
-  applyGraceForMode(DEFAULT_MODE);
+  applyGraceForMode(FAIL_CLOSED_MODE);
   useSensitiveActionPolicy.setState({
-    mode: DEFAULT_MODE,
-    policy: POLICY_BY_MODE[DEFAULT_MODE],
+    mode: FAIL_CLOSED_MODE,
+    policy: POLICY_BY_MODE[FAIL_CLOSED_MODE],
     hydrated: false,
   });
 }

@@ -8,6 +8,8 @@
  */
 import * as LocalAuthentication from 'expo-local-authentication';
 
+import type { NativeSignSession } from './nativeSignSession';
+
 export type BiometricReason =
   | 'sign'
   | 'export'
@@ -75,7 +77,13 @@ export async function isBiometricAvailable(): Promise<boolean> {
 const GRACE_MS = 5 * 60 * 1000;
 const ALWAYS_PROMPT: ReadonlySet<BiometricReason> = new Set(['delete', 'cardRelease']);
 let graceUntil = 0;
-let promptInFlight: Promise<boolean> | null = null;
+let gracedPromptInFlight: Promise<AuthOutcome> | null = null;
+/**
+ * Bumped by every reset. A sheet that was already on screen when the grace was
+ * reset must not re-open the window when it later succeeds — a reset means
+ * "the next action needs a prompt shown after this point".
+ */
+let graceGeneration = 0;
 
 /**
  * Master switch for the grace window, driven by the user's gate mode
@@ -95,7 +103,11 @@ let graceEnabled = true;
  */
 export function setBiometricGraceEnabled(enabled: boolean): void {
   graceEnabled = enabled;
-  if (!enabled) graceUntil = 0;
+  if (!enabled) {
+    graceUntil = 0;
+    graceGeneration += 1;
+    resetNativeSignSession();
+  }
 }
 
 /** Whether the grace window is allowed at all under the current gate mode. */
@@ -103,10 +115,16 @@ export function isBiometricGraceEnabled(): boolean {
   return graceEnabled;
 }
 
-/** Drop any active grace so the next sensitive action re-prompts. */
+/**
+ * Drop any active grace so the next sensitive action re-prompts. Also drops
+ * the native sign context of a legacy native-ACL key, so neither window
+ * outlives the other.
+ */
 export function resetBiometricGrace(): void {
   graceUntil = 0;
-  promptInFlight = null;
+  graceGeneration += 1;
+  gracedPromptInFlight = null;
+  resetNativeSignSession();
 }
 
 /** Open the shared grace window (called after any equivalent gate succeeds). */
@@ -126,27 +144,103 @@ export function hasBiometricGrace(): boolean {
  */
 export async function requireBiometric(reason: BiometricReason): Promise<boolean> {
   if (ALWAYS_PROMPT.has(reason)) {
-    return authenticate(reason);
+    return (await promptOnce(PROMPT_BY_REASON[reason])).success;
   }
   if (hasBiometricGrace()) return true;
-  // In-flight coalescing is a concurrency guard (two signers racing must not
-  // stack two OS sheets), NOT a grace window — it stays on in every mode.
-  if (promptInFlight) return promptInFlight;
-  promptInFlight = authenticate(reason).finally(() => {
-    promptInFlight = null;
-  });
-  return promptInFlight;
+  return (await promptForGrace(PROMPT_BY_REASON[reason])).success;
 }
 
-async function authenticate(reason: BiometricReason): Promise<boolean> {
+/** What the OS sheet answered. `error` is an expo-local-authentication code. */
+export interface AuthOutcome {
+  readonly success: boolean;
+  readonly error?: string;
+}
+
+/**
+ * The ONE live prompt behind every graced gate (`requireBiometric` here and
+ * `requireSensitiveAction` in the gatekeeper). Success arms the shared bucket.
+ *
+ * Concurrent callers share the sheet that is already up: two signers racing
+ * (a Page save and a QR build) must not stack two OS sheets for one moment of
+ * user presence. This is a concurrency guard, not a grace window — it stays on
+ * in every mode, `everyTime` included. Red-line / always-prompt actions never
+ * join it (they use `promptOnce`): their prompt names a different, stronger
+ * intent, and their success must not open the family window.
+ *
+ * When the device key is a legacy native-ACL key, the prompt runs on the
+ * native sign context (`nativeSignSession.ts`), so the same Face ID also
+ * authorizes the next native signatures — one sheet, both windows.
+ */
+export function promptForGrace(promptMessage: string): Promise<AuthOutcome> {
+  if (gracedPromptInFlight) return gracedPromptInFlight;
+  const generation = graceGeneration;
+  const attempt = osPrompt(promptMessage, { shareWithNativeSession: true }).then((outcome) => {
+    if (outcome.success && generation === graceGeneration) armBiometricGrace();
+    return outcome;
+  });
+  const tracked = attempt.finally(() => {
+    if (gracedPromptInFlight === tracked) gracedPromptInFlight = null;
+  });
+  gracedPromptInFlight = tracked;
+  return tracked;
+}
+
+/** A live prompt that neither coalesces nor arms anything (red line, Pear release). */
+export function promptOnce(promptMessage: string): Promise<AuthOutcome> {
+  return osPrompt(promptMessage, { shareWithNativeSession: false });
+}
+
+type NativeSessionResolver = () => Promise<NativeSignSession | null>;
+
+const defaultNativeSessionResolver: NativeSessionResolver = async () => {
+  const { nativeSignSession } = await import('./nativeSignSession');
+  return nativeSignSession();
+};
+
+let resolveNativeSession: NativeSessionResolver = defaultNativeSessionResolver;
+
+/** Test-only override. Pass `null` to restore the real resolver. */
+export function __setNativeSignSessionResolverForTesting(
+  resolver: NativeSessionResolver | null
+): void {
+  resolveNativeSession = resolver ?? defaultNativeSessionResolver;
+}
+
+async function nativeSessionOrNull(): Promise<NativeSignSession | null> {
+  try {
+    return await resolveNativeSession();
+  } catch {
+    return null;
+  }
+}
+
+function resetNativeSignSession(): void {
+  void nativeSessionOrNull().then((session) => session?.reset());
+}
+
+async function osPrompt(
+  promptMessage: string,
+  options: { readonly shareWithNativeSession: boolean }
+): Promise<AuthOutcome> {
+  if (options.shareWithNativeSession) {
+    const session = await nativeSessionOrNull();
+    if (session) {
+      const code = await session.prime(promptMessage).catch(() => 'unsupported');
+      if (code !== 'unsupported') {
+        return code === '' ? { success: true } : { success: false, error: code };
+      }
+    }
+  }
   const r = await LocalAuthentication.authenticateAsync({
-    promptMessage: PROMPT_BY_REASON[reason],
+    promptMessage,
     fallbackLabel: 'Use device passcode',
     disableDeviceFallback: false,
     cancelLabel: 'Cancel',
   });
-  if (r.success && !ALWAYS_PROMPT.has(reason)) {
-    armBiometricGrace();
-  }
-  return r.success;
+  if (r.success) return { success: true };
+  // r.error is set to e.g. 'user_cancel', 'lockout', 'not_enrolled' on newer SDKs.
+  const error =
+    (r as unknown as { error?: string }).error ??
+    (r as unknown as { warning?: string }).warning;
+  return { success: false, error };
 }
