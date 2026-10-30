@@ -120,9 +120,7 @@ apps/expo/
 │   ├── onboarding/            ← V2 flow
 │   ├── settings/              ← hub + sub-pages
 │   ├── people/[id].tsx        ← PersonDetail
-│   ├── cards/edit.tsx         ← BusinessCardForm
 │   ├── credentials/{index,[id],offer}.tsx
-│   ├── groups/                ← frozen (06-plan), reached by invite link
 │   ├── passport/index.tsx
 │   ├── scan/index.tsx         ← vision-camera QR scanner
 │   └── oidc/consent.tsx
@@ -134,13 +132,14 @@ apps/expo/
 │   │   ├── settings/SettingRow + ToggleRow
 │   │   └── share/RadarMatching
 │   ├── constants/Colors.ts    ← brand palette (single source)
+│   ├── constants/radius.ts    ← radius + shadow roles (= creds.id web tokens)
 │   ├── storage/               ← MMKV + secure-store + AES-GCM
 │   ├── keychain/              ← signing key + pairwise + biometric gate
 │   ├── backup/                ← iCloud + Drive + gesture-triggered
 │   ├── contacts/              ← repository (zustand) + VCF importer
-│   ├── cards/cardManager      ← business card CRUD (zustand)
+│   ├── cards/                 ← legacy card store + card-wire DECODE only (10 §4)
 │   ├── credentials/store      ← VC library (zustand)
-│   ├── groups/store           ← group + member (zustand)
+│   ├── groups/store           ← frozen; UI removed (10 §5), store kept for wipe/backup
 │   ├── vault/secretsKeychain  ← legacy vault root secret (wipe only)
 │   ├── oidc/{parseAuthRequest,proofVerifier}
 │   ├── passport/pipeline      ← MRZ → NFC → ZK orchestrator

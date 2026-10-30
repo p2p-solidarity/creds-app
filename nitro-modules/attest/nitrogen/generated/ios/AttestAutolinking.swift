@@ -36,18 +36,6 @@ public final class AttestAutolinking {
     return HybridNfcPassport.self is any RecyclableView.Type
   }
   
-  public static func createPassportZk() -> bridge.std__shared_ptr_HybridPassportZkSpec_ {
-    let hybridObject = HybridPassportZk()
-    return { () -> bridge.std__shared_ptr_HybridPassportZkSpec_ in
-      let __cxxWrapped = hybridObject.getCxxWrapper()
-      return __cxxWrapped.getCxxPart()
-    }()
-  }
-  
-  public static func isPassportZkRecyclable() -> Bool {
-    return HybridPassportZk.self is any RecyclableView.Type
-  }
-  
   public static func createSemaphore() -> bridge.std__shared_ptr_HybridSemaphoreSpec_ {
     let hybridObject = HybridSemaphore()
     return { () -> bridge.std__shared_ptr_HybridSemaphoreSpec_ in

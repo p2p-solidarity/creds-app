@@ -298,7 +298,7 @@ function FieldRow({
         {label}
       </Text>
       <View
-        className="bg-searchBg rounded-sm2"
+        className="bg-searchBg rounded-field"
         style={{
           minHeight: multiline ? 88 : 44,
           paddingHorizontal: 12,

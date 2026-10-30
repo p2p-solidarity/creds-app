@@ -5,6 +5,7 @@ import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/radius';
 import type { ContactManifestEntry } from '@/contacts/repository';
 import { haptic } from '@/feedback/haptics';
 import { useTranslation } from '@/i18n';
@@ -48,7 +49,7 @@ export function ContactRow({
             style={{
               width: 22,
               height: 22,
-              borderRadius: 11,
+              borderRadius: Radius.pill,
               borderWidth: 1.5,
               borderColor: selected ? Colors.primaryBlue : Colors.text3,
               backgroundColor: selected ? Colors.primaryBlue : 'transparent',

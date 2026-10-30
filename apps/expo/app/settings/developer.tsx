@@ -121,17 +121,6 @@ export default function DeveloperSettings() {
             />
           </SettingsBlockSection>
 
-          <SettingsBlockSection title={t('developer.identityKeys.header')}>
-            <SettingsBlockRow
-              icon="person.text.rectangle"
-              title={t('developer.identityKeys.inspector')}
-              subtitle={t('developer.identityKeys.inspectorSubtitle')}
-              onPress={() => {
-                router.push({ pathname: '/settings/dids', params: { readOnly: '1' } });
-              }}
-            />
-          </SettingsBlockSection>
-
           <SettingsBlockSection title={t('developer.credentials.header')}>
             <SettingsBlockRow
               icon="checkmark.shield"

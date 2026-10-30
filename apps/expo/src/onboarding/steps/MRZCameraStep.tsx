@@ -42,6 +42,7 @@ import { Colors } from '@/constants/Colors';
 import { useTranslation } from '@/i18n';
 import { useCameraPermission } from '@/scan/useCameraPermission';
 import { MONO } from '@/constants/fonts';
+import { Radius } from '@/constants/radius';
 
 export interface PassportMRZDraft {
   readonly passportNumber: string;
@@ -837,7 +838,7 @@ const styles = StyleSheet.create({
   instructionLabel: { color: '#FFFFFF', fontSize: 12, textAlign: 'center' },
   confirmationCard: {
     backgroundColor: Colors.cardBg,
-    borderRadius: 12,
+    borderRadius: Radius.card,
     padding: 16,
     gap: 10,
   },

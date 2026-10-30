@@ -7,8 +7,6 @@
  *   NfcStep         → `nfcStep`
  *   ChipSnapshotCard → `chipSnapshotCard(_:)`
  *   AuthBadge       → `authBadge(_:passed:)`
- *   ProofStep       → `proofStepSection`
- *   ProofResultCard → `proofResultCard(_:)`
  *   PersistStep     → `persistStepSection`
  *
  * They take props rather than reading the view-model directly so the
@@ -28,23 +26,14 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 
-import { BulletGuaranteeRow } from '@/components/passport/BulletGuaranteeRow';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedButton } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
-import { TIMING } from '@/feedback/motion';
-import {
-  credentialTrustDisplayFor,
-  passportTrustLevelFromProof,
-  type TrustDisplayTone,
-} from '@/credentials/trustDisplay';
+import { SPRING, TIMING } from '@/feedback/motion';
 import { useTranslation } from '@/i18n';
-import type {
-  PassportChipSnapshot,
-  PassportProofResult,
-} from '@/passport/pipeline';
-import { DEFAULT_DISCLOSURE_POLICY } from '@/passport/zkInputs';
-import { MONO, textFont } from '@/constants/fonts';
+import type { PassportChipSnapshot } from '@/passport/pipeline';
+import { MONO } from '@/constants/fonts';
+import { Radius } from '@/constants/radius';
 
 export function NfcStep({
   busy,
@@ -89,7 +78,7 @@ export function NfcStep({
         ? 'Bring your passport close to the device to read NFC chip data.'
         : t('passportSetup.nfc.ready');
   return (
-    <View className="bg-mutedSurface gap-3 rounded-xl p-3.5">
+    <View className="bg-mutedSurface gap-3 rounded-group p-3.5">
       <NfcVisual busy={busy} success={chip !== null} />
       <Text className="text-text2 px-6 text-center text-[15px]">{status}</Text>
       {busy ? (
@@ -169,13 +158,13 @@ const progressStyles = StyleSheet.create({
   track: {
     width: '85%',
     height: 6,
-    borderRadius: 3,
+    borderRadius: Radius.xs,
     backgroundColor: 'rgba(255,255,255,0.08)',
     overflow: 'hidden',
   },
   fill: {
     height: '100%',
-    borderRadius: 3,
+    borderRadius: Radius.xs,
   },
 });
 
@@ -288,7 +277,7 @@ function SuccessCheck() {
   const opacity = useSharedValue(0);
   useEffect(() => {
     opacity.value = withTiming(1, TIMING.enter);
-    if (!reduceMotion) scale.value = withSpring(1, { duration: 200, dampingRatio: 0.8 });
+    if (!reduceMotion) scale.value = withSpring(1, SPRING.gentle);
   }, [opacity, reduceMotion, scale]);
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
@@ -330,7 +319,7 @@ function ChipSnapshotCard({
   const { t } = useTranslation();
   if (!developerMode) {
     return (
-      <View className="rounded-xl p-3" style={{ backgroundColor: Colors.mutedSurface, gap: 4 }}>
+      <View className="rounded-group p-3" style={{ backgroundColor: Colors.mutedSurface, gap: 4 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <SfIcon name="checkmark.circle.fill" size={14} color={Colors.terminalGreen} />
           <Text style={{ color: Colors.terminalGreen, fontSize: 12, fontWeight: '600' }}>
@@ -345,7 +334,7 @@ function ChipSnapshotCard({
   }
 
   return (
-    <View className="rounded-xl p-3" style={{ backgroundColor: Colors.mutedSurface, gap: 8 }}>
+    <View className="rounded-group p-3" style={{ backgroundColor: Colors.mutedSurface, gap: 8 }}>
       {chip.isSimulated ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <SfIcon name="exclamationmark.triangle.fill" size={14} color="#FF9500" />
@@ -414,296 +403,22 @@ function AuthBadge({ label, passed }: { label: string; passed: boolean }) {
   );
 }
 
-export function ProofStep({
-  busy,
-  progress,
-  proof,
-  disabled,
-  developerMode,
-  onGenerate,
-}: {
-  readonly busy: boolean;
-  readonly progress: string;
-  readonly proof: PassportProofResult | null;
-  readonly disabled: boolean;
-  readonly developerMode: boolean;
-  readonly onGenerate: () => void;
-}) {
-  const { t } = useTranslation();
-  // Real disclosure decisions from the policy that actually runs in
-  // `onGenerateProof` — not a fabricated list. Disclosed fields earn a
-  // green check; hidden fields (e.g. Name under DEFAULT_DISCLOSURE_POLICY)
-  // render a hollow badge so the screen never claims to share what it hides.
-  const policyRows: readonly { text: string; checked: boolean }[] = [
-    {
-      text: t('passportProof.discloseNationality'),
-      checked: DEFAULT_DISCLOSURE_POLICY.discloseNationality,
-    },
-    {
-      text: t('passportProof.discloseAgeOver18'),
-      checked: DEFAULT_DISCLOSURE_POLICY.discloseOlderThan,
-    },
-    {
-      text: t('passportProof.discloseName'),
-      checked: DEFAULT_DISCLOSURE_POLICY.discloseName,
-    },
-  ];
-  return (
-    <View className="gap-12 pt-8">
-      <View className="items-center gap-4">
-        <View style={{ width: 64, height: 64, alignItems: 'center', justifyContent: 'center' }}>
-          <SfIcon name="checkmark.shield" size={48} color={Colors.terminalGreen} />
-        </View>
-        <View className="items-center gap-2">
-          <Text className="text-text1 text-center text-[16px] font-medium">
-            {developerMode ? 'Create Privacy Proof' : t('passportSetup.proof.title')}
-          </Text>
-          <Text className="text-text2 px-8 text-center text-[14px]" style={{ lineHeight: 22 }}>
-            {developerMode
-              ? 'Securely generate a proof from your passport to verify your identity — without sharing raw data.'
-              : t('passportSetup.proof.subtitle')}
-          </Text>
-        </View>
-      </View>
-
-      <View className="gap-8">
-        <View className="gap-2 px-4">
-          <Text className="text-text1 text-[14px]">
-            {t('passportProof.selectiveDisclosures')}
-          </Text>
-          <View className="gap-2">
-            <BulletGuaranteeRow text={t('passportProof.runsOnDevice')} />
-            <BulletGuaranteeRow text={t('passportProof.noDataUploaded')} />
-            {/* Real policy-derived rows — what DEFAULT_DISCLOSURE_POLICY
-                actually shares vs hides for this proof. */}
-            {policyRows.map((row) => (
-              <BulletGuaranteeRow
-                key={row.text}
-                text={row.text}
-                checked={row.checked}
-              />
-            ))}
-          </View>
-        </View>
-
-        {busy ? (
-          <View className="items-center gap-2">
-            <ActivityIndicator color={Colors.terminalGreen} />
-            <Text className="text-text3 text-[12px]">
-              {developerMode ? progress : t('passportSetup.proof.preparing')}
-            </Text>
-          </View>
-        ) : null}
-
-        {proof ? <ProofResultCard proof={proof} developerMode={developerMode} /> : null}
-
-        <View className="px-4">
-          <ThemedButton
-            label={developerMode ? 'Generate Proof' : t('passportSetup.proof.button')}
-            fullWidth
-            disabled={busy || disabled}
-            onPress={onGenerate}
-          />
-        </View>
-      </View>
-    </View>
-  );
-}
-
-function ProofResultCard({
-  proof,
-  developerMode,
-}: {
-  readonly proof: PassportProofResult;
-  readonly developerMode: boolean;
-}) {
-  const { t } = useTranslation();
-  if (!developerMode) {
-    const unavailable = proof.generationFailed;
-    return (
-      <View
-        className="mx-4 rounded-xl p-3"
-        style={{ backgroundColor: Colors.mutedSurface, gap: 4 }}
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <SfIcon
-            name={unavailable ? 'exclamationmark.triangle.fill' : 'checkmark.seal.fill'}
-            size={14}
-            color={unavailable ? Colors.warning : Colors.terminalGreen}
-          />
-          <Text
-            style={{
-              color: unavailable ? Colors.warning : Colors.terminalGreen,
-              fontSize: 12,
-              fontWeight: '600',
-            }}
-          >
-            {unavailable ? t('passportSetup.proof.unavailable') : t('passportSetup.proof.ready')}
-          </Text>
-        </View>
-        <Text className="text-text3" style={{ fontSize: 12 }}>
-          {unavailable
-            ? t('passportSetup.proof.unavailableBody')
-            : t('passportSetup.proof.readyBody')}
-        </Text>
-      </View>
-    );
-  }
-
-  const failed = proof.generationFailed;
-  const storedTrustLevel = passportTrustLevelFromProof(proof.trustLevel);
-  const trustDisplay = credentialTrustDisplayFor({
-    type: 'passport',
-    trustLevel: storedTrustLevel,
-    metadataTags:
-      proof.trustLevel === 'blue'
-        ? ['passport-openac-v3', 'passport-openac-v3-no-aa']
-        : proof.trustLevel === 'green'
-          ? ['passport-openac-v3']
-          : ['fallback'],
-  });
-  const accent = levelColorForTone(trustDisplay.tone);
-  const title = failed
-    ? 'Fallback / Non-ZK proof'
-    : proof.proofType === 'mopro-noir-disclosure'
-      ? trustDisplay.level === 'L1'
-        ? 'ZK disclosure proof (synthetic MRZ)'
-        : 'ZK disclosure proof'
-      : trustDisplay.level === 'L3+'
-        ? 'Passport ZK + AA proof ready'
-        : trustDisplay.level === 'L3'
-          ? 'Passport ZK proof ready (no AA)'
-          : 'Fallback / Non-ZK proof';
-  const iconName = failed
-    ? 'exclamationmark.triangle'
-    : trustDisplay.level === 'L1'
-      ? 'checkmark.seal'
-      : 'checkmark.seal.fill';
-  return (
-    <View
-      className="mx-4 rounded-xl p-3"
-      style={{ backgroundColor: Colors.mutedSurface, gap: 4 }}
-    >
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-        <SfIcon name={iconName} size={14} color={accent} />
-        <Text style={{ color: accent, fontSize: 12, fontWeight: '600', flex: 1 }}>
-          {title}
-        </Text>
-        <Text
-          style={{
-            color: accent,
-            fontSize: 10,
-            fontFamily: textFont('700'),
-            paddingHorizontal: 6,
-            paddingVertical: 2,
-            backgroundColor: `${accent}26`,
-            borderRadius: 4,
-          }}
-        >
-          {trustDisplay.level}
-        </Text>
-      </View>
-      <Text className="text-text3" style={{ fontSize: 10, fontFamily: MONO }}>
-        {`Type: ${proof.proofType}`}
-      </Text>
-      {proof.disclosure ? <DisclosureRows disclosure={proof.disclosure} /> : null}
-    </View>
-  );
-}
-
-function levelColorForTone(tone: TrustDisplayTone): string {
-  switch (tone) {
-    case 'green':
-      return Colors.terminalGreen;
-    case 'blue':
-      return Colors.primaryBlue;
-    default:
-      return Colors.text3;
-  }
-}
-
-/**
- * v3 disclosure circuit's public outputs, rendered alongside the proof so
- * the user — and any downstream verifier UI — sees exactly which MRZ
- * attributes were committed. Hidden attributes show "— hidden" rather
- * than leaving the row empty, so the user can audit the policy that ran.
- */
-function DisclosureRows({ disclosure }: { disclosure: NonNullable<PassportProofResult['disclosure']> }) {
-  return (
-    <View style={{ gap: 2, paddingTop: 4 }}>
-      <DisclosureRow
-        label="Nationality"
-        value={disclosure.nationality ?? '— hidden'}
-        hidden={disclosure.nationality === null}
-      />
-      <DisclosureRow
-        label={`Age ≥ ${String(disclosure.ageThreshold)}`}
-        value={
-          disclosure.isOlder === null
-            ? '— hidden'
-            : disclosure.isOlder
-              ? 'verified'
-              : 'not met'
-        }
-        hidden={disclosure.isOlder === null}
-      />
-      <DisclosureRow
-        label="Name"
-        value={disclosure.name ?? '— hidden'}
-        hidden={disclosure.name === null}
-      />
-      <Text
-        className="text-text3"
-        style={{ fontSize: 10, fontFamily: MONO, paddingTop: 2 }}
-      >
-        {`MRZ hash: ${disclosure.mrzHashHex.slice(0, 16)}…`}
-      </Text>
-    </View>
-  );
-}
-
-function DisclosureRow({
-  label,
-  value,
-  hidden,
-}: {
-  label: string;
-  value: string;
-  hidden: boolean;
-}) {
-  return (
-    <View style={{ flexDirection: 'row', gap: 6 }}>
-      <Text
-        className="text-text3"
-        style={{ fontSize: 10, fontWeight: '600', width: 84 }}
-      >
-        {label}
-      </Text>
-      <Text
-        className={hidden ? 'text-text3' : 'text-text2'}
-        style={{ fontSize: 10, fontFamily: MONO, flex: 1 }}
-      >
-        {value}
-      </Text>
-    </View>
-  );
-}
-
 export function PersistStep({
-  proof,
+  chip,
   busy,
   developerMode,
   onSave,
 }: {
-  readonly proof: PassportProofResult | null;
+  readonly chip: PassportChipSnapshot | null;
   readonly busy: boolean;
   readonly developerMode: boolean;
   readonly onSave: () => void;
 }) {
   const { t } = useTranslation();
-  const fallback = proof?.generationFailed === true;
+  // Only a real chip whose SOD verified against the bundled CSCAs counts.
+  const fallback = chip !== null && (chip.isSimulated || !chip.passiveAuthValid);
   return (
-    <View className="bg-mutedSurface gap-3 rounded-xl p-3.5">
+    <View className="bg-mutedSurface gap-3 rounded-group p-3.5">
       <Text className="text-text2 text-center text-[15px]">
         {developerMode
           ? 'Credential is ready. Save it to your identity wallet.'
@@ -720,7 +435,7 @@ export function PersistStep({
               : t('passportSetup.persist.save')
         }
         fullWidth
-        disabled={proof === null || busy}
+        disabled={chip === null || busy}
         onPress={onSave}
       />
     </View>

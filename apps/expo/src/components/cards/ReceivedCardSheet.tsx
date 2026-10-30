@@ -34,6 +34,7 @@ import type {
   VerificationStatus,
 } from '@solidarity/shared';
 import { displayFont } from '@/constants/fonts';
+import { Radius } from '@/constants/radius';
 
 export interface ReceivedCardSheetProps {
   readonly visible: boolean;
@@ -176,7 +177,7 @@ function ReceivedCardContent({
                 position: 'absolute',
                 width: 100,
                 height: 100,
-                borderRadius: 50,
+                borderRadius: Radius.pill,
                 borderWidth: 4,
                 borderColor: Colors.accentRose,
               }}
@@ -258,7 +259,7 @@ function CardDetailBlock({
     <View
       style={{
         backgroundColor: Colors.cardSurface,
-        borderRadius: 16,
+        borderRadius: Radius.card,
         borderWidth: 1,
         borderColor: Colors.cardBorder,
         padding: 16,
@@ -357,7 +358,7 @@ function InitialAvatar({ name }: { readonly name: string }): ReactNode {
       style={{
         width: 56,
         height: 56,
-        borderRadius: 28,
+        borderRadius: Radius.pill,
         backgroundColor: Colors.searchBg,
         borderWidth: 1,
         borderColor: Colors.accentRose,

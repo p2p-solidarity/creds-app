@@ -2,12 +2,11 @@
   "name": "@solidarity/nitro-attest",
   "version": "0.1.0",
   "private": true,
-  "description": "Attestation-lifecycle Nitro module: MRZ OCR capture (Vision / ML Kit), ePassport NFC read (NFCPassportReader / jmrtd), Noir ZK prove + verify (mopro / barretenberg), and Semaphore group proofs. Merged from nitro-mrz-ocr + nitro-nfc-passport + nitro-passport-zk + nitro-semaphore.",
+  "description": "Attestation-lifecycle Nitro module: MRZ OCR capture (Vision / ML Kit), ePassport NFC read with passive authentication (NFCPassportReader / jmrtd), Semaphore group proofs, and App Attest / Key Attestation device keys.",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
     "nitrogen": "nitrogen",
-    "build:zk:android": "bash scripts/build-android.sh",
     "build:semaphore:ios": "bash semaphore/rust/build-ios.sh",
     "build:semaphore:android": "bash semaphore/rust/build-android.sh",
     "lint": "eslint .",

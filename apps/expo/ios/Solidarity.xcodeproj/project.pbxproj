@@ -172,7 +172,6 @@
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
-				32DC4DD331C9445691EF2C6E /* Stage Passport OpenAC SRS */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
 				AD40EEC336600B979492D096 /* [CP] Embed Pods Frameworks */,
 			);
@@ -276,23 +275,6 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		32DC4DD331C9445691EF2C6E /* Stage Passport OpenAC SRS */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"${SRCROOT}/../scripts/stage-openac-srs.sh",
-			);
-			name = "Stage Passport OpenAC SRS";
-			outputPaths = (
-				"${PODS_ROOT}/../../../../nitro-modules/attest/android/src/main/assets/passport.srs.bin",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/bash;
-			shellScript = "set -euo pipefail\nAPP_DIR=\"${SRCROOT}/..\"\nAIRMEISHI_EXPO_APP_DIR=\"$APP_DIR\" \"$APP_DIR/scripts/stage-openac-srs.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
 		800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -301,12 +283,7 @@
 			inputPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Solidarity/Pods-Solidarity-resources.sh",
 				"${PODS_CONFIGURATION_BUILD_DIR}/AppAuth/AppAuthCore_Privacy.bundle",
-				"${PODS_ROOT}/../../../../nitro-modules/attest/android/src/main/assets/dsc_chain.json",
-				"${PODS_ROOT}/../../../../nitro-modules/attest/android/src/main/assets/passport_adapter.json",
-				"${PODS_ROOT}/../../../../nitro-modules/attest/android/src/main/assets/openac_show.json",
-				"${PODS_ROOT}/../../../../nitro-modules/attest/android/src/main/assets/passport.srs.bin",
 				"${PODS_ROOT}/../../../../nitro-modules/attest/android/src/main/assets/masterList.pem",
-				"${PODS_ROOT}/../../../../nitro-modules/attest/android/src/main/assets/passportRevocationSnapshot.v3.json",
 				"${PODS_CONFIGURATION_BUILD_DIR}/EXApplication/ExpoApplication_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/EXConstants/EXConstants.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/EXConstants/ExpoConstants_privacy.bundle",
@@ -329,12 +306,7 @@
 			name = "[CP] Copy Pods Resources";
 			outputPaths = (
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/AppAuthCore_Privacy.bundle",
-				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/dsc_chain.json",
-				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/passport_adapter.json",
-				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/openac_show.json",
-				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/passport.srs.bin",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/masterList.pem",
-				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/passportRevocationSnapshot.v3.json",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ExpoApplication_privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/EXConstants.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ExpoConstants_privacy.bundle",

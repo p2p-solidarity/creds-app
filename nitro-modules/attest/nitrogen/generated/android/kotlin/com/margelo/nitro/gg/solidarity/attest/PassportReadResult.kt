@@ -29,13 +29,7 @@ data class PassportReadResult(
   val chipUid: String?,
   @DoNotStrip
   @Keep
-  val passiveAuthValid: Boolean,
-  @DoNotStrip
-  @Keep
-  val openAcV3WitnessBundleJson: String?,
-  @DoNotStrip
-  @Keep
-  val activeAuthJson: String?
+  val passiveAuthValid: Boolean
 ) {
   /* primary constructor */
 
@@ -46,8 +40,6 @@ data class PassportReadResult(
       && Objects.deepEquals(this.dataGroups, other.dataGroups)
       && Objects.deepEquals(this.chipUid, other.chipUid)
       && Objects.deepEquals(this.passiveAuthValid, other.passiveAuthValid)
-      && Objects.deepEquals(this.openAcV3WitnessBundleJson, other.openAcV3WitnessBundleJson)
-      && Objects.deepEquals(this.activeAuthJson, other.activeAuthJson)
   }
 
   override fun hashCode(): Int {
@@ -55,9 +47,7 @@ data class PassportReadResult(
       mrz,
       dataGroups,
       chipUid,
-      passiveAuthValid,
-      openAcV3WitnessBundleJson,
-      activeAuthJson
+      passiveAuthValid
     ).contentDeepHashCode()
   }
 
@@ -69,8 +59,8 @@ data class PassportReadResult(
     @Keep
     @Suppress("unused")
     @JvmStatic
-    private fun fromCpp(mrz: ParsedMrz, dataGroups: DataGroupsBundle, chipUid: String?, passiveAuthValid: Boolean, openAcV3WitnessBundleJson: String?, activeAuthJson: String?): PassportReadResult {
-      return PassportReadResult(mrz, dataGroups, chipUid, passiveAuthValid, openAcV3WitnessBundleJson, activeAuthJson)
+    private fun fromCpp(mrz: ParsedMrz, dataGroups: DataGroupsBundle, chipUid: String?, passiveAuthValid: Boolean): PassportReadResult {
+      return PassportReadResult(mrz, dataGroups, chipUid, passiveAuthValid)
     }
   }
 }

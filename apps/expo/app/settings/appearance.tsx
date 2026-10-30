@@ -103,7 +103,7 @@ export default function AppearanceSettings() {
             <SettingsBlockSectionHeader title={t('appearance.colorMode.header')} />
             <View className="px-4">
               <View
-                className="bg-mutedSurface rounded-xl flex-row"
+                className="bg-mutedSurface rounded-group flex-row"
                 style={{ padding: 4 }}
               >
                 {COLOR_MODE_VALUES.map((value) => {
@@ -118,7 +118,7 @@ export default function AppearanceSettings() {
                       accessibilityRole="button"
                       accessibilityState={{ selected: active }}
                       accessibilityLabel={label}
-                      className="items-center justify-center rounded-lg"
+                      className="items-center justify-center rounded-button"
                       style={{
                         minHeight: 36,
                         paddingVertical: 8,
@@ -146,7 +146,7 @@ export default function AppearanceSettings() {
             <SettingsBlockSectionHeader title={t('appearance.cardAccent')} />
             <View className="px-4">
               <View
-                className="bg-mutedSurface rounded-xl flex-row flex-wrap"
+                className="bg-mutedSurface rounded-group flex-row flex-wrap"
                 style={{ padding: 14, gap: 12 }}
               >
                 {CARD_ACCENT_PRESETS.map((hex) => {
@@ -161,7 +161,7 @@ export default function AppearanceSettings() {
                       accessibilityState={{ selected: isSelected }}
                       accessibilityLabel={t('appearance.accentLabel', { hex })}
                       hitSlop={4}
-                      className="items-center justify-center rounded-full"
+                      className="items-center justify-center rounded-pill"
                       style={{
                         width: 36,
                         height: 36,

@@ -17,7 +17,6 @@ import { createRequire } from 'node:module';
 const appDir = resolve(import.meta.dir, '../..');
 const repoRoot = resolve(appDir, '../..');
 const prepareScript = join(appDir, 'scripts', 'prepare-ios-workspace.sh');
-const stageOpenAcSrsScript = join(appDir, 'scripts', 'stage-openac-srs.sh');
 const normalizeSchemeScript = join(appDir, 'scripts', 'normalize-ios-scheme.sh');
 const cloudPostCloneScript = join(appDir, 'ci-scripts', 'ci_post_clone.sh');
 const precompiledResizerPluginPath = join(
@@ -36,7 +35,6 @@ const appConfig = JSON.parse(readFileSync(join(appDir, 'app.json'), 'utf8')) as 
   readonly expo: { readonly plugins: readonly (string | readonly unknown[])[] };
 };
 const prepareScriptSource = readFileSync(prepareScript, 'utf8');
-const stageOpenAcSrsScriptSource = readFileSync(stageOpenAcSrsScript, 'utf8');
 const normalizeSchemeScriptSource = readFileSync(normalizeSchemeScript, 'utf8');
 const require = createRequire(import.meta.url);
 const disableClangExplicitModulesPlugin = require(
@@ -143,17 +141,10 @@ if [[ -z "$zip" || -z "$dest" ]]; then
   echo "unzip stub expected ZIP and -d DEST" >&2
   exit 2
 fi
-if [[ "$zip" == *passport* ]]; then
-  root="$dest/MoproBindings.xcframework"
-  module="passport_zk_mopro"
-  lib="libpassport_zk_mopro.a"
-  header="passport_zk_moproFFI.h"
-else
-  root="$dest/SemaphoreSwift-fixture/Sources/MoproiOSBindings/MoproBindings.xcframework"
-  module="semaphore_bindings"
-  lib="libsemaphore_bindings.a"
-  header="semaphore_bindingsFFI.h"
-fi
+root="$dest/SemaphoreSwift-fixture/Sources/MoproiOSBindings/MoproBindings.xcframework"
+module="semaphore_bindings"
+lib="libsemaphore_bindings.a"
+header="semaphore_bindingsFFI.h"
 for slice in ios-arm64 ios-arm64-simulator; do
   mkdir -p "$root/$slice/Headers/$module"
   printf 'fake lib' > "$root/$slice/$lib"
@@ -184,7 +175,6 @@ function writeGeneratedScheme(appDir: string): string {
 describe('iOS build environment scripts', () => {
   test('test fixture paths resolve to the Expo app', () => {
     expect(existsSync(prepareScript), prepareScript).toBe(true);
-    expect(existsSync(stageOpenAcSrsScript), stageOpenAcSrsScript).toBe(true);
     expect(existsSync(cloudPostCloneScript), cloudPostCloneScript).toBe(true);
   });
 
@@ -237,102 +227,6 @@ end
       expect(combined).toContain('# [withIosDeploymentTarget] BEGIN');
       expect(combined).toContain('# [withDisableClangExplicitModules] BEGIN');
     }
-  });
-
-  test('iOS project bundles the single merged OpenAC SRS resource', () => {
-    expect(xcodeProject).toContain(
-      'nitro-modules/attest/android/src/main/assets/passport.srs.bin'
-    );
-    expect(xcodeProject).toContain(
-      '${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/passport.srs.bin'
-    );
-    expect(xcodeProject.indexOf('Stage Passport OpenAC SRS')).toBeGreaterThan(-1);
-    expect(xcodeProject.indexOf('Stage Passport OpenAC SRS')).toBeLessThan(
-      xcodeProject.indexOf('[CP] Copy Pods Resources')
-    );
-    expect(xcodeProject).toContain('scripts/stage-openac-srs.sh');
-    expect(xcodeProject).not.toContain('dsc_chain.srs.bin');
-    expect(xcodeProject).not.toContain('passport_adapter.srs.bin');
-    expect(xcodeProject).not.toContain('openac_show.srs.bin');
-  });
-
-  test('prepare script stages OpenAC SRS locally, with a SHA-pinned release fallback', () => {
-    expect(prepareScriptSource).toContain('stage-openac-srs.sh');
-    // The retired per-circuit SRS zip must not come back.
-    expect(prepareScriptSource).not.toContain('PASSPORT_OPENAC_SRS_ZIP_URL');
-    expect(prepareScriptSource).not.toContain('PassportOpenAcV3Srs.zip');
-    // Fresh checkouts (Xcode Cloud) download the merged SRS attached to the
-    // passport-noir release — pinned by SHA-256 so the proving key cannot
-    // drift silently.
-    expect(prepareScriptSource).toContain(
-      'releases/download/${PASSPORT_MOPRO_VERSION}/passport.srs.bin'
-    );
-    expect(prepareScriptSource).toMatch(
-      /PASSPORT_OPENAC_SRS_SHA256="\$\{AIRMEISHI_PASSPORT_OPENAC_SRS_SHA256-[0-9a-f]{64}\}"/
-    );
-    // The staging helper doubles as an Xcode build phase and must stay
-    // offline — downloads live in prepare-ios-workspace.sh only.
-    expect(stageOpenAcSrsScriptSource).not.toContain('curl');
-    expect(stageOpenAcSrsScriptSource).toContain(
-      'intentionally does not download anything'
-    );
-  });
-
-  test('OpenAC SRS staging promotes the largest legacy SRS when merged SRS is absent', () => {
-    const fixtureRoot = makeTempDir();
-    const fixtureApp = join(fixtureRoot, 'apps', 'expo');
-    const stdoutPath = join(fixtureRoot, 'stdout.log');
-    const stderrPath = join(fixtureRoot, 'stderr.log');
-    const passportNoirDir = join(fixtureRoot, 'passport-noir');
-    const localSrsDir = join(passportNoirDir, 'mopro-binding', 'test-vectors', 'srs');
-    const assetsDir = join(
-      fixtureRoot,
-      'nitro-modules',
-      'attest',
-      'android',
-      'src',
-      'main',
-      'assets'
-    );
-    mkdirSync(join(fixtureApp, 'ios'), { recursive: true });
-    mkdirSync(localSrsDir, { recursive: true });
-    mkdirSync(assetsDir, { recursive: true });
-    writeFileSync(join(localSrsDir, 'dsc_chain.srs.bin'), 'small');
-    writeFileSync(join(localSrsDir, 'passport_adapter.srs.bin'), 'largest local srs');
-    writeFileSync(join(localSrsDir, 'openac_show.srs.bin'), 'medium srs');
-    writeFileSync(join(assetsDir, 'passport_adapter.srs.bin'), 'stale');
-
-    const result = Bun.spawnSync({
-      cmd: [
-        '/bin/bash',
-        '-c',
-        '/bin/bash "$1" >"$2" 2>"$3"',
-        'runner',
-        stageOpenAcSrsScript,
-        stdoutPath,
-        stderrPath,
-      ],
-      env: {
-        ...process.env,
-        AIRMEISHI_EXPO_APP_DIR: fixtureApp,
-        AIRMEISHI_PASSPORT_NOIR_DIR: passportNoirDir,
-        AIRMEISHI_REPO_ROOT: fixtureRoot,
-      },
-      stdout: 'pipe',
-      stderr: 'pipe',
-    });
-
-    expect(
-      result.exitCode,
-      JSON.stringify({
-        stderr: readOptional(stderrPath),
-        stdout: readOptional(stdoutPath),
-      })
-    ).toBe(0);
-    expect(readFileSync(join(assetsDir, 'passport.srs.bin'), 'utf8')).toBe(
-      'largest local srs'
-    );
-    expect(existsSync(join(assetsDir, 'passport_adapter.srs.bin'))).toBe(false);
   });
 
   test('shared prepare script runs workspace install, clean prebuild, and pod install', () => {
@@ -731,9 +625,6 @@ rm -rf "$work"
     writeFileSync(join(fixtureScriptsDir, 'prepare-ios-workspace.sh'), prepareScriptSource, {
       mode: 0o755,
     });
-    writeFileSync(join(fixtureScriptsDir, 'stage-openac-srs.sh'), stageOpenAcSrsScriptSource, {
-      mode: 0o755,
-    });
     writeFileSync(join(fixtureScriptsDir, 'normalize-ios-scheme.sh'), normalizeSchemeScriptSource, {
       mode: 0o755,
     });
@@ -919,28 +810,7 @@ rm -rf "$work"
     const logPath = join(fixtureRoot, 'commands.log');
     const stdoutPath = join(fixtureRoot, 'stdout.log');
     const stderrPath = join(fixtureRoot, 'stderr.log');
-    const passportNoirDir = join(fixtureRoot, 'passport-noir');
-    const localSrsDir = join(passportNoirDir, 'mopro-binding', 'test-vectors', 'srs');
-    const passportAssetsDir = join(
-      fixtureRoot,
-      'nitro-modules',
-      'attest',
-      'android',
-      'src',
-      'main',
-      'assets'
-    );
     mkdirSync(join(fixtureApp, 'ios'), { recursive: true });
-    mkdirSync(localSrsDir, { recursive: true });
-    writeFileSync(join(localSrsDir, 'passport.srs.bin'), 'new merged local srs');
-    mkdirSync(passportAssetsDir, { recursive: true });
-    for (const staleSrs of [
-      'dsc_chain.srs.bin',
-      'passport_adapter.srs.bin',
-      'openac_show.srs.bin',
-    ]) {
-      writeFileSync(join(passportAssetsDir, staleSrs), 'stale srs');
-    }
     createFakeToolchain(fakeBin, logPath);
     writeNativeBindingDownloadStubs(fakeBin, logPath);
 
@@ -959,9 +829,6 @@ rm -rf "$work"
         AIRMEISHI_BUN_INSTALL_ARGS: '--frozen-lockfile',
         AIRMEISHI_EXPO_APP_DIR: fixtureApp,
         AIRMEISHI_INSTALL_TOOLING: '0',
-        AIRMEISHI_PASSPORT_MOPRO_SHA256: '',
-        AIRMEISHI_PASSPORT_MOPRO_ZIP_URL: 'https://example.invalid/passport.zip',
-        AIRMEISHI_PASSPORT_NOIR_DIR: passportNoirDir,
         AIRMEISHI_REPO_ROOT: fixtureRoot,
         AIRMEISHI_SEMAPHORE_SWIFT_ZIP_URL: 'https://example.invalid/semaphore.zip',
         // The curl stub cannot serve the pinned prover; an empty pin builds without it.
@@ -980,18 +847,6 @@ rm -rf "$work"
         stdout: readOptional(stdoutPath),
       })
     ).toBe(0);
-    expect(
-      existsSync(
-        join(
-          passportNoirDir,
-          'mopro-binding',
-          'MoproiOSBindings',
-          'MoproBindings.xcframework',
-          'ios-arm64',
-          'libpassport_zk_mopro.a'
-        )
-      )
-    ).toBe(true);
     expect(
       existsSync(
         join(
@@ -1006,22 +861,11 @@ rm -rf "$work"
         )
       )
     ).toBe(true);
-    expect(
-      existsSync(join(passportAssetsDir, 'passport.srs.bin'))
-    ).toBe(true);
-    for (const staleSrs of [
-      'dsc_chain.srs.bin',
-      'passport_adapter.srs.bin',
-      'openac_show.srs.bin',
-    ]) {
-      expect(existsSync(join(passportAssetsDir, staleSrs))).toBe(false);
-    }
 
     const commands = readCommandLog(logPath);
     const downloads = commands.filter((line) => line.startsWith('curl\t'));
-    expect(downloads).toHaveLength(2);
-    expect(downloads.join('\n')).not.toContain('PassportOpenAcV3Srs.zip');
-    expect(downloads.join('\n')).not.toContain('openac');
+    expect(downloads).toHaveLength(1);
+    expect(downloads.join('\n')).not.toContain('passport');
     const firstDownload = commands.findIndex((line) => line.startsWith('curl\t'));
     const podInstall = commands.findIndex((line) =>
       line === `pod\t${join(fixtureApp, 'ios')}\tinstall`
@@ -1030,84 +874,4 @@ rm -rf "$work"
     expect(podInstall).toBeGreaterThan(firstDownload);
   });
 
-  test('prepare script downloads the pinned merged SRS when local artifacts are absent', () => {
-    const fixtureRoot = makeTempDir();
-    const fixtureApp = join(fixtureRoot, 'apps', 'expo');
-    const fakeBin = join(fixtureRoot, 'bin');
-    const logPath = join(fixtureRoot, 'commands.log');
-    const stdoutPath = join(fixtureRoot, 'stdout.log');
-    const stderrPath = join(fixtureRoot, 'stderr.log');
-    const passportNoirDir = join(fixtureRoot, 'passport-noir');
-    const passportAssetsDir = join(
-      fixtureRoot,
-      'nitro-modules',
-      'attest',
-      'android',
-      'src',
-      'main',
-      'assets'
-    );
-    mkdirSync(join(fixtureApp, 'ios'), { recursive: true });
-    createFakeToolchain(fakeBin, logPath);
-    writeNativeBindingDownloadStubs(fakeBin, logPath);
-
-    const result = Bun.spawnSync({
-      cmd: [
-        '/bin/bash',
-        '-c',
-        '/bin/bash "$1" >"$2" 2>"$3"',
-        'runner',
-        prepareScript,
-        stdoutPath,
-        stderrPath,
-      ],
-      env: {
-        ...process.env,
-        AIRMEISHI_BUN_INSTALL_ARGS: '--frozen-lockfile',
-        AIRMEISHI_EXPO_APP_DIR: fixtureApp,
-        AIRMEISHI_INSTALL_TOOLING: '0',
-        AIRMEISHI_PASSPORT_MOPRO_SHA256: '',
-        AIRMEISHI_PASSPORT_MOPRO_ZIP_URL: 'https://example.invalid/passport.zip',
-        AIRMEISHI_PASSPORT_NOIR_DIR: passportNoirDir,
-        AIRMEISHI_PASSPORT_OPENAC_SRS_SHA256: '',
-        AIRMEISHI_REPO_ROOT: fixtureRoot,
-        AIRMEISHI_SEMAPHORE_SWIFT_ZIP_URL: 'https://example.invalid/semaphore.zip',
-        // The curl stub cannot serve the pinned prover; an empty pin builds without it.
-        AIRMEISHI_ZKTLS_SHA256: '',
-        COMMAND_LOG: logPath,
-        PATH: `${fakeBin}:${process.env['PATH'] ?? ''}`,
-      },
-      stdout: 'ignore',
-      stderr: 'ignore',
-    });
-
-    expect(
-      result.exitCode,
-      JSON.stringify({
-        stderr: readOptional(stderrPath),
-        stdout: readOptional(stdoutPath),
-      })
-    ).toBe(0);
-    // Downloaded into the canonical local artifact path, then staged into the
-    // pod assets dir by stage-openac-srs.sh exactly like a local build.
-    expect(
-      readFileSync(
-        join(passportNoirDir, 'mopro-binding', 'test-vectors', 'srs', 'passport.srs.bin'),
-        'utf8'
-      )
-    ).toBe('fake zip');
-    expect(readFileSync(join(passportAssetsDir, 'passport.srs.bin'), 'utf8')).toBe(
-      'fake zip'
-    );
-    const downloads = readCommandLog(logPath).filter((line) =>
-      line.startsWith('curl\t')
-    );
-    expect(downloads).toHaveLength(3);
-    expect(
-      downloads.some(
-        (line) =>
-          line.includes('releases/download/') && line.includes('passport.srs.bin')
-      )
-    ).toBe(true);
-  });
 });

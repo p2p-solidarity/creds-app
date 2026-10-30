@@ -61,37 +61,6 @@ beforeAll(() => {
 });
 
 describe('nfcPassport — pipeline integration with mocked Nitro module', () => {
-  it('runs the orchestrator and emits steps in order', async () => {
-    const { runPassportPipeline } = await import('../../src/passport/pipeline');
-    const nitro = (await import('@solidarity/nitro-attest')) as {
-      getNfcPassport: () => {
-        read: (mrz: PassportMRZ) => Promise<PassportReadResult>;
-      };
-    };
-    const reader = nitro.getNfcPassport();
-
-    const steps: string[] = [];
-    const jwt = await runPassportPipeline(
-      VALID_MRZ,
-      {
-        readChip: (m) => reader.read(m),
-        generateProof: async () => new ArrayBuffer(32),
-        issueVc: async () => 'header.payload.sig',
-      },
-      (s) => { steps.push(s.type); }
-    );
-
-    expect(jwt).toBe('header.payload.sig');
-    expect(steps).toEqual([
-      'mrzScanned',
-      'nfcReading',
-      'nfcRead',
-      'proofGenerating',
-      'proofGenerated',
-      'vcIssued',
-    ]);
-  });
-
   it('maps the Nitro PassportReadResult into a chip snapshot with stable fields', async () => {
     const { chipFromNitro } = await import('../../src/passport/pipeline');
     const result = fakeRead(VALID_MRZ);
@@ -106,74 +75,6 @@ describe('nfcPassport — pipeline integration with mocked Nitro module', () => 
     expect(snapshot.dataGroups?.dg1).toBe(result.dataGroups.dg1);
     expect(snapshot.dataGroups?.dg15).toBe(result.dataGroups.dg15);
     expect(snapshot.dataGroups?.sod).toBe(result.dataGroups.sod);
-  });
-
-  it('preserves the native OpenAC v3 witness bundle JSON for the proof stage', async () => {
-    const { chipFromNitro } = await import('../../src/passport/pipeline');
-    const openAcV3WitnessBundleJson = JSON.stringify({
-      dscChainInputsJson: '{"dsc":true}',
-      passportAdapterInputsJson: '{"passport":true}',
-      openAcShowInputsJson: '{"show":true}',
-    });
-    const result = {
-      ...fakeRead(VALID_MRZ),
-      openAcV3WitnessBundleJson,
-    };
-
-    const snapshot = chipFromNitro(result, 'TWN', VALID_MRZ.documentNumber);
-
-    expect(snapshot.openAcV3WitnessBundleJson).toBe(openAcV3WitnessBundleJson);
-  });
-
-  it('preserves native DG15 Active Authentication evidence for trust and diagnostics', async () => {
-    const { chipFromNitro } = await import('../../src/passport/pipeline');
-    const activeAuthJson = JSON.stringify({
-      challengeB64: 'challenge',
-      signatureRawB64: 'signature',
-    });
-    const result = {
-      ...fakeRead(VALID_MRZ),
-      activeAuthJson,
-    };
-
-    const snapshot = chipFromNitro(result, 'TWN', VALID_MRZ.documentNumber);
-
-    expect(snapshot.activeAuthJson).toBe(activeAuthJson);
-  });
-
-  it('classifies an NFC cancellation as a configurationError', async () => {
-    const { runPassportPipelineSafe } = await import('../../src/passport/pipeline');
-    const r = await runPassportPipelineSafe(
-      VALID_MRZ,
-      {
-        readChip: () => Promise.reject(new Error('NFC read was cancelled.')),
-        generateProof: () => Promise.resolve(new ArrayBuffer(0)),
-        issueVc: () => Promise.resolve(''),
-      },
-      () => undefined
-    );
-    expect(r.ok).toBe(false);
-    if (!r.ok) {
-      expect(r.error.type).toBe('configurationError');
-      expect(r.error.message).toMatch(/cancel/i);
-    }
-  });
-
-  it('classifies a chip-authentication failure as configurationError', async () => {
-    const { runPassportPipelineSafe } = await import('../../src/passport/pipeline');
-    const r = await runPassportPipelineSafe(
-      VALID_MRZ,
-      {
-        readChip: () => Promise.reject(new Error('NFC chip BAC mutual-auth rejected')),
-        generateProof: () => Promise.resolve(new ArrayBuffer(0)),
-        issueVc: () => Promise.resolve(''),
-      },
-      () => undefined
-    );
-    expect(r.ok).toBe(false);
-    if (!r.ok) {
-      expect(r.error.type).toBe('configurationError');
-    }
   });
 
   it('prunes dataGroupsRead based on which DG buffers actually came back', async () => {

@@ -75,6 +75,9 @@ import { hydrateProfile } from '@/profile/store';
 import { pushToast } from '@/feedback/toast';
 import { translate } from '@/i18n';
 import { renewDueProofs } from '@/zktls/flow';
+import { renewPassportStatement } from '@/passport/npubBinding';
+import { dropRetiredPassportZkData } from '@/passport/retiredZkData';
+import { DEFAULT_RELAYS } from '@/nostr/publish';
 import { hydrateZktlsProofs } from '@/zktls/store';
 import { hydratePreferences, usePreferences } from '@/settings/preferences';
 import { initMmkv, ManifestStorage } from '@/storage';
@@ -323,10 +326,12 @@ export default function RootLayout() {
   // on foreground (npub-signed, no Face ID); a failed renewal is told once.
   useEffect(() => {
     if (!ready || !hasCompletedOnboarding) return;
+    dropRetiredPassportZkData();
     const renew = () => {
       void renewDueProofs().then((failed) => {
         if (failed.length > 0) pushToast(translate('zktls.renewFailed'), 'error');
       });
+      void renewPassportStatement(DEFAULT_RELAYS);
     };
     renew();
     const sub = AppState.addEventListener('change', (state) => {

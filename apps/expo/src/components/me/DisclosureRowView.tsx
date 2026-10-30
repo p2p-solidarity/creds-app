@@ -56,7 +56,7 @@ function ActionButton({ action }: { action: DisclosureRowAction }) {
       disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={action.accessibilityLabel ?? action.title}
-      className="rounded-sm2"
+      className="rounded-button"
       style={{
         minWidth: 56,
         minHeight: 28,
@@ -89,7 +89,7 @@ export function DisclosureRowView({
   work,
 }: DisclosureRowViewProps) {
   return (
-    <View className="mx-4 flex-row items-center gap-2 rounded-lg bg-mutedSurface px-3 py-4">
+    <View className="mx-4 flex-row items-center gap-2 rounded-group bg-mutedSurface px-3 py-4">
       <View
         style={{ width: 18, height: 18, alignItems: 'center', justifyContent: 'center' }}
       >

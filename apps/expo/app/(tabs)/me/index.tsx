@@ -66,9 +66,6 @@ export default function MeTab() {
           onEditAvatar={() => {
             router.push({ pathname: '/me/edit', params: { avatar: '1' } });
           }}
-          onAddLink={() => {
-            router.push({ pathname: '/me/edit', params: { add: '1' } });
-          }}
           onImportLinks={() => {
             router.push({ pathname: '/me/edit', params: { importLinks: '1' } });
           }}

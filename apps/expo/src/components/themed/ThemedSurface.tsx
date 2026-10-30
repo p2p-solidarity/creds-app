@@ -9,19 +9,20 @@
 import type { ReactNode } from 'react';
 import { View, type ViewProps } from 'react-native';
 
+import { shadow } from '@/constants/radius';
+
 export type SurfaceVariant = 'card' | 'elevated' | 'outlined' | 'inset';
 
-// Radii by role, the same table as creds.id (`--radius-*`): a bordered
-// content card and a muted group are 12, a sheet is 16.
+// Radii by role (src/constants/radius.ts, = creds.id `--radius-*`).
 const VARIANT_CLASS: Readonly<Record<SurfaceVariant, string>> = {
   // Solid card on pageBg
-  card: 'bg-cardBg rounded-xl border border-divider',
-  // Sheet / modal — slightly raised
-  elevated: 'bg-cardBg rounded-2xl shadow-lg shadow-black/10',
+  card: 'bg-cardBg rounded-card border border-divider',
+  // Lifted card — creds.id `--shadow-lift` (style below)
+  elevated: 'bg-cardBg rounded-card',
   // Bordered group on pageBg
-  outlined: 'bg-transparent rounded-xl border border-divider',
+  outlined: 'bg-transparent rounded-card border border-divider',
   // Subtle inset like search backgrounds
-  inset: 'bg-searchBg rounded-xl',
+  inset: 'bg-searchBg rounded-group',
 };
 
 export interface ThemedSurfaceProps extends ViewProps {
@@ -35,6 +36,7 @@ export function ThemedSurface({
   variant = 'card',
   padded = false,
   className,
+  style,
   children,
   ...rest
 }: ThemedSurfaceProps): ReactNode {
@@ -43,7 +45,7 @@ export function ThemedSurface({
     .join(' ')
     .trim();
   return (
-    <View className={tw} {...rest}>
+    <View className={tw} style={variant === 'elevated' ? [shadow('lift'), style] : style} {...rest}>
       {children}
     </View>
   );

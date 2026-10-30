@@ -12,7 +12,6 @@
 
 #include "HybridMrzOcrSpecSwift.hpp"
 #include "HybridNfcPassportSpecSwift.hpp"
-#include "HybridPassportZkSpecSwift.hpp"
 #include "HybridSemaphoreSpecSwift.hpp"
 #include "HybridDeviceAttestSpecSwift.hpp"
 
@@ -36,13 +35,6 @@
     "NfcPassport",
     []() -> std::shared_ptr<HybridObject> {
       std::shared_ptr<HybridNfcPassportSpec> hybridObject = Attest::AttestAutolinking::createNfcPassport();
-      return hybridObject;
-    }
-  );
-  HybridObjectRegistry::registerHybridObjectConstructor(
-    "PassportZk",
-    []() -> std::shared_ptr<HybridObject> {
-      std::shared_ptr<HybridPassportZkSpec> hybridObject = Attest::AttestAutolinking::createPassportZk();
       return hybridObject;
     }
   );

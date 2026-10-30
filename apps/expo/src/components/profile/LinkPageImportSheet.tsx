@@ -39,6 +39,7 @@ import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedButton, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/radius';
 import { useTranslation } from '@/i18n';
 import {
   fetchLinkPage,
@@ -182,7 +183,7 @@ function LinkPageImportSheetContent({
         ) : null}
 
         {phase.step === 'error' ? (
-          <View className="gap-3 rounded-xl border border-divider p-4">
+          <View className="gap-3 rounded-card border border-divider p-4">
             <View className="flex-row items-center" style={{ gap: 8 }}>
               <SfIcon name="xmark.seal.fill" size={18} color={Colors.destructive} />
               <ThemedText variant="titleMedium" style={{ color: Colors.destructive }}>
@@ -265,13 +266,13 @@ function ChecklistRow({
         accessibilityRole="checkbox"
         accessibilityState={{ checked }}
         accessibilityLabel={linkDisplay(link.label, link.url).text}
-        className="flex-row items-center gap-3 rounded-lg border border-divider p-3"
+        className="flex-row items-center gap-3 rounded-card border border-divider p-3"
       >
         <View
           style={{
             width: 20,
             height: 20,
-            borderRadius: 4,
+            borderRadius: Radius.xs,
             borderWidth: 1.5,
             borderColor: checked ? Colors.accentRose : Colors.text3,
             backgroundColor: checked ? Colors.accentRose : 'transparent',
@@ -292,7 +293,7 @@ function ChecklistRow({
             </ThemedText>
           ) : null}
         </View>
-        <View className="rounded-full border border-divider px-2 py-0.5" style={{ borderStyle: 'dashed' }}>
+        <View className="rounded-pill border border-divider px-2 py-0.5" style={{ borderStyle: 'dashed' }}>
           <ThemedText variant="caption" tone="tertiary">
             {t('linkPageImport.claimedChip')}
           </ThemedText>

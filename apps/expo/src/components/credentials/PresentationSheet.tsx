@@ -1,11 +1,11 @@
 import { useMemo, type ReactNode } from 'react';
-import { Modal, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { PresentationQRPage } from '@/me/presentationQrPages';
+import { ModalSheet } from '@/components/common/ModalSheet';
 import { PressableScale } from '@/components/common/PressableScale';
-import { PassportShowPresentation } from '@/components/credentials/PassportShowPresentation';
 import { PresentationProofQr } from '@/components/credentials/PresentationProofQr';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedText } from '@/components/themed/ThemedText';
@@ -17,19 +17,12 @@ import {
   selectPresentationClaims,
   type PresentationCredential,
 } from '@/credentials/presentationProof';
-import { selectPassportShowPresentationClaims } from '@/passport/presentationClaims';
 
 export interface PresentationSheetProps {
   readonly visible: boolean;
   readonly credential: PresentationCredential & { readonly title: string };
   readonly selectedClaimIds: ReadonlySet<string>;
   readonly onDismiss: () => void;
-  /**
-   * OpenAC-v3 passports with a vaulted show witness present a FRESH
-   * `openac_show` proof (small animated QR) instead of replaying the
-   * enrollment envelope. Decided by the caller (metadata tag + vault check).
-   */
-  readonly passportShowEligible?: boolean;
   /** Product flows keep proof mechanics usable without exposing claim diagnostics. */
   readonly productMode?: boolean;
 }
@@ -39,24 +32,17 @@ export function PresentationSheet({
   credential,
   selectedClaimIds,
   onDismiss,
-  passportShowEligible = false,
   productMode = false,
 }: PresentationSheetProps): ReactNode {
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onDismiss}
-    >
+    <ModalSheet visible={visible} onRequestClose={onDismiss}>
       <PresentationBody
         credential={credential}
         selectedClaimIds={selectedClaimIds}
         onDismiss={onDismiss}
-        passportShowEligible={passportShowEligible}
         productMode={productMode}
       />
-    </Modal>
+    </ModalSheet>
   );
 }
 
@@ -64,13 +50,11 @@ function PresentationBody({
   credential,
   selectedClaimIds,
   onDismiss,
-  passportShowEligible,
   productMode,
 }: {
   readonly credential: PresentationCredential & { readonly title: string };
   readonly selectedClaimIds: ReadonlySet<string>;
   readonly onDismiss: () => void;
-  readonly passportShowEligible: boolean;
   readonly productMode: boolean;
 }): ReactNode {
   const insets = useSafeAreaInsets();
@@ -83,24 +67,17 @@ function PresentationBody({
   );
 
   const selectedClaims: readonly ProvableClaimEntity[] = useMemo(
-    () =>
-      passportShowEligible
-        ? selectPassportShowPresentationClaims(allClaims, selectedClaimIds)
-        : selectPresentationClaims(allClaims, selectedClaimIds),
-    [allClaims, selectedClaimIds, passportShowEligible],
+    () => selectPresentationClaims(allClaims, selectedClaimIds),
+    [allClaims, selectedClaimIds],
   );
 
   const proof = useMemo<
     { readonly pages: readonly PresentationQRPage[]; readonly error?: string }
   >(() => {
-    if (passportShowEligible) return { pages: [] };
-    // An OpenAC-v3 credential that got here is NOT show-eligible, i.e. this
-    // device has no witness. `buildPresentationProofJson` already refuses it
-    // (its envelope proves none of the selected claims); repeating the check
-    // here — ahead of the empty-selection return — only so the sheet can give
-    // the specific reason instead of a generic "no claims" placeholder.
-    if (credential.metadataTags.includes('passport-openac-v3')) {
-      return { pages: [], error: t('present.rescanRequiredBody') };
+    // A passport is never presented from here (its badge lives on the Page,
+    // 10 §4); say so instead of a generic "no claims" placeholder.
+    if (credential.type === 'passport') {
+      return { pages: [], error: t('credentialDetail.passportNotPresentable') };
     }
     if (selectedClaims.length === 0) return { pages: [] };
     const result = buildPresentationProofQrPages({
@@ -111,7 +88,7 @@ function PresentationBody({
     return result.ok
       ? { pages: result.value }
       : { pages: [], error: t(disclosureErrorI18nKey(result.error)) };
-  }, [credential, selectedClaims, allClaims, passportShowEligible, t]);
+  }, [credential, selectedClaims, allClaims, t]);
 
   return (
     <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
@@ -141,24 +118,14 @@ function PresentationBody({
           gap: 24,
         }}
       >
-        {passportShowEligible ? (
-          <PassportShowPresentation
-            credentialId={credential.id}
-            credentialTitle={credential.title}
-            holderDid={credential.holderDid}
-            selectedClaims={selectedClaims}
-            showClaimDetails={!productMode}
-          />
-        ) : (
-          <PresentationProofQr
-            credentialTitle={credential.title}
-            selectedClaims={selectedClaims}
-            pages={proof.pages}
-            showTitle
-            showClaimDetails={!productMode}
-            {...(proof.error ? { emptyText: proof.error } : {})}
-          />
-        )}
+        <PresentationProofQr
+          credentialTitle={credential.title}
+          selectedClaims={selectedClaims}
+          pages={proof.pages}
+          showTitle
+          showClaimDetails={!productMode}
+          {...(proof.error ? { emptyText: proof.error } : {})}
+        />
       </ScrollView>
     </View>
   );

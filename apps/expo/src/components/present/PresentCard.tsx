@@ -1,280 +1,251 @@
+/**
+ * PresentCard — the one card (10 §4). The QR is the Page itself, in one of
+ * two forms:
+ *
+ *   online   `creds.id/@name` (or the nostr short URL before a name exists) —
+ *            short, scans from across a table, always the latest Page.
+ *   offline  the signed fragment URL — works with no network on either side,
+ *            but only carries the name, the links and the did.
+ *
+ * Before the Page is published there is no online form, so the card opens on
+ * offline and says why instead of drawing a QR for an address that does not
+ * resolve yet.
+ */
+import { Image } from 'expo-image';
 import { useEffect, useState, type ReactNode } from 'react';
-import { View } from 'react-native';
-import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ActivityIndicator, View, useWindowDimensions } from 'react-native';
+import Animated, { useReducedMotion } from 'react-native-reanimated';
 import type { ProfileRecord } from '@solidarity/shared';
 
 import { generateQrPng } from '@/cards/qrCodeManager';
-import { shareFieldPreferencesFromFields } from '@/cards/solidarityQrPayload';
-import { buildRuntimeSolidarityQrWire } from '@/cards/solidarityQrRuntime';
-import { ModalSheet } from '@/components/common/ModalSheet';
+import { PressableScale } from '@/components/common/PressableScale';
+import { SfIcon } from '@/components/icons/SfIcon';
 import {
   displayProfileShareUrl,
   type PublicPageShareSource,
   type ProfileShareUrlCandidate,
 } from '@/components/me/meProfileModel';
-import { PageSectionLabel } from '@/components/me/PageSectionLabel';
 import { useProfileShareSelection } from '@/components/me/useProfileShareSelection';
-import {
-  PresentCardVisual,
-  type CardQrState,
-} from '@/components/present/PresentCardVisual';
 import { PhysicalCardSheet } from '@/components/present/PhysicalCardSheet';
-import { ThemedButton, ThemedText, ThemedTextInput } from '@/components/themed';
+import { PresentCardVisual } from '@/components/present/PresentCardVisual';
+import { ON_DARK, ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
-import { pushToast } from '@/feedback/toast';
+import { Radius } from '@/constants/radius';
+import { useThemeColors } from '@/constants/useThemeColors';
+import { zoomFadeIn, DURATION } from '@/feedback/motion';
 import { useTranslation } from '@/i18n';
-import {
-  PRESENT_CARD_PREFERENCE_KEYS,
-  selectPresentCardPresets,
-  type PresentCardPreset,
-  type PresentModel,
-} from '@/present/presentModel';
 import { usePreferences } from '@/settings/preferences';
 
-const CARD_QR_SIZE = 68;
+export type PresentQrMode = 'online' | 'offline';
 
-type ReadyCard = Extract<PresentModel['cardState'], { readonly kind: 'ready' }>['card'];
+type QrState =
+  | { readonly kind: 'loading' }
+  | { readonly kind: 'ready'; readonly uri: string }
+  | { readonly kind: 'error' };
+
+/** The plate never grows past this — a bigger code scans no better. */
+const MAX_QR_SIZE = 280;
+const QR_PLATE_PADDING = 14;
 
 function resolveCardAccent(value: string): string {
   return value.startsWith('#') && value.length === 7 ? value : Colors.primaryMauve;
 }
 
-/**
- * What the card face prints, and the key identifying what the QR encodes.
- *
- * The mock's steel face carries only the name and the page address — every
- * optional field the user switched on travels INSIDE the QR, so a glance at
- * someone's card never leaks a field they only meant to hand over on scan.
- */
-function selectedCardContent(model: PresentModel, ownerName: string | null) {
-  return {
-    name: ownerName ?? model.mandatoryName ?? null,
-    selectedFieldKey: model.cardOnlyFields
-      .filter((field) => field.selected)
-      .map((field) => field.field)
-      .join('|'),
-  };
+function onlineCandidate(
+  candidates: readonly ProfileShareUrlCandidate[],
+): ProfileShareUrlCandidate | null {
+  return (
+    candidates.find((c) => c.kind === 'username') ??
+    candidates.find((c) => c.kind === 'handle' && c.isVerified) ??
+    candidates.find((c) => c.kind === 'short') ??
+    null
+  );
 }
 
-function useCardQr(
-  card: ReadyCard | null,
-  page: ProfileShareUrlCandidate | null,
-  selectedFieldKey: string,
-): CardQrState {
-  const [qrState, setQrState] = useState<CardQrState>({ kind: 'loading' });
-
+function useQrPng(value: string | null, size: number): QrState {
+  const [state, setState] = useState<QrState>({ kind: 'loading' });
   useEffect(() => {
-    if (page === null && card === null) {
-      setQrState({ kind: 'error' });
+    if (value === null) {
+      setState({ kind: 'error' });
       return;
     }
     let cancelled = false;
-    setQrState({ kind: 'loading' });
-    const selectedFields = ['name', ...selectedFieldKey.split('|').filter(Boolean)];
-    void Promise.resolve()
-      .then(() => card === null
-        ? { wire: page?.url ?? '', startingLevel: 'M' as const }
-        : buildRuntimeSolidarityQrWire(
-            card,
-            shareFieldPreferencesFromFields(selectedFields),
-            { sealedRoute: page?.url },
-          ))
-      .then(({ wire, startingLevel }) =>
-        generateQrPng(wire, { size: CARD_QR_SIZE, startingLevel })
-      )
+    setState({ kind: 'loading' });
+    // The offline URL is long; let the encoder pick the level that fits.
+    void generateQrPng(value, { size, startingLevel: 'M' })
       .then((uri) => {
-        if (!cancelled) setQrState({ kind: 'ready', uri });
+        if (!cancelled) setState({ kind: 'ready', uri });
       })
       .catch(() => {
-        if (!cancelled) setQrState({ kind: 'error' });
+        if (!cancelled) setState({ kind: 'error' });
       });
     return () => {
       cancelled = true;
     };
-  }, [card, page?.url, selectedFieldKey]);
-
-  return qrState;
-}
-
-export function PresentCardWithPageUrl({
-  model,
-  ownerName,
-  shareRecord,
-  shareJws,
-  publicPage = null,
-  nostrShortUrlReady,
-}: {
-  readonly model: PresentModel;
-  readonly ownerName: string | null;
-  readonly shareRecord: ProfileRecord;
-  readonly shareJws: string;
-  readonly publicPage?: PublicPageShareSource | null;
-  readonly nostrShortUrlReady: boolean;
-}): ReactNode {
-  const shareSelection = useProfileShareSelection(
-    shareRecord,
-    shareJws,
-    nostrShortUrlReady,
-    0,
-    publicPage,
-  );
-  const page = shareSelection.kind === 'ready' ? shareSelection.selected : null;
-  return <PresentCard model={model} ownerName={ownerName} page={page} />;
+  }, [value, size]);
+  return state;
 }
 
 export function PresentCard({
-  model,
   ownerName,
-  page,
+  shareRecord,
+  shareJws,
+  publicPage,
+  nostrShortUrlReady,
 }: {
-  readonly model: PresentModel;
   readonly ownerName: string | null;
-  readonly page: ProfileShareUrlCandidate | null;
+  readonly shareRecord: ProfileRecord;
+  readonly shareJws: string;
+  readonly publicPage: PublicPageShareSource | null;
+  readonly nostrShortUrlReady: boolean;
 }): ReactNode {
   const { t } = useTranslation();
   const cardAccentHex = usePreferences((state) => state.cardAccentHex);
   const enableGlow = usePreferences((state) => state.enableGlow);
   const [physicalCardOpen, setPhysicalCardOpen] = useState(false);
-  const card = model.cardState.kind === 'ready' ? model.cardState.card : null;
-  const { name, selectedFieldKey } = selectedCardContent(model, ownerName);
-  const displayUrl = page ? displayProfileShareUrl(page) : null;
-  const resolvedAccent = resolveCardAccent(cardAccentHex);
-  const qrState = useCardQr(card, page, selectedFieldKey);
+  const selection = useProfileShareSelection(shareRecord, shareJws, nostrShortUrlReady, 0, publicPage);
+
+  const candidates = selection.kind === 'error' ? [] : selection.candidates;
+  const online = onlineCandidate(candidates);
+  const offline = candidates.find((c) => c.kind === 'offline') ?? null;
+  const [chosen, setChosen] = useState<PresentQrMode>('online');
+  const mode: PresentQrMode = online === null ? 'offline' : chosen;
+  const active = mode === 'online' ? online : offline;
+  const displayUrl = online ? displayProfileShareUrl(online) : t('present.unpublished');
 
   return (
-    <>
+    <View style={{ gap: 16 }}>
       <PresentCardVisual
-        resolvedAccent={resolvedAccent}
+        resolvedAccent={resolveCardAccent(cardAccentHex)}
         enableGlow={enableGlow}
-        name={name}
-        summary={t('present.cardSummary', { count: model.selectedCardOnlyCount })}
+        name={ownerName}
+        summary={t(mode === 'online' ? 'present.mode.onlineSummary' : 'present.mode.offlineSummary')}
         scanHint={t('present.scanToExchange')}
-        displayUrl={displayUrl ?? t('present.noPublicLinks')}
-        qrState={qrState}
+        displayUrl={displayUrl}
         flipLabel={t('present.flipCard')}
         physicalCardLabel={t('present.orderPhysicalCard')}
         onOpenPhysicalCard={() => {
           setPhysicalCardOpen(true);
         }}
       />
+      <QrModeControl mode={mode} onlineAvailable={online !== null} onChange={setChosen} />
+      <QrPlate key={mode} candidate={active} mode={mode} onlineMissing={online === null} />
       <PhysicalCardSheet
         visible={physicalCardOpen}
         onClose={() => {
           setPhysicalCardOpen(false);
         }}
       />
-    </>
+    </View>
   );
 }
 
-export function PresentCardPresetControls({
-  model,
+function QrModeControl({
+  mode,
+  onlineAvailable,
+  onChange,
 }: {
-  readonly model: PresentModel;
+  readonly mode: PresentQrMode;
+  readonly onlineAvailable: boolean;
+  readonly onChange: (mode: PresentQrMode) => void;
 }): ReactNode {
   const { t } = useTranslation();
-  const insets = useSafeAreaInsets();
-  const savedPresets = usePreferences(selectPresentCardPresets);
-  const setPreference = usePreferences((state) => state.set);
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [nameInput, setNameInput] = useState('');
+  const colors = useThemeColors();
+  const options: readonly PresentQrMode[] = ['online', 'offline'];
+  return (
+    <ThemedSurface
+      accessibilityRole="tablist"
+      variant="inset"
+      className="flex-row"
+      style={{ borderRadius: Radius.button, padding: 4 }}>
+      {options.map((option) => {
+        const selected = option === mode;
+        const disabled = option === 'online' && !onlineAvailable;
+        return (
+          <PressableScale
+            key={option}
+            fill
+            haptic="tap"
+            disabled={disabled}
+            accessibilityRole="tab"
+            accessibilityState={{ selected, disabled }}
+            accessibilityLabel={t(`present.mode.${option}`)}
+            onPress={() => {
+              onChange(option);
+            }}
+            style={{
+              minHeight: 40,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: selected ? colors.invertedButtonBg : 'transparent',
+              borderRadius: Radius.xs,
+              opacity: disabled ? 0.45 : 1,
+            }}>
+            <ThemedText variant="label" style={{ color: selected ? colors.invertedButtonText : colors.text2 }}>
+              {t(`present.mode.${option}`)}
+            </ThemedText>
+          </PressableScale>
+        );
+      })}
+    </ThemedSurface>
+  );
+}
 
-  const closeSheet = () => {
-    setSheetOpen(false);
-    setNameInput('');
-  };
-
-  const savePreset = () => {
-    const name = nameInput.trim();
-    if (name.length === 0) return;
-    const preset: PresentCardPreset = {
-      name,
-      preferenceKeys: model.cardOnlyFields
-        .filter((field) => field.selected)
-        .map((field) => field.preferenceKey),
-    };
-    setPreference('presentCardPresets', [
-      ...savedPresets.filter((existing) => existing.name !== name),
-      preset,
-    ]);
-    pushToast(t('present.presetSaved', { name }), 'success');
-    closeSheet();
-  };
-
-  const applyPreset = (preset: PresentCardPreset) => {
-    const selected = new Set(preset.preferenceKeys);
-    for (const key of PRESENT_CARD_PREFERENCE_KEYS) {
-      setPreference(key, selected.has(key));
-    }
-    pushToast(t('present.presetApplied', { name: preset.name }), 'success');
-  };
+function QrPlate({
+  candidate,
+  mode,
+  onlineMissing,
+}: {
+  readonly candidate: ProfileShareUrlCandidate | null;
+  readonly mode: PresentQrMode;
+  readonly onlineMissing: boolean;
+}): ReactNode {
+  const { t } = useTranslation();
+  const reduceMotion = useReducedMotion();
+  const { width } = useWindowDimensions();
+  const size = Math.min(MAX_QR_SIZE, width - 32 - QR_PLATE_PADDING * 2 - 32);
+  const qr = useQrPng(candidate?.url ?? null, size);
 
   return (
-    <>
-      {savedPresets.length > 0 ? (
-        <View style={{ gap: 8 }}>
-          <PageSectionLabel title={t('present.savedCombinations')} />
-          {savedPresets.map((preset) => (
-            <ThemedButton
-              key={preset.name}
-              label={preset.name}
-              variant="secondary"
-              fullWidth
-              onPress={() => {
-                applyPreset(preset);
-              }}
+    <Animated.View entering={reduceMotion ? undefined : zoomFadeIn(DURATION.enter)}>
+      <ThemedSurface variant="card" className="items-center" style={{ paddingVertical: 20, gap: 12 }}>
+        <View
+          style={{
+            width: size + QR_PLATE_PADDING * 2,
+            height: size + QR_PLATE_PADDING * 2,
+            padding: QR_PLATE_PADDING,
+            borderRadius: Radius.group,
+            // The code needs a light quiet zone in dark mode too.
+            backgroundColor: ON_DARK,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+          {qr.kind === 'ready' ? (
+            <Image
+              source={{ uri: qr.uri }}
+              contentFit="contain"
+              accessibilityLabel={t('present.qrLabel')}
+              style={{ width: size, height: size }}
             />
-          ))}
-        </View>
-      ) : null}
-      <ThemedButton
-        label={t('present.saveCombination')}
-        variant="secondary"
-        fullWidth
-        onPress={() => {
-          setSheetOpen(true);
-        }}
-      />
-      <ModalSheet visible={sheetOpen} onRequestClose={closeSheet}>
-        <KeyboardAvoidingView behavior="padding" automaticOffset style={{ flex: 1 }}>
-          <View
-            className="flex-1 bg-pageBg px-4"
-            style={{
-              paddingTop: insets.top + 16,
-              paddingBottom: Math.max(insets.bottom, 16),
-              gap: 18,
-            }}
-          >
-            <ThemedText accessibilityRole="header" variant="titleLarge">
-              {t('present.presetNameTitle')}
-            </ThemedText>
-            <ThemedTextInput
-              autoFocus
-              value={nameInput}
-              onChangeText={setNameInput}
-              label={t('present.presetNameLabel')}
-              placeholder={t('present.presetNamePlaceholder')}
-              returnKeyType="done"
-              onSubmitEditing={savePreset}
-            />
-            <View style={{ marginTop: 'auto', gap: 10 }}>
-              <ThemedButton
-                fullWidth
-                disabled={nameInput.trim().length === 0}
-                label={t('present.save')}
-                onPress={savePreset}
-              />
-              <ThemedButton
-                fullWidth
-                variant="secondary"
-                label={t('present.cancel')}
-                onPress={closeSheet}
-              />
+          ) : qr.kind === 'loading' ? (
+            <ActivityIndicator color={Colors.text2} />
+          ) : (
+            <View className="items-center" style={{ gap: 8 }}>
+              <SfIcon name="exclamationmark.triangle" size={22} color={Colors.destructive} />
+              <ThemedText variant="caption" tone="secondary" style={{ textAlign: 'center' }}>
+                {t('present.qrError')}
+              </ThemedText>
             </View>
-          </View>
-        </KeyboardAvoidingView>
-      </ModalSheet>
-    </>
+          )}
+        </View>
+        <ThemedText variant="caption" tone="secondary" style={{ textAlign: 'center', paddingHorizontal: 20 }}>
+          {mode === 'online'
+            ? t('present.mode.onlineHint')
+            : onlineMissing
+              ? t('present.mode.offlineOnlyHint')
+              : t('present.mode.offlineHint')}
+        </ThemedText>
+      </ThemedSurface>
+    </Animated.View>
   );
 }

@@ -11,10 +11,12 @@ import { StyleSheet } from 'react-native';
 
 import { normalizeAtprotoHandle } from '@solidarity/shared';
 
+import { Radius } from '@/constants/radius';
+
 /** `.field` / `.blk` bottom margin — grouping by space, not by lines. */
 export const ROW_GAP = 6;
-/** `--radiusCard` for app rows. The public page uses its own per-template radius. */
-export const ROW_RADIUS = 2;
+/** App rows are cards (`--radius-card`). The public page uses its own per-template radius. */
+export const ROW_RADIUS = Radius.card;
 /** `.f-ico` — round icon tile and the glyph it frames. */
 export const ICON_TILE_SIZE = 36;
 export const ICON_TILE_GLYPH = 18;
@@ -118,7 +120,7 @@ export function iconTileStyle(surface: string): ViewStyle {
   return {
     width: ICON_TILE_SIZE,
     height: ICON_TILE_SIZE,
-    borderRadius: ICON_TILE_SIZE / 2,
+    borderRadius: Radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: surface,

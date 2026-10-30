@@ -14,6 +14,7 @@ import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { useThemeColors } from '@/constants/useThemeColors';
+import { Radius } from '@/constants/radius';
 
 export type SealState = 'verified' | 'needsRecheck' | 'declared';
 
@@ -31,7 +32,7 @@ export function SealPill({ state, label }: { readonly state: SealState; readonly
         gap: 5,
         paddingVertical: 5,
         paddingHorizontal: 11,
-        borderRadius: 999,
+        borderRadius: Radius.pill,
         borderWidth: 1,
         borderColor: state === 'verified' ? Colors.terminalGreenBorder : state === 'needsRecheck' ? ink : c.divider,
         backgroundColor: state === 'verified' ? Colors.terminalGreenBg : 'transparent',

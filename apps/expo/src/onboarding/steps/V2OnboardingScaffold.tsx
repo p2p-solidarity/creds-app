@@ -8,6 +8,7 @@ import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/radius';
 import { DURATION, EASE_OUT } from '@/feedback/motion';
 import { useTranslation } from '@/i18n';
 import { ONBOARDING_STEP_COUNT } from '@/onboarding/state';
@@ -43,7 +44,7 @@ export function V2OnboardingScaffold({
             style={{
               width: index === stepIndex ? 20 : 7,
               height: 7,
-              borderRadius: 4,
+              borderRadius: Radius.pill,
               backgroundColor: index <= stepIndex ? Colors.primaryMauve : Colors.divider,
             }}
           />

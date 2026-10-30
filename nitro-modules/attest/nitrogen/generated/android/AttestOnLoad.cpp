@@ -19,7 +19,6 @@
 #include "JHybridMrzOcrSpec.hpp"
 #include "JHybridNfcPassportSpec.hpp"
 #include "JFunc_void_NfcReadProgress.hpp"
-#include "JHybridPassportZkSpec.hpp"
 #include "JHybridSemaphoreSpec.hpp"
 #include <NitroModules/DefaultConstructableObject.hpp>
 
@@ -45,14 +44,6 @@ struct JHybridNfcPassportSpecImpl: public jni::JavaClass<JHybridNfcPassportSpecI
     static const auto constructorFn = javaClassStatic()->getConstructor<JHybridNfcPassportSpecImpl::javaobject()>();
     jni::local_ref<JHybridNfcPassportSpec::JavaPart> javaPart = javaClassStatic()->newObject(constructorFn);
     return javaPart->getJHybridNfcPassportSpec();
-  }
-};
-struct JHybridPassportZkSpecImpl: public jni::JavaClass<JHybridPassportZkSpecImpl, JHybridPassportZkSpec::JavaPart> {
-  static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/gg/solidarity/attest/HybridPassportZk;";
-  static std::shared_ptr<JHybridPassportZkSpec> create() {
-    static const auto constructorFn = javaClassStatic()->getConstructor<JHybridPassportZkSpecImpl::javaobject()>();
-    jni::local_ref<JHybridPassportZkSpec::JavaPart> javaPart = javaClassStatic()->newObject(constructorFn);
-    return javaPart->getJHybridPassportZkSpec();
   }
 };
 struct JHybridSemaphoreSpecImpl: public jni::JavaClass<JHybridSemaphoreSpecImpl, JHybridSemaphoreSpec::JavaPart> {
@@ -81,7 +72,6 @@ void registerAllNatives() {
   margelo::nitro::solidarity::attest::JHybridMrzOcrSpec::CxxPart::registerNatives();
   margelo::nitro::solidarity::attest::JHybridNfcPassportSpec::CxxPart::registerNatives();
   margelo::nitro::solidarity::attest::JFunc_void_NfcReadProgress_cxx::registerNatives();
-  margelo::nitro::solidarity::attest::JHybridPassportZkSpec::CxxPart::registerNatives();
   margelo::nitro::solidarity::attest::JHybridSemaphoreSpec::CxxPart::registerNatives();
 
   // Register Nitro Hybrid Objects
@@ -95,12 +85,6 @@ void registerAllNatives() {
     "NfcPassport",
     []() -> std::shared_ptr<HybridObject> {
       return JHybridNfcPassportSpecImpl::create();
-    }
-  );
-  HybridObjectRegistry::registerHybridObjectConstructor(
-    "PassportZk",
-    []() -> std::shared_ptr<HybridObject> {
-      return JHybridPassportZkSpecImpl::create();
     }
   );
   HybridObjectRegistry::registerHybridObjectConstructor(

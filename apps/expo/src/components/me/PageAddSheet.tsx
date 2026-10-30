@@ -24,6 +24,7 @@ import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { useThemeColors } from '@/constants/useThemeColors';
+import { Radius } from '@/constants/radius';
 import { SCALE } from '@/feedback/motion';
 import { useTranslation } from '@/i18n';
 import { MAX_PAGE_BLOCK_COUNT, PAGE_BLOCK_CATALOG, type PageBlockType } from '@/page/pageDesign';
@@ -272,7 +273,7 @@ function AddTileButton({ tile }: { readonly tile: AddTile }): ReactNode {
       {tile.pro ? (
         <View
           className="bg-chipSurface"
-          style={{ position: 'absolute', top: 6, right: 6, paddingHorizontal: 6, borderRadius: 999 }}>
+          style={{ position: 'absolute', top: 6, right: 6, paddingHorizontal: 6, borderRadius: Radius.pill }}>
           <ThemedText variant="caption" style={{ color: Colors.primaryBlue, letterSpacing: 0.6 }}>
             PRO
           </ThemedText>

@@ -16,7 +16,7 @@
  * Selective Disclosures are sourced from `useIdentityData.provableClaims`
  * filtered by this credential's id — mirrors Swift `associatedClaims`.
  */
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { safeBack } from '@/navigation/safeBack';
 import type { SFSymbol } from 'expo-symbols';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
@@ -27,15 +27,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { IssuerBadge } from '@/components/credentials/IssuerBadge';
 import { PresentationProofQr } from '@/components/credentials/PresentationProofQr';
 import { PresentationSheet } from '@/components/credentials/PresentationSheet';
-import { hasPassportShowWitnessSafe } from '@/passport/showWitnessVault';
 import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ON_DARK, ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/radius';
 import { useIssuerMetadataStore } from '@/credentials/issuerStore';
 import { useCredentialById, useCredentialStore, type StoredCredential } from '@/credentials/store';
 import {
   credentialTrustDisplayFor,
+  isRetiredPassportCredential,
   type CredentialTrustDisplay,
   type TrustDisplayTone,
 } from '@/credentials/trustDisplay';
@@ -52,10 +53,6 @@ import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
 import { useIdentityData, type ProvableClaimEntity } from '@/identity';
 import { requireSensitiveAction } from '@/keychain/biometricGatekeeper';
-import {
-  filterPassportShowPresentationClaims,
-  selectPassportShowPresentationClaims,
-} from '@/passport/presentationClaims';
 import { usePreferences } from '@/settings/preferences';
 
 // MARK: - Helpers (Swift parity)
@@ -90,28 +87,22 @@ function credentialIcon(type: string): SFSymbol {
 }
 
 function proofTagText(metadataTags: readonly string[]): string {
-  if (metadataTags.includes('passport-openac-v3') || metadataTags.includes('passport-noir')) {
-    return 'Passport ZK';
-  }
-  if (metadataTags.includes('mopro-noir')) return 'OpenPassport';
+  if (metadataTags.includes('passport-statement')) return 'Device-attested passport';
+  if (metadataTags.includes('passport-passive-auth')) return 'Passport chip';
   if (metadataTags.includes('semaphore-zk')) return 'Semaphore ZK';
-  return 'SD-JWT Fallback';
+  return 'Unverified';
 }
 
 function proofTypeText(metadataTags: readonly string[]): string {
-  if (metadataTags.includes('passport-openac-v3') || metadataTags.includes('passport-noir')) {
-    return 'Passport ZK (OpenAC v3)';
-  }
-  if (metadataTags.includes('mopro-noir')) return 'OpenPassport (Noir/Mopro)';
+  if (metadataTags.includes('passport-statement')) return 'Passive auth + device statement';
+  if (metadataTags.includes('passport-passive-auth')) return 'Passive auth (this phone only)';
   if (metadataTags.includes('semaphore-zk')) return 'Semaphore ZK';
-  return 'SD-JWT Fallback';
+  return 'Unverified';
 }
 
 function proofIcon(metadataTags: readonly string[]): SFSymbol {
-  if (metadataTags.includes('passport-openac-v3') || metadataTags.includes('passport-noir')) {
-    return 'checkmark.shield.fill';
-  }
-  if (metadataTags.includes('mopro-noir')) return 'bolt.shield.fill';
+  if (metadataTags.includes('passport-statement')) return 'checkmark.shield.fill';
+  if (metadataTags.includes('passport-passive-auth')) return 'checkmark.shield';
   if (metadataTags.includes('semaphore-zk')) return 'shield.checkered';
   return 'doc.text.fill';
 }
@@ -251,7 +242,7 @@ function LevelTag({ text, accent }: { readonly text: string; readonly accent: st
       style={{
         borderWidth: 0.5,
         borderColor: accent,
-        borderRadius: 2,
+        borderRadius: Radius.xs,
         paddingHorizontal: 4,
         paddingVertical: 2,
         alignItems: 'center',
@@ -327,7 +318,7 @@ function ClaimRow({
           style={{
             width: 18,
             height: 18,
-            borderRadius: 2,
+            borderRadius: Radius.xs,
             alignItems: 'center',
             justifyContent: 'center',
             backgroundColor: selected ? Colors.terminalGreen : 'transparent',
@@ -389,30 +380,11 @@ export default function CredentialDetailScreen() {
     return allClaims.filter((c) => c.identityCardId === credential.id);
   }, [allClaims, credential]);
 
-  // OpenAC-v3 passports with a vaulted show witness present a FRESH
-  // openac_show proof in the sheet instead of replaying the (huge)
-  // enrollment envelope — only show claim rows backed by that circuit.
-  const passportShowEligible = useMemo(
-    () =>
-      credential !== undefined &&
-      credential.metadataTags.includes('passport-openac-v3') &&
-      hasPassportShowWitnessSafe(credential.id),
-    [credential]
-  );
-
-  // Narrow on the TAG alone, never on the device witness: `openac_show` can
-  // only ever disclose age/nationality, so a witness-less device must not be
-  // shown the wider set it cannot prove (the gate used to fail OPEN here).
-  const isOpenAcV3Credential =
-    credential?.metadataTags.includes('passport-openac-v3') ?? false;
-
-  const presentationClaimRows = useMemo(
-    () =>
-      isOpenAcV3Credential
-        ? filterPassportShowPresentationClaims(associatedClaims)
-        : associatedClaims,
-    [associatedClaims, isOpenAcV3Credential]
-  );
+  // A passport is shown in person through its L3 badge on the Page (10 §4);
+  // the multi-frame proof QR that used to present it here is gone, and the
+  // Pear hand-over that replaces it is not built yet — so no present CTA.
+  const isPassportCredential = credential?.type === 'passport';
+  const presentationClaimRows = associatedClaims;
 
   const initialClaimIdsForPresentation = useMemo(
     () =>
@@ -429,21 +401,15 @@ export default function CredentialDetailScreen() {
   );
 
   const selectedClaimsForPresentation = useMemo(
-    () =>
-      passportShowEligible
-        ? selectPassportShowPresentationClaims(
-            presentationClaimRows,
-            selectedClaimIdsForPresentation
-          )
-        : selectPresentationClaims(presentationClaimRows, selectedClaimIdsForPresentation),
-    [passportShowEligible, presentationClaimRows, selectedClaimIdsForPresentation]
+    () => selectPresentationClaims(presentationClaimRows, selectedClaimIdsForPresentation),
+    [presentationClaimRows, selectedClaimIdsForPresentation]
   );
 
   const presentation = useMemo<{
     readonly pages: readonly PresentationQRPage[];
     readonly error?: string;
   }>(() => {
-    if (!credential || passportShowEligible || selectedClaimsForPresentation.length === 0) {
+    if (!credential || isPassportCredential || selectedClaimsForPresentation.length === 0) {
       return { pages: [] };
     }
     const result = buildPresentationProofQrPages({
@@ -454,7 +420,7 @@ export default function CredentialDetailScreen() {
     return result.ok
       ? { pages: result.value }
       : { pages: [], error: t(disclosureErrorI18nKey(result.error)) };
-  }, [credential, passportShowEligible, selectedClaimsForPresentation, presentationClaimRows, t]);
+  }, [credential, isPassportCredential, selectedClaimsForPresentation, presentationClaimRows, t]);
 
   const status = useMemo<string>(() => {
     if (!credential) return '';
@@ -481,14 +447,7 @@ export default function CredentialDetailScreen() {
   const accent = levelAccent(trustDisplay.tone);
   const trustBadge = issuerTrustBadge(credential, t);
   const isExpired = credential.expiresAt != null && credential.expiresAt.getTime() < Date.now();
-  // An openac-v3 credential without this device's show-witness cannot produce
-  // an honest presentation (buildPresentationProofJson refuses it). Disable the
-  // CTA rather than letting it consume a Face ID prompt and stamp
-  // `lastPresentedAt` for a presentation that provably never happens.
-  const cannotPresentWithoutWitness =
-    credential.metadataTags.includes('passport-openac-v3') && !passportShowEligible;
-  const presentDisabled =
-    selectedClaimsForPresentation.length === 0 || cannotPresentWithoutWitness;
+  const presentDisabled = selectedClaimsForPresentation.length === 0;
 
   const onPresent = () => {
     void (async () => {
@@ -597,13 +556,13 @@ export default function CredentialDetailScreen() {
                 paddingBottom: 24,
                 alignItems: 'center',
                 gap: 8,
-                borderRadius: 4,
+                borderRadius: Radius.xs,
               }}>
               <View
                 style={{
                   width: 56,
                   height: 56,
-                  borderRadius: 28,
+                  borderRadius: Radius.pill,
                   backgroundColor: Colors.warmCream,
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -649,6 +608,21 @@ export default function CredentialDetailScreen() {
               </View>
             </LinearGradient>
           </View>
+
+          {/* A passport saved by the retired ZK path earns no level any more
+              (docs/ref/11 P2): ask for a rescan, which replaces it. */}
+          {isRetiredPassportCredential(credential) ? (
+            <ThemedSurface variant="outlined" padded className="mx-4 gap-3">
+              <ThemedText variant="bodySmall" tone="secondary">
+                {t('credentialDetail.passportRescan')}
+              </ThemedText>
+              <ThemedButton
+                label={t('credentialDetail.passportRescanAction')}
+                fullWidth
+                onPress={() => { router.push('/passport'); }}
+              />
+            </ThemedSurface>
+          ) : null}
 
           {/* Metadata section */}
           <View className="gap-2">
@@ -701,9 +675,9 @@ export default function CredentialDetailScreen() {
               </View>
             ) : (
               <View className="px-4" style={{ gap: 16 }}>
-                {passportShowEligible ? (
+                {isPassportCredential ? (
                   <ThemedText variant="bodySmall" tone="tertiary">
-                    {t('passportShow.inlineHint')}
+                    {t('credentialDetail.passportOnPage')}
                   </ThemedText>
                 ) : (
                   <PresentationProofQr
@@ -733,12 +707,14 @@ export default function CredentialDetailScreen() {
 
       {/* Present bar */}
       <View className="bg-pageBg px-4 pt-3" style={{ paddingBottom: 12 + insets.bottom }}>
-        <ThemedButton
-          label={t('credentialDetail.presentProof')}
-          fullWidth
-          disabled={presentDisabled}
-          onPress={onPresent}
-        />
+        {isPassportCredential ? null : (
+          <ThemedButton
+            label={t('credentialDetail.presentProof')}
+            fullWidth
+            disabled={presentDisabled}
+            onPress={onPresent}
+          />
+        )}
         <View className="mt-2 items-center">
           <PressableScale
             onPress={onRegenerate}
@@ -759,7 +735,6 @@ export default function CredentialDetailScreen() {
         onDismiss={() => {
           setPresenting(false);
         }}
-        passportShowEligible={passportShowEligible}
         productMode={isProductContext}
       />
     </View>

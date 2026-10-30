@@ -17,6 +17,7 @@ import Animated, {
 
 import { SfIcon } from '@/components/icons/SfIcon';
 import { useThemeColors, type ThemeColors } from '@/constants/useThemeColors';
+import { Radius } from '@/constants/radius';
 
 export type PublishAnimationPhase =
   | 'ready'
@@ -143,7 +144,7 @@ export function PublishingConstellation({
             top: CENTER.y - 27,
             width: 54,
             height: 54,
-            borderRadius: 18,
+            borderRadius: Radius.card,
             alignItems: 'center',
             justifyContent: 'center',
             backgroundColor: c.cardBg,
@@ -239,7 +240,7 @@ function TravelDot({
           top: 0,
           width: 8,
           height: 8,
-          borderRadius: 4,
+          borderRadius: Radius.xs,
           backgroundColor: color,
         },
         style,
@@ -300,7 +301,7 @@ function RelayNode({
           top: point.y - 17,
           width: 34,
           height: 34,
-          borderRadius: 12,
+          borderRadius: Radius.card,
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: colors.searchBg,

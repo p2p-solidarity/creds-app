@@ -1,5 +1,6 @@
 /**
- * Card manager — zustand store backing BusinessCardForm + Me/Share tabs.
+ * Card manager — zustand store for the legacy business card (kept for backup
+ * restore and wipe; the card editor and card wire left with 10 §4).
  * Mirrors Swift CardManager.shared (CRUD + dedup + validation).
  *
  * Boot model (Path A — manifest + lazy details):

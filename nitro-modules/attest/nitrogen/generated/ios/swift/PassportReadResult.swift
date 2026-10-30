@@ -18,26 +18,14 @@ public extension PassportReadResult {
   /**
    * Create a new instance of `PassportReadResult`.
    */
-  init(mrz: ParsedMrz, dataGroups: DataGroupsBundle, chipUid: String?, passiveAuthValid: Bool, openAcV3WitnessBundleJson: String?, activeAuthJson: String?) {
+  init(mrz: ParsedMrz, dataGroups: DataGroupsBundle, chipUid: String?, passiveAuthValid: Bool) {
     self.init(mrz, dataGroups, { () -> bridge.std__optional_std__string_ in
       if let __unwrappedValue = chipUid {
         return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
       } else {
         return .init()
       }
-    }(), passiveAuthValid, { () -> bridge.std__optional_std__string_ in
-      if let __unwrappedValue = openAcV3WitnessBundleJson {
-        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
-      } else {
-        return .init()
-      }
-    }(), { () -> bridge.std__optional_std__string_ in
-      if let __unwrappedValue = activeAuthJson {
-        return bridge.create_std__optional_std__string_(std.string(__unwrappedValue))
-      } else {
-        return .init()
-      }
-    }())
+    }(), passiveAuthValid)
   }
 
   @inline(__always)
@@ -65,29 +53,5 @@ public extension PassportReadResult {
   @inline(__always)
   var passiveAuthValid: Bool {
     return self.__passiveAuthValid
-  }
-  
-  @inline(__always)
-  var openAcV3WitnessBundleJson: String? {
-    return { () -> String? in
-      if bridge.has_value_std__optional_std__string_(self.__openAcV3WitnessBundleJson) {
-        let __unwrapped = bridge.get_std__optional_std__string_(self.__openAcV3WitnessBundleJson)
-        return String(__unwrapped)
-      } else {
-        return nil
-      }
-    }()
-  }
-  
-  @inline(__always)
-  var activeAuthJson: String? {
-    return { () -> String? in
-      if bridge.has_value_std__optional_std__string_(self.__activeAuthJson) {
-        let __unwrapped = bridge.get_std__optional_std__string_(self.__activeAuthJson)
-        return String(__unwrapped)
-      } else {
-        return nil
-      }
-    }()
   }
 }

@@ -78,8 +78,9 @@ type QrEngine = {
 
 const now = new Date('2026-06-09T00:00:00Z');
 
-const credential: Pick<StoredCredential, 'id' | 'holderDid' | 'rawJwt' | 'metadataTags'> = {
+const credential: Pick<StoredCredential, 'id' | 'type' | 'holderDid' | 'rawJwt' | 'metadataTags'> = {
   id: 'passport-card',
+  type: 'vc',
   holderDid: 'did:key:z6MkHolder',
   rawJwt: '{"proof":"passport-proof","publicSignals":["sig-a"]}',
   metadataTags: ['mopro-noir'],
@@ -304,6 +305,7 @@ describe('presentation proof — no full-VC leak on a subset', () => {
   it('FAILS CLOSED when only a subset of an ordinary JWT credential is selected (never leaks the rest)', () => {
     const plainCred: PresentationCredential = {
       id: 'card-1',
+      type: 'vc',
       holderDid: HOLDER_DID,
       rawJwt: signPlainVc(),
       metadataTags: ['jwt_vc_json', 'imported', 'did:key'],
@@ -327,6 +329,7 @@ describe('presentation proof — no full-VC leak on a subset', () => {
     const rawJwt = signPlainVc();
     const plainCred: PresentationCredential = {
       id: 'card-1',
+      type: 'vc',
       holderDid: HOLDER_DID,
       rawJwt,
       metadataTags: ['jwt_vc_json', 'imported', 'did:key'],
@@ -355,6 +358,7 @@ describe('presentation proof — no full-VC leak on a subset', () => {
     });
     const sdCred: PresentationCredential = {
       id: 'sd-1',
+      type: 'vc',
       holderDid: HOLDER_DID,
       rawJwt: combined,
       metadataTags: ['sd-jwt-fallback'],
@@ -388,6 +392,7 @@ describe('presentation proof — no full-VC leak on a subset', () => {
     const tampered = `${combined}${forged}~`;
     const sdCred: PresentationCredential = {
       id: 'sd-2',
+      type: 'vc',
       holderDid: HOLDER_DID,
       rawJwt: tampered,
       metadataTags: ['sd-jwt-fallback'],
@@ -408,6 +413,7 @@ describe('presentation proof — no full-VC leak on a subset', () => {
   it('refuses to present a credential that failed import verification (unverified tag)', () => {
     const plainCred: PresentationCredential = {
       id: 'card-1',
+      type: 'vc',
       holderDid: HOLDER_DID,
       rawJwt: signPlainVc(),
       metadataTags: ['jwt_vc_json', 'imported', 'unverified'],
@@ -426,55 +432,26 @@ describe('presentation proof — no full-VC leak on a subset', () => {
     expect(result.error.message).toContain('unverified');
   });
 
-  // ZK honesty (CLAUDE.md): "Never present a fallback as a real ZK
-  // attestation." An openac-v3 enrollment envelope holds only dsc_chain +
-  // passport_adapter — `openac_show` is filtered out of enrollment proving
-  // (passport/openacV3.ts) — so it proves NONE of the four claims. Pairing it
-  // with `selected_claims` over-claims. Only a fresh openac_show proof, which
-  // needs the device-local show-witness, is an honest disclosure.
-  it('refuses to present an openac-v3 enrollment envelope as evidence of its claims', () => {
-    const openAcV3Cred: PresentationCredential = {
-      id: 'passport-card',
-      holderDid: HOLDER_DID,
-      rawJwt: '{"proof":"dsc-chain+passport-adapter","publicSignals":["a"]}',
-      metadataTags: ['passport-openac-v3', 'passport-noir'],
-    };
-
-    const result = buildPresentationProofPayload({
-      credential: openAcV3Cred,
-      selectedClaims: allCardClaims,
-      allClaims: allCardClaims,
-      nonce: 'n',
-    });
-
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
-    expect(result.error.code).toBe('device-witness-missing');
-    expect(result.error.message).toContain('openac_show');
-    // The remedy shown to the user must NOT be "present all of it, or nothing"
-    // (`disclosureNotRedactable`) — that is the over-claim this refusal stops.
-    expect(disclosureErrorI18nKey(result.error)).toBe('present.rescanRequiredBody');
-  });
-
-  // The refusal must not depend on WHICH claims were selected: an empty or
-  // single-claim selection is just as unprovable from this envelope.
-  it('refuses the openac-v3 envelope regardless of how few claims are selected', () => {
-    const openAcV3Cred: PresentationCredential = {
-      id: 'passport-card',
-      holderDid: HOLDER_DID,
-      rawJwt: '{"proof":"dsc-chain+passport-adapter","publicSignals":["a"]}',
-      metadataTags: ['passport-openac-v3'],
-    };
-
-    const result = buildPresentationProofPayload({
-      credential: openAcV3Cred,
-      selectedClaims: allCardClaims.slice(0, 1),
-      allClaims: allCardClaims,
-      nonce: 'n',
-    });
-
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
-    expect(result.error.code).toBe('device-witness-missing');
+  // docs/ref/11 P2: a passport is never presented as a QR payload, whatever
+  // its stored record holds (a retired ZK envelope or a passive-auth summary).
+  it('refuses to present any passport credential as a QR payload', () => {
+    for (const metadataTags of [['passport-openac-v3', 'passport-noir'], ['passport-passive-auth', 'passport-statement']]) {
+      const passportCred: PresentationCredential = {
+        id: 'passport-card',
+        type: 'passport',
+        holderDid: HOLDER_DID,
+        rawJwt: '{"passiveAuth":true,"statement":true}',
+        metadataTags,
+      };
+      const result = buildPresentationProofPayload({
+        credential: passportCred,
+        selectedClaims: allCardClaims.slice(0, 1),
+        allClaims: allCardClaims,
+        nonce: 'n',
+      });
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.error.code).toBe('not-redactable');
+    }
   });
 });

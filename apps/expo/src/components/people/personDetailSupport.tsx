@@ -12,6 +12,7 @@ import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/radius';
 import { appAlert } from '@/feedback/appAlert';
 import { useTranslation } from '@/i18n';
 import type { Contact } from '@solidarity/shared';
@@ -159,7 +160,7 @@ function ChipBase({
     <ThemedSurface
       variant="inset"
       className="flex-row items-center gap-1.5 px-2 py-1"
-      style={{ borderRadius: 999 }}
+      style={{ borderRadius: Radius.pill }}
     >
       <SfIcon name={icon} size={11} color={iconColor} />
       <ThemedText variant="caption" tone="secondary" numberOfLines={1}>

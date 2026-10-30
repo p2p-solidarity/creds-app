@@ -133,7 +133,7 @@ export function UsernameStep({
                     accessibilityRole="button"
                     accessibilityLabel={`@${suggestion}`}>
                     <View
-                      className="rounded-full px-3 py-2"
+                      className="rounded-pill px-3 py-2"
                       style={{ backgroundColor: Colors.searchBg }}>
                       <ThemedText variant="label">@{suggestion}</ThemedText>
                     </View>

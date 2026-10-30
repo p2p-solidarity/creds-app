@@ -29,10 +29,10 @@ namespace margelo::nitro::solidarity::attest { struct NfcReadProgress; }
 // Forward declaration of `NfcReadPhase` to properly resolve imports.
 namespace margelo::nitro::solidarity::attest { enum class NfcReadPhase; }
 
-#include <string>
 #include "PassportReadResult.hpp"
 #include <NitroModules/Promise.hpp>
 #include "ParsedMrz.hpp"
+#include <string>
 #include "DataGroupsBundle.hpp"
 #include <NitroModules/ArrayBuffer.hpp>
 #include <optional>
@@ -95,14 +95,6 @@ namespace margelo::nitro::solidarity::attest {
     // Methods
     inline bool isAvailable() override {
       auto __result = _swiftPart.isAvailable();
-      if (__result.hasError()) [[unlikely]] {
-        std::rethrow_exception(__result.error());
-      }
-      auto __value = std::move(__result.value());
-      return __value;
-    }
-    inline std::string getRevocationSnapshotJson() override {
-      auto __result = _swiftPart.getRevocationSnapshotJson();
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }

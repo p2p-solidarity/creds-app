@@ -10,7 +10,7 @@
  * Identity…) don't leak into HybridSemaphoreSpec's Swift→C++ interop
  * header (which Nitrogen autogenerates with strict type visibility).
  *
- * Twin of `withMoproBindingsPod.js` — same pattern.
+ * Injects the sibling pod into the generated Podfile after every prebuild.
  */
 const fs = require('node:fs');
 const path = require('node:path');

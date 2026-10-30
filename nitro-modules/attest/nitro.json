@@ -36,16 +36,6 @@
         "implementationClassName": "HybridNfcPassport"
       }
     },
-    "PassportZk": {
-      "ios": {
-        "language": "swift",
-        "implementationClassName": "HybridPassportZk"
-      },
-      "android": {
-        "language": "kotlin",
-        "implementationClassName": "HybridPassportZk"
-      }
-    },
     "Semaphore": {
       "ios": {
         "language": "swift",

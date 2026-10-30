@@ -31,7 +31,6 @@ import { scheduleOnRN } from 'react-native-worklets';
 
 import { SfIcon } from '@/components/icons/SfIcon';
 import { EASE_OUT } from '@/feedback/motion';
-import { PassportShowChallengeSheet } from '@/components/scan/PassportShowChallengeSheet';
 import { ProofPresentationFlowSheet } from '@/components/scan/ProofPresentationFlowSheet';
 import { ScanWindowOverlay } from '@/components/scan/ScanWindowOverlay';
 import {
@@ -44,14 +43,11 @@ import { presentReceivedCard } from '@/cards/receivedCard';
 import { handleDeepLink, parseDeepLink } from '@/deeplink/router';
 import { haptic } from '@/feedback/haptics';
 import { pushToast } from '@/feedback/toast';
-import { PASSPORT_SHOW_LINK_SCOPE } from '@/passport/showPresentation';
-import { issuePassportShowChallenge } from '@/passport/showVerifier';
 import { resolveProfileByHandle } from '@/handles/resolveProfile';
 import { resolveProfileByNpub } from '@/nostr/resolveProfile';
 import { QrScanner } from '@/scan/QrScanner';
 import { credentialOfferRouteFromScan } from '@/scan/credentialOfferRoute';
 import { handleScannedPayload } from '@/scan/envelopeHandler';
-import { passportShowVerifierResult } from '@/scan/passportShowResult';
 import { classifyVerifiedPagePayload, verifyFragment } from '@/scan/verifiedPageHandler';
 import { presentVerifiedPageResolving, presentVerifiedPageResult } from '@/scan/verifiedPageResult';
 import { presentWebSignEntry } from '@/websign/pendingRequest';
@@ -79,7 +75,6 @@ export default function ScanScreen() {
   // Verifier challenge for passport show presentations. The nonce lives in
   // the outstanding-challenge store (TTL-bound); this state only drives the
   // sheet showing the QR.
-  const [showChallenge, setShowChallenge] = useState<string | null>(null);
 
   // Capture animation lives on the UI thread — bracketScale pulses the
   // ScanWindowOverlay corners and flashOpacity blinks a white shutter.
@@ -220,13 +215,6 @@ export default function ScanScreen() {
         setIsScanning(true);
         return;
       }
-      if (outcome.kind === 'passport-show' && outcome.passportShow) {
-        setRoute({
-          kind: 'verifier',
-          result: passportShowVerifierResult(outcome.passportShow, t),
-        });
-        return;
-      }
       const classifiedRoute = await classifyPayload(payload, t);
       if (!developerMode && classifiedRoute.kind === 'raw') {
         pushToast(t('scan.couldNotRead'), 'error');
@@ -300,7 +288,7 @@ export default function ScanScreen() {
       >
         {progress ? (
           <View
-            className="rounded-xl bg-mutedSurface px-4 py-3 items-center"
+            className="rounded-group bg-mutedSurface px-4 py-3 items-center"
           >
             <Text className="text-text2 text-[13px]">
               {t('scan.receiving', {
@@ -318,20 +306,6 @@ export default function ScanScreen() {
             </ThemedText>
           </ThemedSurface>
         )}
-        <ThemedButton
-          variant="secondary"
-          label={t('passportShow.verifyEntry')}
-          fullWidth
-          onPress={() => {
-            const issued = issuePassportShowChallenge({
-              scope: PASSPORT_SHOW_LINK_SCOPE,
-              ageThreshold: 18,
-              requestAge: true,
-              requestNationality: false,
-            });
-            setShowChallenge(issued.challengeJson);
-          }}
-        />
         {isScanning ? (
           <View className="flex-row items-center justify-center gap-1.5">
             <ActivityIndicator size="small" />
@@ -354,12 +328,6 @@ export default function ScanScreen() {
         }
         result={route?.kind === 'verifier' ? route.result : null}
         onClose={reset}
-      />
-
-      <PassportShowChallengeSheet
-        visible={showChallenge !== null}
-        challengeJson={showChallenge}
-        onClose={() => { setShowChallenge(null); }}
       />
 
       <Animated.View
@@ -390,7 +358,7 @@ function ScannedResultView({
     >
       <View>
         <Text className="text-text1 text-[24px] font-medium">{t('scan.resultTitle')}</Text>
-        <View className="mt-4 rounded-xl bg-mutedSurface p-4">
+        <View className="mt-4 rounded-group bg-mutedSurface p-4">
           <Text
             selectable
             numberOfLines={6}

@@ -10,7 +10,7 @@
  * surface presses the same way. Reach for `SPRING.gentle` on entrances /
  * larger travel and `SPRING.zoom` for the long-press lift.
  */
-import { Easing, withDelay, withTiming } from 'react-native-reanimated';
+import { Easing, LinearTransition, withDelay, withTiming } from 'react-native-reanimated';
 import type {
   EntryExitAnimationFunction,
   WithSpringConfig,
@@ -122,6 +122,35 @@ export function zoomFadeIn(durationMs: number): EntryExitAnimationFunction {
     };
   };
 }
+
+/**
+ * Row / card exit: fade out while settling to 0.98, on `EASE_OUT` and the
+ * shorter exit duration — a removed row leaves quietly and fast. Worklet:
+ * it only touches the captured config.
+ */
+export function fadeOutSettle(): EntryExitAnimationFunction {
+  const config: WithTimingConfig = { duration: DURATION.exit, easing: EASE_OUT };
+  return function fadeOutSettleExiting() {
+    'worklet';
+    return {
+      initialValues: { opacity: 1, transform: [{ scale: 1 }] },
+      animations: {
+        opacity: withTiming(0, config),
+        transform: [{ scale: withTiming(0.98, config) }],
+      },
+    };
+  };
+}
+
+/**
+ * Layout transition for every editable list: when a row is added, removed or
+ * reordered, the others glide to their new place on the gentle spring
+ * instead of jumping. Pass as `layout={LIST_LAYOUT}` (drop it under Reduce
+ * Motion).
+ */
+export const LIST_LAYOUT = LinearTransition.springify()
+  .damping(SPRING.gentle.damping ?? 22)
+  .stiffness(SPRING.gentle.stiffness ?? 220);
 
 /**
  * Idle life for the world illustrations — the web's shared rhythm (airmeishi-web

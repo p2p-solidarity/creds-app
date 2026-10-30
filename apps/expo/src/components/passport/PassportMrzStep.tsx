@@ -82,7 +82,7 @@ export function PassportMrzStep({
           </View>
         </View>
 
-        <View className="bg-mutedSurface gap-3 rounded-xl p-3.5">
+        <View className="bg-mutedSurface gap-3 rounded-group p-3.5">
           <ThemedButton
             label={t('passportSetup.details.scan')}
             fullWidth
@@ -100,7 +100,7 @@ export function PassportMrzStep({
             haptic="tap"
             onPress={() => { setShowManualInput(true); }}
             accessibilityRole="button"
-            className="rounded-sm2"
+            className="rounded-button"
             style={{
               paddingVertical: 12,
               alignItems: 'center',
@@ -118,7 +118,7 @@ export function PassportMrzStep({
   }
 
   return (
-    <View className="bg-mutedSurface gap-2.5 rounded-xl p-3.5">
+    <View className="bg-mutedSurface gap-2.5 rounded-group p-3.5">
       <Field
         label={t('passportSetup.details.passportNumber')}
         value={draft.passportNumber}
@@ -191,7 +191,7 @@ function Field({
       <TextInput
         autoCorrect={false}
         placeholderTextColor={Colors.text3}
-        className="text-text1 rounded-sm2 bg-cardBg text-[15px]"
+        className="text-text1 rounded-field bg-cardBg text-[15px]"
         style={{
           paddingHorizontal: 12,
           paddingVertical: 10,

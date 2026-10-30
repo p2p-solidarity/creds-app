@@ -1,7 +1,7 @@
 /**
  * Expo config plugin — injects a CocoaPods `post_install` hook that adds
- * the absolute on-disk slice paths of the Mopro + Semaphore xcframeworks
- * into the app target's `LIBRARY_SEARCH_PATHS[sdk=*]`.
+ * the absolute on-disk slice paths of the Semaphore xcframework into the
+ * app target's `LIBRARY_SEARCH_PATHS[sdk=*]`.
  *
  * Why this is needed:
  *   - CocoaPods doesn't auto-`-l` a static `.a` wrapped in an
@@ -12,14 +12,12 @@
  *     (`ios-arm64-simulator` or `ios-arm64`).
  *   - `user_target_xcconfig` in podspecs is the conventional way to
  *     inject xcconfig into the app target — but CocoaPods bails with
- *     "Can't merge user_target_xcconfig" when TWO pods both contribute
- *     SDK-conditional `LIBRARY_SEARCH_PATHS[sdk=*]` with different
- *     values. MoproBindings + SemaphoreBindings both do.
- *   - Solution: keep the `-l` flag in each pod, and inject the search
- *     paths via `post_install` so there's a single owner of the
- *     SDK-conditional key.
+ *     "Can't merge user_target_xcconfig" when two pods both contribute
+ *     SDK-conditional `LIBRARY_SEARCH_PATHS[sdk=*]` (the retired passport
+ *     MoproBindings pod used to). Injecting via `post_install` keeps a single
+ *     owner of the SDK-conditional key.
  *
- * Mirrors the pattern of `withMoproBindingsPod.js` / `withNfcReader.js`
+ * Mirrors the pattern of `withSemaphoreBindingsPod.js` / `withNfcReader.js`
  * — `withDangerousMod` patches the generated Podfile after every
  * prebuild so the change survives `expo prebuild --clean`.
  */
@@ -33,19 +31,11 @@ const HOOK_END = '# [withRustXcframeworkSearchPath] END';
 
 const HOOK_BODY = `
     ${HOOK_MARKER}
-    # __dir__ is apps/expo/ios/.
-    #   • The passport-zk mopro xcframework still lives in the sibling
-    #     passport-noir repo (one level above the airmeishi/ root), so we
-    #     reach it via four ".." hops (../../../../).
-    #   • The semaphore xcframework is now built locally from
-    #     nitro-modules/attest/semaphore/rust/build-ios.sh and lands next to
-    #     SemaphoreBindings.podspec inside nitro-modules/attest/semaphore/mopro/.
-    #     Reach the airmeishi monorepo root via three ".." hops
-    #     (apps/expo/ios/ → apps/expo/ → apps/ → airmeishi/).
+    # __dir__ is apps/expo/ios/. The semaphore xcframework lands next to
+    # SemaphoreBindings.podspec inside nitro-modules/attest/semaphore/mopro/;
+    # reach the airmeishi monorepo root via three ".." hops
+    # (apps/expo/ios/ → apps/expo/ → apps/ → airmeishi/).
     airmeishi_root = File.expand_path(File.join(__dir__, '..', '..', '..'))
-    solidarity_root = File.expand_path(File.join(__dir__, '..', '..', '..', '..'))
-    mopro_xcf = File.join(solidarity_root, 'passport-noir', 'mopro-binding',
-                          'MoproiOSBindings', 'MoproBindings.xcframework')
     semaphore_xcf = File.join(airmeishi_root, 'nitro-modules', 'attest',
                               'semaphore', 'mopro', 'SemaphoreBindings.xcframework')
 
@@ -56,9 +46,9 @@ const HOOK_BODY = `
 
         injected_keys = {
           'LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]' =>
-            "$(inherited) \\"#{mopro_xcf}/ios-arm64-simulator\\" \\"#{semaphore_xcf}/ios-arm64-simulator\\"",
+            "$(inherited) \\"#{semaphore_xcf}/ios-arm64-simulator\\"",
           'LIBRARY_SEARCH_PATHS[sdk=iphoneos*]' =>
-            "$(inherited) \\"#{mopro_xcf}/ios-arm64\\" \\"#{semaphore_xcf}/ios-arm64\\"",
+            "$(inherited) \\"#{semaphore_xcf}/ios-arm64\\"",
         }
 
         existing = File.read(xcconfig_path)

@@ -435,25 +435,6 @@ export async function signRawEs256(payload: Uint8Array): Promise<{
   return signDigestWithCurrentKey(sha256Bytes(payload), 'signRawEs256');
 }
 
-export async function signOpenAcDeviceBindingDigest(
-  nonceHash: Uint8Array
-): Promise<{
-  readonly signature: Uint8Array;
-  readonly publicKeyRaw: Uint8Array;
-}> {
-  if (nonceHash.length !== 32) {
-    throw new Error(
-      `signOpenAcDeviceBindingDigest: expected 32-byte nonce_hash (got ${nonceHash.length})`
-    );
-  }
-  return signDigestWithCurrentKey(nonceHash, 'signOpenAcDeviceBindingDigest');
-}
-
-export async function publicRawP256ForCurrentIdentity(): Promise<Uint8Array> {
-  const id = await ensureSigningKey();
-  return rawP256PublicKeyFromJwk(id.publicJwk, 'publicRawP256ForCurrentIdentity');
-}
-
 async function signDigestWithCurrentKey(
   digest: Uint8Array,
   context: string
