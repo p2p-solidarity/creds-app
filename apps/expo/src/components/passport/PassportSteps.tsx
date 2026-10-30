@@ -13,7 +13,7 @@
  * page-level reducer remains the single source of truth.
  */
 import { useEffect } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Switch, Text, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -407,11 +407,18 @@ export function PersistStep({
   chip,
   busy,
   developerMode,
+  canCountAsWitness,
+  countAsWitness,
+  onCountAsWitnessChange,
   onSave,
 }: {
   readonly chip: PassportChipSnapshot | null;
   readonly busy: boolean;
   readonly developerMode: boolean;
+  /** This save will sign a device-attested statement, so the opt-in applies. */
+  readonly canCountAsWitness: boolean;
+  readonly countAsWitness: boolean;
+  readonly onCountAsWitnessChange: (next: boolean) => void;
   readonly onSave: () => void;
 }) {
   const { t } = useTranslation();
@@ -426,7 +433,25 @@ export function PersistStep({
             ? t('passportSetup.persist.fallback')
             : t('passportSetup.persist.ready')}
       </Text>
+      {canCountAsWitness ? (
+        <View className="bg-cardBg gap-1.5 rounded-xl px-3.5 py-3">
+          <View className="flex-row items-center gap-3">
+            <Text className="text-text1 flex-1 text-[15px] font-semibold">
+              {t('passportStatement.optInTitle')}
+            </Text>
+            <Switch
+              value={countAsWitness}
+              onValueChange={onCountAsWitnessChange}
+              disabled={busy}
+              accessibilityLabel={t('passportStatement.optInTitle')}
+              style={{ alignSelf: 'center' }}
+            />
+          </View>
+          <Text className="text-text3 text-[13px] leading-[18px]">{t('passportStatement.optInBody')}</Text>
+        </View>
+      ) : null}
       <ThemedButton
+        loading={busy}
         label={
           developerMode
             ? 'Save Passport Credential'

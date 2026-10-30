@@ -72,8 +72,7 @@ import { useActiveDid, useIdentityData } from '@/identity';
 import type { PassportReadResult } from '@solidarity/nitro-attest';
 import { uuid } from '@solidarity/shared';
 import { loadPassportNitroModules } from '@/passport/nitroModules';
-import { issuePassportStatement } from '@/passport/npubBinding';
-import { confirmDialog } from '@/feedback/confirmDialog';
+import { issuePassportStatement, preloadPassportStatement } from '@/passport/npubBinding';
 import { DEFAULT_RELAYS } from '@/nostr/publish';
 import { hasNostrKeySync } from '@/nostr/userKey';
 import { deviceAttestSupported } from '@/witness/deviceKey';
@@ -263,6 +262,12 @@ export default function PassportSetup() {
   // credentials, two statements, 4 + 4 claims. This ref closes that window
   // synchronously.
   const persisting = useRef(false);
+  // Opt-in (plan 11 Q3): the nullifier lets the issuing state link this npub.
+  const [countAsWitness, setCountAsWitness] = useState(false);
+  const statementSod = state.chip?.dataGroups?.sod;
+  const canSignStatement = state.chip !== null && !state.chip.isSimulated && state.chip.passiveAuthValid &&
+    (statementSod?.byteLength ?? 0) > 0 && hasNostrKeySync() && deviceAttestSupported();
+  useEffect(() => { if (state.step === 'persist' && canSignStatement) void preloadPassportStatement(); }, [state.step, canSignStatement]);
   const onPersist = async () => {
     if (persisting.current) return;
     persisting.current = true;
@@ -346,13 +351,7 @@ export default function PassportSetup() {
       // Whether it was signed decides L3 vs L2, so it is awaited here.
       let statementSigned = false;
       const sod = chip.dataGroups?.sod;
-      if (chipVerified && sod !== undefined && sod.byteLength > 0 && hasNostrKeySync() && deviceAttestSupported()) {
-        const countAsWitness = await confirmDialog({
-          title: t('passportStatement.optInTitle'),
-          message: t('passportStatement.optInBody'),
-          confirmLabel: t('passportStatement.optInConfirm'),
-          cancelLabel: t('passportStatement.optInDecline'),
-        });
+      if (canSignStatement && sod !== undefined) {
         const { ageOver18 } = derivePassportPublicSignals({
           dg1MRZData: chip.dg1MRZData,
           fallbackNationality: draft.nationalityCode,
@@ -501,6 +500,9 @@ export default function PassportSetup() {
             chip={state.chip}
             busy={state.isLoading}
             developerMode={developerMode}
+            canCountAsWitness={canSignStatement}
+            countAsWitness={countAsWitness}
+            onCountAsWitnessChange={setCountAsWitness}
             onSave={() => { void onPersist(); }}
           />
         ) : null}

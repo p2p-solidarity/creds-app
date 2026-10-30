@@ -63,9 +63,27 @@ export function dropDeviceKey(): void {
   }
 }
 
+// One attestation at a time: a preload still running when the first
+// signature asks must be joined, or the phone would attest two keys.
+let pending: { readonly npubHex: string; readonly promise: Promise<Result<StoredDeviceKey, DeviceKeyFailure>> } | null = null;
+
 async function ensureDeviceKey(npubHex: string): Promise<Result<StoredDeviceKey, DeviceKeyFailure>> {
   const cached = readStored(npubHex);
   if (cached !== null) return ok(cached);
+  if (pending?.npubHex === npubHex) return pending.promise;
+  const promise = attestDeviceKey(npubHex).finally(() => {
+    if (pending?.promise === promise) pending = null;
+  });
+  pending = { npubHex, promise };
+  return promise;
+}
+
+/** Do the Apple / Google round trip ahead of the first signature, so that signature is local. */
+export function preloadDeviceKey(npubHex: string): void {
+  void ensureDeviceKey(npubHex);
+}
+
+async function attestDeviceKey(npubHex: string): Promise<Result<StoredDeviceKey, DeviceKeyFailure>> {
   const native = getDeviceAttest();
   if (!native?.isSupported) return err('unsupported');
 

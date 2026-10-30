@@ -29,9 +29,8 @@ import {
 } from '@solidarity/shared';
 
 import type { NostrEvent } from '@/nostr/nostrAdapter';
-import type { PublishReport } from '@/nostr/publish';
 import { getNostrPubkey, npubEncode, signNostrEvent } from '@/nostr/userKey';
-import { dropDeviceKey, signWithDeviceKey, type DeviceKeyFailure } from '@/witness/deviceKey';
+import { dropDeviceKey, preloadDeviceKey, signWithDeviceKey, type DeviceKeyFailure } from '@/witness/deviceKey';
 import { fetchEvents, publishWitness } from '@/witness/witness';
 
 import {
@@ -60,7 +59,7 @@ async function signAndPublish(
   stored: Omit<StoredStatement, 'signedAt'>,
   relays: readonly string[],
   nowMs: number,
-): Promise<Result<PublishReport, PassportStatementFailure>> {
+): Promise<Result<void, PassportStatementFailure>> {
   // A passport deleted while this signs must not get its statement back.
   const generation = statementGeneration();
   const holder = npubEncode(stored.npubHex);
@@ -82,7 +81,20 @@ async function signAndPublish(
   }
   if (!event.ok) return event;
   if (!writeStoredStatement({ ...stored, signedAt: signedAt * 1000 }, generation)) return err('passportDeleted');
-  return ok(await publishWitness(event.value, relays));
+  // Signed and stored is what makes it L3; relays can take seconds each, so
+  // the publish finishes in the background instead of holding the save screen.
+  void publishWitness(event.value, relays)
+    .then((report) => {
+      if (!report.success) console.warn(`[passport] statement reached ${String(report.acceptedCount)}/${String(report.requiredCount)} relays`);
+    })
+    .catch((e: unknown) => { console.warn('[passport] statement publish failed', e); });
+  return ok(undefined);
+}
+
+/** Attest the device key while the user is still on the save step. */
+export async function preloadPassportStatement(): Promise<void> {
+  const npubHex = await getNostrPubkey();
+  if (npubHex.ok) preloadDeviceKey(npubHex.value);
 }
 
 /**
@@ -101,7 +113,7 @@ export async function issuePassportStatement(
     readonly credentialId: string;
   },
   relays: readonly string[],
-): Promise<Result<PublishReport, PassportStatementFailure>> {
+): Promise<Result<void, PassportStatementFailure>> {
   const npubHex = await getNostrPubkey();
   if (!npubHex.ok) return err('noNostrKey');
   return signAndPublish(
