@@ -37,3 +37,17 @@
 | 11 | 帳號保護 | `11-header-one-row-security.png` |
 
 另外看過開發者選項（同一列）。沒逐頁點開的：username、backup、identity-export、pro、verify/nostr、verify/bluesky、me/edit、websign、驗證工具（同一個元件、同一個機械替換，typecheck 過）。
+
+## 追加：法律文件改成 creds.id（與 creds.id/privacy、/terms 同文）
+
+- App 的隱私權政策／服務條款改由 airmeishi-web `src/content/legal/` 產生（`bun scripts/export-legal-markdown.ts`），依 App 語言顯示 en 或 zh-Hant，標題在地化。新版生效日 2026-10-30。
+- 跑過：模擬器開 `credsid://legal/privacy`（繁中）→ 新內容、單列標題，`12-app-privacy-zh.png`。網站 `localhost:5732/privacy` 15 節標題都在、日期 2026-10-30。
+- 沒跑：App 英文版、服務條款頁（同一元件與產生器）；網站沒有部署。
+- 備註：iPhone 18 Pro 在 20:30 被 `xcode-cleanup.sh` 清掉（關機時 3.25 GB > 3 GB），用 DerivedData 既有的 Debug build 重新安裝。
+
+## 追加：i18n 確認
+
+- App：en／zh-Hant key 完全一致；程式裡靜態用到的 key 全部存在（`i18nCatalog.test.ts`）。刪掉 354 個只剩被砍功能在用的 key（DIDs、分享設定、群組、名片編輯、舊 Me 首頁…），1737 → 1383。動態前綴（`security.mode.*`、`zktls.error.*` 等）不動。
+- 修掉與新隱私權政策矛盾的文案：onboarding「金鑰只在這支手機上」→「金鑰在這支手機上簽名」（passkey 會上傳加密副本）；連結查驗「不經過任何伺服器」→「中間不經過 creds.id 的伺服器」。補翻：`Bluesky handle`、`Email`。
+- 網站：en／zh-Hant key 一致；中英相同的只剩品牌名、標語與 placeholder。
+- 沒跑：刪 key 之後沒有逐頁在模擬器上點過；靠 catalog 測試擋靜態用法。
