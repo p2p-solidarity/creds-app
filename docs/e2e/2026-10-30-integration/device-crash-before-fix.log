@@ -1,0 +1,17 @@
+Oct 30 18:03:01.762812 Solidarity(UIKitCore)[3214] <Notice>: Sending UIEvent type: 0; subtype: 0; to windows: 1
+Oct 30 18:03:01.763497 Solidarity(UIKitCore)[3214] <Notice>: Sending UIEvent type: 0; subtype: 0; to window: <UIWindow: 0x10880e8b0>; contextId: 0xAA0026A2
+Oct 30 18:03:01.773463 Solidarity(React)[3214] <Error>: [solidarity:uncaught] FATAL Cannot read property 'emit' of undefined
+TypeError: Cannot read property 'emit' of undefined
+    at onPress (/Volumes/workspace/DerivedData/Build/Intermediates.noindex/ArchiveIntermediates/solidarity/BuildProductsPath/Release-iphoneos/main.jsbundle:145792:40)
+    at _performTransitionSideEffects (/Volumes/workspace/DerivedData/Build/Intermediates.noindex/ArchiveIntermediates/solidarity/BuildProductsPath/Release-iphoneos/main.jsbundle:32273:20)
+    at _receiveSignal (/Volumes/workspace/DerivedData/Build/Intermediates.noindex/ArchiveIntermediates/solidarity/BuildProductsPath/Release-iphoneos/main.jsbundle:32231:43)
+    at onResponderRelease (/Volumes/workspace/DerivedData/Build/Intermediates.noindex/ArchiveIntermediates/solidarity/BuildProductsPath/Release-iphoneos/main.jsbundle:32128:30)
+    at dispatchResponderEvent (/Volumes/workspace/DerivedData/Build/Intermediates.noindex/ArchiveIntermediates/solidarity/BuildProductsPath/Release-iphoneos/main.jsbundle:15431:23)
+    at p<…>
+Oct 30 18:03:01.776400 Solidarity(UIKitCore)[3214] <Notice>: Evaluating dispatch of UIEvent: 0x1099c6300; type: 0; subtype: 0; backing type: 11; shouldSend: 0; ignoreInteractionEvents: 0, systemGestureStateChange: 0
+Oct 30 18:03:01.776763 Solidarity(CoreFoundation)[3214] <Debug>: found no value for key LogSystemGestureUpdate in CFPrefsSearchListSource<0x1098a8280> (Domain: com.apple.UIKit, Container: (null))
+Oct 30 18:03:01.777367 Solidarity(UIKitCore)[3214] <Notice>: Evaluating dispatch of UIEvent: 0x1099c6300; type: 0; subtype: 0; backing type: 11; shouldSend: 0; ignoreInteractionEvents: 0, systemGestureStateChange: 1
+Oct 30 18:03:01.778035 Solidarity(CoreFoundation)[3214] <Debug>: found no value for key LogGesturePerformance in CFPrefsSearchListSource<0x1098a8280> (Domain: com.apple.UIKit, Container: (null))
+Oct 30 18:03:01.778169 Solidarity(UIKitCore)[3214] <Info>: send gesture actions
+Oct 30 18:03:01.778260 Solidarity(UIKitCore)[3214] <Info>: send gesture actions
+Oct 30 18:03:01.778357 Solidarity(React)[3214] <Error>: [TypeError: Cannot read property 'emit' of undefined]
