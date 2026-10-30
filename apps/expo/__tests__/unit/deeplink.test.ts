@@ -14,6 +14,12 @@ describe('parseDeepLink', () => {
     }
   });
 
+  it('routes credsid:// the same as the legacy solidarity:// scheme', () => {
+    expect(parseDeepLink('credsid://card/f47ac10b-58cc-4372-a567-0e02b2c3d479').kind).toBe('card');
+    expect(parseDeepLink('credsid://websign?req=aaa.bbb.ccc').kind).toBe('webSign');
+    expect(parseDeepLink('credsidx://card/f47ac10b-58cc-4372-a567-0e02b2c3d479').kind).toBe('unknown');
+  });
+
   it('parses a https://solidarity.gg/c/<uuid> universal link', () => {
     const r = parseDeepLink('https://solidarity.gg/c/f47ac10b-58cc-4372-a567-0e02b2c3d479');
     expect(r.kind).toBe('card');

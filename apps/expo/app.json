@@ -5,6 +5,7 @@
     "owner": "kidney",
     "icon": "./assets/icon.png",
     "scheme": [
+      "credsid",
       "solidarity",
       "airmeishi",
       "openid-credential-offer"

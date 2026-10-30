@@ -27,6 +27,7 @@ import {
 } from '@solidarity/shared';
 
 import { verifyCrd1Wire } from '@/cards/crd1Envelope';
+import { hasAppSchemePrefix } from '@/deeplink/appScheme';
 import { EVIDENCE_PACK_TYP } from '@/cards/evidencePack';
 import {
   parseNostrPointerClaim,
@@ -78,7 +79,7 @@ export async function handleScannedPayload(payload: string): Promise<ScanOutcome
   }
 
   // App deep links — leave the existing deeplink router handle these.
-  if (payload.startsWith('solidarity://') || payload.startsWith('airmeishi://')) {
+  if (hasAppSchemePrefix(payload)) {
     return { kind: 'unknown' };
   }
 

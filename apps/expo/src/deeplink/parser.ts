@@ -6,6 +6,7 @@
 import { DEFAULT_HANDLE_RESOLVERS, matchHandleResolver, resolveDidKey } from '@solidarity/shared';
 
 import { WEBSIGN_DEEPLINK_HOST, WEBSIGN_REQUEST_PARAM } from '../websign/transport';
+import { isAppSchemeProtocol } from './appScheme';
 import { isProductHost, isVerifiedDomain } from './domainVerification';
 
 export type DeepLinkRoute =
@@ -173,7 +174,7 @@ function parseVerifiedDomainRoute(url: URL, devProductHosts: boolean): DeepLinkR
 }
 
 /**
- * `solidarity://…` / `airmeishi://…` routes only — split out of
+ * `credsid://…` (and legacy `solidarity://…` / `airmeishi://…`) routes only — split out of
  * `parseDeepLink` for the same reason `parseVerifiedDomainRoute` above was:
  * keep that function's cyclomatic complexity under budget as this branch
  * grows (card / group / and now pear, Task A5.4 US-20). `null` means
@@ -244,7 +245,7 @@ export function parseDeepLink(raw: string, options: ParseDeepLinkOptions = {}): 
       : { kind: 'credentialOffer', query };
   }
 
-  if (url.protocol === 'solidarity:' || url.protocol === 'airmeishi:') {
+  if (isAppSchemeProtocol(url.protocol)) {
     const route = parseCustomSchemeRoute(url);
     if (route !== null) return route;
   }
