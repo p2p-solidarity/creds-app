@@ -1,5 +1,5 @@
 /**
- * `dragDestinationIndex` is called synchronously inside `Gesture.Pan().onEnd`
+ * The drag-slot helpers (`dragDestinationForSlots`, `rowSlot`, `slotOffset`) are called synchronously inside `Gesture.Pan().onEnd`
  * worklets (ProfileLinksList / ProfileSectionsList), which run on the UI
  * runtime. A captured non-worklet function unpacks there as a stub that
  * throws — "[Worklets] Tried to synchronously call a non-worklet function" —
@@ -7,8 +7,8 @@
  *
  * Bun tests never execute the UI runtime, so this asserts the invariant at
  * the artifact level instead: the app's worklets babel plugin must emit a
- * workletized `dragDestinationIndex` (i.e. stamp `__workletHash` on it).
- * Dropping the `'worklet'` directive from the function turns this red.
+ * workletized helper (i.e. stamp `__workletHash` on each).
+ * Dropping the `'worklet'` directive from any of them turns this red.
  */
 import { describe, expect, it } from 'bun:test';
 import { fileURLToPath } from 'node:url';
@@ -29,10 +29,11 @@ function transform(relativePath: string): string {
 }
 
 describe('pageRowStyles worklet contract', () => {
-  it('workletizes dragDestinationIndex for the UI-runtime drag handles', () => {
-    expect(transform('../../src/components/me/pageRowStyles.ts')).toMatch(
-      /dragDestinationIndex\.__workletHash\s*=/u,
-    );
+  it('workletizes the drag-slot helpers for the UI-runtime drag handles', () => {
+    const code = transform('../../src/components/me/pageRowStyles.ts');
+    expect(code).toMatch(/dragDestinationForSlots\.__workletHash\s*=/u);
+    expect(code).toMatch(/rowSlot\.__workletHash\s*=/u);
+    expect(code).toMatch(/slotOffset\.__workletHash\s*=/u);
   });
 
   it('workletizes the rowDrag helpers its pan worklets call synchronously', () => {

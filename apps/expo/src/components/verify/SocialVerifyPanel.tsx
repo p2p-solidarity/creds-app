@@ -294,7 +294,7 @@ function MarkerCard({
   );
 }
 
-const FAILURE_KEY: Record<ProofFailure | 'signDenied' | 'noName', string> = {
+export const FAILURE_KEY: Record<ProofFailure | 'signDenied' | 'noName', string> = {
   unsupported: 'zktls.error.unsupported',
   serverUnavailable: 'zktls.error.serverUnavailable',
   deviceRejected: 'zktls.error.deviceRejected',

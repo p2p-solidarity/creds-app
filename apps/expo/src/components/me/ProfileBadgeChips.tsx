@@ -53,6 +53,9 @@ export interface ProfileBadgeChipsProps {
   /** Only the empty state's reminder uses it — adding a proof otherwise goes
    *  through the tab's single "＋ 新增" sheet. */
   readonly onCreateProof: () => void;
+  /** Folded on the Page by default: the binding checks above keep running,
+   *  only the rows are left out. */
+  readonly expanded: boolean;
 }
 
 export function ProfileBadgeChips({
@@ -60,6 +63,7 @@ export function ProfileBadgeChips({
   publicRecord,
   nostrUploaded,
   onCreateProof,
+  expanded,
 }: ProfileBadgeChipsProps): ReactNode {
   const { t } = useTranslation();
   const c = useThemeColors();
@@ -142,6 +146,8 @@ export function ProfileBadgeChips({
         setSavingClaimId(null);
       });
   };
+
+  if (!expanded) return null;
 
   if (!hydrated) {
     return (

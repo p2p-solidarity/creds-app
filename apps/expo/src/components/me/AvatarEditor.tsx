@@ -51,12 +51,16 @@ export function AvatarEditor({
         phase={controller.phase}
         canUseBluesky={controller.canUseBluesky}
         canRemove={controller.canRemove}
+        linkAvatars={controller.linkAvatars}
         onClose={controller.close}
         onChooseLibrary={() => {
           void controller.chooseFromLibrary();
         }}
         onUseBluesky={() => {
           void controller.useBluesky();
+        }}
+        onUseLinkAvatar={(picture) => {
+          void controller.useLinkAvatar(picture);
         }}
         onRemove={() => {
           void controller.remove();

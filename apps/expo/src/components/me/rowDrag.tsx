@@ -9,7 +9,7 @@
  *
  * Runtime contract: everything the pan worklets call synchronously runs on
  * the UI runtime and must be a worklet (`rubberClamp`, `settleBack`, and
- * `dragDestinationIndex` from pageRowStyles). Dropping a `'worklet'`
+ * `dragDestinationForSlots` / `rowSlot` / `slotOffset` from pageRowStyles). Dropping a `'worklet'`
  * directive here is the release-build crash "[Worklets] Tried to
  * synchronously call a non-worklet function on the UI thread" — guarded at
  * the artifact level by `__tests__/unit/pageRowStylesWorklet.test.ts`.
@@ -36,7 +36,7 @@ import { Colors } from '@/constants/Colors';
 import { haptic } from '@/feedback/haptics';
 import { SCALE, SPRING } from '@/feedback/motion';
 
-import { dragDestinationIndex } from './pageRowStyles';
+import { dragDestinationForSlots, rowSlot, slotOffset } from './pageRowStyles';
 
 export interface RowDragController {
   /** Section index of the row being carried; -1 when idle. */
@@ -45,15 +45,18 @@ export interface RowDragController {
   readonly dragY: SharedValue<number>;
   /** Slot the drag currently resolves to; -1 when idle. */
   readonly destination: SharedValue<number>;
+  /** Each row's measured height by section index (0 = not measured yet). */
+  readonly heights: SharedValue<number[]>;
 }
 
 export function useRowDragController(): RowDragController {
   const activeIndex = useSharedValue(-1);
   const dragY = useSharedValue(0);
   const destination = useSharedValue(-1);
+  const heights = useSharedValue<number[]>([]);
   return useMemo(
-    () => ({ activeIndex, dragY, destination }),
-    [activeIndex, dragY, destination],
+    () => ({ activeIndex, dragY, destination, heights }),
+    [activeIndex, dragY, destination, heights],
   );
 }
 
@@ -85,7 +88,8 @@ function settleBack(controller: RowDragController): void {
 }
 
 /** Animated wrapper for one reorderable row. `stride` is the row's travel
- * per slot (height + gap) — import it from pageRowStyles, never re-derive. */
+ * per slot (height + gap) until the row has measured itself — import it from
+ * pageRowStyles, never re-derive. Rows must be spaced by exactly `ROW_GAP`. */
 export function DraggableRow({
   controller,
   index,
@@ -109,8 +113,9 @@ export function DraggableRow({
       const active = controller.activeIndex.value;
       if (active === -1 || active === index) return 0;
       const destination = controller.destination.value;
-      if (index > active && index <= destination) return -stride;
-      if (index < active && index >= destination) return stride;
+      const carried = rowSlot(controller.heights.value, active, stride);
+      if (index > active && index <= destination) return -carried;
+      if (index < active && index >= destination) return carried;
       return 0;
     },
     (target, previous) => {
@@ -139,7 +144,20 @@ export function DraggableRow({
     };
   });
 
-  return <Animated.View style={[style, animatedStyle]}>{children}</Animated.View>;
+  return (
+    <Animated.View
+      style={[style, animatedStyle]}
+      onLayout={(event) => {
+        const height = event.nativeEvent.layout.height;
+        const current = controller.heights.value;
+        if (current[index] === height) return;
+        const next = [...current];
+        next[index] = height;
+        controller.heights.value = next;
+      }}>
+      {children}
+    </Animated.View>
+  );
 }
 
 /** 44pt grip that drives the section's drag. Also exposes the reorder to
@@ -153,6 +171,8 @@ export function RowDragHandle({
   label,
   disabled = false,
   onMove,
+  children,
+  width = 44,
 }: {
   readonly controller: RowDragController;
   readonly index: number;
@@ -162,6 +182,10 @@ export function RowDragHandle({
   readonly label: string;
   readonly disabled?: boolean;
   readonly onMove: (destination: number) => void;
+  /** Grip face; defaults to the six-dot glyph. A link row uses its avatar. */
+  readonly children?: ReactNode;
+  /** Grip width; the default fits the six-dot glyph's 44pt target. */
+  readonly width?: number;
 }): ReactNode {
   const pan = usePanGesture({
     enabled: !disabled,
@@ -173,23 +197,25 @@ export function RowDragHandle({
       scheduleOnRN(haptic, 'soft');
     },
     onUpdate: (event) => {
+      const heights = controller.heights.value;
       controller.dragY.value = rubberClamp(
         event.translationY,
-        -index * stride,
-        (itemCount - 1 - index) * stride,
+        slotOffset(heights, index, 0, stride),
+        slotOffset(heights, index, itemCount - 1, stride),
       );
-      const destination = dragDestinationIndex(index, event.translationY, itemCount, stride);
+      const destination = dragDestinationForSlots(index, event.translationY, itemCount, heights, stride);
       if (destination !== controller.destination.value) {
         controller.destination.value = destination;
         scheduleOnRN(haptic, 'selection');
       }
     },
     onDeactivate: (event) => {
-      const destination = dragDestinationIndex(index, event.translationY, itemCount, stride);
+      const heights = controller.heights.value;
+      const destination = dragDestinationForSlots(index, event.translationY, itemCount, heights, stride);
       if (destination !== index) {
         // Land in the destination slot first; the JS commit then repaints
         // the same geometry with identity transforms (see module header).
-        controller.dragY.value = withSpring((destination - index) * stride, SPRING.press);
+        controller.dragY.value = withSpring(slotOffset(heights, index, destination, stride), SPRING.press);
         scheduleOnRN(onMove, destination);
         return;
       }
@@ -215,13 +241,13 @@ export function RowDragHandle({
           if (event.nativeEvent.actionName === 'increment' && index < itemCount - 1) onMove(index + 1);
         }}
         style={{
-          width: 44,
+          width,
           height,
           alignItems: 'center',
           justifyContent: 'center',
           opacity: disabled ? 0.4 : 1,
         }}>
-        <Svg width={18} height={24} viewBox="0 0 18 24" fill="none">
+        {children ?? <Svg width={18} height={24} viewBox="0 0 18 24" fill="none">
           {[6, 12, 18].flatMap((cy) => [6, 12].map((cx) => (
             <Circle
               key={`${String(cx)}-${String(cy)}`}
@@ -231,7 +257,7 @@ export function RowDragHandle({
               fill={Colors.text3}
             />
           )))}
-        </Svg>
+        </Svg>}
       </View>
     </GestureDetector>
   );

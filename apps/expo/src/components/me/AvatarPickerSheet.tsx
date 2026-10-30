@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { ActivityIndicator, Modal, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { ReactNode } from 'react';
@@ -6,7 +7,10 @@ import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/radius';
 import { useTranslation } from '@/i18n';
+
+import type { LinkAvatarChoice } from './useAvatarEditor';
 
 export type AvatarPickerPhase =
   | { readonly step: 'ready' }
@@ -18,9 +22,12 @@ export interface AvatarPickerSheetProps {
   readonly phase: AvatarPickerPhase;
   readonly canUseBluesky: boolean;
   readonly canRemove: boolean;
+  /** Pictures the Page's links already serve — one tap instead of an upload. */
+  readonly linkAvatars: readonly LinkAvatarChoice[];
   readonly onClose: () => void;
   readonly onChooseLibrary: () => void;
   readonly onUseBluesky: () => void;
+  readonly onUseLinkAvatar: (picture: string) => void;
   readonly onRemove: () => void;
   readonly onResetError: () => void;
 }
@@ -30,9 +37,11 @@ export function AvatarPickerSheet({
   phase,
   canUseBluesky,
   canRemove,
+  linkAvatars,
   onClose,
   onChooseLibrary,
   onUseBluesky,
+  onUseLinkAvatar,
   onRemove,
   onResetError,
 }: AvatarPickerSheetProps): ReactNode {
@@ -101,6 +110,35 @@ export function AvatarPickerSheet({
                   />
                 </View>
               </ThemedSurface>
+            ) : null}
+
+            {phase.step === 'ready' && linkAvatars.length > 0 ? (
+              <View className="gap-2">
+                <ThemedText variant="label" tone="secondary">
+                  {t('meEdit.avatar.fromLinks')}
+                </ThemedText>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 14 }}>
+                  {linkAvatars.map((choice) => (
+                    <PressableScale
+                      key={choice.picture}
+                      haptic="tap"
+                      onPress={() => { onUseLinkAvatar(choice.picture); }}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('meEdit.avatar.useFromLink', { label: choice.label })}
+                      style={{ width: 72, alignItems: 'center', gap: 6 }}>
+                      <Image
+                        source={{ uri: choice.picture }}
+                        contentFit="cover"
+                        accessibilityIgnoresInvertColors
+                        style={{ width: 64, height: 64, borderRadius: Radius.pill, backgroundColor: Colors.chipSurface }}
+                      />
+                      <ThemedText variant="caption" tone="secondary" numberOfLines={1}>
+                        {choice.label}
+                      </ThemedText>
+                    </PressableScale>
+                  ))}
+                </ScrollView>
+              </View>
             ) : null}
 
             {phase.step === 'ready' ? (

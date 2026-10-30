@@ -15,7 +15,6 @@ import { Radius } from '@/constants/radius';
 import { useTranslation } from '@/i18n';
 import { haptic } from '@/feedback/haptics';
 import { fadeUpIn } from '@/feedback/motion';
-import { pushToast } from '@/feedback/toast';
 import {
   PAGE_BLOCK_CATALOG,
   MAX_PAGE_BLOCK_TITLE_LENGTH,
@@ -33,7 +32,8 @@ import { preparePageDesign, usePageDesignStore } from '@/page/pageDesignStore';
 import { useProGate } from '@/pro/useProGate';
 
 import { PageLivePreview } from './PageLivePreview';
-import { PageSectionLabel } from './PageSectionLabel';
+import { PageCollapsibleHeader } from './PageCollapsibleHeader';
+import { PublishChangesCard } from './PublishChangesCard';
 import {
   BLOCK_ROW_HEIGHT,
   BLOCK_ROW_STRIDE,
@@ -79,6 +79,10 @@ export function ProfileSectionsList({
   const savePageDesign = useProfileStore((state) => state.savePageDesign);
   const [editing, setEditing] = useState<PageBlock | null>(null);
   const [publishing, setPublishing] = useState(false);
+  // What the last publish actually did; `done` stays until dismissed or the
+  // next edit, `error` until the next try.
+  const [publishResult, setPublishResult] = useState<'idle' | 'done' | 'error'>('idle');
+  const [open, setOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const drag = useRowDragController();
   const publishedDesign = record?.page ?? toPublicPageDesign(createInitialPageDesign());
@@ -105,24 +109,29 @@ export function ProfileSectionsList({
       .then((result) => {
         if (result.ok) {
           haptic('success');
-          pushToast(t('pageDesign.publishSuccess'), 'success');
+          setPublishResult('done');
           return;
         }
         haptic('error');
-        pushToast(t('pageDesign.publishError'), 'error');
+        setPublishResult('error');
       })
       .catch(() => {
         haptic('error');
-        pushToast(t('pageDesign.publishError'), 'error');
+        setPublishResult('error');
       })
       .finally(() => { setPublishing(false); });
   };
 
   return (
     <View className="gap-3 px-4">
-      <PageSectionLabel title={t('mePage.sections')} />
+      <PageCollapsibleHeader
+        title={t('mePage.sections')}
+        summary={status === 'ready' ? t('mePage.groupCount', { count: movableBlocks.length + 1 }) : null}
+        open={open}
+        onToggle={() => { setOpen((current) => !current); }}
+      />
 
-      {status === 'loading' ? (
+      {!open ? null : status === 'loading' ? (
         <ThemedSurface padded className="items-center gap-2">
           <ActivityIndicator color={Colors.primaryBlue} />
           <ThemedText variant="caption" tone="secondary">{t('pageDesign.loading')}</ThemedText>
@@ -193,24 +202,23 @@ export function ProfileSectionsList({
             onToggle={() => { setPreviewOpen((current) => !current); }}
           />
 
-          {pageHasChanges ? (
-            <ThemedSurface variant="inset" padded className="gap-3">
-              <View className="gap-1">
-                <ThemedText variant="bodyMedium">{t('pageDesign.publishChanges')}</ThemedText>
-                <ThemedText variant="caption" tone="secondary">
-                  {t('pageDesign.publishHint')}
-                </ThemedText>
-              </View>
-              <ThemedButton
-                label={t('pageDesign.publishChanges')}
-                loading={publishing}
-                fullWidth
-                onPress={publishPageChanges}
-              />
-            </ThemedSurface>
-          ) : null}
         </>
       )}
+
+      {/* Outside the fold: unpublished changes always show, folded or not. */}
+      {status === 'ready' && (pageHasChanges || publishResult === 'done') ? (
+        <PublishChangesCard
+          state={
+            publishing
+              ? { kind: 'publishing' }
+              : pageHasChanges
+                ? publishResult === 'error' ? { kind: 'error' } : { kind: 'pending' }
+                : { kind: 'done', handle: previewHandle }
+          }
+          onPublish={publishPageChanges}
+          onDismiss={() => { setPublishResult('idle'); }}
+        />
+      ) : null}
 
       <PageBlockEditorSheet block={editing} onClose={() => { setEditing(null); }} />
     </View>

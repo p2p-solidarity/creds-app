@@ -108,6 +108,7 @@ const SF_TO_MATERIAL: Partial<Record<SFSymbol, AndroidSymbol>> = {
   'doc.text.fill': 'description',
   'doc.viewfinder': 'document_scanner',
   'dot.radiowaves.left.and.right': 'wifi_tethering',
+  ellipsis: 'more_vert',
   'ellipsis.circle': 'more_horiz',
   envelope: 'mail',
   'envelope.fill': 'mail',

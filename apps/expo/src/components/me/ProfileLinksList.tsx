@@ -14,7 +14,7 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from 'react';
-import { Linking, View } from 'react-native';
+import { ActivityIndicator, Linking, View } from 'react-native';
 import { router } from 'expo-router';
 
 import {
@@ -43,6 +43,15 @@ import { socialTargetForLink, type SocialTarget } from '@solidarity/shared';
 import { deviceAttestSupported } from '@/witness/deviceKey';
 import { proofAge, useZktlsProofs } from '@/zktls/store';
 import {
+  dismissLinkCheck,
+  linkCheckKey,
+  runLinkCheck,
+  startLinkCheck,
+  useLinkChecks,
+  type LinkCheckJob,
+} from '@/zktls/checkJobs';
+import { FAILURE_KEY } from '@/components/verify/SocialVerifyPanel';
+import {
   CREDS_DEVICE_TRUST,
   normalizeAtprotoHandle,
   pageSocialClaim,
@@ -55,10 +64,8 @@ import {
 import { PageEmptyState } from './PageEmptyState';
 import { PageSectionLabel } from './PageSectionLabel';
 import {
-  FIELD_ROW_HEIGHT,
   FIELD_ROW_STRIDE,
   ICON_TILE_GLYPH,
-  ICON_TILE_SIZE,
   ROW_GAP,
   fieldRowStyle,
   isNostrProfileUrlForNpub,
@@ -183,7 +190,7 @@ export function ProfileLinksList({
   const addMoreAction = (
     <ThemedButton
       label={t('mePage.addMore')}
-      variant="dottedOutline"
+      variant="secondary"
       haptic="tap"
       fullWidth
       onPress={onAddMore}
@@ -207,7 +214,12 @@ export function ProfileLinksList({
 
   return (
     <View className="gap-5 px-4">
-      {addLinkAction}
+      {/* Linktree's pair: the quieter "＋ 新增" (sections, attestations) beside
+          the main "＋ 新增連結". */}
+      <View style={{ flexDirection: 'row', gap: 10 }}>
+        <View style={{ flex: 1 }}>{addMoreAction}</View>
+        <View style={{ flex: 1 }}>{addLinkAction}</View>
+      </View>
       <LinkRowsSection
         title={t('mePage.publicPage')}
         entries={sections.publicLinks}
@@ -245,14 +257,15 @@ export function ProfileLinksList({
           <SfIcon name="chevron.right" size={13} color={Colors.text3} />
         </PressableScale>
       ) : null}
-      {addMoreAction}
     </View>
   );
 }
 
 /** One contiguous reorderable run of link rows. Each section owns its drag
  * controller — section indices restart at 0, so sharing one across sections
- * would alias rows between them. */
+ * would alias rows between them. Rows are Linktree-style cards: the avatar is
+ * the drag grip, the card opens the editor, ⋮ holds the rest, and a link this
+ * phone can check carries its 「驗證」 banner right under it. */
 function LinkRowsSection({
   title,
   entries,
@@ -276,6 +289,8 @@ function LinkRowsSection({
   const c = useThemeColors();
   const drag = useRowDragController();
   const reduceMotion = useReducedMotion();
+  const jobs = useLinkChecks((state) => state.jobs);
+  const dismissed = useLinkChecks((state) => state.dismissed);
   // Rows cascade in once, when the section first paints. A reorder re-keys
   // the moved rows; replaying the entrance there would blink them out right
   // after the drop, so later mounts skip it.
@@ -291,6 +306,23 @@ function LinkRowsSection({
         {entries.map(({ link, sourceIndex }, sectionIndex) => {
           const status = pillFor(link);
           const verifyTarget = status === null ? verifyTargetFor(link) : null;
+          const checkKey = verifyTarget === null ? null : linkCheckKey(verifyTarget);
+          const job = checkKey === null ? undefined : jobs[checkKey];
+          const showBanner = verifyTarget !== null && (job !== undefined || !dismissed.includes(checkKey ?? ''));
+          const display = linkDisplay(link.label, link.url).text;
+          const openMenu = (): void => {
+            appAlert({
+              title: display,
+              buttons: [
+                { label: t('mePage.linkMenu.open'), onPress: () => { onOpenLink(link); } },
+                { label: t('mePage.linkMenu.edit'), onPress: onEdit },
+                ...(verifyTarget !== null && !showBanner
+                  ? [{ label: t('zktls.verifyLink'), onPress: () => { void startLinkCheck(verifyTarget); } }]
+                  : []),
+                { label: t('alert.cancel'), style: 'cancel' as const },
+              ],
+            });
+          };
           return (
             <DraggableRow
               key={`${String(sourceIndex)}-${link.label}-${link.url}`}
@@ -298,78 +330,165 @@ function LinkRowsSection({
               index={sectionIndex}
               stride={FIELD_ROW_STRIDE}
               style={{
-                ...fieldRowStyle(c),
-                gap: 0,
-                paddingVertical: 0,
-                paddingHorizontal: 0,
+                borderRadius: Radius.card,
+                borderWidth: 1,
+                borderColor: c.divider,
+                backgroundColor: c.cardBg,
+                overflow: 'hidden',
               }}>
-              <Animated.View
-                entering={entered ? undefined : fadeUpIn(sectionIndex, reduceMotion)}
-                style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-                <RowDragHandle
-                  controller={drag}
-                  label={t('mePage.reorderLink', { label: linkDisplay(link.label, link.url).text })}
-                  index={sectionIndex}
-                  itemCount={entries.length}
-                  stride={FIELD_ROW_STRIDE}
-                  height={FIELD_ROW_HEIGHT}
-                  disabled={disabled}
-                  onMove={(destination) => {
-                    const target = entries[destination];
-                    if (target) onReorder(sourceIndex, target.sourceIndex);
-                    // Same-task reset: the committed order and the identity
-                    // transforms must reach the UI on the same frame.
-                    resetRowDrag(drag);
-                  }}
-                />
-                <PressableScale
-                  fill
-                  haptic="tap"
-                  onPress={onEdit}
-                  onLongPress={() => { onOpenLink(link); }}
-                  accessibilityRole="button"
-                  accessibilityLabel={linkDisplay(link.label, link.url).text}
-                  accessibilityHint={t('mePage.editLinkHint')}
-                  style={{
-                    minHeight: FIELD_ROW_HEIGHT,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 10,
-                    paddingVertical: 8,
-                    paddingRight: 12,
-                  }}>
-                  <LinkIcon
-                    label={link.label}
-                    url={link.url}
-                    size={ICON_TILE_SIZE}
-                    glyph={ICON_TILE_GLYPH}
-                    surface={c.chipSurface}
-                  />
-                  <View style={{ flex: 1, gap: 1 }}>
-                    <ThemedText variant="bodyMedium" numberOfLines={1} ellipsizeMode="middle">
-                      {linkDisplay(link.label, link.url).text}
-                    </ThemedText>
-                    {linkSecondaryLabel(link.label, link.url) ? (
-                      <ThemedText variant="caption" tone="tertiary" numberOfLines={1}>
-                        {linkSecondaryLabel(link.label, link.url)}
-                      </ThemedText>
-                    ) : null}
-                  </View>
-                  {status ? (
-                    <SealPill
-                      state={status}
-                      label={t(status === 'verified' ? 'mePage.verified' : 'mePage.needsRecheck')}
+              <Animated.View entering={entered ? undefined : fadeUpIn(sectionIndex, reduceMotion)}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: LINK_CARD_HEIGHT }}>
+                  <RowDragHandle
+                    controller={drag}
+                    label={t('mePage.reorderLink', { label: display })}
+                    index={sectionIndex}
+                    itemCount={entries.length}
+                    stride={FIELD_ROW_STRIDE}
+                    height={LINK_CARD_HEIGHT}
+                    width={LINK_AVATAR_SIZE + 24}
+                    disabled={disabled}
+                    onMove={(destination) => {
+                      const target = entries[destination];
+                      if (target) onReorder(sourceIndex, target.sourceIndex);
+                      // Same-task reset: the committed order and the identity
+                      // transforms must reach the UI on the same frame.
+                      resetRowDrag(drag);
+                    }}>
+                    <LinkIcon
+                      label={link.label}
+                      url={link.url}
+                      size={LINK_AVATAR_SIZE}
+                      glyph={ICON_TILE_GLYPH}
+                      surface={c.chipSurface}
                     />
-                  ) : null}
-                  {verifyTarget ? <VerifyChip target={verifyTarget} /> : null}
-                  <SfIcon name="chevron.right" size={13} color={Colors.text3} />
-                </PressableScale>
+                  </RowDragHandle>
+                  <PressableScale
+                    fill
+                    haptic="tap"
+                    onPress={onEdit}
+                    onLongPress={() => { onOpenLink(link); }}
+                    accessibilityRole="button"
+                    accessibilityLabel={display}
+                    accessibilityHint={t('mePage.editLinkHint')}
+                    style={{
+                      minHeight: LINK_CARD_HEIGHT,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 8,
+                      paddingVertical: 10,
+                    }}>
+                    <View style={{ flex: 1, gap: 2 }}>
+                      <ThemedText variant="titleMedium" numberOfLines={1} ellipsizeMode="middle">
+                        {display}
+                      </ThemedText>
+                      <ThemedText variant="caption" tone="tertiary" numberOfLines={1}>
+                        {linkSecondaryLabel(link.label, link.url) ?? link.url.replace(/^https?:\/\//u, '')}
+                      </ThemedText>
+                    </View>
+                    {status ? (
+                      <SealPill
+                        state={status}
+                        label={t(status === 'verified' ? 'mePage.verified' : 'mePage.needsRecheck')}
+                      />
+                    ) : null}
+                  </PressableScale>
+                  <PressableScale
+                    haptic="tap"
+                    onPress={openMenu}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('mePage.linkMenu.more', { label: display })}
+                    style={{ width: 44, height: LINK_CARD_HEIGHT, alignItems: 'center', justifyContent: 'center' }}>
+                    <SfIcon name="ellipsis" size={16} color={c.text2} />
+                  </PressableScale>
+                </View>
+                {showBanner ? (
+                  <LinkVerifyBanner target={verifyTarget} job={job} />
+                ) : null}
               </Animated.View>
             </DraggableRow>
           );
         })}
       </View>
     </View>
+  );
+}
+
+/** Link card geometry: a 44pt avatar, Linktree-sized. */
+const LINK_AVATAR_SIZE = 44;
+const LINK_CARD_HEIGHT = 68;
+
+/**
+ * The 「驗證」 banner under a link row (Linktree's "Finish connecting"): one
+ * tap copies the marker and opens the platform; the check itself runs in
+ * the background (`@/zktls/checkJobs`) and the row's pill appears when done.
+ */
+function LinkVerifyBanner({
+  target,
+  job,
+}: {
+  readonly target: SocialTarget;
+  readonly job: LinkCheckJob | undefined;
+}): ReactNode {
+  const { t } = useTranslation();
+  const c = useThemeColors();
+  const reduceMotion = useReducedMotion();
+  const platform = t(`zktls.platform.${target.platform}`);
+
+  let message: string;
+  let action: { readonly label: string; readonly onPress: () => void } | null;
+  let busy = false;
+  if (job === undefined) {
+    message = t('mePage.linkVerify.prompt', { platform });
+    action = { label: t('mePage.linkVerify.action', { platform }), onPress: () => { void startLinkCheck(target); } };
+  } else if (job.phase === 'waiting') {
+    message = t(target.platform === 'x' ? 'zktls.waitingX' : 'zktls.waiting', { platform });
+    action = { label: t('zktls.alreadyAdded'), onPress: () => { void runLinkCheck(target); } };
+  } else if (job.phase === 'checking') {
+    message = `${t('zktls.proving', { platform })} ${t(job.attempt > 1 ? 'zktls.provingRetry' : 'mePage.linkVerify.background')}`;
+    action = null;
+    busy = true;
+  } else {
+    message = t(FAILURE_KEY[job.failure], { platform });
+    action = job.failure === 'noName'
+      ? { label: t('zktls.claimName'), onPress: () => { router.push('/settings/username'); } }
+      : job.failure === 'noNostrKey'
+        ? { label: t('zktls.setupNostr'), onPress: () => { router.push('/verify/nostr'); } }
+        : job.failure === 'unsupported' || job.failure === 'deviceRejected'
+          ? null
+          : { label: t('zktls.retry'), onPress: () => { void runLinkCheck(target); } };
+  }
+
+  return (
+    <Animated.View
+      key={job?.phase ?? 'idle'}
+      entering={fadeUpIn(0, reduceMotion)}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        paddingVertical: 12,
+        paddingLeft: 14,
+        paddingRight: 6,
+        backgroundColor: c.chipSurface,
+        borderTopWidth: 1,
+        borderTopColor: c.divider,
+      }}>
+      {busy ? <ActivityIndicator size="small" color={c.primaryBlue} /> : null}
+      <ThemedText variant="bodySmall" style={{ flex: 1 }}>
+        {message}
+      </ThemedText>
+      {action ? (
+        <ThemedButton label={action.label} variant="secondary" size="sm" haptic="tap" onPress={action.onPress} />
+      ) : null}
+      <PressableScale
+        haptic="tap"
+        onPress={() => { dismissLinkCheck(target); }}
+        accessibilityRole="button"
+        accessibilityLabel={t('mePage.linkVerify.dismiss')}
+        style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}>
+        <SfIcon name="xmark" size={13} color={c.text2} />
+      </PressableScale>
+    </Animated.View>
   );
 }
 
@@ -489,30 +608,4 @@ function useZktlsClaimStates(record: ProfileRecord | null): ReadonlyMap<string, 
     }
     return states;
   }, [proofs, record]);
-}
-
-function VerifyChip({ target }: { readonly target: SocialTarget }): ReactNode {
-  const { t } = useTranslation();
-  const c = useThemeColors();
-  return (
-    <PressableScale
-      haptic="tap"
-      onPress={() => {
-        router.push({ pathname: '/verify/social', params: { platform: target.platform, handle: target.handle } });
-      }}
-      accessibilityRole="button"
-      accessibilityLabel={t('zktls.verifyLink')}
-      hitSlop={8}
-      style={{
-        paddingVertical: 5,
-        paddingHorizontal: 11,
-        borderRadius: Radius.pill,
-        borderWidth: 1,
-        borderColor: c.primaryBlue,
-      }}>
-      <ThemedText variant="caption" style={{ color: c.primaryBlue }}>
-        {t('zktls.verifyLink')}
-      </ThemedText>
-    </PressableScale>
-  );
 }

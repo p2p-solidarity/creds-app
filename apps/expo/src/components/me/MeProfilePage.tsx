@@ -11,6 +11,7 @@ import { haptic } from '@/feedback/haptics';
 import { fadeUpIn } from '@/feedback/motion';
 import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
+import { useDisplayClaims, useIdentityData } from '@/identity';
 import type { LinkVisibility } from '@/profile/projection';
 import { applyPagePhoto, quickAddLink } from '@/profile/quickAddLink';
 import type { ProfileRecord } from '@solidarity/shared';
@@ -19,7 +20,7 @@ import type { PublicPageShareSource } from './meProfileModel';
 import { displayProfileShareUrl } from './meProfileModel';
 import { useProfileShareSelection } from './useProfileShareSelection';
 import { blockRowStyle } from './pageRowStyles';
-import { PageSectionLabel } from './PageSectionLabel';
+import { PageCollapsibleHeader } from './PageCollapsibleHeader';
 import { ProfileBadgeChips } from './ProfileBadgeChips';
 import { ProfileHero } from './ProfileHero';
 import { ProfileLinksList } from './ProfileLinksList';
@@ -78,6 +79,11 @@ export function MeProfilePage({
   const [addOpen, setAddOpen] = useState(false);
   // Links open the shared add sheet in place: add → saved → check, no detour.
   const [linkSheetOpen, setLinkSheetOpen] = useState(false);
+  // Linktree-simple: hero and links first; attestations fold to one row.
+  const [proofsOpen, setProofsOpen] = useState(false);
+  const claims = useDisplayClaims();
+  const claimsHydrated = useIdentityData((state) => state.hydrated);
+  const proofCount = claims.filter((claim) => claim.claimType !== 'profile_card').length;
   const openAddLink = () => {
     setLinkSheetOpen(true);
   };
@@ -140,10 +146,16 @@ export function MeProfilePage({
       </Animated.View>
 
       <Animated.View entering={entrance(3)}>
-        <View className="px-4 pb-3">
-          <PageSectionLabel title={t('mePage.attestations')} />
+        <View className="px-4 pb-1">
+          <PageCollapsibleHeader
+            title={t('mePage.attestations')}
+            summary={claimsHydrated ? t('mePage.groupCount', { count: proofCount }) : null}
+            open={proofsOpen}
+            onToggle={() => { setProofsOpen((open) => !open); }}
+          />
         </View>
         <ProfileBadgeChips
+          expanded={proofsOpen}
           record={record}
           publicRecord={publicRecord}
           jws={jws}

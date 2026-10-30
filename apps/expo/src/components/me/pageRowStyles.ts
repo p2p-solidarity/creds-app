@@ -28,19 +28,57 @@ export const BLOCK_ROW_HEIGHT = 48;
 export const FIELD_ROW_STRIDE = FIELD_ROW_HEIGHT + ROW_GAP;
 export const BLOCK_ROW_STRIDE = BLOCK_ROW_HEIGHT + ROW_GAP;
 
-/** Resolve the row reached by a vertical drag. Rounding makes the hand-off
- * happen after crossing half a row; clamping keeps edge drags deterministic.
- * Runs inside `Gesture.Pan().onEnd` on the UI runtime — must stay a worklet. */
-export function dragDestinationIndex(
+/** One row's travel (its measured height + the gap), or `stride` while the
+ * row has not been measured. Rows may differ in height — a link row grows a
+ * verify banner — so the drag reads each slot instead of one fixed stride. */
+export function rowSlot(heights: readonly number[], index: number, stride: number): number {
+  'worklet';
+  const height = heights[index] ?? 0;
+  return height > 0 ? height + ROW_GAP : stride;
+}
+
+/** Signed distance from `sourceIndex`'s slot to `destinationIndex`'s. */
+export function slotOffset(
+  heights: readonly number[],
+  sourceIndex: number,
+  destinationIndex: number,
+  stride: number,
+): number {
+  'worklet';
+  let offset = 0;
+  for (let i = sourceIndex + 1; i <= destinationIndex; i++) offset += rowSlot(heights, i, stride);
+  for (let i = destinationIndex; i < sourceIndex; i++) offset -= rowSlot(heights, i, stride);
+  return offset;
+}
+
+/** The slot a vertical drag resolves to, for rows of different heights: the hand-off to a
+ * neighbour happens once the drag has crossed half of that neighbour. */
+export function dragDestinationForSlots(
   sourceIndex: number,
   translationY: number,
   itemCount: number,
-  rowStride: number,
+  heights: readonly number[],
+  stride: number,
 ): number {
   'worklet';
-  if (itemCount <= 0 || rowStride <= 0) return sourceIndex;
-  const destination = sourceIndex + Math.round(translationY / rowStride);
-  return Math.max(0, Math.min(itemCount - 1, destination));
+  let destination = sourceIndex;
+  let travelled = 0;
+  if (translationY > 0) {
+    for (let i = sourceIndex + 1; i < itemCount; i++) {
+      const slot = rowSlot(heights, i, stride);
+      if (translationY < travelled + slot / 2) break;
+      travelled += slot;
+      destination = i;
+    }
+  } else {
+    for (let i = sourceIndex - 1; i >= 0; i--) {
+      const slot = rowSlot(heights, i, stride);
+      if (-translationY < travelled + slot / 2) break;
+      travelled += slot;
+      destination = i;
+    }
+  }
+  return destination;
 }
 
 /** Immutable reorder shared by link and Page-block drag handles. */
