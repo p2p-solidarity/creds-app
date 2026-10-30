@@ -1,7 +1,7 @@
 /** Contacts tab — creds mock v3, backed only by persisted contact data. */
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { ActivityIndicator, ScrollView, View } from 'react-native';
+import { useEffect, useMemo, useState, type ReactElement, type ReactNode } from 'react';
+import { ActivityIndicator, ScrollView, View, type RefreshControlProps } from 'react-native';
 import Animated, {
   interpolate,
   useAnimatedStyle,
@@ -44,6 +44,7 @@ import { haptic } from '@/feedback/haptics';
 import { fadeUpIn } from '@/feedback/motion';
 import { pushToast } from '@/feedback/toast';
 import { useProfileSnapshotStore, useSortedProfileSnapshots } from '@/people/profileSnapshots';
+import { usePagesPullRefresh } from '@/people/usePagesPullRefresh';
 import { usePeopleScreen } from '@/people/usePeopleScreen';
 import { usePreferences } from '@/settings/preferences';
 
@@ -59,6 +60,7 @@ export default function PeopleTab() {
   const loadDetail = useContactStore((s) => s.loadDetail);
   const upsertDeclared = useProfileSnapshotStore((s) => s.upsertDeclared);
   const savedPageCount = useSortedProfileSnapshots().length;
+  const pullRefresh = usePagesPullRefresh(savedPageCount);
   const backupEnabled = usePreferences((s) => s.backupEnabled);
   const insets = useSafeAreaInsets();
   const reduceMotion = useReducedMotion();
@@ -283,6 +285,7 @@ export default function PeopleTab() {
           onAdd={() => { setAddSheetOpen(true); }}
           activity={editMode ? null : <ContactsActivitySections onContactAdded={refresh} />}
           hasSavedPages={savedPageCount > 0}
+          refreshControl={pullRefresh}
         />
       ) : (
         <>
@@ -313,6 +316,7 @@ export default function PeopleTab() {
                   paddingBottom: editMode ? 100 : 16,
                 }}
                 keyboardShouldPersistTaps="handled"
+                refreshControl={editMode ? undefined : pullRefresh}
                 extraData={{ editMode, selectedIds }}
                 ListHeaderComponent={editMode || searching ? null : <VerifiedPagesSection />}
                 renderItem={({ item, index }) => (
@@ -632,15 +636,17 @@ function EmptyContactsContent({
   onAdd,
   activity,
   hasSavedPages,
+  refreshControl,
 }: {
   readonly onImportPhone: () => void;
   readonly onAdd: () => void;
   readonly activity: ReactNode;
   /** Saved Pages are people too: with any, the list is not empty. */
   readonly hasSavedPages: boolean;
+  readonly refreshControl: ReactElement<RefreshControlProps> | undefined;
 }) {
   return (
-    <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+    <ScrollView contentContainerStyle={{ flexGrow: 1 }} refreshControl={refreshControl}>
       {activity}
       {hasSavedPages ? (
         <View className="px-4">

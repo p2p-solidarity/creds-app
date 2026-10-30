@@ -29,9 +29,11 @@ import type { ProfileSnapshot } from '@/people/profileSnapshots';
 import type { SnapshotMergeOutcome } from '@/people/profileSnapshots';
 import type { ProfileRecord } from '@solidarity/shared';
 
-/** One sweep per 6 h — contact freshness matters, relay traffic is not free.
- *  The badge-check cadence (24 h) is a different, per-badge cycle. */
-export const AUTO_REFRESH_MIN_INTERVAL_MS = 6 * 60 * 60 * 1000;
+/** At most one background sweep per 30 min (≤ 30 relay reads) — someone's
+ *  published change reaches this phone within that, the next time the app is
+ *  open; pull-to-refresh on Contacts skips the wait. The badge-check cadence
+ *  (24 h) is a different, per-badge cycle. */
+export const AUTO_REFRESH_MIN_INTERVAL_MS = 30 * 60 * 1000;
 /** Hard cap per sweep — matches the recent-updates feed's own 30-event cap. */
 export const AUTO_REFRESH_MAX_CONTACTS = 30;
 const LAST_SWEEP_KEY = 'contacts:auto-refresh:last-sweep:v1';
@@ -84,6 +86,8 @@ export interface AutoRefreshDeps {
   readonly mergeVerified?: (record: ProfileRecord, jws: string) => SnapshotMergeOutcome;
   readonly minIntervalMs?: number;
   readonly maxContacts?: number;
+  /** Called for each contact whose newer Page was saved. */
+  readonly onUpdated?: (record: ProfileRecord) => void;
 }
 
 export interface AutoRefreshSummary {
@@ -152,8 +156,10 @@ export async function refreshVerifiedContactsOnce(
         continue;
       }
       const outcome = mergeVerified(result.record, result.jws);
-      if (outcome.kind === 'saved') saved += 1;
-      else unchanged += 1;
+      if (outcome.kind === 'saved') {
+        saved += 1;
+        deps.onUpdated?.(result.record);
+      } else unchanged += 1;
     } catch {
       failed += 1;
     }
@@ -164,11 +170,47 @@ export async function refreshVerifiedContactsOnce(
 
 /**
  * Fire-and-forget wrapper for the root layout's foreground hook — never
- * throws, never surfaces anything. The sweep's only user-visible output is
- * a genuine entry in Contacts 「最近更新」.
+ * throws. Output: a genuine entry in Contacts 「最近更新」 and, when 「顯示
+ * 最近更新」 is on, one toast naming who changed.
  */
 export function maybeRefreshVerifiedContacts(): void {
-  void refreshVerifiedContactsOnce().catch(() => undefined);
+  const names: string[] = [];
+  void refreshVerifiedContactsOnce({ onUpdated: (record) => names.push(record.displayName) })
+    .then(async (summary) => {
+      if (summary.saved > 0) await announceUpdates(names);
+    })
+    .catch(() => undefined);
+}
+
+/** Pull-to-refresh on Contacts: sweep now, ignoring the interval. */
+export async function refreshVerifiedContactsNow(): Promise<AutoRefreshSummary> {
+  const names: string[] = [];
+  const summary = await refreshVerifiedContactsOnce({
+    minIntervalMs: 0,
+    onUpdated: (record) => names.push(record.displayName),
+  });
+  if (summary.saved > 0) await announceUpdates(names);
+  return summary;
+}
+
+async function announceUpdates(names: readonly string[]): Promise<void> {
+  const [{ useRecentUpdatesStore }, { pushToast }, { translate }, { haptic }] = await Promise.all([
+    import('@/contacts/recentUpdates'),
+    import('@/feedback/toast'),
+    import('@/i18n'),
+    import('@/feedback/haptics'),
+  ]);
+  if (!useRecentUpdatesStore.getState().enabled) return;
+  const first = names.find((name) => name.trim() !== '');
+  const message = first === undefined
+    ? translate('peopleList.updatesToastSome').replace('{{count}}', String(names.length))
+    : names.length === 1
+      ? translate('peopleList.updatesToastOne').replace('{{name}}', first)
+      : translate('peopleList.updatesToastMany')
+          .replace('{{name}}', first)
+          .replace('{{count}}', String(names.length - 1));
+  haptic('success');
+  pushToast(message, 'success');
 }
 
 // ─── Default (lazy) dependency implementations ─────────────────────────────
