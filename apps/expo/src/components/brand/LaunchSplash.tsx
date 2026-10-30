@@ -7,11 +7,17 @@
  * i's tittle — drop into place last with a little bounce. Then the whole logo lifts a
  * hair and fades into the app. Only transform and opacity move.
  *
- * The first JS frame is the bare ground, so it continues the native splash with no
- * jump. Under Reduce Motion the finished logo simply holds and fades.
+ * Order matters, or the phone plays it where nobody can see it:
+ *   1. mounts with the JS bundle, before boot — the first frame is the bare ground
+ *      in the native splash's colour (system light/dark), so nothing jumps;
+ *   2. the timeline starts only once the native splash has actually hidden;
+ *   3. `onSettled` fires when the logo is whole — the root mounts the app under it
+ *      then, so the heavy first mount never steals the animation's frames;
+ *   4. `appShown` (the app has laid out) starts the lift-and-fade.
+ * Under Reduce Motion the finished logo simply holds and fades.
  */
-import { useCallback, useEffect, useRef, type ReactNode } from 'react';
-import { StyleSheet, View, useWindowDimensions } from 'react-native';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Appearance, StyleSheet, View, useWindowDimensions } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import Svg, { Path } from 'react-native-svg';
 import Animated, {
@@ -37,21 +43,35 @@ const TEXT_IN_MS = 380;
 const TEXT_SLIDE_PX = 12;
 const DOTS_IN_MS = 720;
 const DOTS_DROP_PX = 22;
-const EXIT_AT_MS = 1400;
+/** The dots have landed and the logo is whole; the app may mount underneath. */
+const SETTLED_AT_MS = 1100;
+/** Hold the whole logo this long before the fade even if the app is already there. */
+const MIN_HOLD_MS = 1350;
 const REDUCED_MOTION_HOLD_MS = 150;
-const FINISH_TIMEOUT_MS = 2400;
+/** hideAsync never answering must not leave the logo unassembled. */
+const NATIVE_HIDE_FALLBACK_MS = 800;
+/** The fade's completion callback never firing must not leave the splash over the app. */
+const EXIT_FALLBACK_MS = DURATION.enter + 600;
 
 /** A drop with a visible bounce — the dots are the logo's one playful beat. */
 const DOT_SPRING = { damping: 9, stiffness: 260, mass: 0.8 } as const;
 
 export function LaunchSplash({
+  appShown,
+  onSettled,
   onFinished,
   onHideError,
 }: {
+  /** The app has laid out under the splash — fade out. */
+  readonly appShown: boolean;
+  readonly onSettled: () => void;
   readonly onFinished: () => void;
   readonly onHideError: (error: unknown) => void;
 }): ReactNode {
   const reduceMotion = useReducedMotion();
+  // The native splash follows the system scheme; so does this, read once — a
+  // preference applied during boot must not recolour the logo mid-animation.
+  const [dark] = useState(() => Appearance.getColorScheme() === 'dark');
   const { width } = useWindowDimensions();
   const logoWidth = Math.min(width * 0.68, 300);
   const k = logoWidth / CREDS_LOCKUP.width;
@@ -70,28 +90,27 @@ export function LaunchSplash({
 
   const finished = useRef(false);
   const nativeSplashHideScheduled = useRef(false);
-  const onFinishedRef = useRef(onFinished);
+  const callbacks = useRef({ onSettled, onFinished, onHideError });
+  // The timeline waits for the native splash to be gone.
+  const [started, setStarted] = useState(false);
+  const [held, setHeld] = useState(false);
 
   useEffect(() => {
-    onFinishedRef.current = onFinished;
-  }, [onFinished]);
+    callbacks.current = { onSettled, onFinished, onHideError };
+  }, [onSettled, onFinished, onHideError]);
 
   const finish = useCallback(() => {
     if (finished.current) return;
     finished.current = true;
-    onFinishedRef.current();
+    callbacks.current.onFinished();
+  }, []);
+
+  const start = useCallback(() => {
+    setStarted(true);
   }, []);
 
   useEffect(() => {
-    const timeout = setTimeout(finish, FINISH_TIMEOUT_MS);
-    return () => {
-      clearTimeout(timeout);
-    };
-  }, [finish]);
-
-  useEffect(() => {
-    const exitAt = reduceMotion ? REDUCED_MOTION_HOLD_MS : EXIT_AT_MS;
-
+    if (!started) return;
     if (!reduceMotion) {
       ringA.value = withDelay(RINGS_IN_MS, withSpring(1, SPRING.gentle));
       ringB.value = withDelay(RINGS_IN_MS + RING_STAGGER_MS, withSpring(1, SPRING.gentle));
@@ -104,16 +123,30 @@ export function LaunchSplash({
       );
       text.value = withDelay(TEXT_IN_MS, withTiming(1, { duration: DURATION.enter, easing: EASE_OUT }));
       dots.value = withDelay(DOTS_IN_MS, withSpring(1, DOT_SPRING));
-      lift.value = withDelay(exitAt, withTiming(1.04, { duration: DURATION.enter, easing: EASE_OUT }));
     }
+    const settled = setTimeout(() => {
+      callbacks.current.onSettled();
+    }, reduceMotion ? 0 : SETTLED_AT_MS);
+    const hold = setTimeout(() => {
+      setHeld(true);
+    }, reduceMotion ? REDUCED_MOTION_HOLD_MS : MIN_HOLD_MS);
+    return () => {
+      clearTimeout(settled);
+      clearTimeout(hold);
+    };
+  }, [dots, reduceMotion, ringA, ringB, squeeze, started, text]);
 
-    scene.value = withDelay(
-      exitAt,
-      withTiming(0, { duration: DURATION.enter, easing: EASE_OUT }, (didFinish) => {
-        if (didFinish) scheduleOnRN(finish);
-      }),
-    );
-  }, [dots, finish, lift, reduceMotion, ringA, ringB, scene, squeeze, text]);
+  useEffect(() => {
+    if (!appShown || !held) return;
+    if (!reduceMotion) lift.value = withTiming(1.04, { duration: DURATION.enter, easing: EASE_OUT });
+    scene.value = withTiming(0, { duration: DURATION.enter, easing: EASE_OUT }, (didFinish) => {
+      if (didFinish) scheduleOnRN(finish);
+    });
+    const fallback = setTimeout(finish, EXIT_FALLBACK_MS);
+    return () => {
+      clearTimeout(fallback);
+    };
+  }, [appShown, finish, held, lift, reduceMotion, scene]);
 
   const sceneStyle = useAnimatedStyle(() => ({ opacity: scene.value }));
   const logoStyle = useAnimatedStyle(() => ({ transform: [{ scale: lift.value }] }));
@@ -145,8 +178,12 @@ export function LaunchSplash({
   const hideNativeSplashAfterFirstFrame = () => {
     if (nativeSplashHideScheduled.current) return;
     nativeSplashHideScheduled.current = true;
+    setTimeout(start, NATIVE_HIDE_FALLBACK_MS);
     requestAnimationFrame(() => {
-      void SplashScreen.hideAsync().catch(onHideError);
+      SplashScreen.hideAsync().then(start, (error: unknown) => {
+        callbacks.current.onHideError(error);
+        start();
+      });
     });
   };
 
@@ -157,8 +194,8 @@ export function LaunchSplash({
     height: CREDS_LOCKUP.height * k,
   };
   const textViewBox = `${String(CREDS_LOCKUP.text.x)} 0 ${String(CREDS_LOCKUP.text.width)} ${String(CREDS_LOCKUP.height)}`;
-  const ink = Colors.logoInk;
-  const accent = Colors.logoAccent;
+  const ink = dark ? Colors.logoInkDark : Colors.logoInk;
+  const accent = dark ? Colors.logoAccentDark : Colors.logoAccent;
 
   return (
     <Animated.View
@@ -167,7 +204,7 @@ export function LaunchSplash({
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
       onLayout={hideNativeSplashAfterFirstFrame}
-      style={[styles.fill, { backgroundColor: Colors.splashBg }, sceneStyle]}
+      style={[styles.fill, { backgroundColor: dark ? Colors.splashBgDark : Colors.splashBg }, sceneStyle]}
     >
       <View style={styles.center}>
         <Animated.View style={[{ width: logoWidth, height: CREDS_LOCKUP.height * k }, logoStyle]}>

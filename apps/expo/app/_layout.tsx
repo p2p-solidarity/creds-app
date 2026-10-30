@@ -37,7 +37,7 @@ import 'react-native-gesture-handler';
 import '../global.css';
 
 import { useEffect, useState } from 'react';
-import { Appearance, AppState, useColorScheme } from 'react-native';
+import { Appearance, AppState, useColorScheme, View } from 'react-native';
 import { router, Stack } from 'expo-router';
 import * as Linking from 'expo-linking';
 import * as SplashScreen from 'expo-splash-screen';
@@ -137,6 +137,10 @@ function warnBoot(message: string, error?: unknown): void {
 
 export default function RootLayout() {
   const [ready, setReady] = useState(false);
+  // Launch: the logo animates while boot runs; the app mounts under it once
+  // both are done, and the splash fades after the app's first layout.
+  const [logoSettled, setLogoSettled] = useState(false);
+  const [appShown, setAppShown] = useState(false);
   const [splashFinished, setSplashFinished] = useState(false);
   const receivedCard = useReceivedCard((s) => s.card);
   const receivedVerification = useReceivedCard((s) => s.verificationStatus);
@@ -346,42 +350,52 @@ export default function RootLayout() {
     };
   }, [hasCompletedOnboarding, ready]);
 
-  if (!ready) return null;
-
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <KeyboardProvider>
-        <SafeAreaProvider>
-          <StatusBar style="auto" />
-          <AppErrorBoundary>
-            <Stack screenOptions={{ headerShown: false }} screenLayout={themeRefreshLayout} />
-          </AppErrorBoundary>
-          <ToastOverlay />
-          <ConfirmDialogOverlay />
-          <AppAlertOverlay />
-          <PearConsentOverlay />
-          <PearPresentConsentOverlay />
-          <ReceivedCardSheet
-            visible={receivedCard !== null}
-            card={receivedCard}
-            verificationStatus={receivedVerification}
-            source={receivedSource}
-            sealedRoute={receivedSealedRoute}
-            nostrPointer={receivedNostrPointer}
-            onSave={async (contact) => {
-              await upsertContact(contact);
-            }}
-            onShowMine={() => {
-              dismissReceived();
-              router.replace(PRIMARY_TAB_HREFS.present);
-            }}
-            onDismiss={dismissReceived}
-          />
-          <VerifiedPageResultSheet />
-        </SafeAreaProvider>
-      </KeyboardProvider>
+      {ready && logoSettled ? (
+        <View
+          style={{ flex: 1 }}
+          onLayout={() => {
+            setAppShown(true);
+          }}>
+          <KeyboardProvider>
+            <SafeAreaProvider>
+              <StatusBar style="auto" />
+              <AppErrorBoundary>
+                <Stack screenOptions={{ headerShown: false }} screenLayout={themeRefreshLayout} />
+              </AppErrorBoundary>
+              <ToastOverlay />
+              <ConfirmDialogOverlay />
+              <AppAlertOverlay />
+              <PearConsentOverlay />
+              <PearPresentConsentOverlay />
+              <ReceivedCardSheet
+                visible={receivedCard !== null}
+                card={receivedCard}
+                verificationStatus={receivedVerification}
+                source={receivedSource}
+                sealedRoute={receivedSealedRoute}
+                nostrPointer={receivedNostrPointer}
+                onSave={async (contact) => {
+                  await upsertContact(contact);
+                }}
+                onShowMine={() => {
+                  dismissReceived();
+                  router.replace(PRIMARY_TAB_HREFS.present);
+                }}
+                onDismiss={dismissReceived}
+              />
+              <VerifiedPageResultSheet />
+            </SafeAreaProvider>
+          </KeyboardProvider>
+        </View>
+      ) : null}
       {!splashFinished ? (
         <LaunchSplash
+          appShown={appShown}
+          onSettled={() => {
+            setLogoSettled(true);
+          }}
           onFinished={() => {
             setSplashFinished(true);
           }}
