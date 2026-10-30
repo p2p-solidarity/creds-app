@@ -1,6 +1,6 @@
 # 11 — 護照 ZK（passport-noir OpenAC v3）檢討 plan
 
-> 2026-10-30 · 狀態：**plan 已定案（§0.1、§9 全部採用建議）；P0 完成（`docs/e2e/2026-10-30-passport-p0`），下一步 P1／P3**。安全路徑，size **L**。
+> 2026-10-30 · 狀態：**plan 已定案（§0.1、§9 全部採用建議）；P0、P1 完成（`docs/e2e/2026-10-30-passport-p0`、`-p1`；P1 的兩支實機 E2E 尚未跑），P3 進行中**。安全路徑，size **L**。
 > 與 10 的關係：取代 10 §3.11 裡關於護照的幾條（nullifier、晶片簽章不強制、網頁不驗護照 ZK）、§4 的「護照 ZK 當面出示改走 Pear」、§5。10 的其他決定不變。
 > 程式碼基準：creds-app `e9c4f09c`、passport-noir `2c58ade`（v0.4.0）。
 
@@ -287,7 +287,7 @@ nullifier 只由 SOD 雜湊決定。發證國政府、讀過你晶片的海關�
 | 階段 | 內容 | 結束時的 E2E |
 |---|---|---|
 | **P0 止血**（2.0.0 出貨前，✅ 2026-10-30） | `countPassportHolders` 不再計數；`showPresentationHandler` 的護照分支改成「此版本的護照證明不含發證國驗證」，不給綠勾；`publishPassportNpubBinding` 停止發佈；所有 v1 綁定一律不算。**回歸測試**（真 bug）：用任意 opening 產生的 show 證明不能被當成護照。 | 模擬器：掃假護照出示 → 不給綠勾；見證區不出現護照人數（截圖） |
-| **P1 護照裝置證明**（App 主線） | §6.1：shared 新增 `creds.passport.v1` statement 的驗證（tdd：偽造裝置證明、npub 不符、過期護照、開發環境 aaguid、`white` 憑證、G3 持有人規則、Q3 的 nullifier 選項）；App 在 passive auth 後簽發與背景重簽；`WitnessSection` 與網頁改用它計數。 | 兩支實機（TestFlight build，dev build 的 App Attest 是 sandbox）各掃一本護照 → 對方 App 與 creds.id 網頁都看到「護照見證者」 |
+| **P1 護照裝置證明**（App 主線，✅ 程式 2026-10-30；實機 E2E 待 TestFlight） | §6.1：shared 新增 `creds.passport.v1` statement 的驗證（tdd：偽造裝置證明、npub 不符、過期護照、開發環境 aaguid、`white` 憑證、G3 持有人規則、Q3 的 nullifier 選項）；App 在 passive auth 後簽發與背景重簽；`WitnessSection` 與網頁改用它計數。 | 兩支實機（TestFlight build，dev build 的 App Attest 是 sandbox）各掃一本護照 → 對方 App 與 creds.id 網頁都看到「護照見證者」 |
 | **P2 App 移除護照 ZK**（依 Q8） | 拿掉 mopro 護照 prover、`passport.srs.bin`、三顆電路、`showWitnessVault`、show envelope、sqc1 護照路徑、SD-JWT 降級；CI 的 SRS／xcframework pin 與 Android NDK barretenberg 建置一起移除；Semaphore 不動。已存的舊護照憑證（`passport-openac-v3`、`sd-jwt-fallback`）不再顯示 L3 徽章，改顯示「請重新掃描護照」並走 P1 的流程（Rule 8：不留一個看起來有效的舊徽章）。 | release build 的 `.app`／AAB 大小前後對照；實機掃護照到徽章完整走一次 |
 | **P3 passport-noir 0.5.0** | 晶片調查（台灣、日本真護照：SOD／DSC 演算法、LDS 雜湊，只記 OID 不記個資）→ §6.2 的電路與驗證端；只支援調查到的演算法，其他一律失敗並寫明；SRS 照實際 dyadic 大小（不乘 8）；發安全說明；**完成後封存 repo（畢業）**，README 寫明狀態並指向 creds 的裝置證明做法。 | 真護照 → 證明 → 獨立的驗證 CLI 驗過；換成任意 opening／非釘選 CSCA → 被拒（回歸） |
 | **P4 ZK 套件**（依 Q9） | 依 Q9 的定位另開 plan。 | — |
@@ -339,6 +339,8 @@ P1 與 P3 互不依賴，可以平行；P2 要等 P1 上線（App 才有新的�
 | Q8 | passport-noir 怎麼收尾？App 還內建嗎？ | **0.5.0 做完 MRZ 背書＋安全說明後封存（畢業），App 不內建**（K5、P2、P3）：App 的護照流程只剩 NFC＋passive auth＋裝置證明，少 128 MB SRS、mopro xcframework、Android NDK barretenberg 建置。 | 只發安全說明並封存，不做 0.5.0（最省，但留下一個沒修好的開源電路）；或 App 內建 0.5.0 當進階選項（SRS 約 17 MB 起） |
 | Q3 | 護照 statement 要不要帶 nullifier？（nullifier 讓發證國與讀過晶片的人能認出你的 npub） | **分開**：L3 徽章的 statement 不帶；「成為護照見證者」另外開，開之前明講風險（G4 選項 A） | 一律帶並揭露；或不做計數 |
 | Q4 | 同一本護照的衝突規則？ | **認持有人（裝置金鑰）不認 npub：先註冊者勝、三個月沒重簽才讓出**（G3 選項 A，不做 AA 所以沒有「AA 搶回」） | 維持「最新勝出」 |
+
+> **Q4 實作偏離（2026-10-30，P1）**：「先註冊者勝」在離線驗證下做不到——`signedAt`／`readAt` 都是簽署者自己寫的，搶綁者可以把時間填早。改成**同一個 nullifier 被兩把以上裝置金鑰簽過＝有爭議，誰都不算**（`countPassportWitnesses`）。代價：搶綁者能讓本人的護照暫時不被計數（最多到搶綁者停止重簽後 90 天），但搶不走；本人換手機（新金鑰）時舊金鑰的 statement 要等 90 天失效才不衝突。搶綁的前提仍是讀到同一本護照的晶片。
 | Q9 | App 的 ZK 套件要做什麼？ | **Semaphore「匿名的真人見證」**：護照 statement 背書一個 Semaphore identity commitment，見證時用 Semaphore 證明「我是其中一位已驗證的真人」，nullifier 來自用戶自己的秘密，發證國連不起來（順便解 G4）。在 P1 上線後另開 plan；zkTLS 等到要證明「登入後才看得到的資料」再回來。 | 先不做 ZK 套件；或先做 zkTLS |
 | Q10 | passport-noir 0.5.0 要單顆電路（scoped 裝置標記），還是保留 OpenAC 的兩階段 commitment？ | **單顆電路**（§6.2）：少一顆電路、一個 vk、沒有跨證明的連結檢查；OpenAC 的選擇性揭露與 scoped 化名都還在。 | 保留兩階段（與 OpenAC 論文對齊，但多一顆電路與連結邏輯） |
 | Q7 | 已發佈的 1.3.x 要不要另出 hotfix，關掉護照出示驗證？ | **不另出**，P0 跟 2.0.0 一起出；1.3.3 的解析 bug 實際上拒絕所有證明（§2.4），偽造在那一版過不了。 | 立刻出 1.3.x hotfix |
