@@ -272,13 +272,13 @@ function PageBlockEditorContent({ block, onClose }: { readonly block: PageBlock;
           {record !== null ? (
             <View className="gap-2">
               <View style={{ opacity: visible ? 1 : 0.45 }}>
-                <PageBlockPreview block={draft} record={record} appearance={appearance} />
+                <PageBlockPreview
+                  block={draft}
+                  record={record}
+                  appearance={appearance}
+                  emptyHint={t('pageDesign.previewEmptyHint')}
+                />
               </View>
-              {cleanedItems.length === 0 && block.type !== 'leave-card' ? (
-                <ThemedText variant="caption" tone="tertiary" style={{ textAlign: 'center' }}>
-                  {t('pageDesign.previewEmptyHint')}
-                </ThemedText>
-              ) : null}
             </View>
           ) : null}
 

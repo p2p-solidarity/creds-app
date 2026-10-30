@@ -114,7 +114,7 @@ export function PageLivePreview({
   const renderBody = (block: PageBlock): ReactNode => {
     const items = blockItems(block, record);
     const editable = editing !== undefined && block.type !== 'links';
-    const empty = items.length === 0 && block.type !== 'leave-card';
+    const empty = items.length === 0;
     return (
       <>
         {block.type === 'links' ? null : (
@@ -137,12 +137,8 @@ export function PageLivePreview({
           textColor={palette.text}
           fontFamily={fontFamily}
           variant={variant}
+          emptyHint={editable && empty ? t('pageDesign.emptyBlockHint') : undefined}
         />
-        {editable && empty ? (
-          <ThemedText variant="caption" style={{ color: palette.subtle, fontFamily }}>
-            {t('pageDesign.emptyBlockHint')}
-          </ThemedText>
-        ) : null}
       </>
     );
   };
@@ -209,10 +205,13 @@ export function PageBlockPreview({
   block,
   record,
   appearance,
+  emptyHint,
 }: {
   readonly block: PageBlock;
   readonly record: ProfileRecord;
   readonly appearance: PageAppearance;
+  /** Shown in the block's own shape while it has no items yet. */
+  readonly emptyHint?: string;
 }): ReactNode {
   const palette = paletteFor(appearance);
   const fontFamily = fontFor(appearance.font);
@@ -230,6 +229,7 @@ export function PageBlockPreview({
           textColor={palette.text}
           fontFamily={fontFamily}
           variant="public"
+          emptyHint={emptyHint}
         />
       </View>
     </PageGround>
@@ -298,16 +298,40 @@ function PageGround({
 function PreviewBlockItems({
   block,
   items,
+  emptyHint,
   ...render
 }: BlockRenderProps & {
   readonly block: PageBlock;
   readonly items: readonly PreviewItem[];
+  /** Owner-only: an empty block still shows its shape, holding this hint. */
+  readonly emptyHint?: string;
 }): ReactNode {
   const { palette, metrics, textColor, fontFamily, variant } = render;
   const size = cardSizeOf(block);
   const sizedRender = { ...render, size };
   const visibleItems = variant === 'public' ? items : items.slice(0, 3);
-  if (visibleItems.length === 0 && block.type !== 'leave-card') return null;
+  if (visibleItems.length === 0 && block.type !== 'leave-card') {
+    if (emptyHint === undefined) return null;
+    const hint = (
+      <ThemedText variant="caption" style={{ color: palette.subtle, fontFamily, textAlign: block.style === 'card' ? 'center' : 'left' }}>
+        {emptyHint}
+      </ThemedText>
+    );
+    // A card-style block keeps its panel, so picking 卡片 shows a card.
+    return block.style === 'card' ? (
+      <View
+        style={{
+          alignItems: 'center',
+          padding: 18,
+          borderWidth: 1,
+          borderColor: palette.cardBorder,
+          borderRadius: palette.cardRadius,
+          backgroundColor: palette.cardBg,
+        }}>
+        {hint}
+      </View>
+    ) : hint;
+  }
   // Web `richOr`: a Spotify / YouTube item plays instead of being a row.
   const richOr = (item: PreviewItem, fallback: ReactNode): ReactNode => {
     const media = richMediaForBlock(block.type, item.url);
