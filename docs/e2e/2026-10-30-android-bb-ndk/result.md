@@ -50,3 +50,13 @@ Not an app bug: the dev build loads `import()` chunks lazily from Metro
 (`lazy=true`), and Metro had been stopped. With Metro running the same step
 completes (onboarding advanced to 「放上你的連結」). Release builds have no lazy
 chunks.
+
+## Release + deploy (same day)
+
+- passport-noir v0.4.0 cut by the release workflow; `PassportMoproBindings.xcframework.zip`
+  SHA `f397c013…f49e` (contains the 0.4.0 witness builder), `passport.srs.bin`
+  uploaded and re-downloaded at the pinned `7d368f93…6996`.
+- `prepare-ios-workspace.sh` downloaded and SHA-checked the released zip (local
+  build moved aside); the simulator app built on it and runs
+  (`ios-sim-release-xcframework.png`). `expo run:ios` needs `--scheme solidarity`
+  (the shared scheme is lowercase for Xcode Cloud).
