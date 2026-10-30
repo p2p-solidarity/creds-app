@@ -66,6 +66,8 @@ const SF_TO_MATERIAL: Partial<Record<SFSymbol, AndroidSymbol>> = {
   'arrow.counterclockwise': 'history',
   'arrow.counterclockwise.icloud': 'cloud_sync',
   'arrow.triangle.2.circlepath': 'sync',
+  'arrow.down': 'arrow_downward',
+  'arrow.up': 'arrow_upward',
   'arrow.up.forward.app': 'open_in_new',
   'arrow.up.right': 'open_in_new',
   'arrowshape.turn.up.right': 'reply',

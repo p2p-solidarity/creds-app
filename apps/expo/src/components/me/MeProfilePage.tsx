@@ -130,7 +130,7 @@ export function MeProfilePage({
 
       <Animated.View entering={entrance(2)}>
         <ProfileSectionsList
-          linkCount={record.links.length}
+          onAddSection={openAdd}
           previewRecord={publicRecord}
           previewHandle={pageHandle}
         />

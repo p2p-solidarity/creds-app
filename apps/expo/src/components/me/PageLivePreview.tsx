@@ -27,6 +27,7 @@ import type { PageAppearance, PageBlock } from '@/page/pageDesign';
 import { richMediaForBlock } from '@/page/richMedia';
 import type { ProfileRecord } from '@solidarity/shared';
 
+import { PagePreviewBlockFrame, type PreviewBlockEditing } from './PagePreviewBlockFrame';
 import {
   PagePreviewEmpty,
   PagePreviewFooter,
@@ -69,6 +70,9 @@ export interface PageLivePreviewProps {
    * the display name exactly as the mock's `.pub-handle`; omitted entirely
    * when the caller has no address to show. */
   readonly handle?: string | null;
+  /** The owner's Page tab edits blocks right here: every non-links block
+   *  (empty or hidden too) gets in-place controls. Visitors never pass it. */
+  readonly editing?: PreviewBlockEditing;
 }
 
 export function PageLivePreview({
@@ -77,15 +81,17 @@ export function PageLivePreview({
   appearance,
   variant = 'editor',
   handle = null,
+  editing,
 }: PageLivePreviewProps): ReactNode {
   const palette = paletteFor(appearance);
   const fontFamily = fontFor(appearance.font);
   const metrics = PREVIEW_METRICS[variant];
   const chrome = { palette, metrics, fontFamily, variant };
   const renderedBlocks = blocks.filter(
-    (block) => block.visible
-      && (block.type === 'leave-card' || blockItems(block, record).length > 0),
+    (block) => (editing !== undefined && block.type !== 'links')
+      || (block.visible && (block.type === 'leave-card' || blockItems(block, record).length > 0)),
   );
+  const movable = blocks.filter((block) => block.type !== 'links');
 
   const content = (
     <View
@@ -98,22 +104,40 @@ export function PageLivePreview({
 
       {renderedBlocks.length === 0 ? <PagePreviewEmpty {...chrome} /> : null}
 
-      {renderedBlocks.map((block) => (
-        <View key={block.id} style={{ marginTop: metrics.sectionGap }}>
-          {block.type === 'links' ? null : (
-            <PagePreviewSectionTitle title={block.title} palette={palette} fontFamily={fontFamily} />
-          )}
-          <PreviewBlockItems
-            block={block}
-            items={blockItems(block, record)}
-            palette={palette}
-            metrics={metrics}
-            textColor={palette.text}
-            fontFamily={fontFamily}
-            variant={variant}
-          />
-        </View>
-      ))}
+      {renderedBlocks.map((block) => {
+        const items = blockItems(block, record);
+        const body = (
+          <>
+            {block.type === 'links' ? null : (
+              <PagePreviewSectionTitle title={block.title} palette={palette} fontFamily={fontFamily} />
+            )}
+            <PreviewBlockItems
+              block={block}
+              items={items}
+              palette={palette}
+              metrics={metrics}
+              textColor={palette.text}
+              fontFamily={fontFamily}
+              variant={variant}
+            />
+          </>
+        );
+        const position = movable.findIndex((candidate) => candidate.id === block.id);
+        return (
+          <View key={block.id} style={{ marginTop: metrics.sectionGap }}>
+            {editing !== undefined && block.type !== 'links' ? (
+              <PagePreviewBlockFrame
+                block={block}
+                empty={items.length === 0 && block.type !== 'leave-card'}
+                canMoveUp={position > 0}
+                canMoveDown={position < movable.length - 1}
+                editing={editing}>
+                {body}
+              </PagePreviewBlockFrame>
+            ) : body}
+          </View>
+        );
+      })}
 
       <PagePreviewFooter appearance={appearance} {...chrome} />
     </View>
