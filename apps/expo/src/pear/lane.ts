@@ -155,6 +155,10 @@ export interface LaneError {
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- reserved for future config (memoryLimit, etc.); kept as an explicit param so call sites don't need updating when it grows
 export interface StartLaneOptions {}
 
+/** How long a shut-down lane's worklet gets to close its sockets and swarms
+ *  before it is terminated (see `shutdown`). */
+export const LANE_TERMINATE_GRACE_MS = 1500;
+
 export function startLane(_opts: StartLaneOptions = {}): Result<LaneHandle, LaneError> {
   let worklet: Worklet;
   try {
@@ -342,15 +346,17 @@ export function startLane(_opts: StartLaneOptions = {}): Result<LaneHandle, Lane
   }
 
   function shutdown(): void {
+    // Leave every topic first (the worklet destroys its sockets and swarms),
+    // stop listening, and only terminate once that traffic has drained.
+    // bare-kit 0.15.6's native `terminate()` frees the IPC poll handle while
+    // the worklet thread can still be firing it — a use-after-free that kills
+    // the whole app. A synchronous terminate right after a connection (request
+    // proof: the peer auto-declines within milliseconds) hit it every time.
+    for (const topicHex of ctrlListeners.keys()) sendCommand({ t: '_leave', topic: topicHex });
     try {
       worklet.IPC.off('data', onIpcData);
     } catch {
       // Already torn down.
-    }
-    try {
-      worklet.terminate();
-    } catch {
-      // Already dead.
     }
     ctrlListeners.clear();
     lastCtrlEvent.clear();
@@ -358,6 +364,13 @@ export function startLane(_opts: StartLaneOptions = {}): Result<LaneHandle, Lane
     connCtrlListeners.clear();
     lastConnCtrlEvent.clear();
     topicConnIds.clear();
+    setTimeout(() => {
+      try {
+        worklet.terminate();
+      } catch {
+        // Already dead.
+      }
+    }, LANE_TERMINATE_GRACE_MS);
   }
 
   return ok({ joinTopic, shutdown });
