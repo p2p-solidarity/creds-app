@@ -30,6 +30,7 @@ import { DeleteContactsSheet } from '@/components/people/DeleteContactsSheet';
 import { ManualContactEntrySheet } from '@/components/people/ManualContactEntrySheet';
 import { PeopleSearchField } from '@/components/people/PeopleSearchField';
 import { TrustGraphContactRow } from '@/components/people/TrustGraphContactRow';
+import { VerifiedPagesSection } from '@/components/people/VerifiedPagesSection';
 import { LinkPageImportSheet, type LinkPageImportResult } from '@/components/profile/LinkPageImportSheet';
 import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
@@ -42,7 +43,7 @@ import { confirmDialog } from '@/feedback/confirmDialog';
 import { haptic } from '@/feedback/haptics';
 import { fadeUpIn } from '@/feedback/motion';
 import { pushToast } from '@/feedback/toast';
-import { useProfileSnapshotStore } from '@/people/profileSnapshots';
+import { useProfileSnapshotStore, useSortedProfileSnapshots } from '@/people/profileSnapshots';
 import { usePeopleScreen } from '@/people/usePeopleScreen';
 import { usePreferences } from '@/settings/preferences';
 
@@ -57,6 +58,7 @@ export default function PeopleTab() {
   const removeContact = useContactStore((s) => s.remove);
   const loadDetail = useContactStore((s) => s.loadDetail);
   const upsertDeclared = useProfileSnapshotStore((s) => s.upsertDeclared);
+  const savedPageCount = useSortedProfileSnapshots().length;
   const backupEnabled = usePreferences((s) => s.backupEnabled);
   const insets = useSafeAreaInsets();
   const reduceMotion = useReducedMotion();
@@ -280,6 +282,7 @@ export default function PeopleTab() {
           onImportPhone={() => { router.push('/contacts/import-phone'); }}
           onAdd={() => { setAddSheetOpen(true); }}
           activity={editMode ? null : <ContactsActivitySections onContactAdded={refresh} />}
+          hasSavedPages={savedPageCount > 0}
         />
       ) : (
         <>
@@ -311,6 +314,7 @@ export default function PeopleTab() {
                 }}
                 keyboardShouldPersistTaps="handled"
                 extraData={{ editMode, selectedIds }}
+                ListHeaderComponent={editMode || searching ? null : <VerifiedPagesSection />}
                 renderItem={({ item, index }) => (
                   // Always wrapped, so a recycled cell keeps the same tree;
                   // `entering` only runs on mount, never on recycle.
@@ -627,15 +631,24 @@ function EmptyContactsContent({
   onImportPhone,
   onAdd,
   activity,
+  hasSavedPages,
 }: {
   readonly onImportPhone: () => void;
   readonly onAdd: () => void;
   readonly activity: ReactNode;
+  /** Saved Pages are people too: with any, the list is not empty. */
+  readonly hasSavedPages: boolean;
 }) {
   return (
     <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
       {activity}
-      <EmptyState onImportPhone={onImportPhone} onAdd={onAdd} />
+      {hasSavedPages ? (
+        <View className="px-4">
+          <VerifiedPagesSection />
+        </View>
+      ) : (
+        <EmptyState onImportPhone={onImportPhone} onAdd={onAdd} />
+      )}
     </ScrollView>
   );
 }
