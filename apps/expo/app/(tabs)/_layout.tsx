@@ -10,7 +10,7 @@
  */
 import { Tabs } from 'expo-router';
 
-import { FloatingTabBar, type FloatingTabBarProps } from '@/components/tabs/FloatingTabBar';
+import { FloatingTabBar } from '@/components/tabs/FloatingTabBar';
 import { useTranslation } from '@/i18n';
 import { PRIMARY_TABS } from '@/navigation/primaryTabs';
 
@@ -20,7 +20,7 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{ headerShown: false }}
-      tabBar={(props) => <FloatingTabBar {...(props as unknown as FloatingTabBarProps)} />}
+      tabBar={(props) => <FloatingTabBar {...props} />}
     >
       <Tabs.Screen name={pageTab.route} options={{ title: t(pageTab.titleKey) }} />
       <Tabs.Screen name={presentTab.route} options={{ title: t(presentTab.titleKey) }} />

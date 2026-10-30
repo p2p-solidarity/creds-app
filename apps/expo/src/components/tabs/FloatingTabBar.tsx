@@ -39,15 +39,17 @@ interface TabRoute {
 type TabDescriptors = Readonly<Record<string, {
   readonly options: {
     readonly title?: string;
-    readonly tabBarLabel?: string;
   };
 }>>;
 
-interface TabNavigationLike {
+// expo-router 58's `tabBar` gets `emitter` + `navigateToTab`, not `navigation`
+// (its own BottomTabBar does the same). Keep this shape assignable from the
+// router's props with no cast, so the next contract change fails typecheck
+// instead of crashing on the first tab tap.
+interface TabEmitterLike {
   readonly emit: (event: { type: 'tabPress'; target: string; canPreventDefault: true }) => {
     readonly defaultPrevented: boolean;
   };
-  readonly navigate: (target: { name: string; merge: true }) => void;
 }
 
 interface TabStateLike {
@@ -58,13 +60,15 @@ interface TabStateLike {
 export interface FloatingTabBarProps {
   readonly state: TabStateLike;
   readonly descriptors: TabDescriptors;
-  readonly navigation: TabNavigationLike;
+  readonly emitter: TabEmitterLike;
+  readonly navigateToTab: (routeKey: string) => void;
 }
 
 export function FloatingTabBar({
   state,
   descriptors,
-  navigation,
+  emitter,
+  navigateToTab,
 }: FloatingTabBarProps): ReactNode {
   const insets = useSafeAreaInsets();
   // useThemeColors subscribes via useColorScheme() so the bar re-renders on
@@ -108,13 +112,13 @@ export function FloatingTabBar({
           const onPress = (): void => {
             if (isSelected) return;
             haptic('tap');
-            const event = navigation.emit({
+            const event = emitter.emit({
               type: 'tabPress',
               target: route.key,
               canPreventDefault: true,
             });
             if (!event.defaultPrevented) {
-              navigation.navigate({ name: route.name, merge: true });
+              navigateToTab(route.key);
             }
           };
 
