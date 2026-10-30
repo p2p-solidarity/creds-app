@@ -4,19 +4,23 @@
  * `.pub-foot` (`creds-design/verified-linkinbio-mock-v3.html` §`#s-public`).
  */
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
 
+import { BrandIcon } from '@/components/icons/BrandIcon';
+import type { BrandIconName } from '@/components/icons/brandGlyphs';
 import { ThemedText } from '@/components/themed';
-import { PageTemplateColors } from '@/constants/Colors';
+import { PageChromeColors, PagePalettes } from '@/constants/Colors';
 import { useTranslation } from '@/i18n';
 import type { PageAppearance } from '@/page/pageDesign';
 import { resolveProfileAvatarSource } from '@/profile/avatar';
+import { brandIconForLink } from '@/profile/linkPresentation';
 import type { ProfileRecord } from '@solidarity/shared';
 
 import type { PageLivePreviewVariant, PagePalette, PreviewMetrics } from './pagePreviewTheme';
 import { MONO } from '@/constants/fonts';
-import { Radius } from '@/constants/radius';
+import { Radius, shadow } from '@/constants/radius';
 
 export interface PagePreviewChromeProps {
   readonly palette: PagePalette;
@@ -40,10 +44,15 @@ export function PagePreviewHeader({
   const avatarUrl = resolveProfileAvatarSource(record.avatar, null);
   const trimmedHandle = handle?.trim() ?? '';
   const headline = variant === 'public' ? 'headlineLarge' : 'headlineMedium';
+  const marks = cardMarks(record.links);
 
   return (
     <View style={{ alignItems: 'center' }}>
-      <View
+      {/* `.pub-avatar`: warm-cream → gradient-cream disc, a card-coloured ring. */}
+      <LinearGradient
+        colors={PageChromeColors.avatarStops}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
         style={{
           width: metrics.avatar,
           height: metrics.avatar,
@@ -52,12 +61,10 @@ export function PagePreviewHeader({
           alignItems: 'center',
           justifyContent: 'center',
           borderWidth: 3,
-          borderColor: palette.onDark ? PageTemplateColors.pagePreviewBorder : PageTemplateColors.cardBg,
-          backgroundColor: palette.onDark ? PageTemplateColors.pagePreviewGlass : PageTemplateColors.warmCream,
+          borderColor: palette.cardBg,
+          ...shadow('avatar'),
         }}>
-        <ThemedText
-          variant={headline}
-          style={{ color: palette.onDark ? palette.text : PageTemplateColors.primaryBlue, fontFamily }}>
+        <ThemedText variant={headline} style={{ color: PagePalettes.cream.accent, fontFamily }}>
           {(record.displayName.trim().charAt(0) || '?').toUpperCase()}
         </ThemedText>
         {avatarUrl ? (
@@ -69,7 +76,7 @@ export function PagePreviewHeader({
             style={{ position: 'absolute', width: '100%', height: '100%' }}
           />
         ) : null}
-      </View>
+      </LinearGradient>
 
       <ThemedText
         variant={headline}
@@ -89,6 +96,7 @@ export function PagePreviewHeader({
           style={{
             color: palette.subtle,
             opacity: palette.subtleOpacity,
+            fontFamily: MONO,
             marginTop: 2,
             textAlign: 'center',
           }}>
@@ -108,8 +116,29 @@ export function PagePreviewHeader({
           {record.bio}
         </ThemedText>
       ) : null}
+
+      {/* The platforms the page links to, one mark each — web `cardMarks`. */}
+      {marks.length > 0 ? (
+        <View
+          accessibilityRole="none"
+          style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 16, marginTop: metrics.bioGap }}>
+          {marks.map((mark) => (
+            <BrandIcon key={mark} name={mark} size={variant === 'public' ? 24 : 20} color={palette.text} />
+          ))}
+        </View>
+      ) : null}
     </View>
   );
+}
+
+/** One mark per platform the links name, in page order, at most 8. */
+function cardMarks(links: ProfileRecord['links']): readonly BrandIconName[] {
+  const seen = new Set<BrandIconName>();
+  for (const link of links) {
+    if (link.url.trim() === '') continue;
+    seen.add(brandIconForLink(link.label, link.url));
+  }
+  return [...seen].slice(0, 8);
 }
 
 /** `.pub-empty` — one quiet sentence. Deliberately no illustration and no
@@ -131,7 +160,7 @@ export function PagePreviewEmpty({ palette, metrics, fontFamily }: PagePreviewCh
   );
 }
 
-/** `.pub-foot` — the brand line, far below the last card. */
+/** `.pub-foot` — `creds.id · footer text`, far below the last card. */
 export function PagePreviewFooter({
   appearance,
   palette,
@@ -139,18 +168,26 @@ export function PagePreviewFooter({
   fontFamily,
 }: PagePreviewChromeProps & { readonly appearance: PageAppearance }): ReactNode {
   if (!appearance.footerText && !appearance.showBrand) return null;
+  const quiet = { color: palette.quiet, fontSize: 12 } as const;
   return (
-    <ThemedText
-      variant="caption"
+    <View
       style={{
-        color: palette.subtle,
-        opacity: palette.subtleOpacity,
-        fontFamily: appearance.footerText ? fontFamily : MONO,
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'center',
+        gap: 7,
         marginTop: metrics.footerGap,
-        textAlign: 'center',
       }}>
-      {appearance.footerText || 'creds.id'}
-    </ThemedText>
+      {appearance.showBrand ? (
+        <ThemedText variant="caption" style={[quiet, { fontFamily: MONO, fontWeight: '700' }]}>creds.id</ThemedText>
+      ) : null}
+      {appearance.showBrand && appearance.footerText ? (
+        <ThemedText variant="caption" style={quiet}>·</ThemedText>
+      ) : null}
+      {appearance.footerText ? (
+        <ThemedText variant="caption" style={[quiet, { fontFamily }]}>{appearance.footerText}</ThemedText>
+      ) : null}
+    </View>
   );
 }
 

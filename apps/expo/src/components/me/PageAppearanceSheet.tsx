@@ -3,15 +3,17 @@ import { Modal, ScrollView, Switch, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PressableScale } from '@/components/common/PressableScale';
-import { ThemedButton, ThemedSurface, ThemedText, ThemedTextInput } from '@/components/themed';
+import { LinearGradient } from 'expo-linear-gradient';
+
+import { ThemedButton, ThemedChoiceChip, ThemedSurface, ThemedText, ThemedTextInput } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { Radius } from '@/constants/radius';
+import { useThemeColors } from '@/constants/useThemeColors';
 import { useTranslation } from '@/i18n';
 import {
   PAGE_BACKGROUND_IDS,
   PAGE_FONT_IDS,
   PAGE_TEMPLATE_IDS,
-  type PageBackgroundId,
   type PageTemplateId,
 } from '@/page/pageDesign';
 import { usePageDesignStore } from '@/page/pageDesignStore';
@@ -19,6 +21,7 @@ import { useProGate } from '@/pro/useProGate';
 import type { ProfileRecord } from '@solidarity/shared';
 
 import { PageLivePreview } from './PageLivePreview';
+import { TEMPLATE_NATIVE_BACKGROUND, paletteFor } from './pagePreviewTheme';
 
 export interface PageAppearanceSheetProps {
   readonly visible: boolean;
@@ -27,17 +30,6 @@ export interface PageAppearanceSheetProps {
   readonly handle?: string | null;
   readonly onClose: () => void;
 }
-
-const TEMPLATE_BACKGROUND: Readonly<Record<PageTemplateId, PageBackgroundId>> = {
-  cream: 'cream',
-  ink: 'ink',
-  journal: 'cream',
-  gradient: 'rose',
-  night: 'ink',
-  mint: 'mint',
-  sun: 'cream',
-  minimal: 'white',
-};
 
 const ignoreChange = (): void => undefined;
 
@@ -87,29 +79,32 @@ export function PageAppearanceSheet({
             />
 
             <ControlSection title={t('pageDesign.templates')}>
-              <View className="flex-row flex-wrap gap-10">
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
                 {PAGE_TEMPLATE_IDS.map((template) => (
-                  <ChoiceTile
+                  <TemplateSwatch
                     key={template}
+                    template={template}
                     label={t(`pageDesign.template.${template}`)}
                     selected={appearance.template === template}
                     onPress={() => {
+                      // The template's own ground, so creds.id paints the
+                      // template rather than flattening it to an override.
                       setAppearance({
                         template,
-                        background: TEMPLATE_BACKGROUND[template],
+                        background: TEMPLATE_NATIVE_BACKGROUND[template],
                         customBackground: null,
                         ...(template === 'journal' ? { font: 'serif' as const } : {}),
                       });
                     }}
                   />
                 ))}
-              </View>
+              </ScrollView>
             </ControlSection>
 
             <ControlSection title={t('pageDesign.font')}>
               <View className="flex-row flex-wrap gap-2">
                 {PAGE_FONT_IDS.map((font, index) => (
-                  <ChoiceTile
+                  <ThemedChoiceChip
                     key={font}
                     label={t(`pageDesign.font.${font}`)}
                     selected={appearance.font === font}
@@ -129,7 +124,7 @@ export function PageAppearanceSheet({
             <ControlSection title={t('pageDesign.background')}>
               <View className="flex-row flex-wrap gap-2">
                 {PAGE_BACKGROUND_IDS.map((background) => (
-                  <ChoiceTile
+                  <ThemedChoiceChip
                     key={background}
                     label={t(`pageDesign.background.${background}`)}
                     selected={
@@ -278,37 +273,66 @@ function ControlSection({
   );
 }
 
-function ChoiceTile({
+/** A template as its visitors see it: the ground, a name bar and two cards. */
+function TemplateSwatch({
+  template,
   label,
   selected,
-  pro = false,
   onPress,
 }: {
+  readonly template: PageTemplateId;
   readonly label: string;
   readonly selected: boolean;
-  readonly pro?: boolean;
   readonly onPress: () => void;
 }): ReactNode {
+  const c = useThemeColors();
+  const palette = paletteFor({
+    template,
+    font: 'sans',
+    background: TEMPLATE_NATIVE_BACKGROUND[template],
+    customBackground: null,
+    showBrand: true,
+    footerText: '',
+  });
+  const [first = palette.cardBg, second, ...rest] = palette.stops;
+  const card = {
+    height: 12,
+    borderRadius: Math.min(palette.cardRadius, 6),
+    borderWidth: 1,
+    borderColor: palette.cardBorder,
+    backgroundColor: palette.cardBg,
+  } as const;
+  const face = (
+    <View style={{ flex: 1, padding: 10, gap: 6, justifyContent: 'center' }}>
+      <View style={{ alignSelf: 'center', width: 18, height: 18, borderRadius: Radius.pill, backgroundColor: palette.iconBg }} />
+      <View style={{ alignSelf: 'center', width: 36, height: 4, borderRadius: Radius.xs, backgroundColor: palette.text }} />
+      <View style={card} />
+      <View style={card} />
+    </View>
+  );
   return (
     <PressableScale
+      haptic="tap"
       onPress={onPress}
       accessibilityRole="button"
+      accessibilityLabel={label}
       accessibilityState={{ selected }}
-      style={{
-        minHeight: 44,
-        minWidth: 88,
-        paddingHorizontal: 12,
-        borderRadius: Radius.card,
-        borderWidth: 1,
-        borderColor: selected ? Colors.primaryBlue : Colors.divider,
-        backgroundColor: selected ? Colors.chipSurface : Colors.cardBg,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}>
-      <ThemedText variant="label">
-        {label}
-        {pro ? ' · PRO' : ''}
-      </ThemedText>
+      style={{ alignItems: 'center', gap: 6 }}>
+      <View
+        style={{
+          width: 72,
+          height: 104,
+          borderRadius: Radius.card,
+          borderWidth: 2,
+          borderColor: selected ? c.primaryBlue : c.divider,
+          overflow: 'hidden',
+          backgroundColor: first,
+        }}>
+        {second === undefined ? face : (
+          <LinearGradient colors={[first, second, ...rest]} style={{ flex: 1 }}>{face}</LinearGradient>
+        )}
+      </View>
+      <ThemedText variant="caption" style={{ color: selected ? c.primaryBlue : c.text2 }}>{label}</ThemedText>
     </PressableScale>
   );
 }

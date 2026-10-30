@@ -1,10 +1,9 @@
 /**
- * Verified Page preview theme — the `.pub` numbers and colours from
- * `creds-design/verified-linkinbio-mock-v3.html`, kept out of the components
- * so the editor sample and the visitor page can never drift apart.
+ * Verified Page preview theme — the `.pub` numbers from the creds-design mock
+ * and the per-template colours of the creds.id web viewer, kept out of the
+ * components so the editor sample and the visitor page can never drift apart.
  */
-import { ON_DARK, readableTextOn } from '@/components/themed';
-import { PageTemplateColors } from '@/constants/Colors';
+import { PageBackgroundGrounds, PagePalettes } from '@/constants/Colors';
 import type { PageAppearance, PageBlock, PageBlockItem, PageTemplateId } from '@/page/pageDesign';
 import type { ProfileRecord } from '@solidarity/shared';
 import type { ViewStyle } from 'react-native';
@@ -63,25 +62,21 @@ export const PREVIEW_METRICS: Readonly<Record<PageLivePreviewVariant, PreviewMet
   },
 };
 
-/** `--radiusCard` per template — the mock gives each template its own card
- *  silhouette (classic square, minimal 8, night 16, gradient 20, mint/sun 22). */
-const TEMPLATE_CARD_RADIUS: Readonly<Record<PageTemplateId, number>> = {
-  cream: 0,
-  ink: 0,
-  journal: 0,
-  gradient: 20,
-  night: 16,
-  mint: 22,
-  sun: 22,
-  minimal: 8,
-};
-
-/** Resolved surface treatment for one appearance: the mock's default `.pub`
- *  cards on light templates, its translucent `.t-grad` cards on dark ones. */
+/**
+ * One appearance resolved to surfaces — airmeishi-web `paletteFor`
+ * (`src/page/pageAppearance.ts`) over `PagePalettes`, so the preview paints
+ * the same ground, cards and inks a visitor gets on creds.id. The legacy
+ * field names (`text`, `subtle`, `iconBg` …) are kept for the row pieces.
+ */
 export interface PagePalette {
+  /** Opaque ground stop(s); two or more draw a gradient. */
+  readonly stops: readonly string[];
   readonly text: string;
   readonly subtle: string;
   readonly subtleOpacity: number;
+  /** `--color-text3` — the footer's quiet ink. */
+  readonly quiet: string;
+  readonly accent: string;
   readonly cardBg: string;
   readonly cardBorder: string;
   readonly cardRadius: number;
@@ -91,59 +86,70 @@ export interface PagePalette {
   readonly onDark: boolean;
 }
 
-export function backgroundFor(appearance: PageAppearance): string {
-  if (appearance.customBackground) return appearance.customBackground;
-  switch (appearance.background) {
-    case 'white': return PageTemplateColors.cardBg;
-    case 'mint': return PageTemplateColors.pageMint;
-    case 'rose': return PageTemplateColors.pageRose;
-    case 'ink': return PageTemplateColors.pageInk;
-    default: return PageTemplateColors.warmCream;
-  }
-}
+type TemplatePalette = (typeof PagePalettes)[PageTemplateId];
 
-export function textFor(appearance: PageAppearance): string {
-  if (appearance.customBackground) return readableTextOn(appearance.customBackground);
-  return appearance.template === 'ink' || appearance.template === 'night' || appearance.template === 'gradient' || appearance.background === 'ink'
-    ? PageTemplateColors.pageLightText
-    : PageTemplateColors.text1;
-}
+/** The background each template already stands on — a `background` equal to
+ *  it is the default, not an override (web `TEMPLATE_NATIVE_BACKGROUND`). */
+export const TEMPLATE_NATIVE_BACKGROUND: Readonly<Record<PageTemplateId, PageAppearance['background']>> = {
+  cream: 'cream',
+  ink: 'ink',
+  journal: 'cream',
+  gradient: 'cream',
+  night: 'ink',
+  mint: 'mint',
+  sun: 'cream',
+  minimal: 'white',
+};
 
-/** Inks that only appear on a dark ground — the signal for the mock's
- *  translucent `.t-grad` card treatment. A custom background resolves through
- *  `readableTextOn`, so `ON_DARK` has to count too. */
-const LIGHT_INKS: readonly string[] = [PageTemplateColors.pageLightText, ON_DARK];
-
-export function paletteFor(appearance: PageAppearance): PagePalette {
-  const text = textFor(appearance);
-  const onDark = LIGHT_INKS.includes(text);
-  const cardRadius = TEMPLATE_CARD_RADIUS[appearance.template];
-  if (onDark) {
-    return {
-      text,
-      subtle: text,
-      subtleOpacity: 0.72,
-      cardBg: PageTemplateColors.pagePreviewGlass,
-      cardBorder: PageTemplateColors.pagePreviewBorder,
-      cardRadius,
-      iconBg: PageTemplateColors.pagePreviewGlass,
-      iconTint: text,
-      placeholder: PageTemplateColors.pagePreviewGlass,
-      onDark,
-    };
-  }
+function toPalette(base: TemplatePalette, overrides: Partial<PagePalette> = {}): PagePalette {
   return {
-    text,
-    subtle: PageTemplateColors.text2,
+    stops: base.stops,
+    text: base.text1,
+    subtle: base.text2,
     subtleOpacity: 1,
-    cardBg: PageTemplateColors.cardBg,
-    cardBorder: PageTemplateColors.divider,
-    cardRadius,
-    iconBg: PageTemplateColors.searchBg,
-    iconTint: PageTemplateColors.primaryBlue,
-    placeholder: PageTemplateColors.warmCream,
-    onDark,
+    quiet: base.text3,
+    accent: base.accent,
+    cardBg: base.card,
+    cardBorder: base.border,
+    cardRadius: base.cardRadius,
+    iconBg: base.iconWell,
+    iconTint: base.accent,
+    placeholder: base.iconWell,
+    onDark: base.onDark,
+    ...overrides,
   };
+}
+
+/** Web `readableTextOn` — light ink once relative luminance is ≤ 0.4. Not the
+ *  app's contrast helper: the viewer's threshold decides what visitors see. */
+function groundIsDark(hex: string): boolean {
+  const value = hex.replace('#', '');
+  if (!/^[0-9a-f]{6}$/iu.test(value)) return false;
+  const [r = 0, g = 0, b = 0] = [0, 2, 4]
+    .map((i) => Number.parseInt(value.slice(i, i + 2), 16) / 255)
+    .map((ch) => (ch <= 0.03928 ? ch / 12.92 : ((ch + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b <= 0.4;
+}
+
+/**
+ * Lightness follows the ground (web CREDS.md §4 ruling 3): an overriding
+ * `background` / `customBackground` that flips polarity flips the inks with
+ * it, keeping only the template's card radius.
+ */
+export function paletteFor(appearance: PageAppearance): PagePalette {
+  const base = PagePalettes[appearance.template];
+  const override = appearance.customBackground
+    ?? (appearance.background === TEMPLATE_NATIVE_BACKGROUND[appearance.template]
+      ? null
+      : PageBackgroundGrounds[appearance.background]);
+  if (override === null) return toPalette(base);
+
+  const onDark = groundIsDark(override);
+  if (onDark === base.onDark) {
+    return toPalette(base, { stops: [override], quiet: base.text2 });
+  }
+  const flipped = onDark ? PagePalettes.ink : PagePalettes.cream;
+  return toPalette(flipped, { stops: [override], quiet: flipped.text2, cardRadius: base.cardRadius });
 }
 
 export function fontFor(font: PageAppearance['font']): string | undefined {

@@ -17,20 +17,34 @@ import { PressableScale } from '@/components/common/PressableScale';
 import { BrandIcon } from '@/components/icons/BrandIcon';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedText } from '@/components/themed';
-import { PageTemplateColors } from '@/constants/Colors';
+import { BrandBadge } from '@/components/icons/BrandBadge';
+import { PageChromeColors, PageTemplateColors } from '@/constants/Colors';
+import { MONO } from '@/constants/fonts';
+import type { RichMedia } from '@/page/richMedia';
 import { Radius } from '@/constants/radius';
 import { appAlert } from '@/feedback/appAlert';
 import { useTranslation } from '@/i18n';
-import { linkDisplay, linkSecondaryLabel } from '@/profile/linkPresentation';
+import { linkDisplay } from '@/profile/linkPresentation';
 import { isRenderableLinkUrl } from '@solidarity/shared';
 
 import {
+  paletteFor,
   previewCardStyle,
   type PageLivePreviewVariant,
   type PagePalette,
   type PreviewItem,
   type PreviewMetrics,
 } from './pagePreviewTheme';
+
+/** A facade drawn outside a Page (the add sheet) wears the default template. */
+const DEFAULT_FACADE_PALETTE = paletteFor({
+  template: 'cream',
+  font: 'sans',
+  background: 'cream',
+  customBackground: null,
+  showBrand: true,
+  footerText: '',
+});
 
 export interface BlockRenderProps {
   readonly palette: PagePalette;
@@ -136,16 +150,16 @@ export function MediaTile({
   );
 }
 
-/** `.link-card` — icon tile, title, mono URL. The page's primary row. */
+/** `.link-card` — icon well, bold title, mono URL: web `LinkRow`. */
 export function LinkCard({
   item,
   ...render
 }: BlockRenderProps & { readonly item: PreviewItem }): ReactNode {
+  const { t } = useTranslation();
   const { palette, metrics, textColor, fontFamily, variant } = render;
   const mediaUrl = item.media && isRenderableLinkUrl(item.media) ? item.media : null;
   const reduceMotion = useReducedMotion();
-  const displayUrl = item.url ? linkDisplay(item.title, item.url).text : null;
-  const caption = item.url ? linkSecondaryLabel(item.title, item.url) : null;
+  const shown = item.url ? linkDisplay(item.title, item.url) : null;
   return (
     <ItemPressable item={item} variant={variant}>
       <Animated.View entering={fadeUpIn(0, reduceMotion)} style={[previewCardStyle(palette, metrics), { minHeight: 44 }]}>
@@ -175,23 +189,105 @@ export function LinkCard({
           )}
         </View>
         <View style={{ flex: 1, gap: 1 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            {mediaUrl ? <BrandIcon name={linkDisplay(item.title, item.url ?? '').brand} size={18} color={palette.iconTint} /> : null}
-            <ThemedText variant="bodyLarge" numberOfLines={1} style={{ color: textColor, fontFamily, flexShrink: 1 }}>
-              {displayUrl ?? item.title}
-            </ThemedText>
-          </View>
-          {caption ? (
+          <ThemedText
+            variant="titleMedium"
+            numberOfLines={1}
+            style={{ color: textColor, fontFamily, flexShrink: 1 }}>
+            {item.title.trim() || t('pageDesign.untitledLink')}
+          </ThemedText>
+          {shown ? (
             <ThemedText
               variant="caption"
               numberOfLines={1}
-              style={{ color: palette.subtle, opacity: palette.subtleOpacity, fontFamily }}>
-              {caption}
+              style={{ color: palette.subtle, opacity: palette.subtleOpacity, fontFamily: MONO, fontSize: 12 }}>
+              {shown.text}
             </ThemedText>
           ) : null}
         </View>
       </Animated.View>
     </ItemPressable>
+  );
+}
+
+/**
+ * The web's click-to-load player facades (`RichBlocks`): a Spotify row with
+ * the play disc, or a 16:9 plate for YouTube. Nothing third-party loads here
+ * either — the visitor page swaps the real player in on a tap.
+ */
+export function PagePreviewMediaFacade({
+  media,
+  title,
+  palette = DEFAULT_FACADE_PALETTE,
+  fontFamily,
+}: {
+  readonly media: RichMedia;
+  readonly title: string;
+  readonly palette?: PagePalette;
+  readonly fontFamily?: string | undefined;
+}): ReactNode {
+  const { t } = useTranslation();
+  if (media.kind === 'spotify') {
+    return (
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 14,
+          padding: 12,
+          borderWidth: 1,
+          borderColor: palette.cardBorder,
+          borderRadius: palette.cardRadius,
+          backgroundColor: palette.cardBg,
+        }}>
+        <BrandBadge name="spotify" size={44} />
+        <View style={{ flex: 1, gap: 2 }}>
+          <ThemedText variant="titleMedium" numberOfLines={1} style={{ color: palette.text, fontFamily }}>
+            {title}
+          </ThemedText>
+          <ThemedText variant="caption" numberOfLines={1} style={{ color: palette.subtle, fontFamily }}>
+            {t(`pageAdd.music.spotify.${media.type}`)} · {t('pageDesign.loadsFrom', { host: 'Spotify' })}
+          </ThemedText>
+        </View>
+        <PlayDisc size={36} />
+      </View>
+    );
+  }
+  return (
+    <View
+      style={{
+        aspectRatio: 16 / 9,
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+        borderRadius: palette.cardRadius,
+        backgroundColor: PageChromeColors.playerPlate,
+      }}>
+      <PlayDisc size={52} />
+      <View style={{ position: 'absolute', left: 12, right: 12, bottom: 10, gap: 2 }}>
+        <ThemedText variant="bodyMedium" numberOfLines={1} style={{ color: PageChromeColors.playerInk, fontFamily }}>
+          {title}
+        </ThemedText>
+        <ThemedText variant="caption" numberOfLines={1} style={{ color: PageChromeColors.playerInk, opacity: 0.72 }}>
+          {t('pageDesign.loadsFrom', { host: 'YouTube' })}
+        </ThemedText>
+      </View>
+    </View>
+  );
+}
+
+function PlayDisc({ size }: { readonly size: number }): ReactNode {
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: Radius.pill,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: PageChromeColors.playerScrim,
+      }}>
+      <SfIcon name="play.fill" size={Math.round(size * 0.4)} color={PageChromeColors.playerInk} />
+    </View>
   );
 }
 

@@ -8,10 +8,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ModalSheet } from '@/components/common/ModalSheet';
 import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
-import { ThemedButton, ThemedSurface, ThemedText, ThemedTextInput } from '@/components/themed';
+import { ThemedButton, ThemedChoiceChip, ThemedSurface, ThemedText, ThemedTextInput } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { useThemeColors } from '@/constants/useThemeColors';
-import { Radius } from '@/constants/radius';
 import { useTranslation } from '@/i18n';
 import { haptic } from '@/feedback/haptics';
 import { fadeUpIn } from '@/feedback/motion';
@@ -452,23 +451,12 @@ function PageBlockEditorContent({ block, onClose }: { readonly block: PageBlock;
             <ThemedText variant="label" tone="tertiary">{t('pageDesign.style')}</ThemedText>
             <View className="flex-row flex-wrap gap-2">
               {catalog.styles.map((option) => (
-                <PressableScale
+                <ThemedChoiceChip
                   key={option}
+                  label={t(`pageDesign.style.${option}`)}
+                  selected={style === option}
                   onPress={() => { setStyle(option); }}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: style === option }}
-                  style={{
-                    minHeight: 44,
-                    paddingHorizontal: 14,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderWidth: 1,
-                    borderRadius: Radius.card,
-                    borderColor: style === option ? Colors.primaryBlue : Colors.divider,
-                    backgroundColor: style === option ? Colors.chipSurface : Colors.cardBg,
-                  }}>
-                  <ThemedText variant="label">{t(`pageDesign.style.${option}`)}</ThemedText>
-                </PressableScale>
+                />
               ))}
             </View>
           </View>

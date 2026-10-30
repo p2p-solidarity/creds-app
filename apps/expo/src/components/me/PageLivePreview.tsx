@@ -23,8 +23,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import type { ReactNode } from 'react';
 import { ScrollView, View } from 'react-native';
 
-import { PageTemplateColors } from '@/constants/Colors';
 import type { PageAppearance, PageBlock } from '@/page/pageDesign';
+import { richMediaForBlock } from '@/page/richMedia';
 import type { ProfileRecord } from '@solidarity/shared';
 
 import {
@@ -39,12 +39,12 @@ import {
   ItemCapsule,
   LinkCard,
   MediaTile,
+  PagePreviewMediaFacade,
   ShopRow,
   type BlockRenderProps,
 } from './PagePreviewItems';
 import {
   PREVIEW_METRICS,
-  backgroundFor,
   blockItems,
   fontFor,
   paletteFor,
@@ -119,53 +119,22 @@ export function PageLivePreview({
     </View>
   );
 
-  // A custom color is an explicit override. Apply it before template
-  // backgrounds so every preview responds immediately to the control.
-  if (appearance.customBackground) {
-    return (
-      <View
-        style={{
-          borderRadius: PHONE_SCREEN_RADIUS,
-          overflow: 'hidden',
-          backgroundColor: appearance.customBackground,
-        }}>
-        {content}
-      </View>
-    );
+  // The ground is the web palette's: one stop is flat; the gradient template
+  // runs 165° and sun 180°, as `GRADIENT_GROUND` / `SUN_GROUND` do.
+  const frame = { borderRadius: PHONE_SCREEN_RADIUS, overflow: 'hidden' as const };
+  const [first = palette.cardBg, second, ...rest] = palette.stops;
+  if (second === undefined) {
+    return <View style={[frame, { backgroundColor: first }]}>{content}</View>;
   }
-
-  if (appearance.template === 'gradient' || appearance.template === 'sun') {
-    const colors: readonly [string, string] = appearance.template === 'gradient'
-      ? [PageTemplateColors.pageGradientStart, PageTemplateColors.pageGradientEnd]
-      : [PageTemplateColors.pageSunStart, PageTemplateColors.pageSunEnd];
-    return (
-      <LinearGradient colors={colors} style={{ borderRadius: PHONE_SCREEN_RADIUS, overflow: 'hidden' }}>
-        {content}
-      </LinearGradient>
-    );
-  }
-
-  const templateBackground = appearance.template === 'night'
-    ? PageTemplateColors.pageNight
-    : appearance.template === 'mint'
-      ? PageTemplateColors.pageMint
-      : appearance.template === 'minimal'
-        ? PageTemplateColors.cardBg
-        : backgroundFor(appearance);
-  // `.pub`'s brand ground (mock P27): a low-opacity hero wash behind the
-  // header, only on the classic templates that have no colour of their own.
-  const showBrandGround = appearance.template === 'cream' || appearance.template === 'journal';
+  const diagonal = appearance.template === 'gradient';
   return (
-    <View style={{ borderRadius: PHONE_SCREEN_RADIUS, overflow: 'hidden', backgroundColor: templateBackground }}>
-      {showBrandGround ? (
-        <LinearGradient
-          colors={[PageTemplateColors.heroGradientStart, PageTemplateColors.heroGradientEnd]}
-          pointerEvents="none"
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 220, opacity: 0.5 }}
-        />
-      ) : null}
+    <LinearGradient
+      colors={[first, second, ...rest]}
+      start={diagonal ? { x: 0.37, y: 0 } : { x: 0.5, y: 0 }}
+      end={diagonal ? { x: 0.63, y: 1 } : { x: 0.5, y: 1 }}
+      style={frame}>
       {content}
-    </View>
+    </LinearGradient>
   );
 }
 
@@ -180,6 +149,13 @@ function PreviewBlockItems({
   const { palette, metrics, textColor, fontFamily, variant } = render;
   const visibleItems = variant === 'public' ? items : items.slice(0, 3);
   if (visibleItems.length === 0 && block.type !== 'leave-card') return null;
+  // Web `richOr`: a Spotify / YouTube item plays instead of being a row.
+  const richOr = (item: PreviewItem, fallback: ReactNode): ReactNode => {
+    const media = richMediaForBlock(block.type, item.url);
+    return media === null ? fallback : (
+      <PagePreviewMediaFacade key={item.id} media={media} title={item.title} palette={palette} fontFamily={fontFamily} />
+    );
+  };
 
   switch (block.style) {
     case 'plain':
@@ -231,7 +207,7 @@ function PreviewBlockItems({
           {visibleItems.map((item) => (
             block.type === 'shop'
               ? <ShopRow key={item.id} item={item} {...render} />
-              : <LinkCard key={item.id} item={item} {...render} />
+              : richOr(item, <LinkCard key={item.id} item={item} {...render} />)
           ))}
         </View>
       );
@@ -266,7 +242,7 @@ function PreviewBlockItems({
       return (
         <View style={{ gap: metrics.cardGap }}>
           {(variant === 'public' ? visibleItems : visibleItems.slice(0, 1)).map((item) => (
-            <FeatureRow key={item.id} item={item} thumbSize={76} {...render} />
+            richOr(item, <FeatureRow key={item.id} item={item} thumbSize={76} {...render} />)
           ))}
         </View>
       );
@@ -274,13 +250,15 @@ function PreviewBlockItems({
       return (
         <View style={{ gap: metrics.cardGap }}>
           {(variant === 'public' ? visibleItems : visibleItems.slice(0, 1)).map((item) => (
-            <EmbedPlate
-              key={item.id}
-              item={item}
-              palette={palette}
-              fontFamily={fontFamily}
-              variant={variant}
-            />
+            richOr(item, (
+              <EmbedPlate
+                key={item.id}
+                item={item}
+                palette={palette}
+                fontFamily={fontFamily}
+                variant={variant}
+              />
+            ))
           ))}
         </View>
       );
@@ -288,7 +266,7 @@ function PreviewBlockItems({
       return (
         <View style={{ gap: metrics.cardGap }}>
           {visibleItems.map((item) => (
-            <FeatureRow key={item.id} item={item} thumbSize={54} {...render} />
+            richOr(item, <FeatureRow key={item.id} item={item} thumbSize={54} {...render} />)
           ))}
         </View>
       );
