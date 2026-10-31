@@ -86,10 +86,13 @@ class HybridSemaphore : HybridSemaphoreSpec() {
     installIdentity(secret)
   }
 
-  override fun identityFromSeed(seed: ArrayBuffer): Promise<String> = Promise.async {
+  override fun identityFromSeed(seed: ArrayBuffer): Promise<String> {
+    // JS ArrayBuffers are only readable on the JS thread: copy before going async.
     val bytes = arrayBufferToBytes(seed)
-    require(bytes.size == 32) { "Seed must be exactly 32 bytes (got ${bytes.size})" }
-    installIdentity(bytes)
+    return Promise.async {
+      require(bytes.size == 32) { "Seed must be exactly 32 bytes (got ${bytes.size})" }
+      installIdentity(bytes)
+    }
   }
 
   override fun getCommitment(): String = cacheLock.withLock { cachedCommitment }
@@ -139,10 +142,13 @@ class HybridSemaphore : HybridSemaphoreSpec() {
     bytesToArrayBuffer(bytes)
   }
 
-  override fun importPrivateKey(bytes: ArrayBuffer): Promise<String> = Promise.async {
+  override fun importPrivateKey(bytes: ArrayBuffer): Promise<String> {
+    // JS ArrayBuffers are only readable on the JS thread: copy before going async.
     val raw = arrayBufferToBytes(bytes)
-    require(raw.size == 32) { "Seed must be exactly 32 bytes (got ${raw.size})" }
-    installIdentity(raw)
+    return Promise.async {
+      require(raw.size == 32) { "Seed must be exactly 32 bytes (got ${raw.size})" }
+      installIdentity(raw)
+    }
   }
 
   // ──────────────────────────────────────────────────────────────────────────

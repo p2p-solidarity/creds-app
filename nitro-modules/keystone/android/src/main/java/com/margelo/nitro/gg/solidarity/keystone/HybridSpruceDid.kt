@@ -337,38 +337,44 @@ class HybridSpruceDid : HybridSpruceDidSpec() {
   // DID derivation and JWS/VC verification are pure TS in packages/shared —
   // the SpruceID SDK wrapper methods were removed in 1.3.3 S7a (zero callers).
 
-  override fun signJws(alias: String, payload: ArrayBuffer): Promise<String> = Promise.async {
+  override fun signJws(alias: String, payload: ArrayBuffer): Promise<String> {
+    // JS ArrayBuffers are only readable on the JS thread: copy before going async.
     val payloadBytes = payload.toByteArray()
-    val entry = keyStore.getEntry(keystoreAlias(alias), null) as? KeyStore.PrivateKeyEntry
-      ?: throw IllegalStateException("No key for alias=$alias")
-    val priv = entry.privateKey
+    return Promise.async {
+      val entry = keyStore.getEntry(keystoreAlias(alias), null) as? KeyStore.PrivateKeyEntry
+        ?: throw IllegalStateException("No key for alias=$alias")
+      val priv = entry.privateKey
 
-    // Header is fixed since we only sign ES256 from this surface today.
-    val header = """{"alg":"ES256","typ":"JWT"}"""
-    val headerB64 = SpruceDidBase64.urlEncode(header.toByteArray(Charsets.UTF_8))
-    val payloadB64 = SpruceDidBase64.urlEncode(payloadBytes)
-    val signingInput = "$headerB64.$payloadB64".toByteArray(Charsets.UTF_8)
+      // Header is fixed since we only sign ES256 from this surface today.
+      val header = """{"alg":"ES256","typ":"JWT"}"""
+      val headerB64 = SpruceDidBase64.urlEncode(header.toByteArray(Charsets.UTF_8))
+      val payloadB64 = SpruceDidBase64.urlEncode(payloadBytes)
+      val signingInput = "$headerB64.$payloadB64".toByteArray(Charsets.UTF_8)
 
-    val sig = Signature.getInstance("SHA256withECDSA")
-    sig.initSign(priv)
-    sig.update(signingInput)
-    val derSig = sig.sign()
-    val rawSig = SpruceDidEcdsa.derToRaw(derSig)
-    "$headerB64.$payloadB64.${SpruceDidBase64.urlEncode(rawSig)}"
+      val sig = Signature.getInstance("SHA256withECDSA")
+      sig.initSign(priv)
+      sig.update(signingInput)
+      val derSig = sig.sign()
+      val rawSig = SpruceDidEcdsa.derToRaw(derSig)
+      "$headerB64.$payloadB64.${SpruceDidBase64.urlEncode(rawSig)}"
+    }
   }
 
-  override fun signRawP256(alias: String, digest: ArrayBuffer): Promise<ArrayBuffer> = Promise.async {
+  override fun signRawP256(alias: String, digest: ArrayBuffer): Promise<ArrayBuffer> {
+    // JS ArrayBuffers are only readable on the JS thread: copy before going async.
     val digestBytes = digest.toByteArray()
-    require(digestBytes.size == 32) {
-      "signRawP256 expects a 32-byte SHA-256 digest, got ${digestBytes.size}"
+    return Promise.async {
+      require(digestBytes.size == 32) {
+        "signRawP256 expects a 32-byte SHA-256 digest, got ${digestBytes.size}"
+      }
+      val entry = keyStore.getEntry(keystoreAlias(alias), null) as? KeyStore.PrivateKeyEntry
+        ?: throw IllegalStateException("No key for alias=$alias")
+      val signer = Signature.getInstance("NONEwithECDSA")
+      signer.initSign(entry.privateKey)
+      signer.update(digestBytes)
+      val derSig = signer.sign()
+      ArrayBuffer.copy(SpruceDidEcdsa.derToRaw(derSig))
     }
-    val entry = keyStore.getEntry(keystoreAlias(alias), null) as? KeyStore.PrivateKeyEntry
-      ?: throw IllegalStateException("No key for alias=$alias")
-    val signer = Signature.getInstance("NONEwithECDSA")
-    signer.initSign(entry.privateKey)
-    signer.update(digestBytes)
-    val derSig = signer.sign()
-    ArrayBuffer.copy(SpruceDidEcdsa.derToRaw(derSig))
   }
 
   // MARK: - Listener registration

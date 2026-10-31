@@ -141,7 +141,7 @@ export async function connectRootIdentityToPasskey(input: {
     credentialId = base64UrlDecode(created.credentialId);
     prfOutput = base64UrlDecode(created.prfOutput);
   } catch {
-    return { ok: false, error: { kind: 'invalidCredential' } };
+    return { ok: false, error: { kind: 'invalidCredential', detail: 'credential id or PRF output is not base64url' } };
   }
 
   try {
@@ -189,7 +189,7 @@ export async function connectRootIdentityToPasskey(input: {
       if (sealed.error.kind === 'invalidPrfOutput') {
         return { ok: false, error: { kind: 'noPrf' } };
       }
-      return { ok: false, error: { kind: 'invalidCredential' } };
+      return { ok: false, error: { kind: 'invalidCredential', detail: `seal failed: ${sealed.error.kind}` } };
     }
     try {
       input.pending?.set(locator, sealed.value, row, owner.meta);
@@ -316,7 +316,7 @@ async function connectNative(input: {
   );
   const nostrScalar = await readNostrScalarForPasskeyConnection();
   if (!nostrScalar.ok) {
-    return { ok: false, error: { kind: 'invalidCredential' } };
+    return { ok: false, error: { kind: 'invalidCredential', detail: 'nostr key could not be read' } };
   }
   try {
     const fallbackScalar =
@@ -436,7 +436,7 @@ export async function connectStoredRootIdentityWithNativePasskey(retryOnly = fal
       error:
         mnemonic.error.kind === 'invalidMnemonic'
           ? { kind: 'invalidMnemonic' }
-          : { kind: 'invalidCredential' },
+          : { kind: 'invalidCredential', detail: `root phrase could not be read: ${mnemonic.error.kind}` },
     };
   }
   return connectRootIdentityWithNativePasskey({

@@ -196,44 +196,49 @@ class HybridSecretsVault : HybridSecretsVaultSpec() {
 
   // MARK: - wrap
 
-  override fun wrap(
-    keyAlias: String, plaintext: ArrayBuffer
-  ): Promise<WrappedSecret> = Promise.async {
+  override fun wrap(keyAlias: String, plaintext: ArrayBuffer): Promise<WrappedSecret> {
+    // JS ArrayBuffers are only readable on the JS thread: copy before going async.
     val plaintextBytes = plaintext.toByteArray()
-    if (plaintextBytes.isEmpty()) {
-      throw IllegalArgumentException("plaintext is empty")
+    return Promise.async {
+      if (plaintextBytes.isEmpty()) {
+        throw IllegalArgumentException("plaintext is empty")
+      }
+      val key = loadKey(keyAlias)
+      val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+      cipher.init(Cipher.ENCRYPT_MODE, key)
+      val iv = cipher.iv  // AndroidKeyStore generates a fresh 12-byte IV per init
+      require(iv.size == GCM_IV_BYTES) { "unexpected IV length ${iv.size}" }
+      val ctAndTag = cipher.doFinal(plaintextBytes)
+      val blob = ByteArray(iv.size + ctAndTag.size)
+      System.arraycopy(iv, 0, blob, 0, iv.size)
+      System.arraycopy(ctAndTag, 0, blob, iv.size, ctAndTag.size)
+      WrappedSecret(
+        algorithm = ALGO_LABEL,
+        keyAlias = keyAlias,
+        wrapped = ArrayBuffer.copy(blob),
+        hardwareBacked = keyIsHardwareBacked(key)
+      )
     }
-    val key = loadKey(keyAlias)
-    val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-    cipher.init(Cipher.ENCRYPT_MODE, key)
-    val iv = cipher.iv  // AndroidKeyStore generates a fresh 12-byte IV per init
-    require(iv.size == GCM_IV_BYTES) { "unexpected IV length ${iv.size}" }
-    val ctAndTag = cipher.doFinal(plaintextBytes)
-    val blob = ByteArray(iv.size + ctAndTag.size)
-    System.arraycopy(iv, 0, blob, 0, iv.size)
-    System.arraycopy(ctAndTag, 0, blob, iv.size, ctAndTag.size)
-    WrappedSecret(
-      algorithm = ALGO_LABEL,
-      keyAlias = keyAlias,
-      wrapped = ArrayBuffer.copy(blob),
-      hardwareBacked = keyIsHardwareBacked(key)
-    )
   }
 
   // MARK: - unwrap
 
-  override fun unwrap(wrapped: WrappedSecret): Promise<ArrayBuffer> = Promise.async {
+  override fun unwrap(wrapped: WrappedSecret): Promise<ArrayBuffer> {
+    // JS ArrayBuffers are only readable on the JS thread: copy before going async.
     val blob = wrapped.wrapped.toByteArray()
-    if (blob.size <= GCM_IV_BYTES + GCM_TAG_BYTES) {
-      throw IllegalArgumentException("wrapped blob too short: ${blob.size} bytes")
+    val keyAlias = wrapped.keyAlias
+    return Promise.async {
+      if (blob.size <= GCM_IV_BYTES + GCM_TAG_BYTES) {
+        throw IllegalArgumentException("wrapped blob too short: ${blob.size} bytes")
+      }
+      val iv = blob.copyOfRange(0, GCM_IV_BYTES)
+      val ctAndTag = blob.copyOfRange(GCM_IV_BYTES, blob.size)
+      val key = loadKey(keyAlias)
+      val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+      cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(GCM_TAG_BITS, iv))
+      val plaintext = cipher.doFinal(ctAndTag)
+      ArrayBuffer.copy(plaintext)
     }
-    val iv = blob.copyOfRange(0, GCM_IV_BYTES)
-    val ctAndTag = blob.copyOfRange(GCM_IV_BYTES, blob.size)
-    val key = loadKey(wrapped.keyAlias)
-    val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-    cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(GCM_TAG_BITS, iv))
-    val plaintext = cipher.doFinal(ctAndTag)
-    ArrayBuffer.copy(plaintext)
   }
 
   // MARK: - deleteKey

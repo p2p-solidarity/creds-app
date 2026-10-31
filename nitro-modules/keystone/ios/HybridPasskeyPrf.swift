@@ -13,6 +13,9 @@ private enum PasskeyPrfNativeError: LocalizedError {
   case noPresentationAnchor
   case noPrf
   case invalidCredential
+  /// The provider refused; carries its NSError domain/code/message as report
+  /// detail after the code (same shape as Android's appended provider text).
+  case providerFailed(NSError)
 
   var errorDescription: String? {
     switch self {
@@ -23,6 +26,8 @@ private enum PasskeyPrfNativeError: LocalizedError {
     case .noPresentationAnchor: return "passkey_prf_no_presentation_anchor"
     case .noPrf: return "passkey_prf_no_prf"
     case .invalidCredential: return "passkey_prf_invalid_credential"
+    case .providerFailed(let error):
+      return "passkey_prf_invalid_credential: \(error.domain) \(error.code) \(error.localizedDescription)"
     }
   }
 }
@@ -108,7 +113,7 @@ private final class PasskeyRegistrationCoordinator: NSObject,
     } else if Self.isMatchedExcludedCredential(nsError) {
       finish(.failure(PasskeyPrfNativeError.alreadyRegistered))
     } else {
-      finish(.failure(PasskeyPrfNativeError.invalidCredential))
+      finish(.failure(PasskeyPrfNativeError.providerFailed(nsError)))
     }
   }
 
