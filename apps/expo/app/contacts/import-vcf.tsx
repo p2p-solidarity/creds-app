@@ -1,5 +1,5 @@
 /**
- * VCF import — mirrors Swift VCFDocumentPicker.
+ * VCF import, laid out like the other settings sub-pages.
  * Pick a .vcf file → parse → insert each contact.
  */
 import * as DocumentPicker from 'expo-document-picker';
@@ -7,14 +7,17 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { safeBack } from '@/navigation/safeBack';
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { importFromVcf } from '@/contacts/importer';
-import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
+import { SettingsBlockSection, SettingsScreenTitle } from '@/components/settings/SettingsBlocks';
+import { ThemedButton, ThemedText } from '@/components/themed';
 import { useTranslation } from '@/i18n';
 import { pushToast } from '@/feedback/toast';
 
 export default function ImportVcf() {
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const [busy, setBusy] = useState(false);
   const [lastImport, setLastImport] = useState<number | null>(null);
 
@@ -43,42 +46,42 @@ export default function ImportVcf() {
   };
 
   return (
-    <ScrollView className="flex-1 bg-pageBg">
-      <View className="px-4 pt-6">
-        <ThemedButton variant="secondary" size="sm" label={t('contactVcf.back')} onPress={() => { safeBack(); }} />
-      </View>
-      <View className="px-4 py-4">
-        <ThemedText variant="headlineLarge">{t('contactVcf.title')}</ThemedText>
-        <ThemedText variant="bodySmall" tone="tertiary" className="mt-1">
-          {t('contactVcf.subtitle')}
-        </ThemedText>
-      </View>
+    <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
+      <SettingsScreenTitle
+        title={t('contactVcf.title')}
+        leadingAction={{ accessibilityLabel: t('common.back'), onPress: () => { safeBack(); } }}
+      />
+      <ScrollView contentContainerStyle={{ paddingTop: 24, paddingBottom: 24 + insets.bottom }}>
+        <View className="gap-6">
+          <SettingsBlockSection index={0} title={t('contactVcf.extractHeader')} footer={t('contactVcf.subtitle')}>
+            <View className="px-4 py-3">
+              <ThemedText variant="bodyMedium">
+                {t('contactVcf.extractFullName')}{'\n'}
+                {t('contactVcf.extractEmailPhone')}{'\n'}
+                {t('contactVcf.extractOrgTitle')}{'\n'}
+                {t('contactVcf.extractPhoto')}
+              </ThemedText>
+            </View>
+          </SettingsBlockSection>
 
-      <ThemedSurface variant="card" padded className="mx-4">
-        <ThemedText variant="caption" tone="tertiary">{t('contactVcf.extractHeader')}</ThemedText>
-        <ThemedText variant="bodySmall" className="mt-1">
-          {t('contactVcf.extractFullName')}{'\n'}
-          {t('contactVcf.extractEmailPhone')}{'\n'}
-          {t('contactVcf.extractOrgTitle')}{'\n'}
-          {t('contactVcf.extractPhoto')}
-        </ThemedText>
-      </ThemedSurface>
+          {lastImport !== null ? (
+            <SettingsBlockSection index={1} title={t('contactVcf.lastImportHeader')}>
+              <View className="px-4 py-3">
+                <ThemedText variant="bodyLarge" tabularNums>{t('contactVcf.lastImportCount', { count: lastImport })}</ThemedText>
+              </View>
+            </SettingsBlockSection>
+          ) : null}
 
-      {lastImport !== null ? (
-        <ThemedSurface variant="card" padded className="mx-4 mt-3">
-          <ThemedText variant="caption" tone="tertiary">{t('contactVcf.lastImportHeader')}</ThemedText>
-          <ThemedText variant="bodyLarge" tabularNums>{t('contactVcf.lastImportCount', { count: lastImport })}</ThemedText>
-        </ThemedSurface>
-      ) : null}
-
-      <View className="px-4 mt-6 mb-10">
-        <ThemedButton
-          label={busy ? t('contactVcf.importing') : t('contactVcf.pickFile')}
-          fullWidth
-          loading={busy}
-          onPress={() => { void onPick(); }}
-        />
-      </View>
-    </ScrollView>
+          <View className="px-4">
+            <ThemedButton
+              label={busy ? t('contactVcf.importing') : t('contactVcf.pickFile')}
+              fullWidth
+              loading={busy}
+              onPress={() => { void onPick(); }}
+            />
+          </View>
+        </View>
+      </ScrollView>
+    </View>
   );
 }

@@ -170,7 +170,6 @@
   "contactImport.title": "匯入聯絡人",
   "contactManual.nameRequired": "姓名為必填",
   "contactManual.saved": "已儲存 {{name}}",
-  "contactVcf.back": "返回",
   "contactVcf.extractEmailPhone": "電子郵件與電話",
   "contactVcf.extractFullName": "完整姓名",
   "contactVcf.extractHeader": "可擷取內容",

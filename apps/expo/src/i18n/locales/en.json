@@ -170,7 +170,6 @@
   "contactImport.title": "Import Contacts",
   "contactManual.nameRequired": "Name is required",
   "contactManual.saved": "Saved {{name}}",
-  "contactVcf.back": "Back",
   "contactVcf.extractEmailPhone": "Email + phone",
   "contactVcf.extractFullName": "Full name",
   "contactVcf.extractHeader": "Extracts",
