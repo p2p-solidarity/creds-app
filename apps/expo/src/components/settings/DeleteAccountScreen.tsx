@@ -105,7 +105,7 @@ export function DeleteAccountScreen() {
       <ScrollView className="flex-1" contentContainerStyle={{ paddingTop: 24, paddingBottom: 40 + insets.bottom }}>
         <View className="gap-6">
           <SettingsBlockSection index={0} title={t('deleteAccount.section.deleted')}>
-            <View style={{ gap: 6, paddingHorizontal: 2 }}>
+            <View style={{ gap: 6, paddingHorizontal: 12, paddingVertical: 10 }}>
               {(['page', 'name', 'vault', 'pro', 'device'] as const).map((key) => (
                 <ThemedText key={key} variant="bodySmall">{`• ${t(`deleteAccount.deleted.${key}`)}`}</ThemedText>
               ))}
@@ -113,7 +113,7 @@ export function DeleteAccountScreen() {
           </SettingsBlockSection>
 
           <SettingsBlockSection index={1} title={t('deleteAccount.section.kept')}>
-            <View style={{ gap: 6, paddingHorizontal: 2 }}>
+            <View style={{ gap: 6, paddingHorizontal: 12, paddingVertical: 10 }}>
               {(['name', 'relays', 'others', 'backups'] as const).map((key) => (
                 <ThemedText key={key} variant="bodySmall" tone="secondary">{`• ${t(`deleteAccount.kept.${key}`)}`}</ThemedText>
               ))}
@@ -136,7 +136,7 @@ export function DeleteAccountScreen() {
               title={t('deleteAccount.section.progress')}
               footer={run.kind === 'incomplete' ? t('deleteAccount.incompleteFooter') : undefined}
             >
-              <View style={{ paddingHorizontal: 2 }}>
+              <View style={{ paddingHorizontal: 12, paddingVertical: 4 }}>
                 {ACCOUNT_DELETION_STEPS.map((step) => (
                   <StepRow key={step} step={step} outcome={steps[step]} running={run.kind === 'running' && run.current === step} />
                 ))}
