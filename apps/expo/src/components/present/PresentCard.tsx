@@ -13,7 +13,7 @@
  */
 import { Image } from 'expo-image';
 import { useEffect, useState, type ReactNode } from 'react';
-import { ActivityIndicator, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
 import type { ProfileRecord } from '@solidarity/shared';
 
@@ -30,6 +30,7 @@ import { PhysicalCardSheet } from '@/components/present/PhysicalCardSheet';
 import { PresentCardVisual } from '@/components/present/PresentCardVisual';
 import { ON_DARK, ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
+import { useContentWidth } from '@/constants/layout';
 import { Radius } from '@/constants/radius';
 import { useThemeColors } from '@/constants/useThemeColors';
 import { zoomFadeIn, DURATION } from '@/feedback/motion';
@@ -206,7 +207,7 @@ function QrPlate({
 }): ReactNode {
   const { t } = useTranslation();
   const reduceMotion = useReducedMotion();
-  const { width } = useWindowDimensions();
+  const width = useContentWidth();
   const size = Math.min(MAX_QR_SIZE, width - 32 - QR_PLATE_PADDING * 2 - 32);
   const qr = useQrPng(candidate?.url ?? null, size);
 

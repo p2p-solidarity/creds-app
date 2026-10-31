@@ -1,4 +1,6 @@
 /**
+ * The navigators' `screenLayout`: every leaf screen goes through here.
+ *
  * Light / Dark switch reaches every screen.
  *
  * Most components read `Colors.*` (a Proxy that resolves against the current
@@ -13,13 +15,46 @@
  * Navigator routes (`(tabs)`) are not keyed — their own `screenLayout` keys
  * their screens — so navigation state and the selected tab survive; only a
  * screen's local UI state (scroll, an open fold) starts over.
+ *
+ * Content column (iPad): each leaf screen is centred in a column capped at
+ * `ContentWidth.page` (forms at `ContentWidth.form`) on the page background,
+ * so a 1032pt window doesn't stretch inputs and rows edge to edge. On a phone
+ * the window is narrower than the cap and the column is the whole window.
+ * Camera screens stay full-bleed.
  */
 import { Fragment, type ReactElement } from 'react';
-import { useColorScheme } from 'react-native';
+import { useColorScheme, View } from 'react-native';
+
+import { ContentWidth } from '@/constants/layout';
+
+/** Camera viewfinders fill the window. */
+const FULL_BLEED_ROUTES: ReadonlySet<string> = new Set(['scan/index', 'passport/index']);
+
+/** One-field flows read better narrower than the page column. */
+const FORM_ROUTES: ReadonlySet<string> = new Set([
+  'onboarding/index',
+  'settings/username',
+  'verify/bluesky',
+  'verify/nostr',
+]);
 
 function ThemeRemount({ children }: { readonly children: ReactElement }): ReactElement {
   const scheme = useColorScheme() ?? 'light';
   return <Fragment key={scheme}>{children}</Fragment>;
+}
+
+function ContentColumn({
+  maxWidth,
+  children,
+}: {
+  readonly maxWidth: number;
+  readonly children: ReactElement;
+}): ReactElement {
+  return (
+    <View className="flex-1 bg-pageBg">
+      <View style={{ flex: 1, width: '100%', maxWidth, alignSelf: 'center' }}>{children}</View>
+    </View>
+  );
 }
 
 export function themeRefreshLayout({
@@ -31,5 +66,11 @@ export function themeRefreshLayout({
 }): ReactElement {
   // A `(group)` route is a nested navigator; remounting it would reset its state.
   if (route.name.startsWith('(')) return children;
-  return <ThemeRemount>{children}</ThemeRemount>;
+  if (FULL_BLEED_ROUTES.has(route.name)) return <ThemeRemount>{children}</ThemeRemount>;
+  const maxWidth = FORM_ROUTES.has(route.name) ? ContentWidth.form : ContentWidth.page;
+  return (
+    <ThemeRemount>
+      <ContentColumn maxWidth={maxWidth}>{children}</ContentColumn>
+    </ThemeRemount>
+  );
 }

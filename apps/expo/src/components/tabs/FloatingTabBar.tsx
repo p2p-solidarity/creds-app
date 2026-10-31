@@ -26,6 +26,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
 import { ThemedText } from '@/components/themed';
+import { ContentWidth } from '@/constants/layout';
 import { useThemeColors } from '@/constants/useThemeColors';
 import { haptic } from '@/feedback/haptics';
 import { DURATION, EASE_OUT, SCALE, SPRING, TIMING } from '@/feedback/motion';
@@ -90,6 +91,11 @@ export function FloatingTabBar({
         style={{
           flexDirection: 'row',
           alignItems: 'center',
+          // iPad: three tabs spread over 1032pt read as unrelated; keep them
+          // over the content column.
+          width: '100%',
+          maxWidth: ContentWidth.page,
+          alignSelf: 'center',
           paddingHorizontal: 16,
           paddingTop: 12,
           // iOS home indicator (`insets.bottom` ≈ 34) and Android gesture /

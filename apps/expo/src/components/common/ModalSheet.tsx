@@ -58,6 +58,10 @@ export function ModalSheet({
   const parentFrame = useSafeAreaFrame();
   // iOS sheets already sit below the status bar, so their own top inset is 0.
   // Android modals fill the window, so the root insets are the right seed.
+  // iPad: a pageSheet is nearly the whole 13" screen; a formSheet is a
+  // centred card, which is what these short sheets are. iPhone draws both
+  // the same way, so the caller's choice only matters off-iPad.
+  const presentation = Platform.OS === 'ios' && Platform.isPad ? 'formSheet' : presentationStyle;
   const initialMetrics = {
     insets: Platform.OS === 'ios' ? { ...parentInsets, top: 0 } : parentInsets,
     frame: parentFrame,
@@ -67,7 +71,7 @@ export function ModalSheet({
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle={presentationStyle}
+      presentationStyle={presentation}
       onRequestClose={onRequestClose}
       onDismiss={onDismiss}>
       <SafeAreaProvider initialMetrics={initialMetrics}>{children}</SafeAreaProvider>

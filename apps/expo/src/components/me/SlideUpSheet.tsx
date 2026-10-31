@@ -36,6 +36,7 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { Colors } from '@/constants/Colors';
+import { ContentWidth } from '@/constants/layout';
 import { TIMING } from '@/feedback/motion';
 import { useTranslation } from '@/i18n';
 
@@ -154,7 +155,7 @@ export function SlideUpSheet({ visible, onClose, dismissOnBackdrop = false, chil
             onPress={() => { close(); }}
           />
         ) : null}
-        <Animated.View onLayout={onSheetLayout} style={sheetStyle}>
+        <Animated.View onLayout={onSheetLayout} style={[styles.sheet, sheetStyle]}>
           {children(close)}
         </Animated.View>
       </View>
@@ -164,4 +165,6 @@ export function SlideUpSheet({ visible, onClose, dismissOnBackdrop = false, chil
 
 const styles = StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
+  // iPad: a bottom sheet the column's width, not the whole 1032pt window.
+  sheet: { width: '100%', maxWidth: ContentWidth.page, alignSelf: 'center' },
 });

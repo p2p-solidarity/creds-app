@@ -11,6 +11,7 @@ import { SfIcon } from '@/components/icons/SfIcon';
 import { brandIconForHost } from '@/profile/linkPresentation';
 import { ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
+import { useContentWidth } from '@/constants/layout';
 import { useTranslation } from '@/i18n';
 import { resolveProfileAvatarSource } from '@/profile/avatar';
 import { readLocalAvatarUri } from '@/profile/localAvatar';
@@ -49,7 +50,8 @@ export function ProfileHero({
   onOpenSettings,
 }: ProfileHeroProps): ReactNode {
   const { t } = useTranslation();
-  const { width, fontScale } = useWindowDimensions();
+  const { fontScale } = useWindowDimensions();
+  const width = useContentWidth();
   const layout = pageHeaderLayout(width, fontScale);
   const [localAvatar, setLocalAvatar] = useState(readLocalAvatarUri);
   const [bioOpen, setBioOpen] = useState(false);

@@ -17,6 +17,7 @@ import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedText } from '@/components/themed';
 import { CardMetalColors, Colors } from '@/constants/Colors';
+import { ContentWidth } from '@/constants/layout';
 import { Radius } from '@/constants/radius';
 import { DURATION, EASE_OUT, IDLE, SPRING } from '@/feedback/motion';
 
@@ -140,7 +141,9 @@ export function PresentCardVisual(props: PresentCardVisualProps): ReactNode {
   };
 
   return (
-    <View style={{ gap: 12 }}>
+    // Business-card size at most: on an iPad the column would otherwise blow
+    // the card up to ~650pt next to a phone-sized QR.
+    <View style={{ gap: 12, width: '100%', maxWidth: ContentWidth.card, alignSelf: 'center' }}>
       <Animated.View style={tiltStyle}>
         <PressableScale
           haptic="tap"

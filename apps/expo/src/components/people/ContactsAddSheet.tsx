@@ -8,6 +8,7 @@ import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedButton, ThemedSurface, ThemedText, ThemedTextInput } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
+import { ContentWidth } from '@/constants/layout';
 import { Radius } from '@/constants/radius';
 import { credsNameLink } from '@/deeplink/credsName';
 import { handleDeepLink } from '@/deeplink/router';
@@ -69,6 +70,10 @@ export function ContactsAddSheet({
           variant="elevated"
           style={{
             maxHeight: '82%',
+            // iPad: a column-wide drawer, not a full-width strip.
+            width: '100%',
+            maxWidth: ContentWidth.form,
+            alignSelf: 'center',
             borderTopLeftRadius: 16,
             borderTopRightRadius: 16,
             borderBottomLeftRadius: 0,
@@ -91,8 +96,6 @@ export function ContactsAddSheet({
                   setNameError(null);
                 }}
                 kind="handle"
-                // Names are ASCII; a Zhuyin / kana keyboard would compose them away.
-                keyboardType="ascii-capable"
                 label={t('peopleList.credsNameLabel')}
                 inlinePrefix="creds.id/@"
                 placeholder={t('peopleList.credsNamePlaceholder')}
