@@ -489,6 +489,8 @@
   "identityExport.section.current": "Root Identity",
   "identityExport.activeDid": "Active Root DID",
   "identityExport.none": "Not yet created",
+  "identityExport.didLoading": "Loading…",
+  "identityExport.didError": "Couldn't read",
   "identityExport.section.export": "Export",
   "identityExport.exportFooter": "Needs Face ID. Anyone with this phrase can access your identity.",
   "identityExport.reveal": "Reveal Recovery Phrase",

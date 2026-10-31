@@ -489,6 +489,8 @@
   "identityExport.section.current": "根身分",
   "identityExport.activeDid": "目前的根 DID",
   "identityExport.none": "尚未建立",
+  "identityExport.didLoading": "讀取中…",
+  "identityExport.didError": "無法讀取",
   "identityExport.section.export": "匯出",
   "identityExport.exportFooter": "需要 Face ID。任何取得此助記詞的人都能存取你的身分。",
   "identityExport.reveal": "顯示復原助記詞",

@@ -43,7 +43,10 @@ export default function IdentityExportSettings() {
   const { t } = useTranslation();
   const setPref = usePreferences((s) => s.set);
 
-  const [currentDid, setCurrentDid] = useState<string | null>(null);
+  const [didState, setDidState] = useState<
+    { readonly kind: 'loading' | 'none' | 'error' } | { readonly kind: 'ready'; readonly did: string }
+  >({ kind: 'loading' });
+  const currentDid = didState.kind === 'ready' ? didState.did : null;
   const [revealedWords, setRevealedWords] = useState<readonly string[] | null>(null);
   const [revealing, setRevealing] = useState(false);
 
@@ -54,7 +57,9 @@ export default function IdentityExportSettings() {
   useEffect(() => {
     let cancelled = false;
     void getRootDid().then((r) => {
-      if (!cancelled && r.ok) setCurrentDid(r.value);
+      if (cancelled) return;
+      if (r.ok) setDidState({ kind: 'ready', did: r.value });
+      else setDidState({ kind: r.error.kind === 'notProvisioned' ? 'none' : 'error' });
     });
     return () => {
       cancelled = true;
@@ -121,7 +126,7 @@ export default function IdentityExportSettings() {
           pushToast(t('identityExport.staleSyncWarning'), 'error');
         }
       }
-      setCurrentDid(r.value.did);
+      setDidState({ kind: 'ready', did: r.value.did });
       setImportText('');
       pushToast(
         currentDid === r.value.did ? t('identityExport.alreadyActive') : t('identityExport.switched'),
@@ -150,7 +155,15 @@ export default function IdentityExportSettings() {
             <SettingsBlockInfoRow
               icon="key.horizontal"
               title={t('identityExport.activeDid')}
-              value={currentDid ? `${currentDid.slice(0, 18)}…` : t('identityExport.none')}
+              value={
+                didState.kind === 'ready'
+                  ? `${didState.did.slice(0, 18)}…`
+                  : didState.kind === 'loading'
+                    ? t('identityExport.didLoading')
+                    : didState.kind === 'error'
+                      ? t('identityExport.didError')
+                      : t('identityExport.none')
+              }
             />
           </SettingsBlockSection>
 

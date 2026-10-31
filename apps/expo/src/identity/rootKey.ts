@@ -64,6 +64,8 @@
  * for tests (`__setRootKeyStorageForTesting`).
  */
 import { p256 } from '@noble/curves/nist.js';
+import { sha256 } from '@noble/hashes/sha2.js';
+import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js';
 // Type-only — the runtime binding is loaded lazily (see `loadSecureStore`)
 // so importing this module in tests never eagerly pulls in the real
 // `expo-secure-store` (which transitively requires React Native's Flow-
@@ -419,6 +421,14 @@ async function importFromMnemonicAtEpoch(
   return ok({ did: didResult.value });
 }
 
+/**
+ * Last derived root DID, keyed by a SHA-256 of the stored phrase (never the
+ * phrase). BIP-39 PBKDF2 runs in JS and takes seconds on Android, and many
+ * screens read the DID; the key check keeps an import or wipe from serving a
+ * stale DID. Holds only public data.
+ */
+let rootDidMemo: { readonly phraseDigest: string; readonly did: string } | null = null;
+
 /** Resolve the currently-provisioned root did:key. */
 export async function getRootDid(): Promise<Result<string, RootKeyError>> {
   let mnemonic: string | null;
@@ -428,7 +438,11 @@ export async function getRootDid(): Promise<Result<string, RootKeyError>> {
     return err(toStorageError(e));
   }
   if (!mnemonic) return err({ kind: 'notProvisioned' });
-  return deriveDidFromMnemonic(mnemonic);
+  const phraseDigest = bytesToHex(sha256(utf8ToBytes(mnemonic)));
+  if (rootDidMemo?.phraseDigest === phraseDigest) return ok(rootDidMemo.did);
+  const derived = deriveDidFromMnemonic(mnemonic);
+  if (derived.ok) rootDidMemo = { phraseDigest, did: derived.value };
+  return derived;
 }
 
 /** Whether a root key has been provisioned on this device. */
