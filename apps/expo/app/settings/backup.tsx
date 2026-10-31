@@ -30,7 +30,10 @@ import {
   ArchiveDownloadError,
   backupMtime,
   BackupRestoreError,
+  connectGoogleDrive,
   ensureArchiveDownloaded,
+  getActiveProvider,
+  googleDriveAccount,
   listBackupArchives,
   MAX_RETAINED_BACKUPS,
   requestBackup,
@@ -55,6 +58,14 @@ export default function BackupSettings() {
   const [lastBackup, setLastBackup] = useState<Date | null>(null);
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [iCloudAvailable, setICloudAvailable] = useState(true);
+  // Android backs up to Google Drive, iOS to iCloud — every string that names
+  // the place says which one.
+  const isDrive = getActiveProvider() === 'googleDrive';
+  const cloud = t(isDrive ? 'backup.cloud.googleDrive' : 'backup.cloud.icloud');
+  // Drive only: which Google account backups go to. undefined = loading,
+  // null = not connected.
+  const [googleEmail, setGoogleEmail] = useState<string | null | undefined>(undefined);
+  const [connecting, setConnecting] = useState(false);
   // Dated archive list (plan G6: explicit choice) — strict 3-state, no
   // placeholder rows while loading (CLAUDE.md rule 8).
   const [archives, setArchives] = useState<'loading' | 'error' | readonly BackupArchiveInfo[]>(
@@ -92,9 +103,26 @@ export default function BackupSettings() {
     void reloadArchives();
   }, [provider, reloadArchives]);
 
+  useEffect(() => {
+    if (!isDrive) return;
+    void googleDriveAccount().then(setGoogleEmail);
+  }, [isDrive]);
+
+  const onConnectGoogle = async () => {
+    setConnecting(true);
+    try {
+      setGoogleEmail(await connectGoogleDrive());
+      void reloadArchives();
+    } catch (err) {
+      showError({ context: 'Backup › Connect Google', summary: t('backup.drive.connectFailed'), error: err });
+    } finally {
+      setConnecting(false);
+    }
+  };
+
   const onBackupNow = async () => {
     setIsBackingUp(true);
-    pushToast(t('backup.encrypting'), 'info', 2000);
+    pushToast(t('backup.encrypting', { cloud }), 'info', 2000);
     try {
       const result = await requestBackup('manual');
       if (!result.ran) {
@@ -122,7 +150,7 @@ export default function BackupSettings() {
       // report" mails the trace to err@solidarity.gg.
       showError({
         context: 'Backup › Back Up Now',
-        summary: t('backup.failedSummary'),
+        summary: t('backup.failedSummary', { cloud }),
         error: err,
       });
     } finally {
@@ -212,7 +240,7 @@ export default function BackupSettings() {
       if (isWrongKey) {
         const createNew = await confirmDialog({
           title: t('backup.restore.keyFailedCreateNew.title'),
-          message: `${t('backup.restore.keyMismatch')}\n\n${t('backup.restore.keyFailedCreateNew.message')}`,
+          message: `${t('backup.restore.keyMismatch')}\n\n${t('backup.restore.keyFailedCreateNew.message', { cloud })}`,
           confirmLabel: t('backup.restore.keyFailedCreateNew.confirm'),
         });
         if (createNew) await onBackupNow();
@@ -221,7 +249,7 @@ export default function BackupSettings() {
       const summary =
         err instanceof BackupRestoreError && err.kind === 'root-key-unavailable'
           ? t('backup.restore.rootKeyUnavailable')
-          : t('backup.restore.failedSummary');
+          : t('backup.restore.failedSummary', { cloud });
       showError({ context: 'Backup › Restore', summary, error: err });
     }
   };
@@ -261,12 +289,23 @@ export default function BackupSettings() {
         <View className="gap-6">
           <SettingsBlockSection
             index={0}
-            title={t('backup.section.icloud')}
+            title={t('backup.section.icloud', { cloud })}
             footer={cloudFooter}
             accessory={
-              <InfoButton title={t('backup.section.icloud')} body={t('backup.section.icloudInfo')} />
+              <InfoButton title={t('backup.section.icloud', { cloud })} body={t('backup.section.icloudInfo')} />
             }
           >
+            {isDrive && googleEmail !== undefined ? (
+              <SettingsBlockRow
+                icon="person.crop.circle"
+                title={t('backup.drive.account')}
+                subtitle={googleEmail ? t('backup.drive.connected', { email: googleEmail }) : undefined}
+                trailingText={googleEmail ? undefined : connecting ? t('backup.working') : t('backup.drive.connect')}
+                showsChevron={googleEmail === null}
+                disabled={connecting}
+                onPress={googleEmail ? undefined : () => { void onConnectGoogle(); }}
+              />
+            ) : null}
             <SettingsBlockToggleRow
               icon="icloud"
               title={t('backup.sync.enable')}
@@ -335,7 +374,9 @@ export default function BackupSettings() {
               />
             }
             footer={
-              archives === 'loading'
+              isDrive && googleEmail === null
+                ? t('backup.drive.connectForHistory')
+                : archives === 'loading'
                 ? undefined
                 : archives === 'error'
                   ? t('backup.archives.loadError')
@@ -345,7 +386,7 @@ export default function BackupSettings() {
             }
           >
             {archives === 'loading' ? (
-              <SettingsBlockInfoRow icon="icloud" title={t('backup.history.loading')} value="" />
+              <SettingsBlockInfoRow icon="icloud" title={t('backup.history.loading', { cloud })} value="" />
             ) : typeof archives !== 'string' ? (
               archives.map((a) => (
                 <ArchiveHistoryRow
