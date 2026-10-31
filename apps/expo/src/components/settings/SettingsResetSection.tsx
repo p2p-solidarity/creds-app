@@ -91,6 +91,12 @@ export function SettingsResetSection({ index }: { readonly index: number }) {
         title={t('advanced.resetPassport')}
         onPress={() => { void onResetPassport(); }}
       />
+      <SettingsBlockDangerRow
+        icon="person.crop.circle.badge.xmark"
+        title={t('deleteAccount.title')}
+        subtitle={t('deleteAccount.rowSubtitle')}
+        onPress={() => { router.push('/settings/delete-account'); }}
+      />
     </SettingsBlockSection>
   );
 }

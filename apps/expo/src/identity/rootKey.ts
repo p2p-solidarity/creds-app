@@ -92,6 +92,7 @@ import {
   generateMnemonic,
   ok,
   publicKeyFromPrivate,
+  signCompact,
   type Result,
   type Signer,
 } from '@solidarity/shared';
@@ -497,6 +498,49 @@ export async function getRootSigner(): Promise<Result<Signer, RootKeyError>> {
     return p256.sign(digest, scalar, { prehash: false });
   };
   return ok(signer);
+}
+
+/** `aud` of the creds.id `DELETE /pro/binding` request (airmeishi-backend). */
+export const PRO_BINDING_DELETE_AUDIENCE = 'creds.id/pro/binding/delete';
+
+/**
+ * Account deletion's root-key signature. The caller has already passed the
+ * ONE red-line gate (`rotateMasterKey`) for the deletion; a red-line pass
+ * never arms the grace bucket, so `getRootSigner()` would show a second sheet
+ * for the same intent. This signs exactly one fixed payload — "drop the Pro
+ * binding of this did, now" — and nothing else, so it can't be turned into an
+ * ungated general-purpose signer.
+ */
+export async function signRootProBindingDeletion(
+  nowSeconds: number,
+): Promise<Result<string, RootKeyError>> {
+  let mnemonic: string | null;
+  try {
+    mnemonic = await activeStorage.getMnemonic();
+  } catch (e) {
+    return err(toStorageError(e));
+  }
+  if (!mnemonic) return err({ kind: 'notProvisioned' });
+  const did = deriveDidFromMnemonic(mnemonic);
+  if (!did.ok) return did;
+  let scalar: Uint8Array;
+  try {
+    scalar = deriveP256Scalar(mnemonic, HKDF_INFO_ROOT);
+  } catch (e) {
+    return err({ kind: 'invalidMnemonic', message: e instanceof Error ? e.message : String(e) });
+  }
+  try {
+    const jws = await signCompact(
+      { did: did.value, aud: PRO_BINDING_DELETE_AUDIENCE, iat: nowSeconds },
+      did.value,
+      (digest) => Promise.resolve(p256.sign(digest, scalar, { prehash: false })),
+    );
+    return ok(jws);
+  } catch (e) {
+    return err(toStorageError(e));
+  } finally {
+    scalar.fill(0);
+  }
 }
 
 /**

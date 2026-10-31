@@ -176,6 +176,7 @@ const SF_TO_MATERIAL: Partial<Record<SFSymbol, AndroidSymbol>> = {
   'person.badge.shield.checkmark.fill': 'verified_user',
   'person.crop.circle': 'account_circle',
   'person.crop.circle.badge.plus': 'person_add',
+  'person.crop.circle.badge.xmark': 'person_remove',
   'person.crop.rectangle.fill': 'badge',
   'person.fill': 'person',
   'person.text.rectangle': 'contact_page',
