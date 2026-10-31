@@ -79,6 +79,23 @@ export function ProfileHero({
 
   return (
     <View className="gap-3 px-4">
+      {/* Narrow screens (e.g. 360pt Android) give the name the full row and
+          keep the page actions at the top, on their own line above it. */}
+      {layout === 'stacked' ? (
+        <View className="flex-row justify-end">
+          <ProfileHeaderActions
+            shareRecord={shareRecord}
+            shareJws={shareJws}
+            publicPage={publicPage}
+            nostrShortUrlReady={nostrShortUrlReady}
+            appearanceLabel={t('mePage.appearance')}
+            settingsLabel={t('mePage.settings')}
+            onOpenAppearance={onOpenAppearance}
+            onOpenSettings={onOpenSettings}
+          />
+        </View>
+      ) : null}
+
       {/* `.me-top` — 56pt avatar, name, mono page address, and the three
           whole-page actions, all on one line (mock §`#s-page`). */}
       <View className="flex-row items-center" style={{ gap: 14, paddingTop: 4, paddingBottom: 4 }}>
@@ -151,21 +168,6 @@ export function ProfileHero({
         {record.bio.length > 0 ? <SfIcon name="pencil" size={13} color={Colors.text3} /> : null}
       </PressableScale>
       <PageBioSheet visible={bioOpen} bio={record.bio} onClose={() => { setBioOpen(false); }} />
-
-      {layout === 'stacked' ? (
-        <View className="flex-row justify-end">
-          <ProfileHeaderActions
-            shareRecord={shareRecord}
-            shareJws={shareJws}
-            publicPage={publicPage}
-            nostrShortUrlReady={nostrShortUrlReady}
-            appearanceLabel={t('mePage.appearance')}
-            settingsLabel={t('mePage.settings')}
-            onOpenAppearance={onOpenAppearance}
-            onOpenSettings={onOpenSettings}
-          />
-        </View>
-      ) : null}
     </View>
   );
 }
