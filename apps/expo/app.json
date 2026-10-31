@@ -43,8 +43,7 @@
         ],
         "com.apple.developer.pass-type-identifiers": [
           "$(TeamIdentifierPrefix)pass.kidneyweakx.airmeishi"
-        ],
-        "aps-environment": "production"
+        ]
       },
       "infoPlist": {
         "CFBundleDisplayName": "creds.id",
@@ -54,10 +53,6 @@
         "NSFaceIDUsageDescription": "creds.id uses Face ID to protect identity keys and authorize sensitive actions.",
         "NSPhotoLibraryUsageDescription": "creds.id lets you choose a photo from your library for your Page. The photo stays on this device.",
         "UIApplicationSupportsIndirectInputEvents": true,
-        "UIBackgroundModes": [
-          "remote-notification",
-          "fetch"
-        ],
         "ITSAppUsesNonExemptEncryption": false
       },
       "privacyManifests": {
@@ -105,8 +100,7 @@
         "android.permission.WRITE_CONTACTS",
         "android.permission.USE_BIOMETRIC",
         "android.permission.NFC",
-        "android.permission.INTERNET",
-        "android.permission.POST_NOTIFICATIONS"
+        "android.permission.INTERNET"
       ],
       "blockedPermissions": [
         "android.permission.READ_MEDIA_IMAGES",
@@ -114,7 +108,8 @@
         "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.POST_NOTIFICATIONS"
       ],
       "intentFilters": [
         {
@@ -151,6 +146,13 @@
         }
       ],
       [
+        "expo-notifications",
+        {
+          "enableRemoteNotifications": false,
+          "enableBackgroundRemoteNotifications": false
+        }
+      ],
+      [
         "expo-camera",
         {
           "cameraPermission": "creds.id uses the camera to scan QR codes and passport MRZ.",
@@ -182,7 +184,6 @@
       ],
       "expo-localization",
       "expo-secure-store",
-      "expo-notifications",
       [
         "expo-build-properties",
         {
