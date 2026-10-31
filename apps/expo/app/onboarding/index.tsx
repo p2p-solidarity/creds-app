@@ -1,10 +1,11 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useCallback, useReducer, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useReducer, useState, type ReactNode } from 'react';
 import { Modal, View } from 'react-native';
 
 import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { Colors } from '@/constants/Colors';
+import { ContentWidth } from '@/constants/layout';
 import { useTranslation } from '@/i18n';
 import { safeBack } from '@/navigation/safeBack';
 import { PRIMARY_TAB_HREFS } from '@/navigation/primaryTabs';
@@ -18,6 +19,7 @@ import { WelcomeStep } from '@/onboarding/steps/WelcomeStep';
 import {
   initialOnboardingState,
   onboardingReducer,
+  resumeOnboardingState,
   type OnboardingStep,
 } from '@/onboarding/state';
 import { useProfileStore } from '@/profile/store';
@@ -27,13 +29,22 @@ export default function OnboardingFlow(): ReactNode {
   const { t } = useTranslation();
   const params = useLocalSearchParams<{ replay?: string }>();
   const isReplay = params.replay === '1';
-  const [state, dispatch] = useReducer(onboardingReducer, initialOnboardingState);
+  // A replay (from Settings) always starts over and never touches the saved run.
+  const [state, dispatch] = useReducer(onboardingReducer, isReplay, (replay) =>
+    replay
+      ? initialOnboardingState
+      : resumeOnboardingState(usePreferences.getState().onboardingProgress),
+  );
   const [loginOpen, setLoginOpen] = useState(false);
   const [takenName, setTakenName] = useState<string | null>(null);
   const [onPickAnother, setOnPickAnother] = useState<(() => void) | null>(null);
   const setPref = usePreferences((preferences) => preferences.set);
   const username = usePreferences((preferences) => preferences.publicPageUsername);
   const profileStatus = useProfileStore((profile) => profile.status);
+
+  useEffect(() => {
+    if (!isReplay) setPref('onboardingProgress', state);
+  }, [isReplay, setPref, state]);
 
   const goTo = useCallback((step: OnboardingStep) => {
     dispatch({ type: 'goTo', step });
@@ -44,6 +55,7 @@ export default function OnboardingFlow(): ReactNode {
 
   const markComplete = (): void => {
     setPref('hasCompletedOnboarding', true);
+    setPref('onboardingProgress', null);
   };
 
   const finishToPage = (): void => {
@@ -138,7 +150,7 @@ export default function OnboardingFlow(): ReactNode {
           <ThemedSurface
             variant="elevated"
             className="rounded-t-sheet px-6 pb-8 pt-3"
-            style={{ gap: 16 }}>
+            style={{ gap: 16, width: '100%', maxWidth: ContentWidth.form, alignSelf: 'center' }}>
             <View className="h-1 w-9 self-center rounded-pill bg-divider" />
             <ThemedText variant="headlineMedium">
               @{takenName} {t('ob.handle.taken_title')}

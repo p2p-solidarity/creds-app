@@ -17,6 +17,7 @@ import {
   captureLocalDataEpoch,
 } from '@/settings/localDataWipeBarrier';
 import type { ProviderKind } from '@/backup';
+import type { OnboardingState } from '@/onboarding/state';
 
 const KEY = 'prefs:v1';
 
@@ -44,6 +45,8 @@ export type AppColorScheme = 'system' | 'light' | 'dark';
 
 export interface Preferences {
   readonly hasCompletedOnboarding: boolean;
+  /** Where an unfinished onboarding stopped, so a relaunch resumes there; null once done. */
+  readonly onboardingProgress: OnboardingState | null;
   /** Locally selected name, even while the network-backed page is unpublished. */
   readonly publicPageUsername: string;
   /** Name most recently confirmed by the authenticated directory endpoint. */
@@ -139,6 +142,7 @@ const DEFAULT_BIOMETRIC_POLICY: Readonly<Record<SensitiveActionKey, boolean>> = 
 
 const DEFAULTS: Preferences = {
   hasCompletedOnboarding: false,
+  onboardingProgress: null,
   publicPageUsername: '',
   publicPageRegisteredUsername: '',
   publicPageBindingReady: false,
