@@ -5,7 +5,6 @@
  */
 import { useState, type ReactNode } from 'react';
 import { View } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ModalSheet, sheetTopInset } from '@/components/common/ModalSheet';
@@ -60,10 +59,10 @@ function BioEditor({ initial, onClose }: { readonly initial: string; readonly on
   return (
     <View className="flex-1 bg-pageBg" style={{ paddingTop: sheetTopInset(insets.top) }}>
       <SheetHeader title={t('pageBio.title')} canGoBack={false} onClose={onClose} />
-      <KeyboardAwareScrollView
-        keyboardShouldPersistTaps="handled"
-        bottomOffset={16}
-        contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 24, gap: 14 }}>
+      {/* A plain View, not KeyboardAwareScrollView: the input and Save sit at
+          the top, above any keyboard, and on Android that ScrollView claimed
+          the first tap with the keyboard up (it hid the keyboard, never saved). */}
+      <View style={{ padding: 16, paddingBottom: insets.bottom + 24, gap: 14 }}>
         <ThemedTextInput
           value={value}
           onChangeText={setValue}
@@ -86,7 +85,7 @@ function BioEditor({ initial, onClose }: { readonly initial: string; readonly on
           disabled={value.trim() === initial.trim()}
           onPress={save}
         />
-      </KeyboardAwareScrollView>
+      </View>
     </View>
   );
 }
