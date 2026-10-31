@@ -1,5 +1,8 @@
 package com.margelo.nitro.gg.solidarity.keystone
 
+import androidx.annotation.Keep
+import com.facebook.proguard.annotations.DoNotStrip
+
 import android.app.Activity
 import android.util.Base64
 import androidx.credentials.CreatePublicKeyCredentialRequest
@@ -21,6 +24,8 @@ import java.security.SecureRandom
 import org.json.JSONArray
 import org.json.JSONObject
 
+@Keep
+@DoNotStrip
 class HybridPasskeyPrf : HybridPasskeyPrfSpec() {
   override fun isSupported(): Boolean = NitroModules.applicationContext != null
 

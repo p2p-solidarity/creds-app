@@ -24,12 +24,17 @@
  */
 package com.margelo.nitro.gg.solidarity.keystone
 
+import androidx.annotation.Keep
+import com.facebook.proguard.annotations.DoNotStrip
+
 import android.util.Base64
 import com.margelo.nitro.core.Promise
 import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
+@Keep
+@DoNotStrip
 class HybridCloudKit : HybridCloudKitSpec() {
 
   // MARK: - State (serialised through `lock`)

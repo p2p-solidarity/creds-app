@@ -60,6 +60,9 @@
 
 package com.margelo.nitro.gg.solidarity.attest
 
+import androidx.annotation.Keep
+import com.facebook.proguard.annotations.DoNotStrip
+
 import android.app.Activity
 import android.content.Context
 import android.nfc.NfcAdapter
@@ -98,6 +101,8 @@ import org.jmrtd.lds.SODFile
 import org.jmrtd.lds.icao.DG1File
 import org.jmrtd.lds.icao.MRZInfo
 
+@Keep
+@DoNotStrip
 class HybridNfcPassport : HybridNfcPassportSpec() {
 
   // MARK: - Constants

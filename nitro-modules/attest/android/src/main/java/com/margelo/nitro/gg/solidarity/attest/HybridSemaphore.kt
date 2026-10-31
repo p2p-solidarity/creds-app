@@ -23,6 +23,9 @@
  */
 package com.margelo.nitro.gg.solidarity.attest
 
+import androidx.annotation.Keep
+import com.facebook.proguard.annotations.DoNotStrip
+
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
@@ -37,6 +40,8 @@ import java.security.SecureRandom
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
+@Keep
+@DoNotStrip
 class HybridSemaphore : HybridSemaphoreSpec() {
 
   // ──────────────────────────────────────────────────────────────────────────

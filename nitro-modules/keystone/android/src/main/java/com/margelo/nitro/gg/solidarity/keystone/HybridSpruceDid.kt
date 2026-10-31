@@ -46,6 +46,9 @@
 
 package com.margelo.nitro.gg.solidarity.keystone
 
+import androidx.annotation.Keep
+import com.facebook.proguard.annotations.DoNotStrip
+
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
@@ -67,6 +70,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 
+@Keep
+@DoNotStrip
 class HybridSpruceDid : HybridSpruceDidSpec() {
 
   // MARK: - Constants

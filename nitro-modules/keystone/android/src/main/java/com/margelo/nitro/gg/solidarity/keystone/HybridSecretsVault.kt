@@ -35,6 +35,9 @@
 
 package com.margelo.nitro.gg.solidarity.keystone
 
+import androidx.annotation.Keep
+import com.facebook.proguard.annotations.DoNotStrip
+
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
@@ -53,6 +56,8 @@ import javax.crypto.SecretKey
 import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.GCMParameterSpec
 
+@Keep
+@DoNotStrip
 class HybridSecretsVault : HybridSecretsVaultSpec() {
 
   // MARK: - Constants
