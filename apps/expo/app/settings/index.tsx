@@ -19,7 +19,6 @@ import {
   SettingsBlockInfoRow,
   SettingsBlockRow,
   SettingsBlockSection,
-  SettingsBlockSectionHeader,
   SettingsBlockSegmentRow,
   SettingsBlockToggleRow,
   SettingsScreenTitle,
@@ -218,32 +217,39 @@ export default function SettingsHub() {
             </SettingsBlockSection>
           ) : null}
 
-          <View className="gap-3">
-            <SettingsBlockSectionHeader title={t('settingsHub.about')} />
-            <View className="px-4 gap-2">
-              <SettingsBlockRow
-                icon="arrow.counterclockwise"
-                title={t('settingsHub.replayOnboarding')}
-                onPress={() => { router.push('/onboarding?replay=1'); }}
+          <SettingsBlockSection index={developerMode ? 7 : 6} title={t('settingsHub.about')}>
+            <SettingsBlockRow
+              icon="arrow.counterclockwise"
+              title={t('settingsHub.replayOnboarding')}
+              onPress={() => { router.push('/onboarding?replay=1'); }}
+            />
+            <SettingsBlockRow
+              icon="hand.raised"
+              title={t('settingsHub.privacyPolicy')}
+              onPress={() => { router.push('/legal/privacy'); }}
+            />
+            <SettingsBlockRow
+              icon="doc.text"
+              title={t('settingsHub.termsOfService')}
+              onPress={() => { router.push('/legal/terms'); }}
+            />
+            <SettingsBlockRow
+              icon="chevron.left.forwardslash.chevron.right"
+              title={t('settingsHub.openSourceLicenses')}
+              onPress={() => { router.push('/legal/licenses'); }}
+            />
+            <Pressable
+              onPress={onVersionTap}
+              accessibilityRole="button"
+              accessibilityLabel={t('settingsHub.version')}
+            >
+              <SettingsBlockInfoRow
+                icon="info.circle"
+                title={t('settingsHub.version')}
+                value={version}
               />
-              <SettingsBlockRow
-                icon="hand.raised"
-                title={t('settingsHub.privacyPolicy')}
-                onPress={() => { router.push('/legal/privacy'); }}
-              />
-              <Pressable
-                onPress={onVersionTap}
-                accessibilityRole="button"
-                accessibilityLabel={t('settingsHub.version')}
-              >
-                <SettingsBlockInfoRow
-                  icon="info.circle"
-                  title={t('settingsHub.version')}
-                  value={version}
-                />
-              </Pressable>
-            </View>
-          </View>
+            </Pressable>
+          </SettingsBlockSection>
         </View>
       </ScrollView>
     </View>
