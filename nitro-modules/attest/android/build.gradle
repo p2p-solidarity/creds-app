@@ -173,9 +173,10 @@ dependencies {
   // loading `libsemaphore_bindings.so`). `@aar` is required because JNA ships a
   // regular jar + an aar with the native libs (libjnidispatch.so); without
   // the aar `Native.load()` fails at runtime with
-  // `UnsatisfiedLinkError: jnidispatch`. Version pinned to what
-  // the uniffi-generated bindings expect (UniFFI Kotlin runtime).
-  implementation "net.java.dev.jna:jna:5.13.0@aar"
+  // `UnsatisfiedLinkError: jnidispatch`. 5.17.0 is the first JNA whose
+  // Android libjnidispatch.so is 16 KB-page aligned on every ABI; Play
+  // refuses production releases without it (5.13.0's x86_64 lib was 4 KB).
+  implementation "net.java.dev.jna:jna:5.17.0@aar"
 
   // ─── MrzOcr ──────────────────────────────────────────────────────────────
 
