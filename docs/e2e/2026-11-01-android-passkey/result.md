@@ -25,3 +25,9 @@ Built with `build:android:local`, submitted (EAS 4f09c49d), updated from Play on
 ## Still open
 - Bio sheet on Android: with the keyboard up, the first tap on Save only hides the keyboard (the app itself calls hideSoftInputFromWindow); the second tap saves. Removing KeyboardAwareScrollView did not fix it. Needs a dev build on the phone to see which JS path blurs the input.
 - Backup screen sync row showed 「同步未完成」 right after connecting. cloudSync collapses every failure to 'error' with no detail and release builds print no JS logs, so the cause is unknown.
+
+## vc31 → production review (2026-11-01)
+- Promoting vc30 to production failed Play's check: "app doesn't support 16 KB memory page sizes". Only `libjnidispatch.so` (JNA 5.13.0) was off: x86_64 LOAD align 0x1000. JNA 5.17.0 fixed it (`15448c63`); every arm64/x86_64 `.so` in vc31 is a multiple of 16 KB (llvm-readelf).
+- vc31 submitted to internal (EAS), then swapped into the production draft (vc12 excluded, 100% rollout, en-US notes) and sent for review from Publishing overview.
+- Not run: vc31 on a phone (adb disconnected before the update). Play warns of fewer supported devices: phones 11,504 → 8,687 (−24%), Chromebook −45% (minSdk 26→29 is likely most of it).
+- zh-TW release notes did not show on the review page; only en-US is attached.
