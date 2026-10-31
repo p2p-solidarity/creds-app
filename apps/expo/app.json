@@ -52,13 +52,44 @@
         "NSContactsUsageDescription": "creds.id can save business card information to your Contacts.",
         "NFCReaderUsageDescription": "creds.id reads your passport's NFC chip to verify identity.",
         "NSFaceIDUsageDescription": "creds.id uses Face ID to protect identity keys and authorize sensitive actions.",
-        "NSPhotoLibraryUsageDescription": "creds.id saves QR codes and business card images to your Photo Library.",
+        "NSPhotoLibraryUsageDescription": "creds.id lets you choose a photo from your library for your Page. The photo stays on this device.",
         "UIApplicationSupportsIndirectInputEvents": true,
         "UIBackgroundModes": [
           "remote-notification",
           "fetch"
         ],
         "ITSAppUsesNonExemptEncryption": false
+      },
+      "privacyManifests": {
+        "NSPrivacyTracking": false,
+        "NSPrivacyCollectedDataTypes": [
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeUserID",
+            "NSPrivacyCollectedDataTypeLinked": true,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": ["NSPrivacyCollectedDataTypePurposeAppFunctionality"]
+          },
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypePurchaseHistory",
+            "NSPrivacyCollectedDataTypeLinked": true,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": ["NSPrivacyCollectedDataTypePurposeAppFunctionality"]
+          }
+        ],
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": ["CA92.1", "C56D.1"]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
+            "NSPrivacyAccessedAPITypeReasons": ["C617.1"]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategorySystemBootTime",
+            "NSPrivacyAccessedAPITypeReasons": ["35F9.1"]
+          }
+        ]
       },
       "appleTeamId": "538MCM44UX"
     },
@@ -82,7 +113,8 @@
         "android.permission.READ_MEDIA_VIDEO",
         "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
         "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE"
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO"
       ],
       "intentFilters": [
         {
@@ -110,6 +142,22 @@
       ]
     },
     "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "creds.id lets you choose a photo from your library for your Page. The photo stays on this device.",
+          "cameraPermission": "creds.id uses the camera to scan QR codes and passport MRZ.",
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "creds.id uses the camera to scan QR codes and passport MRZ.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
       [
         "expo-router",
         {
