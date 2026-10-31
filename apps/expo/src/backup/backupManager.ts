@@ -23,6 +23,7 @@ import {
   backupMtime,
   downloadArchive,
   downloadLatestArchive,
+  getActiveProvider,
   prepareProvider,
   setProvider,
   uploadBackup,
@@ -157,7 +158,7 @@ async function requestBackupUnlocked(reason: BackupReason): Promise<BackupReques
   // On Android Drive, detect a missing Google connection up front and prompt,
   // rather than letting the upload 401 with an opaque error.
   const driveStatus = await prepareProvider(reason === 'manual');
-  if (prefs.backupProvider === 'googleDrive' && driveStatus === 'needs-connection') {
+  if (getActiveProvider() === 'googleDrive' && driveStatus === 'needs-connection') {
     return { ran: false, skipReason: 'needs-connection' };
   }
   // Resolve the Portable Backup Key BEFORE writing. No Recovery Phrase yet

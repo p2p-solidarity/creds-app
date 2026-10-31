@@ -55,8 +55,12 @@ const CONTAINER_ID = 'iCloud.kidneyweakx.airmeishi';
 
 let activeProvider: ProviderKind = DEFAULT_PROVIDER;
 let initialized = false;
-/** True once a Drive access token has been pushed to the native client. */
-let driveAuthorized = false;
+/** The token the native Drive client holds — handed back as the stale one
+ *  when Drive answers 401, so Play services stops returning it. */
+let driveToken: string | null = null;
+/** Google Sign-In rejects a second `getTokens` while one is running, and a
+ *  sync pass and a backup can both ask at once — they share one fetch. */
+let driveAuthInFlight: Promise<DriveAuthStatus> | null = null;
 
 export type DriveAuthStatus = 'authorized' | 'needs-connection' | 'unavailable';
 /** Last-known Drive auth result (Android). 'needs-connection' means the user
@@ -67,28 +71,32 @@ let lastDriveAuthStatus: DriveAuthStatus = 'authorized';
 /**
  * Acquire a Google Drive access token and hand it to the native Drive client.
  * Without this the Nitro Drive client has NO bearer token, so every Drive op
- * returns 401 — the root reason Android Drive backup never authenticated
- * (signInForDrive existed but was never called). Silent refresh if the user is
- * already signed in; interactive sign-in on the first backup. Lazily imported
- * so the iOS / iCloud path never loads the Google Sign-In native module.
+ * fails. Silent refresh if the user is already signed in; interactive sign-in
+ * only when the caller allows it. Lazily imported so the iOS / iCloud path
+ * never loads the Google Sign-In native module.
  *
  * Degrades gracefully: if the Google Sign-In module is unavailable (unit
  * tests, or a build without it) or the user declines, we DON'T throw/crash —
- * the subsequent Drive op surfaces its own 401, telling the user to connect
- * Google Drive. Never blocks the backup pipeline on an auth side-effect.
+ * the caller gets 'needs-connection' and tells the user to connect Google
+ * Drive. Never blocks the backup pipeline on an auth side-effect.
  */
-async function ensureDriveAuth(interactive: boolean): Promise<DriveAuthStatus> {
-  if (driveAuthorized) return 'authorized';
+function authorizeDrive(interactive: boolean, staleToken?: string): Promise<DriveAuthStatus> {
+  driveAuthInFlight ??= fetchDriveToken(interactive, staleToken).finally(() => {
+    driveAuthInFlight = null;
+  });
+  return driveAuthInFlight;
+}
+
+async function fetchDriveToken(interactive: boolean, staleToken?: string): Promise<DriveAuthStatus> {
   try {
     const { signInForDrive, refreshDriveAccessToken } = await import('./googleAuth');
     try {
-      setGoogleAccessToken(await refreshDriveAccessToken());
+      setGoogleAccessToken(await refreshDriveAccessToken(staleToken));
       return 'authorized';
     } catch {
-      // Not signed in yet (or token expired without a refresh). Interactive
-      // sign-in is reserved for explicit user actions (backup/restore/picker)
-      // — a background PROBE must never open Google Sign-In on a fresh
-      // install (the app promises no-account setup).
+      // Not signed in yet. Interactive sign-in is reserved for explicit user
+      // actions (backup/restore/picker) — a background PROBE must never open
+      // Google Sign-In on a fresh install (the app promises no-account setup).
       if (!interactive) return 'needs-connection';
       const session = await signInForDrive();
       setGoogleAccessToken(session.accessToken);
@@ -96,25 +104,49 @@ async function ensureDriveAuth(interactive: boolean): Promise<DriveAuthStatus> {
     }
   } catch {
     // Sign-in module absent (unit tests) OR user declined / not connected.
-    // Report 'needs-connection' so the caller can prompt instead of letting a
-    // downstream 401 surface as an opaque failure. Never crash the pipeline.
     return 'needs-connection';
   }
 }
 
+const DRIVE_UNAUTHORIZED = /HTTP 401\b/u;
+
+/**
+ * Drive tokens live an hour and Play services keeps serving its cached one
+ * after that, so any call can meet a 401 mid-session. Retry exactly once with
+ * a fresh token (the stale one cleared first); anything else, or a second
+ * 401, surfaces unchanged.
+ */
+function retryOnExpiredDriveToken(ck: CloudKit): CloudKit {
+  return new Proxy(ck, {
+    get(target, prop) {
+      const value: unknown = Reflect.get(target, prop);
+      if (typeof value !== 'function') return value;
+      const method = value as (...args: unknown[]) => unknown;
+      return (...args: unknown[]) => {
+        const call = () => method.apply(target, args);
+        const first = call();
+        if (!(first instanceof Promise)) return first;
+        return first.catch(async (error: unknown) => {
+          const message = error instanceof Error ? error.message : String(error);
+          if (!DRIVE_UNAUTHORIZED.test(message)) throw error;
+          if ((await authorizeDrive(false, driveToken ?? undefined)) !== 'authorized') throw error;
+          return call();
+        });
+      };
+    },
+  });
+}
+
 async function ensureInitialized(interactiveAuth = true): Promise<CloudKit> {
   const ck = getCloudKit();
+  if (activeProvider === 'googleDrive') {
+    // Every call, not once per process: the first token used to be latched
+    // and pushed to Drive forever, so an hour after launch every Drive op
+    // failed until the app was killed. `getTokens` answers from Play
+    // services' cache, so asking each time is cheap.
+    lastDriveAuthStatus = await authorizeDrive(interactiveAuth);
+  }
   if (!initialized) {
-    // Authenticate Drive BEFORE any file op when Drive is the active provider.
-    // A failure here is a real, surfaced error (can't back up without Drive
-    // access) — not a silent no-op — so the caller/UI can prompt the user to
-    // connect Google. Done before initialize() so the token is present for any
-    // Drive setup the native module performs.
-    let authStatus: DriveAuthStatus = 'authorized';
-    if (activeProvider === 'googleDrive') {
-      authStatus = await ensureDriveAuth(interactiveAuth);
-      lastDriveAuthStatus = authStatus;
-    }
     try {
       await ck.initialize(CONTAINER_ID);
     } catch {
@@ -122,25 +154,24 @@ async function ensureInitialized(interactiveAuth = true): Promise<CloudKit> {
       // storage, and Android Drive ops surface their own errors on use.
       // Mirrors native, which never blocks backup on iCloud availability.
     }
-    // A silent probe that could not auth must not latch: the next explicit
-    // (interactive-allowed) call re-runs Drive auth instead of inheriting a
-    // dead 401 session.
-    initialized = !(
-      activeProvider === 'googleDrive' &&
-      authStatus !== 'authorized' &&
-      !interactiveAuth
-    );
+    // Native Drive initialize() is a no-op without a token, so it only counts
+    // once a token is in.
+    initialized = activeProvider !== 'googleDrive' || lastDriveAuthStatus === 'authorized';
   }
-  return ck;
+  return activeProvider === 'googleDrive' ? retryOnExpiredDriveToken(ck) : ck;
 }
 
 /** Switch the active provider. */
 export function setProvider(kind: ProviderKind): void {
+  // Android has no iCloud — its native module is a Drive client whatever the
+  // preference says. The preference defaulted to 'iCloud' on every platform,
+  // so Android ran the iCloud path and no Google token ever reached Drive.
+  const next: ProviderKind = Platform.OS === 'android' ? 'googleDrive' : kind;
   // Called on every sync tick, so only an actual switch may re-initialise:
   // clearing the flag unconditionally re-ran initialize()/Drive auth every
   // pass and reset it underneath a concurrent backup.
-  if (kind === activeProvider) return;
-  activeProvider = kind;
+  if (next === activeProvider) return;
+  activeProvider = next;
   // Re-initialise on next call so the Drive token vs iCloud account context
   // pick up the switch cleanly.
   initialized = false;
@@ -149,7 +180,27 @@ export function setProvider(kind: ProviderKind): void {
 /** Push the Google Sign-In access token into the Nitro module (Android). */
 export function setGoogleAccessToken(accessToken: string): void {
   getCloudKit().setDriveAccessToken(accessToken);
-  driveAuthorized = true;
+  driveToken = accessToken;
+}
+
+/** The connected Google account's email, or null. Never opens UI. */
+export async function googleDriveAccount(): Promise<string | null> {
+  try {
+    const { connectedGoogleEmail } = await import('./googleAuth');
+    return connectedGoogleEmail();
+  } catch {
+    return null;
+  }
+}
+
+/** Interactive Google sign-in from the Backup screen. Returns the email. */
+export async function connectGoogleDrive(): Promise<string> {
+  const { signInForDrive } = await import('./googleAuth');
+  const session = await signInForDrive();
+  setGoogleAccessToken(session.accessToken);
+  lastDriveAuthStatus = 'authorized';
+  initialized = false;
+  return session.email;
 }
 
 /** Currently-active provider — convenience accessor for callers. */
@@ -281,7 +332,9 @@ export interface BackupArchiveInfo {
  * hidden, so the user can see it exists even though it can't be restored.
  */
 export async function listBackupArchives(): Promise<readonly BackupArchiveInfo[]> {
-  const ck = await ensureInitialized();
+  // Silent: History loads when the screen opens, which is not a request to
+  // sign in to Google. Not connected → this throws and the screen says so.
+  const ck = await ensureInitialized(false);
   const names = await sortedBackups(ck); // oldest → newest
   // Rows are independent, and a cold row's probe is a bounded Spotlight query
   // — serialising three of them would keep History on its spinner for ~10 s.

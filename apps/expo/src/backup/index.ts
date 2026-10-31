@@ -10,6 +10,8 @@ export {
   setGoogleAccessToken,
   getActiveProvider,
   backupMtime,
+  googleDriveAccount,
+  connectGoogleDrive,
 } from './cloudProvider';
 export {
   type GoogleSession,
