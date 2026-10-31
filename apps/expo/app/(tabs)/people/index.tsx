@@ -42,7 +42,6 @@ import { useContactStore, type ContactManifestEntry } from '@/contacts/repositor
 import { shareContactVCard } from '@/contacts/shareContactVCard';
 import { confirmDialog } from '@/feedback/confirmDialog';
 import { haptic } from '@/feedback/haptics';
-import { fadeUpIn } from '@/feedback/motion';
 import { pushToast } from '@/feedback/toast';
 import {
   useProfileSnapshotStore,
@@ -56,7 +55,6 @@ import { usePreferences } from '@/settings/preferences';
 /** Rows (headers included) that cascade in when the list first paints — about
  *  one screenful. Everything below the fold, and every recycled cell, just
  *  appears: a stagger nobody can see only delays the list. */
-const ENTRANCE_ROWS = 10;
 
 export default function PeopleTab() {
   const { t } = useTranslation();
@@ -70,7 +68,6 @@ export default function PeopleTab() {
   const pullRefresh = usePagesPullRefresh(savedPageCount);
   const backupEnabled = usePreferences((s) => s.backupEnabled);
   const insets = useSafeAreaInsets();
-  const reduceMotion = useReducedMotion();
   const { edit } = useLocalSearchParams<{ edit?: string }>();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -344,11 +341,11 @@ export default function PeopleTab() {
                 keyboardShouldPersistTaps="handled"
                 refreshControl={editMode ? undefined : pullRefresh}
                 extraData={{ editMode, selectedIds }}
-                renderItem={({ item, index }) => (
-                  // Always wrapped, so a recycled cell keeps the same tree;
-                  // `entering` only runs on mount, never on recycle.
-                  <Animated.View
-                    entering={index < ENTRANCE_ROWS ? fadeUpIn(index, reduceMotion) : undefined}>
+                renderItem={({ item }) => (
+                  // No Reanimated `entering` here: inside a FlashList v2 cell it
+                  // pins the row to the cell's first, estimated frame, so a lone
+                  // contact drew far below its section header (2026-11-01).
+                  <View>
                     {item.kind === 'header' ? (
                       <ContactSectionHeader title={item.title} />
                     ) : item.kind === 'page' ? (
@@ -378,7 +375,7 @@ export default function PeopleTab() {
                         />
                       </SwipeToDelete>
                     )}
-                  </Animated.View>
+                  </View>
                 )}
               />
             </View>
