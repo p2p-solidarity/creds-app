@@ -37,7 +37,7 @@ export function AvatarEditor({
           />
           <ThemedSurface
             variant="elevated"
-            className="absolute bottom-0 right-0 h-8 w-8 items-center justify-center rounded-full">
+            className="absolute bottom-0 right-0 h-8 w-8 items-center justify-center rounded-pill">
             <SfIcon name="camera" size={14} color={Colors.text1} />
           </ThemedSurface>
         </PressableScale>
@@ -46,23 +46,39 @@ export function AvatarEditor({
         </ThemedText>
       </View>
 
-      <AvatarPickerSheet
-        visible={controller.sheetOpen}
-        phase={controller.phase}
-        canUseBluesky={controller.canUseBluesky}
-        canRemove={controller.canRemove}
-        onClose={controller.close}
-        onChooseLibrary={() => {
-          void controller.chooseFromLibrary();
-        }}
-        onUseBluesky={() => {
-          void controller.useBluesky();
-        }}
-        onRemove={() => {
-          void controller.remove();
-        }}
-        onResetError={controller.resetError}
-      />
+      <AvatarEditorSheet controller={controller} />
     </Fragment>
+  );
+}
+
+/** The photo picker sheet bound to an avatar controller — the Page tab opens
+ *  it in place; the editor opens it from its avatar button. */
+export function AvatarEditorSheet({
+  controller,
+}: {
+  readonly controller: AvatarEditorController;
+}): ReactNode {
+  return (
+    <AvatarPickerSheet
+      visible={controller.sheetOpen}
+      phase={controller.phase}
+      canUseBluesky={controller.canUseBluesky}
+      canRemove={controller.canRemove}
+      linkAvatars={controller.linkAvatars}
+      onClose={controller.close}
+      onChooseLibrary={() => {
+        void controller.chooseFromLibrary();
+      }}
+      onUseBluesky={() => {
+        void controller.useBluesky();
+      }}
+      onUseLinkAvatar={(picture) => {
+        void controller.useLinkAvatar(picture);
+      }}
+      onRemove={() => {
+        void controller.remove();
+      }}
+      onResetError={controller.resetError}
+    />
   );
 }

@@ -45,7 +45,7 @@ import {
 import { appAlert, showError } from '@/feedback/appAlert';
 import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
-import { requireBiometric } from '@/keychain';
+import { requireSensitiveAction } from '@/keychain';
 import { usePreferences } from '@/settings/preferences';
 
 interface ActionRowProps {
@@ -64,7 +64,7 @@ function ActionRow({ icon, title, onPress, disabled = false }: ActionRowProps) {
       accessibilityLabel={title}>
       <ThemedSurface
         variant="inset"
-        className="flex-row items-center gap-3 rounded-none px-[14px] py-[14px]"
+        className="flex-row items-center gap-3 px-[14px] py-[14px]"
         style={{ opacity: disabled ? 0.5 : 1 }}>
         <View style={{ width: 20, height: 20, alignItems: 'center', justifyContent: 'center' }}>
           <SfIcon name={icon} size={14} color={Colors.text1} />
@@ -112,7 +112,7 @@ function iconFor(item: CredentialManifestEntry): SFSymbol {
 
 export default function VCManagementRoute() {
   const developerMode = usePreferences((state) => state.developerMode);
-  if (!developerMode) return <Redirect href="/settings/advanced" />;
+  if (!developerMode) return <Redirect href="/settings" />;
 
   return <VCManagementScreen />;
 }
@@ -133,7 +133,6 @@ function VCManagementScreen() {
   const shareProfileImage = usePreferences((s) => s.shareProfileImage);
   const shareSocialNetworks = usePreferences((s) => s.shareSocialNetworks);
   const shareSkills = usePreferences((s) => s.shareSkills);
-  const policy = usePreferences((s) => s.biometricPolicy);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -184,7 +183,7 @@ function VCManagementScreen() {
   };
 
   const onReceiveOidc = () => {
-    router.push('/settings/oidc-request');
+    router.push('/scan');
   };
 
   const onExport = async () => {
@@ -197,12 +196,13 @@ function VCManagementScreen() {
         appAlert({ title: t('vcManage.title'), message: t('vcManage.noneToExport') });
         return;
       }
-      if (policy.exportGraph) {
-        const ok = await requireBiometric('export');
-        if (!ok) {
-          setBusy(false);
-          return;
-        }
+      const gate = await requireSensitiveAction(
+        'exportGraph',
+        t('security.prompt.exportGraph')
+      );
+      if (!gate.success) {
+        setBusy(false);
+        return;
       }
       const cache = FileSystem.cacheDirectory ?? '';
       if (!cache) throw new Error('Cache directory unavailable.');

@@ -1,94 +1,127 @@
-/**
- * ContactRow — list item for People tab. Mirrors Swift TrustGraphContactRow.
- *
- * Visual contract:
- *   [animal avatar] [name + title]              [verification badge]
- *                   [last interaction · source]
- *
- * Accessible: full row Pressable; long-press for "More" sheet via the
- * onLongPress prop. Animation lives in the tap feedback (Reanimated 4
- * pressed-scale via `animatedStyle` — added in next pass, kept simple
- * here so the row stays under 200 LOC).
- */
 import type { ReactNode } from 'react';
-import { Image, Pressable, View } from 'react-native';
+import { View } from 'react-native';
 
+import { PressableScale } from '@/components/common/PressableScale';
+import { SfIcon } from '@/components/icons/SfIcon';
+import { PageAvatar } from '@/components/people/PageAvatar';
 import { ThemedText } from '@/components/themed';
-import type { Contact } from '@solidarity/shared';
+import { Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/radius';
+import type { ContactManifestEntry } from '@/contacts/repository';
+import { haptic } from '@/feedback/haptics';
+import { useTranslation } from '@/i18n';
 
-const ANIMAL_ICON: Readonly<Record<string, string>> = {
-  dog: '🐕',
-  horse: '🐎',
-  pig: '🐖',
-  sheep: '🐑',
-  dove: '🕊️',
-};
-
-const VERIFICATION_BADGE: Readonly<Record<Contact['verificationStatus'], string>> = {
-  Verified: '🟢',
-  Unverified: '⚪',
-  Failed: '🔴',
-  Pending: '🟡',
-};
+type Translate = ReturnType<typeof useTranslation>['t'];
 
 export interface ContactRowProps {
-  readonly contact: Contact;
-  readonly onPress: (contact: Contact) => void;
-  readonly onLongPress?: (contact: Contact) => void;
-}
-
-function relativeTime(d: Date | undefined): string {
-  if (!d) return 'never';
-  const deltaSec = (Date.now() - d.getTime()) / 1000;
-  if (deltaSec < 60) return 'just now';
-  if (deltaSec < 3600) return `${Math.floor(deltaSec / 60)}m ago`;
-  if (deltaSec < 86400) return `${Math.floor(deltaSec / 3600)}h ago`;
-  return `${Math.floor(deltaSec / 86400)}d ago`;
+  readonly contact: ContactManifestEntry;
+  readonly selectionMode?: boolean;
+  readonly selected?: boolean;
+  readonly onPress?: () => void;
+  readonly onLongPress?: () => void;
 }
 
 export function ContactRow({
   contact,
+  selectionMode = false,
+  selected = false,
   onPress,
   onLongPress,
 }: ContactRowProps): ReactNode {
-  const { businessCard: card } = contact;
-  const animal = card.animal ? ANIMAL_ICON[card.animal] : '👤';
+  const { t } = useTranslation();
+  const source = contactSourceDescription(contact, t);
 
   return (
-    <Pressable
-      className="bg-cardBg flex-row items-center rounded-2xl border border-divider p-4 mx-4 my-1"
-      onPress={() => { onPress(contact); }}
-      onLongPress={onLongPress ? () => { onLongPress(contact); } : undefined}
+    <PressableScale
+      onPress={onPress}
+      onLongPress={() => {
+        haptic('heavy');
+        onLongPress?.();
+      }}
       accessibilityRole="button"
-      accessibilityLabel={`Contact ${card.name}`}
+      accessibilityLabel={contact.name}
+      accessibilityState={selectionMode ? { selected } : undefined}
+      className="flex-row items-center gap-3 py-3"
     >
-      <View className="bg-searchBg h-12 w-12 items-center justify-center rounded-full border border-divider mr-3">
-        {card.profileImage ? (
-          <Image
-            source={{ uri: `data:image/png;base64,${card.profileImage}` }}
-            className="h-12 w-12 rounded-full"
-          />
-        ) : (
-          <ThemedText variant="titleLarge">{animal}</ThemedText>
-        )}
-      </View>
-      <View className="flex-1">
-        <ThemedText variant="titleMedium" numberOfLines={1}>
-          {card.name}
+      {selectionMode ? <SelectionCheck selected={selected} /> : null}
+
+      <PageAvatar avatar={null} displayName={contact.name} size={38} />
+      <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+        <ThemedText variant="bodyLarge" numberOfLines={1}>
+          {contact.name}
         </ThemedText>
-        {card.title ? (
-          <ThemedText variant="bodySmall" tone="secondary" numberOfLines={1}>
-            {card.title}
-            {card.company ? ` · ${card.company}` : ''}
+        {source ? (
+          <ThemedText variant="caption" tone="tertiary" numberOfLines={1}>
+            {source}
           </ThemedText>
         ) : null}
-        <ThemedText variant="caption" tone="tertiary">
-          {relativeTime(contact.lastInteraction ?? contact.receivedAt)} · {contact.source}
-        </ThemedText>
       </View>
-      <ThemedText variant="titleLarge">
-        {VERIFICATION_BADGE[contact.verificationStatus]}
-      </ThemedText>
-    </Pressable>
+
+      {!selectionMode ? (
+        <SfIcon name="chevron.right" size={12} weight="semibold" color={Colors.text3} />
+      ) : null}
+    </PressableScale>
   );
+}
+
+/** The round multi-select check shared by contact and saved-Page rows. */
+export function SelectionCheck({ selected }: { readonly selected: boolean }): ReactNode {
+  return (
+    <View style={{ width: 22 }}>
+      <View
+        style={{
+          width: 22,
+          height: 22,
+          borderRadius: Radius.pill,
+          borderWidth: 1.5,
+          borderColor: selected ? Colors.primaryBlue : Colors.text3,
+          backgroundColor: selected ? Colors.primaryBlue : 'transparent',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {selected ? (
+          <SfIcon name="checkmark" size={12} weight="bold" color={Colors.invertedButtonText} />
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+/** Source copy is rendered only from persisted manifest fields (never mock context). */
+export function contactSourceDescription(
+  contact: Pick<ContactManifestEntry, 'source' | 'tags'>,
+  t: Translate,
+): string | undefined {
+  if (contact.source === 'Manual') return t('peopleList.sourceManual');
+  const source = contactSourceTag(contact, t);
+  return source ? t('peopleList.sourceCard', { source }) : undefined;
+}
+
+export function contactSourceTag(
+  contact: Pick<ContactManifestEntry, 'source' | 'tags'>,
+  t: Translate,
+): string | undefined {
+  if (contact.source === 'Manual') return t('peopleList.sourceManual');
+  return contact.tags
+    .map((tag) => tag.trim())
+    .find((tag) => tag.length > 0) ?? sourceName(contact.source, t);
+}
+
+export function sourceName(
+  source: ContactManifestEntry['source'],
+  t: Translate,
+): string | undefined {
+  switch (source) {
+    case 'QR Code':
+      return t('peopleList.sourceQr');
+    case 'Proximity':
+      return t('peopleList.sourceProximity');
+    case 'App Clip':
+      return t('peopleList.sourceAppClip');
+    case 'AirDrop':
+      return t('peopleList.sourceAirDrop');
+    case 'Manual':
+      return t('peopleList.sourceManual');
+  }
 }

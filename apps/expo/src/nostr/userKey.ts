@@ -25,8 +25,9 @@
  *
  * ── Custody model — READ BEFORE CHANGING `getNostrPubkey`/`signNostrEvent`
  *
- * The root mnemonic is only retrievable through `revealMnemonicForExport
- * ()` (Face-ID gated — see `identity/rootKey.ts`'s doc). Re-deriving the
+ * The root mnemonic is only retrievable through Face-ID-gated reads in
+ * `identity/rootKey.ts` (`readMnemonicForKeyDerivation` here — access-level,
+ * follows the gate mode; showing it is the red-line `revealMnemonicForExport`). Re-deriving the
  * Nostr scalar from the mnemonic on every sign/publish call would mean
  * re-prompting Face ID every time the app wants to publish a profile
  * pointer or kind-0 event — unacceptable UX for what is a comparatively
@@ -64,8 +65,8 @@ import { schnorr } from '@noble/curves/secp256k1.js';
 // reasoning as `identity/rootKey.ts`.
 import type * as SecureStoreNS from 'expo-secure-store';
 
-import { computeNip01EventId, hexDecode, hexEncode, type Nip01UnsignedEvent } from '@/dag/node';
-import type { NostrEvent } from '@/dag/nostrAdapter';
+import { computeNip01EventId, hexDecode, hexEncode, type Nip01UnsignedEvent } from '@/nostr/dagNode';
+import type { NostrEvent } from '@/nostr/nostrAdapter';
 // Type-only, same reasoning as SecureStoreNS above — `react-native-mmkv`
 // also pulls in React Native's Flow-syntax entry point. See
 // `warmNostrKeyMirror` below for the runtime (lazy, cached) load.
@@ -247,8 +248,8 @@ export function hasNostrKeySync(): boolean {
 export type MnemonicRevealer = () => Promise<Result<string, string>>;
 
 async function defaultMnemonicRevealer(): Promise<Result<string, string>> {
-  const { revealMnemonicForExport } = await import('@/identity/rootKey');
-  const revealed = await revealMnemonicForExport();
+  const { readMnemonicForKeyDerivation } = await import('@/identity/rootKey');
+  const revealed = await readMnemonicForKeyDerivation();
   if (!revealed.ok) return err(revealed.error.kind);
   return ok(revealed.value);
 }
@@ -268,7 +269,7 @@ function storageErrorMessage(e: unknown): string {
 
 /**
  * Path (a): derive from the root mnemonic. Triggers exactly ONE Face-ID
- * gate (via `revealMnemonicForExport`), then persists only the derived
+ * gate (via `readMnemonicForKeyDerivation`), then persists only the derived
  * scalar — never the mnemonic itself. Idempotent: re-running with the
  * same root mnemonic re-derives and overwrites with the identical
  * scalar. Caller (A4.4 wizard) is responsible for consenting the user
@@ -286,11 +287,30 @@ async function provisionFromRootMnemonicAtEpoch(
   const revealed = await activeMnemonicRevealer();
   if (!revealed.ok) return revealed;
 
+  return provisionFromMnemonicAtEpoch(revealed.value, writeEpoch);
+}
+
+/**
+ * Path (a′): derive from a mnemonic the caller ALREADY holds — onboarding's
+ * freshly minted root (`createFromFreshMnemonic` returns it once, before it is
+ * ever stored behind Face ID). Same derivation and persistence as path (a),
+ * minus the reveal prompt, so a new identity reaches its first publish with
+ * one Face ID instead of two. Never call it with a mnemonic fetched just for
+ * this: fetching IS the gated read path (a) exists for.
+ */
+export function provisionFromFreshRootMnemonic(mnemonic: string): Promise<Result<string, string>> {
+  return trackKeyWrite(provisionFromMnemonicAtEpoch(mnemonic, captureLocalDataEpoch()));
+}
+
+async function provisionFromMnemonicAtEpoch(
+  mnemonic: string,
+  writeEpoch: LocalDataEpoch,
+): Promise<Result<string, string>> {
   if (!canCommitLocalData(writeEpoch)) return err('localDataWipeInProgress');
 
   let scalar: Uint8Array;
   try {
-    scalar = deriveSecp256k1Scalar(revealed.value, HKDF_INFO_NOSTR);
+    scalar = deriveSecp256k1Scalar(mnemonic, HKDF_INFO_NOSTR);
   } catch (e) {
     return err(storageErrorMessage(e));
   }
@@ -510,6 +530,26 @@ async function loadScalar(): Promise<Result<Uint8Array, string>> {
     // its message (see `dag/node.ts`). Never forward it: collapse to a
     // fixed reason, same rationale as `importNsec`'s bech32-decode-failure
     // handling above (never echo secret bytes back to the caller/logs).
+    return err('corruptedScalar');
+  }
+}
+
+/**
+ * Internal passkey-enrolment read. The caller must zero the returned bytes
+ * after sealing; this is deliberately not re-exported from the Nostr barrel.
+ */
+export async function readNostrScalarForPasskeyConnection(): Promise<
+  Result<Uint8Array | null, string>
+> {
+  const scalar = await loadScalar();
+  if (!scalar.ok) {
+    return scalar.error === 'notProvisioned' ? ok(null) : scalar;
+  }
+  try {
+    schnorr.getPublicKey(scalar.value);
+    return scalar;
+  } catch {
+    scalar.value.fill(0);
     return err('corruptedScalar');
   }
 }

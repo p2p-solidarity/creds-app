@@ -29,7 +29,7 @@ export function SettingsBlockSection({
   return (
     <View className="gap-2">
       <MeSectionHeader title={title} />
-      <View className="mx-4 overflow-hidden rounded-lg bg-mutedSurface">
+      <View className="mx-4 overflow-hidden rounded-group bg-mutedSurface">
         {children}
       </View>
     </View>

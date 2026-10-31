@@ -29,7 +29,8 @@ type ThemeKey =
   | 'heroGradientStart' | 'heroGradientEnd'
   | 'gradientCream' | 'blobCenter'
   | 'overlayBg' | 'popupSurface'
-  | 'cardSurface' | 'cardBorder';
+  | 'cardSurface' | 'cardBorder'
+  | 'terminalGreenText' | 'warningText';
 
 export type ThemeColors = Readonly<Record<ThemeKey, string>> & {
   readonly invertedButtonBg: string;
@@ -58,6 +59,7 @@ const KEYS: readonly ThemeKey[] = [
   'gradientCream', 'blobCenter',
   'overlayBg', 'popupSurface',
   'cardSurface', 'cardBorder',
+  'terminalGreenText', 'warningText',
 ];
 
 export function useThemeColors(): ThemeColors {
@@ -70,8 +72,8 @@ export function useThemeColors(): ThemeColors {
       : (Colors[k] as string);
   }
   // Brand accents (no light/dark variants in source-of-truth)
-  out['invertedButtonBg'] = scheme === 'dark' ? Colors.text1Dark : Colors.invertedButtonBg;
-  out['invertedButtonText'] = scheme === 'dark' ? Colors.pageBgDark : Colors.invertedButtonText;
+  out['invertedButtonBg'] = scheme === 'dark' ? Colors.invertedButtonBgDark : Colors.invertedButtonBg;
+  out['invertedButtonText'] = scheme === 'dark' ? Colors.invertedButtonTextDark : Colors.invertedButtonText;
   out['accentRose'] = Colors.accentRose;
   out['primaryBlue'] = Colors.primaryBlue;
   out['primaryMauve'] = Colors.primaryMauve;

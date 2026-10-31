@@ -12,6 +12,7 @@ interface CredentialStoreSurface {
       readonly manifest: readonly { readonly id: string; readonly type: string }[];
       readonly details: ReadonlyMap<string, StoredCredential>;
       readonly add: (credential: StoredCredential) => Promise<void>;
+      readonly remove: (id: string) => Promise<void>;
     };
     setState: (state: Partial<{
       manifest: readonly CredentialManifestEntry[];
@@ -161,5 +162,42 @@ describe('removePassportCredentials', () => {
     expect(credentials.useCredentialStore.getState().manifest.map((entry) => entry.id)).toEqual(['card-1']);
     expect(kv.has('vc:passport-1')).toBe(false);
     expect(kv.has('vc:card-1')).toBe(true);
+  });
+});
+
+// docs/ref/11 P1 follow-up: the device-attested statement is re-signed every
+// 30 days from `passport:statement:v1`. Deleting the passport must stop that.
+describe('passport statement lifecycle', () => {
+  const STATEMENT_KEY = 'passport:statement:v1';
+  const stored = (credentialId?: string) =>
+    JSON.stringify({ npubHex: 'ab', ageOver18: true, readAt: 1, signedAt: 1, passportExpiresAt: null, ...(credentialId ? { credentialId } : {}) });
+
+  it('drops the stored statement when its passport credential is deleted', async () => {
+    await credentials.useCredentialStore.getState().add(credential('passport-1', 'passport'));
+    kv.set(STATEMENT_KEY, stored('passport-1'));
+    await credentials.useCredentialStore.getState().remove('passport-1');
+    expect(kv.has(STATEMENT_KEY)).toBe(false);
+  });
+
+  it('keeps the statement when another credential (or another passport) is deleted', async () => {
+    await credentials.useCredentialStore.getState().add(credential('card-1', 'business_card'));
+    await credentials.useCredentialStore.getState().add(credential('passport-old', 'passport'));
+    kv.set(STATEMENT_KEY, stored('passport-new'));
+    await credentials.useCredentialStore.getState().remove('card-1');
+    await credentials.useCredentialStore.getState().remove('passport-old');
+    expect(kv.has(STATEMENT_KEY)).toBe(true);
+  });
+
+  it('drops a statement saved before it recorded its credential on any passport delete', async () => {
+    await credentials.useCredentialStore.getState().add(credential('passport-1', 'passport'));
+    kv.set(STATEMENT_KEY, stored());
+    await credentials.useCredentialStore.getState().remove('passport-1');
+    expect(kv.has(STATEMENT_KEY)).toBe(false);
+  });
+
+  it('drops the statement when all passports are reset, even with no stored credential', async () => {
+    kv.set(STATEMENT_KEY, stored('passport-1'));
+    await identity.useIdentityData.getState().removePassportCredentials();
+    expect(kv.has(STATEMENT_KEY)).toBe(false);
   });
 });

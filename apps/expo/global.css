@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Light (default) — mirrors Swift Color.Theme (ThemeManager.swift L200-330) */
+/* Light (default) — the same values as creds.id `theme.css` (airmeishi-web). */
 :root {
   --color-pageBg: #FBF9F2;
   --color-cardBg: #FFFFFF;
@@ -19,7 +19,7 @@
   --color-invertedButtonText: #FBF9F2;
   --color-text1: #2F2F30;
   --color-text2: #5F5E67;
-  --color-text3: #9C9AA6;
+  --color-text3: #6E6B7B;
   --color-accentRose: #BF80A7;
   /* primaryBlue is brand mauve — Solidarity palette has no blue. */
   --color-primaryBlue: #83537D;
@@ -31,6 +31,12 @@
   --color-blobCenter: #FFE4D6;
   --color-radarRing: rgba(191,128,167,0.3);
   --color-radarGlow: rgba(191,128,167,0.15);
+  /* creds v3 derived accessibility foregrounds — port spec §3.2. */
+  --color-terminalGreenText: #2F6B45;
+  --color-warningText: #8A5000;
+  --color-destructiveText: #A83048;
+  --color-accentRoseText: #AA568A;
+  --color-text3Strong: #6E6B7B;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -38,20 +44,28 @@
     --color-pageBg: #060417;
     --color-cardBg: #14101C;
     --color-searchBg: #1C1424;
-    --color-divider: #2D2438;
+    --color-divider: #5F5E67;
     --color-mutedSurface: rgba(47,47,48,0.6);
     --color-pillSurface: rgba(47,47,48,0.5);
     --color-pillBg: rgba(255,255,255,0.18);
     --color-pillBorder: rgba(255,255,255,0.30);
     --color-featuredCardBg: #83537D;
-    --color-chipSurface: rgba(47,47,48,0.5);
+    --color-chipSurface: #222026;
     --color-invertedButtonBg: #F0E8F0;
     --color-invertedButtonText: #060417;
     --color-text1: #F0E8F0;
-    --color-text2: #A898A8;
-    --color-text3: #808080;
+    --color-text2: #D1D1D1;
+    --color-text3: #8A8A8A;
     --color-blobCenter: #2A1F26;
-    /* primaryBlue dark — Swift ThemeManager.swift:396 (#C088A0). */
+    /* primaryBlue dark stays #C088A0, not creds.id's #BF80A7: that value is
+     * accentRose, and SfIcon's resolveThemeColor maps colours by value. */
     --color-primaryBlue: #C088A0;
+    /* Dark mode keeps the native accents as foregrounds (≥4.9:1 on #060417),
+     * except destructive text — port spec §10.5 M2. */
+    --color-terminalGreenText: #4CAF51;
+    --color-warningText: #FF9500;
+    --color-destructiveText: #D2677A;
+    --color-accentRoseText: #BF80A7;
+    --color-text3Strong: #8A8A8A;
   }
 }

@@ -13,6 +13,7 @@ import { Text, View } from 'react-native';
 
 import { SfIcon } from '@/components/icons/SfIcon';
 import { Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/radius';
 
 export function BulletGuaranteeRow({
   text,
@@ -22,14 +23,14 @@ export function BulletGuaranteeRow({
   checked?: boolean;
 }) {
   return (
-    <View className="flex-row items-center gap-2 rounded-lg bg-mutedSurface px-3 py-4">
+    <View className="flex-row items-center gap-2 rounded-group bg-mutedSurface px-3 py-4">
       <Text className="flex-1 text-text1 text-[15px]">{text}</Text>
       {checked ? (
         <View
           style={{
             width: 18,
             height: 18,
-            borderRadius: 9,
+            borderRadius: Radius.pill,
             backgroundColor: Colors.terminalGreen,
             alignItems: 'center',
             justifyContent: 'center',
@@ -42,7 +43,7 @@ export function BulletGuaranteeRow({
           style={{
             width: 18,
             height: 18,
-            borderRadius: 9,
+            borderRadius: Radius.pill,
             borderWidth: 1.5,
             borderColor: Colors.text3,
             alignItems: 'center',

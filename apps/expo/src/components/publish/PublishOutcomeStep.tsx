@@ -105,7 +105,7 @@ function RelayReportSection({
 
   return (
     <Animated.View entering={entering(sectionIndex * STAGGER_MS)}>
-      <ThemedSurface variant="inset" className="rounded-none p-3">
+      <ThemedSurface variant="inset" className="p-3">
         <View style={{ gap: 8 }}>
           <ThemedText variant="label">{title}</ThemedText>
           <ThemedText variant="caption" tone="secondary">
@@ -129,7 +129,7 @@ function RelayReportSection({
                   variant="caption"
                   tone="secondary"
                   numberOfLines={1}
-                  style={{ flex: 1, fontFamily: 'Menlo' }}>
+                  style={{ flex: 1 }}>
                   {result.relay}
                 </ThemedText>
               </View>
@@ -138,7 +138,7 @@ function RelayReportSection({
                   variant="caption"
                   tone="tertiary"
                   numberOfLines={2}
-                  style={{ marginLeft: 22, fontFamily: 'Menlo' }}>
+                  style={{ marginLeft: 22 }}>
                   {result.message}
                 </ThemedText>
               ) : null}

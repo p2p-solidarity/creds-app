@@ -15,6 +15,7 @@ import { decompressQR } from '../../src/cards/qrCompression';
 import {
   buildPresentationProofPayload,
   buildPresentationProofQrPages,
+  disclosureErrorI18nKey,
   initialPresentationClaimIds,
   isPresentationDisabled,
   type PresentationCredential,
@@ -77,8 +78,9 @@ type QrEngine = {
 
 const now = new Date('2026-06-09T00:00:00Z');
 
-const credential: Pick<StoredCredential, 'id' | 'holderDid' | 'rawJwt' | 'metadataTags'> = {
+const credential: Pick<StoredCredential, 'id' | 'type' | 'holderDid' | 'rawJwt' | 'metadataTags'> = {
   id: 'passport-card',
+  type: 'vc',
   holderDid: 'did:key:z6MkHolder',
   rawJwt: '{"proof":"passport-proof","publicSignals":["sig-a"]}',
   metadataTags: ['mopro-noir'],
@@ -303,6 +305,7 @@ describe('presentation proof — no full-VC leak on a subset', () => {
   it('FAILS CLOSED when only a subset of an ordinary JWT credential is selected (never leaks the rest)', () => {
     const plainCred: PresentationCredential = {
       id: 'card-1',
+      type: 'vc',
       holderDid: HOLDER_DID,
       rawJwt: signPlainVc(),
       metadataTags: ['jwt_vc_json', 'imported', 'did:key'],
@@ -326,6 +329,7 @@ describe('presentation proof — no full-VC leak on a subset', () => {
     const rawJwt = signPlainVc();
     const plainCred: PresentationCredential = {
       id: 'card-1',
+      type: 'vc',
       holderDid: HOLDER_DID,
       rawJwt,
       metadataTags: ['jwt_vc_json', 'imported', 'did:key'],
@@ -354,6 +358,7 @@ describe('presentation proof — no full-VC leak on a subset', () => {
     });
     const sdCred: PresentationCredential = {
       id: 'sd-1',
+      type: 'vc',
       holderDid: HOLDER_DID,
       rawJwt: combined,
       metadataTags: ['sd-jwt-fallback'],
@@ -387,6 +392,7 @@ describe('presentation proof — no full-VC leak on a subset', () => {
     const tampered = `${combined}${forged}~`;
     const sdCred: PresentationCredential = {
       id: 'sd-2',
+      type: 'vc',
       holderDid: HOLDER_DID,
       rawJwt: tampered,
       metadataTags: ['sd-jwt-fallback'],
@@ -407,6 +413,7 @@ describe('presentation proof — no full-VC leak on a subset', () => {
   it('refuses to present a credential that failed import verification (unverified tag)', () => {
     const plainCred: PresentationCredential = {
       id: 'card-1',
+      type: 'vc',
       holderDid: HOLDER_DID,
       rawJwt: signPlainVc(),
       metadataTags: ['jwt_vc_json', 'imported', 'unverified'],
@@ -423,5 +430,28 @@ describe('presentation proof — no full-VC leak on a subset', () => {
     if (result.ok) return;
     expect(result.error.code).toBe('not-redactable');
     expect(result.error.message).toContain('unverified');
+  });
+
+  // docs/ref/11 P2: a passport is never presented as a QR payload, whatever
+  // its stored record holds (a retired ZK envelope or a passive-auth summary).
+  it('refuses to present any passport credential as a QR payload', () => {
+    for (const metadataTags of [['passport-openac-v3', 'passport-noir'], ['passport-passive-auth', 'passport-statement']]) {
+      const passportCred: PresentationCredential = {
+        id: 'passport-card',
+        type: 'passport',
+        holderDid: HOLDER_DID,
+        rawJwt: '{"passiveAuth":true,"statement":true}',
+        metadataTags,
+      };
+      const result = buildPresentationProofPayload({
+        credential: passportCred,
+        selectedClaims: allCardClaims.slice(0, 1),
+        allClaims: allCardClaims,
+        nonce: 'n',
+      });
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.error.code).toBe('not-redactable');
+    }
   });
 });

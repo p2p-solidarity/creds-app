@@ -6,7 +6,7 @@
  *
  * Deliberately split from i18n: this module only does the millisecond math
  * and returns a `{unit, count}` bucket, so it's unit-testable without
- * bootstrapping i18next. The caller (`VerifiedPagesSection`) maps the
+ * bootstrapping i18next. The caller (`SavedPageRow`) maps the
  * bucket to a localized string via `t()`.
  */
 export type VerifiedAtRelativeUnit = 'justNow' | 'minutes' | 'hours' | 'days';

@@ -30,26 +30,20 @@ import {
   focusedEditorMode,
   shouldReturnAfterFocusedCancel,
 } from '@/components/me/focusedEditorReturn';
+import { saveAndPublishProfile, type PublishChoice } from '@/components/me/saveAndPublishProfile';
 import { useAvatarEditor, type ProfileCommitResult } from '@/components/me/useAvatarEditor';
 import {
   LinkPageImportSheet,
   type LinkPageImportResult,
 } from '@/components/profile/LinkPageImportSheet';
-import { SettingsBackToolbar, SettingsScreenTitle } from '@/components/settings/SettingsBlocks';
+import { SettingsScreenTitle } from '@/components/settings/SettingsBlocks';
 import { ThemedButton, ThemedText, ThemedTextInput } from '@/components/themed';
 import { showError } from '@/feedback/appAlert';
 import { haptic } from '@/feedback/haptics';
 import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
 import { hasRootKey } from '@/identity/rootKey';
-import {
-  isBiometricCancellation,
-  isNostrPublishOutcomePartiallyAccepted,
-  isNostrPublishOutcomeSuccessful,
-  prepareNostrClaimForSave,
-  publishWithNostrAutoSetup,
-} from '@/nostr/connectWizard';
-import { DEFAULT_RELAYS } from '@/nostr/publish';
+import { isBiometricCancellation, prepareNostrClaimForSave } from '@/nostr/connectWizard';
 import {
   getNostrPubkey,
   hasNostrKey,
@@ -63,7 +57,7 @@ import {
   type LinkVisibility,
   type VisibilitySummary,
 } from '@/profile/projection';
-import { useProfileStore, type NostrPublishOutcome } from '@/profile/store';
+import { useProfileStore } from '@/profile/store';
 import { usePreferences } from '@/settings/preferences';
 import { uuid, type ProfileLink } from '@solidarity/shared';
 
@@ -76,22 +70,7 @@ type LinkSheetTarget =
   | { readonly kind: 'edit'; readonly id: string }
   | null;
 
-type TFn = ReturnType<typeof useTranslation>['t'];
-
-interface CommitProfileOptions {
-  /** Only the explicit bottom Save action may create a missing Nostr key. */
-  readonly allowNostrProvisioning: boolean;
-  readonly publishAfterSave: boolean;
-}
-
-function publishFailureDetail(outcome: NostrPublishOutcome, t: TFn): string {
-  return t('nostrConnect.publishReportDetail', {
-    profileAccepted: outcome.profile.acceptedCount,
-    profileTotal: outcome.profile.results.length,
-    bindingAccepted: outcome.kind0.acceptedCount,
-    bindingTotal: outcome.kind0.results.length,
-  });
-}
+type CommitProfileOptions = PublishChoice;
 
 function toEditableLink(link: ProfileLink, visibility: LinkVisibility): EditableLink {
   const detectedPreset = detectLinkFromUrl(link.url)?.preset ?? null;
@@ -107,14 +86,13 @@ function toEditableLink(link: ProfileLink, visibility: LinkVisibility): Editable
 export default function MeEditScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
-  const { add, avatar } = useLocalSearchParams<{
+  const { add, avatar, importLinks } = useLocalSearchParams<{
     readonly add?: string;
     readonly avatar?: string;
+    readonly importLinks?: string;
   }>();
   const record = useProfileStore((s) => s.record);
   const storeLinkVisibility = useProfileStore((s) => s.linkVisibility);
-  const saveProfile = useProfileStore((s) => s.saveProfile);
-  const publishToNostr = useProfileStore((s) => s.publishToNostr);
   const autoRepublish = usePreferences((s) => s.nostrAutoRepublish);
   // The preference is the user's explicit publishing opt-in. On a first
   // publish, Save provisions the Nostr key and adds its claim before signing;
@@ -145,7 +123,7 @@ export default function MeEditScreen() {
     (record?.links ?? []).map((link, i) => toEditableLink(link, storeLinkVisibility[i] ?? 'public'))
   );
   const [saving, setSaving] = useState(false);
-  const [linktreeSheetOpen, setLinktreeSheetOpen] = useState(false);
+  const [linktreeSheetOpen, setLinktreeSheetOpen] = useState(() => importLinks === '1');
   const [previewOpen, setPreviewOpen] = useState(false);
   const [focusedMode, setFocusedMode] = useState(() => focusedEditorMode({ add, avatar }));
   const [hasDraftEdits, setHasDraftEdits] = useState(false);
@@ -173,18 +151,14 @@ export default function MeEditScreen() {
     setHasDraftEdits(true);
     setLinks((prev) => prev.filter((l) => l.id !== id));
   };
-  const moveLink = (id: string, direction: -1 | 1) => {
+  const reorderLink = (sourceIndex: number, destinationIndex: number) => {
     setHasDraftEdits(true);
     setLinks((prev) => {
-      const idx = prev.findIndex((l) => l.id === id);
-      const swapIdx = idx + direction;
-      if (idx < 0 || swapIdx < 0 || swapIdx >= prev.length) return prev;
+      if (sourceIndex === destinationIndex) return prev;
       const next = [...prev];
-      const a = next[idx];
-      const b = next[swapIdx];
-      if (!a || !b) return prev;
-      next[idx] = b;
-      next[swapIdx] = a;
+      const [moved] = next.splice(sourceIndex, 1);
+      if (!moved) return prev;
+      next.splice(destinationIndex, 0, moved);
       return next;
     });
   };
@@ -253,7 +227,7 @@ export default function MeEditScreen() {
       setNostrKeyPresent(true);
     }
 
-    const saved = await saveProfile(
+    return await saveAndPublishProfile(
       {
         displayName: displayName.trim(),
         bio: bio.trim(),
@@ -263,56 +237,10 @@ export default function MeEditScreen() {
       {
         ...(alsoKnownAs === undefined ? {} : { alsoKnownAs }),
         ...(avatarOverride === undefined ? {} : { avatar: avatarOverride }),
-      }
+      },
+      options,
+      t,
     );
-
-    if (!saved.ok) {
-      if (isBiometricCancellation(saved.error)) return 'cancelled';
-      haptic('error');
-      showError({
-        context: 'Me › Edit',
-        summary: t('meEdit.saveFailed'),
-        error: new Error(saved.error),
-      });
-      return 'saveFailed';
-    }
-
-    if (options.publishAfterSave) {
-      const published = options.allowNostrProvisioning
-        ? await publishWithNostrAutoSetup({
-            hasKey: hasNostrKey,
-            provision: provisionFromRootMnemonic,
-            publish: async () => await publishToNostr(DEFAULT_RELAYS),
-          })
-        : await publishToNostr(DEFAULT_RELAYS);
-      if (!published.ok) {
-        if (isBiometricCancellation(published.error)) return 'cancelled';
-        haptic('error');
-        showError({
-          context: 'Me › Edit › Publish',
-          summary: t('meEdit.publishFailed'),
-          error: new Error(published.error),
-        });
-        return 'publishFailed';
-      }
-      if (
-        !isNostrPublishOutcomeSuccessful(published.value) &&
-        isNostrPublishOutcomePartiallyAccepted(published.value)
-      ) {
-        return 'partialSuccess';
-      }
-      if (!isNostrPublishOutcomeSuccessful(published.value)) {
-        haptic('error');
-        showError({
-          context: 'Me › Edit › Publish',
-          summary: t('meEdit.publishFailed'),
-          error: new Error(publishFailureDetail(published.value, t)),
-        });
-        return 'publishFailed';
-      }
-    }
-
-    return 'success';
   };
 
   const avatarWillPublish = willAutoRepublish && nostrKeyPresent;
@@ -390,11 +318,9 @@ export default function MeEditScreen() {
   if (!rootKeyPresent) {
     return (
       <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
-        <SettingsBackToolbar
-          title={t('meEdit.cancel')}
-          onPress={() => {
-            safeBack();
-          }}
+        <SettingsScreenTitle
+          title={t('meEdit.title')}
+          leadingAction={{ icon: 'xmark', accessibilityLabel: t('common.cancel'), onPress: () => { safeBack(); } }}
         />
         <View
           style={{
@@ -421,13 +347,10 @@ export default function MeEditScreen() {
 
   return (
     <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
-      <SettingsBackToolbar
-        title={t('meEdit.cancel')}
-        onPress={() => {
-          safeBack();
-        }}
+      <SettingsScreenTitle
+        title={t('meEdit.title')}
+        leadingAction={{ icon: 'xmark', accessibilityLabel: t('common.cancel'), onPress: () => { safeBack(); } }}
       />
-      <SettingsScreenTitle title={t('meEdit.title')} />
 
       <KeyboardAwareScrollView
         contentContainerStyle={{
@@ -471,7 +394,7 @@ export default function MeEditScreen() {
             setLinkSheetTarget({ kind: 'edit', id });
           }}
           onRemove={removeLink}
-          onMove={moveLink}
+          onReorder={reorderLink}
           onImportLinktree={() => {
             setLinktreeSheetOpen(true);
           }}

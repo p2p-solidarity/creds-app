@@ -1,8 +1,8 @@
 /**
  * Scan screen — 1:1 port of Swift ScanTabView. Full-screen camera preview
  * with a dimmed-mask ScanWindowOverlay (centred square cut-out + four
- * green corner brackets), nav bar "Scan" inline + trailing `qrcode`
- * (open proof-request QR), and concise human-facing scan guidance.
+ * green corner brackets), nav bar "Scan" inline, and concise human-facing
+ * scan guidance.
  *
  * Capture feedback: when a payload is decoded we play a short shutter-style
  * animation (corner brackets pulse + a brief white flash overlay) on the
@@ -29,9 +29,8 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
-import { PassportShowChallengeSheet } from '@/components/scan/PassportShowChallengeSheet';
+import { EASE_OUT } from '@/feedback/motion';
 import { ProofPresentationFlowSheet } from '@/components/scan/ProofPresentationFlowSheet';
 import { ScanWindowOverlay } from '@/components/scan/ScanWindowOverlay';
 import {
@@ -41,17 +40,14 @@ import {
 import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { presentReceivedCard } from '@/cards/receivedCard';
+import { handleDeepLink, parseDeepLink } from '@/deeplink/router';
 import { haptic } from '@/feedback/haptics';
-import { SCALE } from '@/feedback/motion';
 import { pushToast } from '@/feedback/toast';
-import { PASSPORT_SHOW_LINK_SCOPE } from '@/passport/showPresentation';
-import { issuePassportShowChallenge } from '@/passport/showVerifier';
 import { resolveProfileByHandle } from '@/handles/resolveProfile';
 import { resolveProfileByNpub } from '@/nostr/resolveProfile';
 import { QrScanner } from '@/scan/QrScanner';
 import { credentialOfferRouteFromScan } from '@/scan/credentialOfferRoute';
 import { handleScannedPayload } from '@/scan/envelopeHandler';
-import { passportShowVerifierResult } from '@/scan/passportShowResult';
 import { classifyVerifiedPagePayload, verifyFragment } from '@/scan/verifiedPageHandler';
 import { presentVerifiedPageResolving, presentVerifiedPageResult } from '@/scan/verifiedPageResult';
 import { presentWebSignEntry } from '@/websign/pendingRequest';
@@ -60,6 +56,7 @@ import { verifyVpToken } from '@/oidc';
 import { useTranslation } from '@/i18n';
 import { usePreferences } from '@/settings/preferences';
 import { isDeveloperOnlyScanPayload } from '@/scan/technicalFlowGate';
+import { MONO } from '@/constants/fonts';
 
 const SCAN_WINDOW_SIZE = 260;
 
@@ -78,7 +75,6 @@ export default function ScanScreen() {
   // Verifier challenge for passport show presentations. The nonce lives in
   // the outstanding-challenge store (TTL-bound); this state only drives the
   // sheet showing the QR.
-  const [showChallenge, setShowChallenge] = useState<string | null>(null);
 
   // Capture animation lives on the UI thread — bracketScale pulses the
   // ScanWindowOverlay corners and flashOpacity blinks a white shutter.
@@ -148,29 +144,53 @@ export default function ScanScreen() {
     // OIDC URLs, ...), so every existing format below is completely
     // unaffected. A non-null result (verified OR a structured invalid
     // reason) routes into VerifiedPageResultSheet, mounted in `_layout.tsx`.
-    const verifiedPageForm = classifyVerifiedPagePayload(payload);
+    const verifiedPageForm = classifyVerifiedPagePayload(payload, {
+      // Dev mode admits DEV_PRODUCT_HOSTS for the /@handle URL form
+      // (05-spec §8-B mechanism for pre-launch domains).
+      devProductHosts: developerMode,
+    });
     if (verifiedPageForm !== null) {
       if (verifiedPageForm.kind === 'fragment') {
         // Self-contained offline blob — verified locally in this tick.
         presentVerifiedPageResult(verifyFragment(verifiedPageForm.fragment));
       } else if (verifiedPageForm.kind === 'pointer') {
-        // `#nostr:<npub>` short pointer — open the loading state, then swap
-        // in the resolved verdict once relays answer. resolveProfileByNpub
-        // never throws (structured invalid on any failure).
-        presentVerifiedPageResolving();
-        void resolveProfileByNpub(verifiedPageForm.npub).then(presentVerifiedPageResult);
+        // `#nostr:<npub>` short pointer — open the loading state, paint the
+        // first relay's verified page, then swap in the resolved verdict.
+        // resolveProfileByNpub never throws (structured invalid on any failure).
+        const present = presentVerifiedPageResolving();
+        void resolveProfileByNpub(verifiedPageForm.npub, { onInterim: present }).then(present);
       } else {
-        presentVerifiedPageResolving();
-        void resolveProfileByHandle(verifiedPageForm.handle).then(presentVerifiedPageResult);
+        const present = presentVerifiedPageResolving();
+        void resolveProfileByHandle(verifiedPageForm.handle, { onInterim: present }).then(present);
       }
+      safeBack();
+      return;
+    }
+
+    // Our OWN deep links, printed as QR (05-spec §8-D ruling, 2026-08-25):
+    // a scanned `solidarity://card|group|pear/…` or
+    // `https://<product-host>/c|pear/…` must route exactly like tapping it —
+    // not die as 「無法讀取」. `parseDeepLink` is pure; ONLY the three kinds
+    // that were previously dead in the scanner are handed to the deeplink
+    // router (webSign / offers / OID4VP keep their dedicated scan ceremonies
+    // above and below — routing `oidc` here would bypass the dev verifier
+    // sheet). Placed AFTER the Verified Page classifier so fragment/pointer/
+    // handle URLs keep their existing scan presentation.
+    const deepLinkRoute = parseDeepLink(payload, { devProductHosts: developerMode });
+    if (
+      deepLinkRoute.kind === 'card' ||
+      deepLinkRoute.kind === 'groupInvite' ||
+      deepLinkRoute.kind === 'pear'
+    ) {
+      handleDeepLink(payload);
       safeBack();
       return;
     }
 
     // Try the envelope pipeline next — plaintext / zkProof / didSigned
     // payloads route into the ReceivedCardSheet mounted in `_layout.tsx`.
-    // Everything else (OIDC URLs, deep links, raw JWTs that aren't cards)
-    // falls through to the legacy `classifyPayload` router.
+    // Everything else (OIDC URLs, raw JWTs that aren't cards) falls through
+    // to the legacy `classifyPayload` router.
     void (async () => {
       const outcome = await handleScannedPayload(payload);
       if (outcome.kind === 'card' && outcome.card) {
@@ -184,6 +204,7 @@ export default function ScanScreen() {
           verificationStatus: outcome.verificationStatus,
           source: 'QR Code',
           sealedRoute: outcome.sealedRoute,
+          nostrPointer: outcome.nostrPointer,
         });
         safeBack();
         return;
@@ -192,13 +213,6 @@ export default function ScanScreen() {
         pushToast(t('scan.couldNotRead'), 'error');
         setRoute(null);
         setIsScanning(true);
-        return;
-      }
-      if (outcome.kind === 'passport-show' && outcome.passportShow) {
-        setRoute({
-          kind: 'verifier',
-          result: passportShowVerifierResult(outcome.passportShow, t),
-        });
         return;
       }
       const classifiedRoute = await classifyPayload(payload, t);
@@ -219,9 +233,11 @@ export default function ScanScreen() {
       // Tactile "got it" the instant a code resolves — fires with the bracket
       // pulse + shutter flash so the capture lands on three senses at once.
       haptic('success');
+      // An occasional "got it" may carry a little delight, but stays a pulse:
+      // a small lift on the app's ease-out curve, back before the flash ends.
       bracketScale.value = withSequence(
-        withTiming(1.18, { duration: 140 }),
-        withTiming(1, { duration: 120 }),
+        withTiming(1.1, { duration: 140, easing: EASE_OUT }),
+        withTiming(1, { duration: 120, easing: EASE_OUT }),
       );
       flashOpacity.value = withSequence(
         withTiming(1, { duration: 80 }),
@@ -262,20 +278,7 @@ export default function ScanScreen() {
           <Text className="text-text1 text-[15px]">{t('scan.close')}</Text>
         </Pressable>
         <Text className="text-text1 text-[17px] font-semibold">{t('scan.title')}</Text>
-        {developerMode ? (
-          <PressableScale
-            haptic="tap"
-            scaleTo={SCALE.icon}
-            accessibilityRole="button"
-            accessibilityLabel={t('scan.proofRequestQr')}
-            onPress={() => { router.push('/share/qr'); }}
-            style={{ width: 60, height: 44, alignItems: 'flex-end', justifyContent: 'center' }}
-          >
-            <SfIcon name="qrcode" size={20} color={Colors.text1} />
-          </PressableScale>
-        ) : (
-          <View style={{ width: 60, height: 44 }} />
-        )}
+        <View style={{ width: 60, height: 44 }} />
       </View>
 
       <View style={{ flex: 1 }} />
@@ -285,7 +288,7 @@ export default function ScanScreen() {
       >
         {progress ? (
           <View
-            className="rounded-xl bg-mutedSurface px-4 py-3 items-center"
+            className="rounded-group bg-mutedSurface px-4 py-3 items-center"
           >
             <Text className="text-text2 text-[13px]">
               {t('scan.receiving', {
@@ -303,20 +306,6 @@ export default function ScanScreen() {
             </ThemedText>
           </ThemedSurface>
         )}
-        <ThemedButton
-          variant="secondary"
-          label={t('passportShow.verifyEntry')}
-          fullWidth
-          onPress={() => {
-            const issued = issuePassportShowChallenge({
-              scope: PASSPORT_SHOW_LINK_SCOPE,
-              ageThreshold: 18,
-              requestAge: true,
-              requestNationality: false,
-            });
-            setShowChallenge(issued.challengeJson);
-          }}
-        />
         {isScanning ? (
           <View className="flex-row items-center justify-center gap-1.5">
             <ActivityIndicator size="small" />
@@ -339,12 +328,6 @@ export default function ScanScreen() {
         }
         result={route?.kind === 'verifier' ? route.result : null}
         onClose={reset}
-      />
-
-      <PassportShowChallengeSheet
-        visible={showChallenge !== null}
-        challengeJson={showChallenge}
-        onClose={() => { setShowChallenge(null); }}
       />
 
       <Animated.View
@@ -375,12 +358,12 @@ function ScannedResultView({
     >
       <View>
         <Text className="text-text1 text-[24px] font-medium">{t('scan.resultTitle')}</Text>
-        <View className="mt-4 rounded-xl bg-mutedSurface p-4">
+        <View className="mt-4 rounded-group bg-mutedSurface p-4">
           <Text
             selectable
             numberOfLines={6}
             className="text-text2 text-[13px]"
-            style={{ fontFamily: 'Menlo' }}
+            style={{ fontFamily: MONO }}
           >
             {result}
           </Text>

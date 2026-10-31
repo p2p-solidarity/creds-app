@@ -1,9 +1,8 @@
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
 
-import { SfIcon } from '@/components/icons/SfIcon';
-import { ThemedButton, ThemedSurface } from '@/components/themed';
-import { Colors } from '@/constants/Colors';
+import { CredsMark } from '@/components/brand/CredsMark';
+import { ThemedButton } from '@/components/themed';
 import { useTranslation } from '@/i18n';
 
 import { V2OnboardingScaffold } from './V2OnboardingScaffold';
@@ -39,11 +38,8 @@ export function WelcomeStep({
         </View>
       }>
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <ThemedSurface
-          variant="elevated"
-          className="h-28 w-28 items-center justify-center rounded-full">
-          <SfIcon name="checkmark.seal.fill" size={50} color={Colors.terminalGreen} />
-        </ThemedSurface>
+        {/* The creds.id mark (Solidarity rebrand) — replaces the mock's arc-pinwheel. */}
+        <CredsMark size={132} float />
       </View>
     </V2OnboardingScaffold>
   );

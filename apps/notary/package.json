@@ -1,0 +1,18 @@
+{
+  "name": "@solidarity/notary",
+  "version": "0.1.0",
+  "private": true,
+  "description": "creds.id Pro notary: hourly batch that fetches public profile pages itself and signs p2p-format witnesses. docs/ref/10 §3.11.",
+  "type": "module",
+  "scripts": {
+    "deploy": "bunx wrangler@4.155.0 deploy",
+    "witness-key": "bun scripts/witness-key.ts"
+  },
+  "dependencies": {
+    "@noble/curves": "^2.4.0",
+    "@solidarity/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261029.1"
+  }
+}

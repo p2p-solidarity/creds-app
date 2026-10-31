@@ -139,12 +139,12 @@ export function useIdentitySnapshot(): IdentityHomeSnapshot {
   return useZkIdentity((s) => ({ did: null, commitment: s.commitment }));
 }
 
-/** Used by app/id/zk-settings.tsx for the Identity Status block. */
+/** Identity status for the ZK identity. */
 export function useZkIdentityCommitment(): string | null {
   return useZkIdentity((s) => s.commitment);
 }
 
-/** Used by app/id/zk-settings.tsx for the "Proofs Supported" row. */
+/** Proof types this build supports. */
 export function useProofsSupported(): boolean {
   return useZkIdentity((s) => s.proofsSupported);
 }

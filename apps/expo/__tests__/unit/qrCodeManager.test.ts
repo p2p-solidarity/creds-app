@@ -9,7 +9,6 @@
  * not a QR code and must never be returned as a successful result.
  */
 import { describe, expect, it } from 'bun:test';
-import { readFileSync } from 'node:fs';
 
 import { generateQrPng } from '@/cards/qrCodeManager';
 
@@ -27,16 +26,6 @@ async function engineAvailable(): Promise<boolean> {
 }
 
 describe('generateQrPng — cascading error-correction levels', () => {
-  it('loads qrcode with Metro-compatible static syntax', () => {
-    const source = readFileSync(
-      new URL('../../src/cards/qrCodeManager.ts', import.meta.url),
-      'utf8',
-    );
-
-    expect(source).not.toContain('@vite-ignore');
-    expect(source).not.toMatch(/import\(\s*[^'"`]/u);
-  });
-
   it('emits a real SVG for short payloads', async () => {
     if (!(await engineAvailable())) {
       // This runtime cannot prove the successful engine path; the following

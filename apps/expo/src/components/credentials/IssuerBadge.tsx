@@ -20,6 +20,7 @@ import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/radius';
 import {
   useIssuerMetadataStore,
   type IssuerMetadata,
@@ -122,7 +123,7 @@ function LogoOrPlaceholder({
         style={{
           width: size,
           height: size,
-          borderRadius: size / 2,
+          borderRadius: Radius.pill,
           backgroundColor: Colors.warmCream,
           borderWidth: 1,
           borderColor: Colors.divider,
@@ -136,7 +137,7 @@ function LogoOrPlaceholder({
       style={{
         width: size,
         height: size,
-        borderRadius: size / 2,
+        borderRadius: Radius.pill,
         backgroundColor: Colors.warmCream,
         alignItems: 'center',
         justifyContent: 'center',

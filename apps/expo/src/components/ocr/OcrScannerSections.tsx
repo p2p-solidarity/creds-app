@@ -116,14 +116,14 @@ export function ScanningOptionsContent({
         <ThemedButton
           label="Take Photo"
           fullWidth
-          leadingIcon={<SfIcon name="camera" size={16} color={Colors.cardBg} />}
+          icon="camera"
           onPress={onTakePhoto}
         />
         <ThemedButton
           variant="inverted"
           label="Choose from Photos"
           fullWidth
-          leadingIcon={<SfIcon name="photo" size={16} color={Colors.text1} />}
+          icon="photo"
           onPress={onChooseFromLibrary}
         />
       </View>

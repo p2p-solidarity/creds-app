@@ -1,7 +1,7 @@
 /**
  * Parity test — SpruceID DID Nitro module
  *
- * Exercises the JS-side wiring that talks to `@solidarity/nitro-spruce-did`
+ * Exercises the JS-side wiring that talks to `@solidarity/nitro-keystone`
  * by injecting an in-memory driver (`InMemorySpruceDidDriver`) that mimics
  * the native HybridObject's contract. We can't load the real Nitro module
  * in bun tests (no JSI), so the test isolates the surface we control:
@@ -46,7 +46,7 @@ import { p256 } from '@noble/curves/nist.js';
 import type {
   SpruceDid,
   SpruceDidEvent,
-} from '@solidarity/nitro-spruce-did';
+} from '@solidarity/nitro-keystone';
 
 /** Local alias for the HybridObject interface so `equals(other)` typechecks. */
 type HybridLike = SpruceDid;
@@ -86,6 +86,16 @@ class InMemorySpruceDidDriver implements SpruceDid {
     return Promise.resolve(this.keyAuthModeResult);
   }
 
+  /** Reasons the JS gate primed the native sign session with (iOS path). */
+  readonly sessionPrimes: string[] = [];
+
+  primeSignSession(reason: string): Promise<string> {
+    this.sessionPrimes.push(reason);
+    return Promise.resolve('');
+  }
+
+  resetSignSession(): void {}
+
   // ---- Dual-key-under-one-tag modeling (key-resolution invariant) -----------
   // The native iOS fix (`SpruceDidKeyStore.copyECPrivateKey`) deterministically
   // resolves ONE physical key per alias for BOTH `getPublicKeyJwk` and
@@ -93,7 +103,7 @@ class InMemorySpruceDidDriver implements SpruceDid {
   // iCloud-synced copy + a stale Secure-Enclave key). The pre-fix lookup used
   // `kSecAttrSynchronizableAny` + `kSecMatchLimitOne`, which could return a
   // DIFFERENT entry per call → the bound device pubkey and the signer disagree
-  // → the OpenAC device-binding (and the ZK proof that consumes it) fail. The
+  // → a raw signature no longer verifies under its own `publicKeyRaw`. The
   // default driver stores one keypair per alias, so it cannot exercise that
   // divergence; this models it explicitly.
 
@@ -292,7 +302,7 @@ class InMemorySecureStore {
 const sharedSecureStore = new InMemorySecureStore();
 const authCalls: string[] = [];
 
-// Replace expo-secure-store and @solidarity/nitro-spruce-did with stubs.
+// Replace expo-secure-store and @solidarity/nitro-keystone with stubs.
 // Use bun's `mock.module()` so the imports inside `signingKey.ts` resolve to
 // these stubs at test time. Note we MUST install these mocks before the
 // signingKey module gets required for the first time.
@@ -337,7 +347,7 @@ function rawBigEndianToBigInt(bytes: Uint8Array): bigint {
 // Mock the native module's `getSpruceDid()` factory so any code that
 // imports the package directly (rather than going through the
 // __SPRUCE_DID_TEST_DRIVER__ slot) still gets our stub.
-mock.module('@solidarity/nitro-spruce-did', () => ({
+mock.module('@solidarity/nitro-keystone', () => ({
   getSpruceDid: () => driver as unknown as SpruceDid,
 }));
 
@@ -347,10 +357,8 @@ const {
   ensureSigningKey,
   hasExistingSigningKey,
   listSyncableSigningKeys,
-  publicRawP256ForCurrentIdentity,
   publicJwk,
   resolveSigningKeyConflict,
-  signOpenAcDeviceBindingDigest,
   signRawEs256,
   signJwt,
   deleteSigningKey,
@@ -435,14 +443,6 @@ describe('SpruceID DID Nitro module — JS-side wiring', () => {
     expect(did).toBe(didKeyFromJwk(jwk));
   });
 
-  it('publicRawP256ForCurrentIdentity exposes x||y without signing', async () => {
-    const jwk = await publicJwk();
-    const raw = await publicRawP256ForCurrentIdentity();
-
-    expect(raw.length).toBe(64);
-    expect(raw).toEqual(jwkToPublicKey(jwk).slice(1));
-  });
-
   it('signJwt round-trips through verifyJwtEs256 with the stored public key', async () => {
     const jwk = await publicJwk();
     const jwt = await signJwt(
@@ -472,32 +472,37 @@ describe('SpruceID DID Nitro module — JS-side wiring', () => {
     ).toBe(true);
   });
 
-  it('signOpenAcDeviceBindingDigest signs the raw 32-byte nonce_hash digest', async () => {
-    const nonceHash = utf8ToBytes('openac_device_binding_nonce_hash');
-    const { signature, publicKeyRaw } = await signOpenAcDeviceBindingDigest(nonceHash);
-    const jwk = await publicJwk();
-
-    expect(signature.length).toBe(64);
-    expect(publicKeyRaw.length).toBe(64);
-    expect(publicKeyRaw).toEqual(jwkToPublicKey(jwk).slice(1));
-    expect(rawBigEndianToBigInt(signature.slice(32))).toBeLessThanOrEqual(
-      P256_N / 2n
-    );
-    expect(
-      p256.verify(signature, nonceHash, jwkToPublicKey(jwk), { prehash: false })
-    ).toBe(true);
-  });
-
-  it('skips the JS prompt when the driver reports native-acl (single-layer gate)', async () => {
+  it('skips the JS prompt for a native-acl key with no shareable session (Android)', async () => {
     driver.keyAuthModeResult = 'native-acl';
+    (globalThis as { __SPRUCE_DID_TEST_PLATFORM__?: string }).__SPRUCE_DID_TEST_PLATFORM__ = 'android';
     try {
       const nonceHash = new Uint8Array(32).fill(9);
-      const { signature } = await signOpenAcDeviceBindingDigest(nonceHash);
+      const { signature } = await signRawEs256(nonceHash);
       expect(signature.length).toBe(64);
       // The legacy SE key's keychain ACL prompts inside the native sign —
       // stacking the JS prompt on top was the "Face ID twice" bug.
       expect(authCalls.length).toBe(0);
+      expect(driver.sessionPrimes.length).toBe(0);
     } finally {
+      delete (globalThis as { __SPRUCE_DID_TEST_PLATFORM__?: string }).__SPRUCE_DID_TEST_PLATFORM__;
+      driver.keyAuthModeResult = 'js-gated';
+      await resetSigningKeyForTesting();
+    }
+  });
+
+  it('native-acl key on iOS: one JS prompt primes the native context and covers the next sign', async () => {
+    driver.keyAuthModeResult = 'native-acl';
+    driver.sessionPrimes.length = 0;
+    (globalThis as { __SPRUCE_DID_TEST_PLATFORM__?: string }).__SPRUCE_DID_TEST_PLATFORM__ = 'ios';
+    try {
+      await signRawEs256(new Uint8Array(32).fill(5));
+      await signRawEs256(new Uint8Array(32).fill(6));
+      // The live prompt ran ON the native sign context (so the keychain ACL
+      // does not ask again), once, and no second expo sheet was stacked.
+      expect(driver.sessionPrimes.length).toBe(1);
+      expect(authCalls.length).toBe(0);
+    } finally {
+      delete (globalThis as { __SPRUCE_DID_TEST_PLATFORM__?: string }).__SPRUCE_DID_TEST_PLATFORM__;
       driver.keyAuthModeResult = 'js-gated';
       await resetSigningKeyForTesting();
     }
@@ -508,7 +513,7 @@ describe('SpruceID DID Nitro module — JS-side wiring', () => {
     (driver as unknown as { keyAuthMode?: unknown }).keyAuthMode = undefined;
     try {
       const nonceHash = new Uint8Array(32).fill(7);
-      await signOpenAcDeviceBindingDigest(nonceHash);
+      await signRawEs256(nonceHash);
       expect(authCalls.length).toBe(1);
     } finally {
       (driver as unknown as { keyAuthMode?: unknown }).keyAuthMode = original;
@@ -516,18 +521,17 @@ describe('SpruceID DID Nitro module — JS-side wiring', () => {
     }
   });
 
-  it('signOpenAcDeviceBindingDigest is biometric-gated and reuses the sign grace in-session', async () => {
-    const nonceHash = utf8ToBytes('openac_device_binding_nonce_hash');
+  it('signRawEs256 is biometric-gated and reuses the sign grace in-session', async () => {
+    const nonceHash = utf8ToBytes('raw-signature-payload');
 
-    // The passport device-binding signature is a real `'sign'` op, so the
-    // first call authorizes Face ID once…
-    await signOpenAcDeviceBindingDigest(nonceHash);
+    // A raw signature is a real `'sign'` op, so the first call authorizes
+    // Face ID once…
+    await signRawEs256(nonceHash);
     expect(authCalls.length).toBe(1);
 
     // …and a second sign in the same session rides the 5-minute `'sign'`
-    // grace instead of re-prompting (the OpenAC v3 proof reuses that one
-    // authorization rather than bypassing biometrics).
-    const { signature, publicKeyRaw } = await signOpenAcDeviceBindingDigest(nonceHash);
+    // grace instead of re-prompting.
+    const { signature, publicKeyRaw } = await signRawEs256(nonceHash);
     expect(authCalls.length).toBe(1);
 
     const jwk = await publicJwk();
@@ -537,7 +541,7 @@ describe('SpruceID DID Nitro module — JS-side wiring', () => {
       P256_N / 2n
     );
     expect(
-      p256.verify(signature, nonceHash, jwkToPublicKey(jwk), { prehash: false })
+      p256.verify(signature, sha256Bytes(nonceHash), jwkToPublicKey(jwk), { prehash: false })
     ).toBe(true);
   });
 
@@ -628,8 +632,8 @@ describe('SpruceID DID Nitro module — JS-side wiring', () => {
     expect(await driver.listSyncableP256Keys('solidarity.master.v2')).toBe('[]');
   });
 
-  // The OpenAC device binding (and the ZK proof that consumes it) is only safe
-  // if the pubkey it binds is the pubkey of the key that signs. `signingKey.ts`
+  // A raw signature plus its `publicKeyRaw` (selective-disclosure proofs) is
+  // only safe if the returned pubkey is the pubkey of the key that signs. `signingKey.ts`
   // takes `publicKeyRaw` from `getPublicKeyJwk` and the signature from
   // `signRawP256` — two SEPARATE native calls on the same alias. The iOS fix
   // (`SpruceDidKeyStore.copyECPrivateKey`, deterministic `[true,false]`
@@ -661,13 +665,13 @@ describe('SpruceID DID Nitro module — JS-side wiring', () => {
 
       const nonceHash = new Uint8Array(32).fill(3);
       const { signature, publicKeyRaw } =
-        await signOpenAcDeviceBindingDigest(nonceHash);
+        await signRawEs256(nonceHash);
 
       // CRUX: the returned pubkey verifies its OWN signature. Checking against
       // `publicKeyRaw` directly (not a separately stored jwk) is what makes
       // this catch a pubkey/signer divergence.
       expect(
-        p256.verify(signature, nonceHash, uncompressedPoint(publicKeyRaw), {
+        p256.verify(signature, sha256Bytes(nonceHash), uncompressedPoint(publicKeyRaw), {
           prehash: false,
         })
       ).toBe(true);
@@ -685,11 +689,11 @@ describe('SpruceID DID Nitro module — JS-side wiring', () => {
 
       const nonceHash = new Uint8Array(32).fill(4);
       const { signature, publicKeyRaw } =
-        await signOpenAcDeviceBindingDigest(nonceHash);
+        await signRawEs256(nonceHash);
 
       // The bound pubkey cannot verify the phantom's signature…
       expect(
-        p256.verify(signature, nonceHash, uncompressedPoint(publicKeyRaw), {
+        p256.verify(signature, sha256Bytes(nonceHash), uncompressedPoint(publicKeyRaw), {
           prehash: false,
         })
       ).toBe(false);

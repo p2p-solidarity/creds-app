@@ -46,6 +46,11 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const appRoot = path.resolve(__dirname, '..');
+// Bun hoists node_modules to the repo root, above appRoot. With the default
+// base (appRoot) bare-pack keys those modules as `/../../node_modules/...`,
+// which the runtime normalises to `/node_modules/...` and cannot find in the
+// bundle: the worklet aborted the app on load (request proof, 2026-10-31).
+const repoRoot = path.resolve(appRoot, '..', '..');
 const entry = path.join(appRoot, 'pear', 'worklet', 'index.js');
 const outDir = path.join(appRoot, 'pear', 'worklet', 'dist');
 const out = path.join(outDir, 'index.bundle.js');
@@ -73,7 +78,7 @@ mkdirSync(outDir, { recursive: true });
 
 const args = ['bare-pack'];
 for (const host of HOSTS) args.push('--host', host);
-args.push('--linked', '--out', out, entry);
+args.push('--linked', '--base', repoRoot, '--out', out, entry);
 
 console.log(`pack-pear-worklet: npx ${args.join(' ')}`);
 try {

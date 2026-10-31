@@ -32,6 +32,7 @@ import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 
+import { InfoButton } from '@/components/common/InfoSheet';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { shortDid } from '@/components/id/shortDid';
 import { VerifiedProfileView } from '@/components/scan/VerifiedProfileView';
@@ -87,7 +88,7 @@ function DisabledPearConnectSection(): ReactNode {
           variant="secondary"
           fullWidth
           onPress={() => {
-            router.push('/settings/connections');
+            router.push('/settings');
           }}
         />
       </ThemedSurface>
@@ -115,10 +116,24 @@ function EnabledPearConnectSection({ did }: PearConnectSectionProps): ReactNode 
 
   return (
     <View style={{ gap: 16 }}>
-      <ThemedText variant="titleMedium">{t('pearConnect.title')}</ThemedText>
-      <ThemedText variant="bodyMedium" tone="secondary">
-        {t('pearConnect.subtitle', { did: shortDid(did) })}
-      </ThemedText>
+      <View style={{ gap: 6 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <ThemedText variant="titleMedium" style={{ flex: 1 }}>
+            {t('pearConnect.title')}
+          </ThemedText>
+          <InfoButton title={t('pearConnect.title')} body={t('pearConnect.info')} />
+        </View>
+        {/* State, not a paragraph: who this claims to be, and that it is
+            unproven until the handshake says otherwise. Allowed to wrap —
+            "unverified" must never be ellipsized away; `shortDid` already
+            keeps the did itself short. */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <SfIcon name="shield" size={14} color={Colors.text3} />
+          <ThemedText variant="bodySmall" tone="secondary" style={{ flex: 1 }}>
+            {t('pearConnect.subtitle', { did: shortDid(did) })}
+          </ThemedText>
+        </View>
+      </View>
 
       <ThemedSurface variant="outlined" padded style={{ gap: 12 }}>
         <ThemedButton
@@ -127,7 +142,7 @@ function EnabledPearConnectSection({ did }: PearConnectSectionProps): ReactNode 
           fullWidth
           loading={busy}
           disabled={busy}
-          leadingIcon={<SfIcon name="lock.shield" size={16} color={Colors.pageBg} />}
+          icon="lock.shield"
           onPress={() => {
             requestFlow.start();
           }}
@@ -150,7 +165,7 @@ function EnabledPearConnectSection({ did }: PearConnectSectionProps): ReactNode 
               variant="secondary"
               fullWidth
               loading={saving}
-              leadingIcon={<SfIcon name="person.badge.plus" size={16} color={Colors.text1} />}
+              icon="person.badge.plus"
               onPress={onSave}
             />
           </View>

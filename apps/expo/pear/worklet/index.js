@@ -198,6 +198,17 @@ function sendToRN(obj) {
   }
 }
 
+// Bare's default for an unhandled rejection / uncaught exception is
+// `abort()`, which kills the WHOLE app, not just this worklet (crash
+// 2026-10-30: request/exchange card and request proof aborted on a
+// hyperswarm-internal rejection). Report it to RN as a topic-less error
+// instead; the lane's own join timeout still surfaces the failure.
+function reportFatal(kind, error) {
+  sendToRN({ t: '_ctrl', topic: '', ev: 'error', message: kind + ': ' + (error && error.message ? error.message : String(error)) })
+}
+Bare.on('unhandledRejection', (reason) => { reportFatal('unhandledRejection', reason) })
+Bare.on('uncaughtException', (error) => { reportFatal('uncaughtException', error) })
+
 // ---------------------------------------------------------------------
 // RN -> worklet control commands
 // ---------------------------------------------------------------------

@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedSurface, ThemedText } from '@/components/themed';
 import { useThemeColors } from '@/constants/useThemeColors';
+import { Radius } from '@/constants/radius';
 import { useTranslation } from '@/i18n';
 import type { HttpsOwnershipEvidence } from '@/profile/httpsOwnership';
 
@@ -23,13 +24,13 @@ export function HttpsOwnershipCard({
       : 'nostrConnect.httpsSetup';
 
   return (
-    <ThemedSurface variant="outlined" className="rounded-none p-3">
+    <ThemedSurface variant="outlined" className="p-3">
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
         <View
           style={{
             width: 32,
             height: 32,
-            borderRadius: 10,
+            borderRadius: Radius.card,
             alignItems: 'center',
             justifyContent: 'center',
             backgroundColor: c.searchBg,

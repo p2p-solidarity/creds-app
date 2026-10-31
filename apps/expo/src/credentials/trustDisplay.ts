@@ -23,15 +23,17 @@ export interface CredentialTrustDisplay {
     | 'credentialDetail.levelL3Plus';
 }
 
-export function passportTrustLevelFromProof(passportLevel: string): TrustLevel {
-  switch (passportLevel) {
-    case 'green':
-      return 'L3+';
-    case 'blue':
-      return 'L3';
-    default:
-      return 'L1';
-  }
+/**
+ * Tags of passport records saved by the retired ZK path (docs/ref/11 P2).
+ * Their proofs were never bound to an issuing state, so they no longer earn a
+ * level: the user is asked to scan the passport again.
+ */
+const RETIRED_PASSPORT_PROOF_TAGS = ['passport-openac-v3', 'passport-noir', 'mopro-noir', 'sd-jwt-fallback'];
+
+export function isRetiredPassportCredential(subject: CredentialTrustSubject): boolean {
+  if (!isPassportSubject(subject)) return false;
+  const tags = subject.metadataTags?.map((tag) => tag.toLowerCase()) ?? [];
+  return tags.some((tag) => RETIRED_PASSPORT_PROOF_TAGS.includes(tag));
 }
 
 export function credentialTrustDisplayFor(
@@ -52,11 +54,8 @@ export function credentialTrustDisplayLevelFor(
   if (!isPassportSubject(subject)) {
     return subject.trustLevel;
   }
-  if (hasPassportFallbackEvidence(subject)) {
+  if (isRetiredPassportCredential(subject) || hasPassportFallbackEvidence(subject)) {
     return 'L1';
-  }
-  if (subject.trustLevel === 'L2') {
-    return 'L3';
   }
   return subject.trustLevel;
 }
@@ -76,9 +75,9 @@ export function credentialTrustToneForLevel(level: TrustLevel): TrustDisplayTone
 export function credentialTrustLabelForLevel(level: TrustLevel): string {
   switch (level) {
     case 'L3+':
-      return 'Level 3+ - Passport ZK + AA';
+      return 'Level 3+ - Passport';
     case 'L3':
-      return 'Level 3 - Passport ZK (No AA)';
+      return 'Level 3 - Device-attested passport';
     case 'L2':
       return 'Level 2 - Verified';
     default:

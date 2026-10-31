@@ -16,12 +16,6 @@ function dependencies(
       calls.push(path);
       if (path === failingPath) throw new Error('private filesystem detail');
     },
-    deleteVaultFiles: async () => {
-      calls.push('vault');
-      return failingPath === 'vault'
-        ? { ok: false, error: { kind: 'storageFailed' } }
-        : { ok: true, value: undefined };
-    },
     deleteCacheDatabase: async () => {
       calls.push('sqlite');
       return failingPath === 'sqlite'
@@ -43,10 +37,12 @@ describe('deleteProductionFiles', () => {
       'file:///documents/images/',
       'file:///documents/wallet/',
       'file:///cache/wallet/',
+      'file:///cache/creds_vcs.json',
+      'file:///cache/creds-contacts.vcf',
       'file:///cache/solidarity_vcs.json',
       'file:///cache/solidarity-contacts.vcf',
       'file:///cache/solidarity-qr.png',
-      'vault',
+      'file:///documents/vault/',
       'sqlite',
     ]));
   });
@@ -58,7 +54,7 @@ describe('deleteProductionFiles', () => {
       dependencies(calls, 'file:///documents/images/'),
     );
 
-    expect(calls).toContain('vault');
+    expect(calls).toContain('file:///documents/vault/');
     expect(calls).toContain('sqlite');
     expect(result).toEqual({
       ok: false,

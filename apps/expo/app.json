@@ -5,11 +5,12 @@
     "owner": "kidney",
     "icon": "./assets/icon.png",
     "scheme": [
+      "credsid",
       "solidarity",
       "airmeishi",
       "openid-credential-offer"
     ],
-    "version": "1.3.3",
+    "version": "2.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -22,7 +23,9 @@
       "supportsTablet": true,
       "associatedDomains": [
         "applinks:solidarity.gg",
-        "applinks:creds.id"
+        "applinks:app.solidarity.gg",
+        "applinks:creds.id",
+        "webcredentials:creds.id"
       ],
       "entitlements": {
         "com.apple.developer.icloud-container-identifiers": [
@@ -40,21 +43,48 @@
         ],
         "com.apple.developer.pass-type-identifiers": [
           "$(TeamIdentifierPrefix)pass.kidneyweakx.airmeishi"
-        ],
-        "aps-environment": "production"
+        ]
       },
       "infoPlist": {
-        "NSCameraUsageDescription": "Solidarity uses the camera to scan QR codes and passport MRZ.",
-        "NSContactsUsageDescription": "Solidarity can save business card information to your Contacts.",
-        "NFCReaderUsageDescription": "Solidarity reads your passport's NFC chip to verify identity.",
-        "NSFaceIDUsageDescription": "Solidarity uses Face ID to protect identity keys and authorize sensitive actions.",
-        "NSPhotoLibraryUsageDescription": "Solidarity saves QR codes and business card images to your Photo Library.",
+        "CFBundleDisplayName": "creds.id",
+        "NSCameraUsageDescription": "creds.id uses the camera to scan QR codes and passport MRZ.",
+        "NSContactsUsageDescription": "creds.id can save business card information to your Contacts.",
+        "NFCReaderUsageDescription": "creds.id reads your passport's NFC chip to verify identity.",
+        "NSFaceIDUsageDescription": "creds.id uses Face ID to protect identity keys and authorize sensitive actions.",
+        "NSPhotoLibraryUsageDescription": "creds.id lets you choose a photo from your library for your Page. The photo stays on this device.",
         "UIApplicationSupportsIndirectInputEvents": true,
-        "UIBackgroundModes": [
-          "remote-notification",
-          "fetch"
-        ],
         "ITSAppUsesNonExemptEncryption": false
+      },
+      "privacyManifests": {
+        "NSPrivacyTracking": false,
+        "NSPrivacyCollectedDataTypes": [
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeUserID",
+            "NSPrivacyCollectedDataTypeLinked": true,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": ["NSPrivacyCollectedDataTypePurposeAppFunctionality"]
+          },
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypePurchaseHistory",
+            "NSPrivacyCollectedDataTypeLinked": true,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": ["NSPrivacyCollectedDataTypePurposeAppFunctionality"]
+          }
+        ],
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": ["CA92.1", "C56D.1"]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
+            "NSPrivacyAccessedAPITypeReasons": ["C617.1"]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategorySystemBootTime",
+            "NSPrivacyAccessedAPITypeReasons": ["35F9.1"]
+          }
+        ]
       },
       "appleTeamId": "538MCM44UX"
     },
@@ -62,7 +92,7 @@
       "package": "gg.solidarity.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#FFFFFF"
+        "backgroundColor": "#010414"
       },
       "permissions": [
         "android.permission.CAMERA",
@@ -70,15 +100,16 @@
         "android.permission.WRITE_CONTACTS",
         "android.permission.USE_BIOMETRIC",
         "android.permission.NFC",
-        "android.permission.INTERNET",
-        "android.permission.POST_NOTIFICATIONS"
+        "android.permission.INTERNET"
       ],
       "blockedPermissions": [
         "android.permission.READ_MEDIA_IMAGES",
         "android.permission.READ_MEDIA_VIDEO",
         "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
         "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE"
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.POST_NOTIFICATIONS"
       ],
       "intentFilters": [
         {
@@ -87,6 +118,10 @@
             {
               "scheme": "https",
               "host": "solidarity.gg"
+            },
+            {
+              "scheme": "https",
+              "host": "app.solidarity.gg"
             },
             {
               "scheme": "https",
@@ -103,38 +138,52 @@
     },
     "plugins": [
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "creds.id lets you choose a photo from your library for your Page. The photo stays on this device.",
+          "cameraPermission": "creds.id uses the camera to scan QR codes and passport MRZ.",
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "enableRemoteNotifications": false,
+          "enableBackgroundRemoteNotifications": false
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "creds.id uses the camera to scan QR codes and passport MRZ.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
+      [
         "expo-router",
         {
-          "origin": "https://solidarity.gg"
+          "origin": "https://creds.id"
         }
       ],
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#000000",
-          "image": "./assets/splash-icon.png",
-          "imageWidth": 220,
-          "resizeMode": "contain",
+          "backgroundColor": "#FBF9F2",
           "dark": {
-            "backgroundColor": "#000000",
-            "image": "./assets/splash-icon.png"
-          },
-          "ios": {
-            "enableFullScreenImage_legacy": true,
-            "image": "./assets/splash.png",
-            "tabletImage": "./assets/splash.png",
-            "resizeMode": "cover",
-            "backgroundColor": "#000000"
+            "backgroundColor": "#060417"
           },
           "android": {
-            "image": "./assets/splash-icon.png",
-            "backgroundColor": "#000000"
+            "image": "./assets/splash-android-transparent.png",
+            "backgroundColor": "#FBF9F2",
+            "dark": {
+              "backgroundColor": "#060417"
+            }
           }
         }
       ],
       "expo-localization",
       "expo-secure-store",
-      "expo-notifications",
       [
         "expo-build-properties",
         {
@@ -144,29 +193,52 @@
           },
           "android": {
             "minSdkVersion": 29,
-            "compileSdkVersion": 36,
-            "targetSdkVersion": 36
+            "compileSdkVersion": 37,
+            "targetSdkVersion": 36,
+            "useLegacyPackaging": true
           }
         }
       ],
       "./plugins/withXcodeCloudScripts.js",
-      "./plugins/withMoproBindingsPod.js",
+      "./plugins/withPrecompiledVisionCameraResizerMetal.js",
+      "./plugins/withExpoModulesJsiPatches.js",
       "./plugins/withSemaphoreBindingsPod.js",
       "./plugins/withRustXcframeworkSearchPath.js",
       "./plugins/withDisableClangExplicitModules.js",
+      "./plugins/withIosDeploymentTarget.js",
       "./plugins/withNfcReader.js",
-      "./plugins/withPassportOpenAcSrsPhase.js",
       "./plugins/withIosBuildNumber.js",
       "./plugins/withAndroidReleaseSigning.js",
-      "expo-sqlite"
+      ["./plugins/withAndroidDisplayName.js", { "name": "creds.id" }],
+      ["./plugins/withAndroidAssetStatements.js", { "sites": ["creds.id"] }],
+      "expo-sqlite",
+      "expo-asset",
+      "expo-image",
+      "expo-sharing",
+      "expo-web-browser",
+      "expo-iap",
+      "expo-status-bar",
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/Inter-Regular.ttf",
+            "./assets/fonts/Inter-Medium.ttf",
+            "./assets/fonts/Inter-SemiBold.ttf",
+            "./assets/fonts/Inter-Bold.ttf",
+            "./assets/fonts/DMSans-SemiBold.ttf",
+            "./assets/fonts/DMSans-Bold.ttf"
+          ]
+        }
+      ]
     ],
-    "runtimeVersion": "1.3.3",
+    "runtimeVersion": "2.0.0",
     "updates": {
       "enabled": false
     },
     "extra": {
       "router": {
-        "origin": "https://solidarity.gg"
+        "origin": "https://creds.id"
       },
       "eas": {
         "projectId": "425c3486-6541-4fad-a5d5-182bb340c7b0"

@@ -36,7 +36,7 @@
  * SecureStore/biometric access is lazy-loaded + injectable in the first
  * place — see that module's doc). Do not add `mock.module` calls here.
  */
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, setSystemTime } from 'bun:test';
 
 import {
   didKeyFromPublicKey,
@@ -148,6 +148,10 @@ interface RootKeyMod {
   >;
   readonly getRootSigner: () => Promise<
     | { readonly ok: true; readonly value: Signer }
+    | { readonly ok: false; readonly error: { readonly kind: string } }
+  >;
+  readonly readMnemonicForKeyDerivation: () => Promise<
+    | { readonly ok: true; readonly value: string }
     | { readonly ok: false; readonly error: { readonly kind: string } }
   >;
   readonly revealMnemonicForExport: () => Promise<
@@ -271,7 +275,74 @@ describe('getRootSigner — Phase A1 conformance contract', () => {
     nextBiometricSuccess = false;
     const digest = new Uint8Array(32).fill(7);
     await expect(signerResult.value(digest)).rejects.toThrow();
-    expect(biometricCalls).toContain('sign');
+    expect(biometricCalls).toContain('presentProof');
+  });
+});
+
+describe('getRootSigner — one authorization per user intent (2026-10-30)', () => {
+  // Failure modes: (a) a three-projection Page save asks three times; (b) the
+  // reuse leaks to ANOTHER intent's signer; (c) a long-lived signer (Pear
+  // connection) keeps signing silently forever; (d) a denied first call is
+  // remembered as authorized.
+  async function signer(): Promise<Signer> {
+    const r = await mod.getRootSigner();
+    if (!r.ok) throw new Error('no signer');
+    return r.value;
+  }
+
+  it('one signer asks once for the signatures of its own intent', async () => {
+    await mod.createFromFreshMnemonic();
+    const sign = await signer();
+    for (let i = 0; i < 3; i += 1) await sign(new Uint8Array(32).fill(i));
+    expect(biometricCalls).toEqual(['presentProof']);
+  });
+
+  it('a second signer (another intent) asks again', async () => {
+    await mod.createFromFreshMnemonic();
+    await (await signer())(new Uint8Array(32).fill(1));
+    await (await signer())(new Uint8Array(32).fill(2));
+    expect(biometricCalls).toEqual(['presentProof', 'presentProof']);
+  });
+
+  it('the reuse expires: a signer held past the intent window asks again', async () => {
+    await mod.createFromFreshMnemonic();
+    const sign = await signer();
+    await sign(new Uint8Array(32).fill(1));
+    setSystemTime(new Date(Date.now() + 61_000));
+    try {
+      await sign(new Uint8Array(32).fill(2));
+    } finally {
+      setSystemTime();
+    }
+    expect(biometricCalls).toEqual(['presentProof', 'presentProof']);
+  });
+
+  it('a denied first call is not remembered as authorized', async () => {
+    await mod.createFromFreshMnemonic();
+    const sign = await signer();
+    nextBiometricSuccess = false;
+    await expect(sign(new Uint8Array(32).fill(1))).rejects.toThrow();
+    nextBiometricSuccess = true;
+    await sign(new Uint8Array(32).fill(2));
+    expect(biometricCalls).toEqual(['presentProof', 'presentProof']);
+  });
+});
+
+describe('readMnemonicForKeyDerivation', () => {
+  it('uses the access-level gate, not the red-line reveal', async () => {
+    const created = await mod.createFromFreshMnemonic();
+    if (!created.ok) throw new Error('create');
+    const r = await mod.readMnemonicForKeyDerivation();
+    expect(r.ok && r.value).toBe(created.value.mnemonic);
+    expect(biometricCalls).toEqual(['presentProof']);
+  });
+
+  it('denies without reading storage when the gate fails', async () => {
+    await mod.createFromFreshMnemonic();
+    nextBiometricSuccess = false;
+    const r = await mod.readMnemonicForKeyDerivation();
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error.kind).toBe('biometricDenied');
   });
 });
 
@@ -379,7 +450,7 @@ describe('revealMnemonicForExport', () => {
     expect(r.ok).toBe(false);
     if (r.ok) return;
     expect(r.error.kind).toBe('biometricDenied');
-    expect(biometricCalls).toContain('export');
+    expect(biometricCalls).toContain('revealRecoveryBundle');
   });
 
   it('returns the exact persisted mnemonic when biometric succeeds', async () => {
@@ -581,8 +652,8 @@ describe('getPortableBackupKey', () => {
     expect(a.value.length).toBe(32);
     expect(Buffer.from(a.value).toString('hex')).toBe(Buffer.from(b.value).toString('hex'));
     // No Face ID prompt — background backups must not gate on biometrics.
-    expect(biometricCalls).not.toContain('sign');
-    expect(biometricCalls).not.toContain('export');
+    expect(biometricCalls).not.toContain('presentProof');
+    expect(biometricCalls).not.toContain('revealRecoveryBundle');
   });
 
   it('matches the shared derivation vector for a pinned phrase', async () => {

@@ -10,12 +10,12 @@
  *
  * `apps/expo/src/keychain/signingKey.ts` already provisions a DIFFERENT
  * did:key (`ensureSigningKey()` / `didKeyForCurrentIdentity()`), backed by
- * the SpruceID Nitro module (`@solidarity/nitro-spruce-did`). That key is:
+ * the SpruceID Nitro module (`@solidarity/nitro-keystone`). That key is:
  *   - randomly generated natively (not derivable from a mnemonic — the
  *     private material never leaves the platform Keychain/Keystore),
  *   - ALREADY stored as an iCloud-Keychain-synchronizable item on iOS
  *     (`kSecAttrSynchronizable = true`, no biometry ACL — see
- *     `nitro-modules/spruce-did/ios/SpruceDidKeyStore.swift:119`),
+ *     `nitro-modules/keystone/ios/SpruceDidKeyStore.swift:119`),
  *   - the identity every existing screen reads today (`dids.tsx`,
  *     `useIdentityCoordinator`, card/credential signing, challenge
  *     responses, …).
@@ -40,7 +40,7 @@
  *
  * `enableICloudBackup()` (below) is a SEPARATE, ADDITIVE write: it copies
  * the already-persisted mnemonic into an iCloud-Keychain-SYNCHRONIZABLE
- * item via `@solidarity/nitro-secrets-vault`'s `setSynchronizableItem`
+ * item via `@solidarity/nitro-keystone`'s `setSynchronizableItem`
  * (iOS: `kSecAttrSynchronizable=true`, `kSecAttrAccessibleWhenUnlocked`, no
  * biometry ACL — see that module's doc; task A1.5). It does NOT replace or
  * gate the local copy — the local copy is the durable source of truth this
@@ -51,7 +51,7 @@
  * `enableICloudBackup()` resolves `ok(...)` — never on intent alone.
  *
  * Face ID gating happens at the SIGNING/EXPORT CALL layer
- * (`requireBiometric('sign'|'export')`), never via a Keychain ACL — this is
+ * (`requireSensitiveAction('presentProof'|'revealRecoveryBundle')`), never via a Keychain ACL — this is
  * required regardless of the sync gap (a synchronizable item can't carry a
  * biometry access-control instance either), so the design does not change
  * once real sync lands.
@@ -64,6 +64,8 @@
  * for tests (`__setRootKeyStorageForTesting`).
  */
 import { p256 } from '@noble/curves/nist.js';
+import { sha256 } from '@noble/hashes/sha2.js';
+import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js';
 // Type-only — the runtime binding is loaded lazily (see `loadSecureStore`)
 // so importing this module in tests never eagerly pulls in the real
 // `expo-secure-store` (which transitively requires React Native's Flow-
@@ -91,7 +93,9 @@ import {
   err,
   generateMnemonic,
   ok,
+  base64UrlEncode,
   publicKeyFromPrivate,
+  signCompact,
   type Result,
   type Signer,
 } from '@solidarity/shared';
@@ -159,7 +163,7 @@ export interface RootKeySyncStorage {
 
 /**
  * Lazy-loaded for the same reason as `loadSecureStore` above: importing
- * `@solidarity/nitro-secrets-vault` eagerly would pull in
+ * `@solidarity/nitro-keystone` eagerly would pull in
  * `react-native-nitro-modules`' native binding at module-load time, which
  * has no counterpart in the bun test runtime. Every real call site resolves
  * it on first use; tests inject `__setRootKeySyncStorageForTesting` instead.
@@ -169,7 +173,7 @@ async function loadSecretsVault(): Promise<{
   readonly getSynchronizableItem: (alias: string) => Promise<string>;
   readonly deleteSynchronizableItem: (alias: string) => Promise<void>;
 }> {
-  const { getSecretsVault } = await import('@solidarity/nitro-secrets-vault');
+  const { getSecretsVault } = await import('@solidarity/nitro-keystone');
   return getSecretsVault();
 }
 
@@ -245,11 +249,42 @@ export function __setRootKeySyncStorageForTesting(storage: RootKeySyncStorage | 
  * needing a global `mock.module` (which would otherwise leak into every
  * other test file in the same `bun test` process — see the module doc).
  */
-export type BiometricGate = (reason: 'sign' | 'export') => Promise<boolean>;
+/**
+ * The two gate points in this module, named by SensitiveAction so the user's
+ * gate mode governs them:
+ *   - `presentProof`        — signing with the root key (access-level).
+ *   - `revealRecoveryBundle` — revealing the mnemonic. RED LINE: it hands over
+ *     the master secret, so it authenticates in every mode.
+ * These used to share the generic `'export'` reason with VC export, which made
+ * it impossible to treat the two differently.
+ */
+export type RootKeyGateAction = 'presentProof' | 'revealRecoveryBundle';
+export type BiometricGate = (action: RootKeyGateAction) => Promise<boolean>;
 
-async function defaultBiometricGate(reason: 'sign' | 'export'): Promise<boolean> {
-  const { requireBiometric } = await import('@/keychain/biometric');
-  return requireBiometric(reason);
+const ROOT_KEY_PROMPTS: Readonly<Record<RootKeyGateAction, readonly [string, string]>> = {
+  presentProof: ['security.prompt.presentProof', 'Authenticate to sign with your identity key.'],
+  revealRecoveryBundle: [
+    'security.prompt.revealRecoveryBundle',
+    'Authenticate to open recovery data.',
+  ],
+};
+
+async function rootKeyPrompt(action: RootKeyGateAction): Promise<string> {
+  const [key, fallback] = ROOT_KEY_PROMPTS[action];
+  try {
+    const { translate } = await import('@/i18n');
+    return translate(key, fallback);
+  } catch {
+    // `@/i18n` pulls expo-localization -> expo-modules-core. A prompt string is
+    // never worth failing the recovery ceremony over — fall back to English.
+    return fallback;
+  }
+}
+
+async function defaultBiometricGate(action: RootKeyGateAction): Promise<boolean> {
+  const { requireSensitiveAction } = await import('@/keychain/biometricGatekeeper');
+  const gate = await requireSensitiveAction(action, await rootKeyPrompt(action));
+  return gate.success;
 }
 
 let activeBiometricGate: BiometricGate = defaultBiometricGate;
@@ -386,6 +421,14 @@ async function importFromMnemonicAtEpoch(
   return ok({ did: didResult.value });
 }
 
+/**
+ * Last derived root DID, keyed by a SHA-256 of the stored phrase (never the
+ * phrase). BIP-39 PBKDF2 runs in JS and takes seconds on Android, and many
+ * screens read the DID; the key check keeps an import or wipe from serving a
+ * stale DID. Holds only public data.
+ */
+let rootDidMemo: { readonly phraseDigest: string; readonly did: string } | null = null;
+
 /** Resolve the currently-provisioned root did:key. */
 export async function getRootDid(): Promise<Result<string, RootKeyError>> {
   let mnemonic: string | null;
@@ -395,7 +438,11 @@ export async function getRootDid(): Promise<Result<string, RootKeyError>> {
     return err(toStorageError(e));
   }
   if (!mnemonic) return err({ kind: 'notProvisioned' });
-  return deriveDidFromMnemonic(mnemonic);
+  const phraseDigest = bytesToHex(sha256(utf8ToBytes(mnemonic)));
+  if (rootDidMemo?.phraseDigest === phraseDigest) return ok(rootDidMemo.did);
+  const derived = deriveDidFromMnemonic(mnemonic);
+  if (derived.ok) rootDidMemo = { phraseDigest, did: derived.value };
+  return derived;
 }
 
 /** Whether a root key has been provisioned on this device. */
@@ -406,6 +453,9 @@ export async function hasRootKey(): Promise<boolean> {
     return false;
   }
 }
+
+/** How long one root signer's authorization covers its own later signatures. */
+const ROOT_SIGNER_INTENT_MS = 60_000;
 
 /**
  * Face-ID-gated `Signer` for the root key (contract: `@solidarity/shared`'s
@@ -442,9 +492,19 @@ export async function getRootSigner(): Promise<Result<Signer, RootKeyError>> {
     return err({ kind: 'invalidMnemonic', message: e instanceof Error ? e.message : String(e) });
   }
 
+  // One user intent = one `getRootSigner()` call (a Page save signs three
+  // projections; a Pear connection signs its handshake). The signer authorizes
+  // once and reuses that for its own next signatures for at most
+  // ROOT_SIGNER_INTENT_MS, so "ask every time" means every action, not every
+  // signature (Kidney, 2026-10-30). Scoped to this instance — another call
+  // site's signer, a red-line action or a later intent still gates itself.
+  let authorizedAt: number | null = null;
   const signer: Signer = async (digest: Uint8Array): Promise<Uint8Array> => {
-    const allowed = await activeBiometricGate('sign');
-    if (!allowed) throw new Error('biometric authentication required');
+    if (authorizedAt === null || Date.now() - authorizedAt > ROOT_SIGNER_INTENT_MS) {
+      const allowed = await activeBiometricGate('presentProof');
+      if (!allowed) throw new Error('biometric authentication required');
+      authorizedAt = Date.now();
+    }
     // `{ prehash: false }` — `digest` is already the single-SHA-256 RFC 7515
     // signing-input digest computed by `signCompact`; @noble/curves'
     // default (`prehash: true`) would hash it a second time (the exact bug
@@ -456,14 +516,116 @@ export async function getRootSigner(): Promise<Result<Signer, RootKeyError>> {
 }
 
 /**
+ * The creds.id requests the root key may sign without its own Face ID sheet:
+ * owner-index writes and deletes of a root vault row, and dropping the Pro
+ * binding. Anything else is refused, so this can't become a general signer.
+ */
+const ROOT_REQUEST_TARGETS: readonly (readonly [string, RegExp])[] = [
+  ['PUT', /^\/vault\/root\/[A-Za-z0-9_-]{43}(\/owner)?$/u],
+  ['DELETE', /^\/vault\/root\/[A-Za-z0-9_-]{43}$/u],
+  ['DELETE', /^\/pro\/binding$/u],
+];
+
+/**
+ * `X-Creds-Signature` for one creds.id request (airmeishi-backend
+ * `src/lib/signedRequest.ts`): an ES256 JWS by the root did over
+ * `{aud, m, p, iat, jti}`, single-use and valid five minutes. Every delete —
+ * and every owner-index write, which decides who may delete later — needs it.
+ *
+ * No biometric gate of its own, like `readMnemonicForPasskeyConnection`: the
+ * passkey connect that uploads a row reads the mnemonic the same way, and
+ * account deletion already passed its one red-line gate (`rotateMasterKey`
+ * never arms the grace bucket, so `getRootSigner()` would ask again).
+ */
+export async function signRootRequest(
+  method: 'PUT' | 'DELETE',
+  path: string,
+): Promise<Result<string, RootKeyError>> {
+  if (!ROOT_REQUEST_TARGETS.some(([m, pattern]) => m === method && pattern.test(path))) {
+    return err({ kind: 'storageFailed', message: 'not a signable creds.id request' });
+  }
+  let mnemonic: string | null;
+  try {
+    mnemonic = await activeStorage.getMnemonic();
+  } catch (e) {
+    return err(toStorageError(e));
+  }
+  if (!mnemonic) return err({ kind: 'notProvisioned' });
+  const did = deriveDidFromMnemonic(mnemonic);
+  if (!did.ok) return did;
+  let scalar: Uint8Array;
+  try {
+    scalar = deriveP256Scalar(mnemonic, HKDF_INFO_ROOT);
+  } catch (e) {
+    return err({ kind: 'invalidMnemonic', message: e instanceof Error ? e.message : String(e) });
+  }
+  try {
+    const jti = base64UrlEncode(crypto.getRandomValues(new Uint8Array(18)));
+    const jws = await signCompact(
+      { aud: 'creds.id', m: method, p: path, iat: Math.floor(Date.now() / 1000), jti },
+      did.value,
+      (digest) => Promise.resolve(p256.sign(digest, scalar, { prehash: false })),
+    );
+    return ok(jws);
+  } catch (e) {
+    return err(toStorageError(e));
+  } finally {
+    scalar.fill(0);
+  }
+}
+
+/**
  * Export ceremony: Face-ID gate, then reveal the plaintext mnemonic. The
  * caller (settings/identity-export.tsx) is responsible for showing the
  * screenshot warning and never persisting the value outside this module's
  * own SecureStore-backed storage.
  */
 export async function revealMnemonicForExport(): Promise<Result<string, RootKeyError>> {
-  const allowed = await activeBiometricGate('export');
+  // RED LINE: the mnemonic IS the master secret, so this authenticates in
+  // every gate mode, including `redLineOnly`.
+  const allowed = await activeBiometricGate('revealRecoveryBundle');
   if (!allowed) return err({ kind: 'biometricDenied' });
+  let mnemonic: string | null;
+  try {
+    mnemonic = await activeStorage.getMnemonic();
+  } catch (e) {
+    return err(toStorageError(e));
+  }
+  if (!mnemonic) return err({ kind: 'notProvisioned' });
+  return ok(mnemonic);
+}
+
+/**
+ * Internal derivation read for the Nostr publishing key. The phrase never
+ * reaches UI — the caller derives a scalar and drops it — and `getRootSigner`
+ * already reads the same mnemonic under this ACCESS-LEVEL gate for every
+ * signature, so gating it as the red-line reveal added a second, ungraced
+ * prompt (restored identity: reveal + Page sign in one tap) and no protection
+ * (Kidney, 2026-10-30). Showing the phrase stays `revealMnemonicForExport`.
+ */
+export async function readMnemonicForKeyDerivation(): Promise<Result<string, RootKeyError>> {
+  const allowed = await activeBiometricGate('presentProof');
+  if (!allowed) return err({ kind: 'biometricDenied' });
+  let mnemonic: string | null;
+  try {
+    mnemonic = await activeStorage.getMnemonic();
+  } catch (e) {
+    return err(toStorageError(e));
+  }
+  if (!mnemonic) return err({ kind: 'notProvisioned' });
+  return ok(mnemonic);
+}
+
+/**
+ * Internal passkey-enrolment read. Unlike export, this does not show or hand
+ * the phrase to UI: the caller immediately seals it with a PRF output from a
+ * system passkey ceremony that requires user verification. Keep this out of
+ * the production identity barrel so ordinary feature code cannot treat it as
+ * a general-purpose secret accessor.
+ */
+export async function readMnemonicForPasskeyConnection(): Promise<
+  Result<string, RootKeyError>
+> {
   let mnemonic: string | null;
   try {
     mnemonic = await activeStorage.getMnemonic();

@@ -20,7 +20,7 @@
  */
 import { describe, expect, it } from 'bun:test';
 
-import type { NostrEvent, NostrFilter, SubscriptionHandle } from '@/dag/nostrAdapter';
+import type { NostrEvent, NostrFilter, SubscriptionHandle } from '@/nostr/nostrAdapter';
 import { fetchKind0FromRelays, makeKind0Fetcher } from '@/nostr/fetchKind0';
 
 type SubscribeEventsFn = (
@@ -95,6 +95,24 @@ describe('fetchKind0FromRelays', () => {
     if (!r) return;
     expect(r.contentJson).toEqual({ name: 'new' });
     expect(calls.sort()).toEqual(['a', 'b']);
+  });
+
+  it('rejects an event whose kind does not match the requested filter', async () => {
+    const wrongKind = { ...fakeEvent(PUBKEY, { name: 'forged' }, 300), kind: 1 };
+    const { fn } = makeFakeSubscribe({ a: [wrongKind] });
+
+    const r = await fetchKind0FromRelays(PUBKEY, ['a'], { subscribeEventsFn: fn });
+
+    expect(r).toBeNull();
+  });
+
+  it('rejects an event whose author does not match the requested filter', async () => {
+    const wrongAuthor = fakeEvent('f'.repeat(64), { name: 'forged' }, 300);
+    const { fn } = makeFakeSubscribe({ a: [wrongAuthor] });
+
+    const r = await fetchKind0FromRelays(PUBKEY, ['a'], { subscribeEventsFn: fn });
+
+    expect(r).toBeNull();
   });
 
   it('malformed JSON content resolves an empty-object contentJson, not a thrown error', async () => {

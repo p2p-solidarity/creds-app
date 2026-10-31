@@ -29,7 +29,7 @@ module.exports = {
         // Text — map to Color.Theme.textPrimary/Secondary/Tertiary
         text1: 'var(--color-text1, #2F2F30)',
         text2: 'var(--color-text2, #5F5E67)',
-        text3: 'var(--color-text3, #9C9AA6)',
+        text3: 'var(--color-text3, #6E6B7B)',
 
         // Accents — map to Color.Theme.accentRose/primaryBlue/destructive
         // NOTE: `primaryBlue` is brand mauve, NOT iOS system blue — the
@@ -42,6 +42,15 @@ module.exports = {
         terminalGreen: 'var(--color-terminalGreen, #4CAF51)',
         featureAccent: 'var(--color-featureAccent, #5856D6)',
 
+        // creds v3 derived accessibility layer — foreground-only variants
+        // that reach 4.5:1 on light surfaces (port spec §3.2 / §10.5 M2).
+        // Backgrounds/tints keep the native accents above.
+        terminalGreenText: 'var(--color-terminalGreenText, #2F6B45)',
+        warningText: 'var(--color-warningText, #9C5B00)',
+        destructiveText: 'var(--color-destructiveText, #B7364D)',
+        accentRoseText: 'var(--color-accentRoseText, #AA568A)',
+        text3Strong: 'var(--color-text3Strong, #6E6B7B)',
+
         // Decorative — map to Color.Theme.dustyMauve/blobCenter
         dustyMauve: 'var(--color-dustyMauve, #B89BB1)',
         blobCenter: 'var(--color-blobCenter, #FFE4D6)',
@@ -50,12 +59,18 @@ module.exports = {
         radarRing: 'var(--color-radarRing, rgba(191,128,167,0.3))',
         radarGlow: 'var(--color-radarGlow, rgba(191,128,167,0.15))',
       },
+      // creds.id radius roles (src/constants/radius.ts) — keep the two in step.
       borderRadius: {
-        sm2: '2px',
-        sm3: '3px',
+        button: '6px',
+        card: '12px',
+        group: '12px',
+        field: '2px',
+        xs: '2px',
+        sheet: '16px',
+        pill: '9999px',
       },
       fontFamily: {
-        sans: ['System'],
+        sans: ['Inter-Regular'],
       },
     },
   },

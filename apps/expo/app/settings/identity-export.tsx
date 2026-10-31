@@ -2,7 +2,7 @@
  * Identity Export/Import — free App<->Web portability for the seed-derived
  * root identity (04-plan Phase A1 task A1.4, `src/identity/rootKey.ts`).
  *
- * NOT the same identity as `/settings/dids` (SpruceID-managed device key) —
+ * NOT the same identity as the SpruceID-managed device key (no longer shown) —
  * see rootKey.ts's module doc for the coexistence note. This screen is
  * additive; it does not touch the device key.
  *
@@ -13,11 +13,12 @@
  */
 import { safeBack } from '@/navigation/safeBack';
 import { useEffect, useState } from 'react';
-import { ScrollView, TextInput, View } from 'react-native';
+import { TextInput, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { SfIcon } from '@/components/icons/SfIcon';
 import {
-  SettingsBackToolbar,
   SettingsBlockInfoRow,
   SettingsBlockSection,
   SettingsScreenTitle,
@@ -35,13 +36,17 @@ import {
   revealMnemonicForExport,
 } from '@/identity';
 import { usePreferences } from '@/settings/preferences';
+import { MONO } from '@/constants/fonts';
 
 export default function IdentityExportSettings() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const setPref = usePreferences((s) => s.set);
 
-  const [currentDid, setCurrentDid] = useState<string | null>(null);
+  const [didState, setDidState] = useState<
+    { readonly kind: 'loading' | 'none' | 'error' } | { readonly kind: 'ready'; readonly did: string }
+  >({ kind: 'loading' });
+  const currentDid = didState.kind === 'ready' ? didState.did : null;
   const [revealedWords, setRevealedWords] = useState<readonly string[] | null>(null);
   const [revealing, setRevealing] = useState(false);
 
@@ -52,7 +57,9 @@ export default function IdentityExportSettings() {
   useEffect(() => {
     let cancelled = false;
     void getRootDid().then((r) => {
-      if (!cancelled && r.ok) setCurrentDid(r.value);
+      if (cancelled) return;
+      if (r.ok) setDidState({ kind: 'ready', did: r.value });
+      else setDidState({ kind: r.error.kind === 'notProvisioned' ? 'none' : 'error' });
     });
     return () => {
       cancelled = true;
@@ -119,7 +126,7 @@ export default function IdentityExportSettings() {
           pushToast(t('identityExport.staleSyncWarning'), 'error');
         }
       }
-      setCurrentDid(r.value.did);
+      setDidState({ kind: 'ready', did: r.value.did });
       setImportText('');
       pushToast(
         currentDid === r.value.did ? t('identityExport.alreadyActive') : t('identityExport.switched'),
@@ -132,34 +139,56 @@ export default function IdentityExportSettings() {
 
   return (
     <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
-      <SettingsBackToolbar onPress={() => { safeBack('/settings'); }} />
-      <SettingsScreenTitle title={t('identityExport.title')} />
+      <SettingsScreenTitle
+        title={t('identityExport.title')}
+        leadingAction={{ accessibilityLabel: t('common.back'), onPress: () => { safeBack('/settings'); } }}
+      />
 
-      <ScrollView
-        className="flex-1"
+      <KeyboardAwareScrollView
+        style={{ flex: 1 }}
+        keyboardShouldPersistTaps="handled"
+        bottomOffset={16}
         contentContainerStyle={{ paddingTop: 24, paddingBottom: 24 + insets.bottom }}
       >
         <View className="gap-6">
-          <SettingsBlockSection title={t('identityExport.section.current')}>
+          <SettingsBlockSection index={0} title={t('identityExport.section.current')}>
             <SettingsBlockInfoRow
               icon="key.horizontal"
               title={t('identityExport.activeDid')}
-              value={currentDid ? `${currentDid.slice(0, 18)}…` : t('identityExport.none')}
+              value={
+                didState.kind === 'ready'
+                  ? `${didState.did.slice(0, 18)}…`
+                  : didState.kind === 'loading'
+                    ? t('identityExport.didLoading')
+                    : didState.kind === 'error'
+                      ? t('identityExport.didError')
+                      : t('identityExport.none')
+              }
             />
           </SettingsBlockSection>
 
-          <SettingsBlockSection title={t('identityExport.section.export')} footer={t('identityExport.exportFooter')}>
+          {/* The footer is a warning BEFORE the reveal, and the red box is one
+              DURING it — both stay on screen (never behind an ⓘ). */}
+          <SettingsBlockSection
+            index={1}
+            title={t('identityExport.section.export')}
+            footer={t('identityExport.exportFooter')}
+          >
             {revealedWords ? (
               <View style={{ gap: 12, paddingHorizontal: 2 }}>
                 <View
                   style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 8,
                     borderWidth: 1,
                     borderColor: `${Colors.destructive}66`,
                     backgroundColor: `${Colors.destructive}14`,
                     padding: 12,
                   }}
                 >
-                  <ThemedText variant="caption" tone="error">
+                  <SfIcon name="exclamationmark.triangle.fill" size={14} color={Colors.destructive} />
+                  <ThemedText variant="caption" tone="error" style={{ flex: 1 }}>
                     {t('identityExport.screenshotWarning')}
                   </ThemedText>
                 </View>
@@ -167,7 +196,7 @@ export default function IdentityExportSettings() {
                   {revealedWords.map((word, i) => (
                     <View key={`${word}-${String(i)}`} style={{ width: '30%', flexDirection: 'row', gap: 4 }}>
                       <ThemedText variant="caption" tone="secondary">{`${String(i + 1)}.`}</ThemedText>
-                      <ThemedText variant="bodySmall" style={{ fontFamily: 'Menlo' }}>
+                      <ThemedText variant="bodySmall" style={{ fontFamily: MONO }}>
                         {word}
                       </ThemedText>
                     </View>
@@ -195,7 +224,11 @@ export default function IdentityExportSettings() {
             )}
           </SettingsBlockSection>
 
-          <SettingsBlockSection title={t('identityExport.section.import')} footer={t('identityExport.importFooter')}>
+          <SettingsBlockSection
+            index={2}
+            title={t('identityExport.section.import')}
+            footer={t('identityExport.importFooter')}
+          >
             <View style={{ gap: 8, paddingHorizontal: 2 }}>
               <TextInput
                 value={importText}
@@ -213,7 +246,7 @@ export default function IdentityExportSettings() {
                   paddingHorizontal: 14,
                   paddingVertical: 12,
                   fontSize: 14,
-                  fontFamily: 'Menlo',
+                  fontFamily: MONO,
                   minHeight: 88,
                   borderWidth: 1,
                   borderColor: importError ? Colors.destructive : Colors.divider,
@@ -238,7 +271,7 @@ export default function IdentityExportSettings() {
             </View>
           </SettingsBlockSection>
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </View>
   );
 }

@@ -28,6 +28,24 @@
 import { Appearance } from 'react-native';
 
 const RAW = {
+  /** creds.id `--shadow-*` (airmeishi-web theme.css) as RN `boxShadow` strings — read through
+   *  `shadow()` in `radius.ts`, never inline. Avatar well, lifted card, sheet. */
+  shadowAvatar: '0 2px 12px rgba(38, 34, 28, 0.12)',
+  shadowAvatarDark: '0 2px 12px rgba(0, 0, 0, 0.5)',
+  shadowLift: '0 10px 24px -16px rgba(38, 34, 28, 0.35)',
+  shadowLiftDark: '0 10px 24px -16px rgba(0, 0, 0, 0.6)',
+  shadowSheet: '0 30px 70px -30px rgba(38, 34, 28, 0.5)',
+  shadowSheetDark: '0 30px 70px -35px rgba(0, 0, 0, 0.75)',
+  /** Launch splash ground — the native splash's colour (app.json), cream by day, night by dark. */
+  splashBg: '#FBF9F2',
+  splashBgDark: '#060417',
+  /** The creds.id logo's two inks (airmeishi-web Logo.tsx): letters + first ring, and the
+   *  second ring + the two dots. */
+  logoInk: '#2F2F30',
+  logoInkDark: '#FCF8F0',
+  logoAccent: '#83537D',
+  logoAccentDark: '#BF80A7',
+
   /** Page background — Palette.cream (#fbf9f2) light / #060417 dark. */
   pageBg: '#FBF9F2',
   pageBgDark: '#060417',
@@ -40,19 +58,19 @@ const RAW = {
   searchBg: '#EEEEEE',
   searchBgDark: '#1C1424',
 
-  /** 1-pt divider line — #d1d1d1 / #2D2438. */
+  /** 1-pt divider line — #d1d1d1 / #5F5E67. */
   divider: '#D1D1D1',
-  dividerDark: '#2D2438',
+  dividerDark: '#5F5E67',
 
   /** Primary text — #2f2f30 / #F0E8F0. */
   text1: '#2F2F30',
   text1Dark: '#F0E8F0',
-  /** Secondary text — #5f5e67 / #A898A8. */
+  /** Secondary text — #5f5e67 / #D1D1D1. */
   text2: '#5F5E67',
-  text2Dark: '#A898A8',
+  text2Dark: '#D1D1D1',
   /** Tertiary text / placeholders — #9c9aa6 / 50% white. */
-  text3: '#9C9AA6',
-  text3Dark: '#808080',
+  text3: '#6E6B7B',
+  text3Dark: '#8A8A8A',
 
   /** Pill / chip background — #eeeeee / white@18%. */
   pillBg: '#EEEEEE',
@@ -70,7 +88,7 @@ const RAW = {
 
   /** Chip / verified-tag surface — #F7F2FA / rgba(47,47,48,0.5). */
   chipSurface: '#F7F2FA',
-  chipSurfaceDark: 'rgba(47,47,48,0.5)',
+  chipSurfaceDark: '#222026',
 
   /** Muted card / row container — #eeeeee@80% / rgba(47,47,48,0.6). */
   mutedSurface: 'rgba(238,238,238,0.8)',
@@ -101,9 +119,12 @@ const RAW = {
   gradientCream: '#F0EDF4',
   gradientCreamDark: '#141112',
 
-  /** Inverted button background — text1 (used by Edit / Show buttons). */
+  /** creds.id `--color-inverted` / `--color-on-inverted`: the `.btn` fill and
+   *  label — ink on cream by day, cream with near-black type by night. The
+   *  night label stays `#060417` rather than the web's `#2F2F30`: that hex is
+   *  the light `text1`, and `resolveThemeColor` would read it as a stale one. */
   invertedButtonBg: '#2F2F30',
-  invertedButtonBgDark: '#F0E8F0',
+  invertedButtonBgDark: '#FBF9F2',
   invertedButtonText: '#FBF9F2',
   invertedButtonTextDark: '#060417',
 
@@ -127,6 +148,12 @@ const RAW = {
   destructive: '#CD556A',
   /** Terminal green — success / verified. */
   terminalGreen: '#4CAF51',
+  /** 16% green tint for "this is included / verified" fills. Same formula the
+   *  creds-design mock uses for `--terminalGreenBg`; pair it with
+   *  `terminalGreenText`, which is the contrast-safe foreground. */
+  terminalGreenBg: 'rgba(76,175,81,0.16)',
+  /** 40% green ring around the tinted seal (creds.id `.seal-ok`). */
+  terminalGreenBorder: 'rgba(76,175,81,0.40)',
   /** Feature accent purple. */
   featureAccent: '#5856D6',
 
@@ -149,6 +176,23 @@ const RAW = {
 
   /** Warning amber — `Color.Theme.warning` (orange in Swift). */
   warning: '#FF9500',
+
+  /** creds v3 derived accessibility layer — text/glyph foregrounds that must
+   * hit WCAG 4.5:1 on the light surfaces (`pageBg` / `cardBg` / 16% tints).
+   * Values from creds-design port spec §3.2 (+§10.5 M2 for dark destructive).
+   * Fill/tint backgrounds keep the native tokens above; ONLY the foreground
+   * text/icon uses these. */
+  terminalGreenText: '#2F6B45',
+  terminalGreenTextDark: '#4CAF51',
+  warningText: '#8A5000',
+  warningTextDark: '#FF9500',
+  destructiveText: '#A83048',
+  destructiveTextDark: '#D2677A',
+  accentRoseText: '#AA568A',
+  accentRoseTextDark: '#BF80A7',
+  /** Same as text3 since text3 itself took creds.id's accessible value. */
+  text3Strong: '#6E6B7B',
+  text3StrongDark: '#8A8A8A',
 
   /** Public Page template palette. These are separate from the app theme:
    * choosing a visitor-facing template must never replace the owner's app UI. */
@@ -184,6 +228,157 @@ const RAW = {
   scanDim: 'rgba(0,0,0,0.55)',
   /** Shutter-flash overlay for the screenshot-style capture animation. */
   scanFlash: 'rgba(255,255,255,0.55)',
+} as const;
+
+/**
+ * Fixed light palette for the visitor-facing Verified Page.
+ *
+ * A Page's colours are the TEMPLATE ITS OWNER CHOSE, not the reader's app
+ * theme — so unlike every other surface these must NOT follow `Appearance`.
+ * The creds-design mock resets exactly these tokens back to light inside
+ * `#pubFrame` for the same reason ("app 的深淺是你的閱讀偏好，公開頁的深淺
+ * 是你替訪客選的模板，兩件事不能混").
+ */
+export const PageTemplateColors = {
+  cardBg: RAW.cardBg,
+  divider: RAW.divider,
+  searchBg: RAW.searchBg,
+  text1: RAW.text1,
+  text2: RAW.text2,
+  primaryBlue: RAW.primaryBlue,
+  warmCream: RAW.warmCream,
+  invertedButtonBg: RAW.invertedButtonBg,
+  invertedButtonText: RAW.invertedButtonText,
+  heroGradientStart: RAW.heroGradientStart,
+  heroGradientEnd: RAW.heroGradientEnd,
+  pageMint: RAW.pageMint,
+  pageRose: RAW.pageRose,
+  pageInk: RAW.pageInk,
+  pageNight: RAW.pageNight,
+  pageLightText: RAW.pageLightText,
+  pageGradientStart: RAW.pageGradientStart,
+  pageGradientEnd: RAW.pageGradientEnd,
+  pageSunStart: RAW.pageSunStart,
+  pageSunEnd: RAW.pageSunEnd,
+  pagePreviewGlass: RAW.pagePreviewGlass,
+  pagePreviewBorder: RAW.pagePreviewBorder,
+} as const;
+
+/**
+ * Platform colours for the round brand badges in the add sheet (Linktree's
+ * "Suggested" list). `bg` fills the circle, `fg` is the glyph on it; a brand
+ * whose mark is a gradient carries its `stops` too. Brand colours are the
+ * platforms' own, so like the Page palette they do NOT follow `Appearance`.
+ */
+export const BrandColors = {
+  instagram: { bg: '#E1306C', fg: '#FFFFFF', stops: ['#FEDA75', '#FA7E1E', '#D62976', '#962FBF', '#4F5BD5'] },
+  x: { bg: '#000000', fg: '#FFFFFF' },
+  threads: { bg: '#000000', fg: '#FFFFFF' },
+  tiktok: { bg: '#000000', fg: '#FFFFFF' },
+  youtube: { bg: '#FF0033', fg: '#FFFFFF' },
+  spotify: { bg: '#1ED760', fg: '#000000' },
+  github: { bg: '#181717', fg: '#FFFFFF' },
+  linkedin: { bg: '#0A66C2', fg: '#FFFFFF' },
+  telegram: { bg: '#26A5E4', fg: '#FFFFFF' },
+  facebook: { bg: '#1877F2', fg: '#FFFFFF' },
+  bluesky: { bg: '#1185FE', fg: '#FFFFFF' },
+  line: { bg: '#06C755', fg: '#FFFFFF' },
+  discord: { bg: '#5865F2', fg: '#FFFFFF' },
+  whatsapp: { bg: '#25D366', fg: '#FFFFFF' },
+  substack: { bg: '#FF6719', fg: '#FFFFFF' },
+  twitch: { bg: '#9146FF', fg: '#FFFFFF' },
+  reddit: { bg: '#FF4500', fg: '#FFFFFF' },
+  medium: { bg: '#000000', fg: '#FFFFFF' },
+  pinterest: { bg: '#E60023', fg: '#FFFFFF' },
+  mastodon: { bg: '#6364FF', fg: '#FFFFFF' },
+  farcaster: { bg: '#855DCD', fg: '#FFFFFF' },
+  linktree: { bg: '#43E55E', fg: '#000000' },
+  /** A plain website / any link: the creds.id plum. */
+  web: { bg: '#83537D', fg: '#FFFFFF' },
+  maps: { bg: '#34A853', fg: '#FFFFFF' },
+  form: { bg: '#7A5AF8', fg: '#FFFFFF' },
+  /** A brand mark that is black on its own ground needs an edge on a dark sheet. */
+  edgeOnDark: 'rgba(255,255,255,0.18)',
+} as const;
+
+/**
+ * The visitor page's per-template surfaces — airmeishi-web
+ * `src/page/pageAppearance.ts` `TEMPLATE_PALETTE` / `BACKGROUND_GROUND`,
+ * transcribed 1:1 so the app preview paints what creds.id paints. Change both
+ * together. Like `PageTemplateColors` these never follow `Appearance`.
+ */
+export const PagePalettes = {
+  cream: {
+    stops: ['#FBF9F2'], card: '#FFFFFF', iconWell: '#EEEEEE', border: '#D1D1D1',
+    text1: '#2F2F30', text2: '#5F5E67', text3: '#6E6B7B', accent: '#83537D', cardRadius: 12, onDark: false,
+  },
+  ink: {
+    stops: ['#26221C'], card: '#322D26', iconWell: '#3C362E', border: '#453F35',
+    text1: '#F5F0E4', text2: '#A79F8F', text3: '#A79F8F', accent: '#BF80A7', cardRadius: 12, onDark: true,
+  },
+  journal: {
+    stops: ['#F3EDDD'], card: '#FFFFFF', iconWell: '#EEEEEE', border: '#D1D1D1',
+    text1: '#2F2F30', text2: '#5F5E67', text3: '#6B6877', accent: '#83537D', cardRadius: 12, onDark: false,
+  },
+  gradient: {
+    stops: ['#6E3D5F', '#B4628F', '#E7A17A'],
+    card: 'rgba(46,25,40,0.55)', iconWell: 'rgba(46,25,40,0.40)', border: 'rgba(255,255,255,0.24)',
+    text1: '#FFFFFF', text2: 'rgba(255,255,255,0.78)', text3: '#43414B', accent: '#FFFFFF', cardRadius: 20, onDark: true,
+  },
+  night: {
+    stops: ['#0F1420'], card: '#171D2E', iconWell: '#1E2740', border: '#252D42',
+    text1: '#E8EAF2', text2: '#7B85A3', text3: '#7B85A3', accent: '#4C7BF0', cardRadius: 16, onDark: true,
+  },
+  mint: {
+    stops: ['#E9F6EF'], card: '#FFFFFF', iconWell: '#E3F1E9', border: '#CBE7D8',
+    text1: '#2F2F30', text2: '#5F5E67', text3: '#6E6B7B', accent: '#83537D', cardRadius: 22, onDark: false,
+  },
+  sun: {
+    stops: ['#FFE9C7', '#FFD3A0'], card: '#FFFDF8', iconWell: '#FDEFD8', border: '#F0C48C',
+    text1: '#2F2F30', text2: '#5F5E67', text3: '#605D6B', accent: '#83537D', cardRadius: 22, onDark: false,
+  },
+  minimal: {
+    stops: ['#FFFFFF'], card: '#FFFFFF', iconWell: '#F2F2F2', border: '#E6E6E6',
+    text1: '#2F2F30', text2: '#5F5E67', text3: '#6E6B7B', accent: '#83537D', cardRadius: 8, onDark: false,
+  },
+} as const;
+
+/** `BACKGROUND_GROUND` — the signed `background` field as grounds. */
+export const PageBackgroundGrounds = {
+  cream: '#F3EBDD', white: '#FFFFFF', mint: '#E9F6EF', rose: '#F6EAEA', ink: '#26221C',
+} as const;
+
+/** `.pub-avatar` ground (`--color-warm-cream` → `--color-gradient-cream`) and
+ *  the dark media plate behind a player facade. */
+export const PageChromeColors = {
+  avatarStops: ['#F3EBDD', '#F0EDF4'],
+  playerPlate: '#14161A',
+  playerInk: '#FFFFFF',
+  playerScrim: 'rgba(0,0,0,0.35)',
+} as const;
+
+/**
+ * The metal card's own palette — a 1:1 port of the creds-design mock's
+ * `.metal` faces (`#s-show`). Brushed steel is brushed steel in either theme,
+ * so like `PageTemplateColors` these deliberately do NOT follow `Appearance`.
+ *
+ * `frontStops`/`backStops` are the mock's CSS gradient stops in order, with
+ * `frontLocations`/`backLocations` carrying their percentages.
+ */
+export const CardMetalColors = {
+  frontStops: ['#3A3F46', '#6E757E', '#9AA2AB', '#5C636C', '#40454C', '#7C838C', '#A8AFB8', '#565C64', '#383D44'],
+  frontLocations: [0, 0.16, 0.27, 0.38, 0.52, 0.66, 0.74, 0.86, 1],
+  backStops: ['#33383F', '#5A616A', '#868D96', '#4A5058', '#2E333A'],
+  backLocations: [0, 0.3, 0.5, 0.72, 1],
+  /** `.etch` — engraved text on steel. */
+  etch: '#EDEFF2',
+  /** `.etch`'s lower text-shadow; RN supports a single shadow, so this is it. */
+  etchShadow: 'rgba(0,0,0,0.55)',
+  /** `.metal .face` hairline. */
+  faceBorder: 'rgba(255,255,255,0.28)',
+  /** `.m-qr` plate and the ink of the code printed on it. */
+  qrPlate: 'rgba(236,238,241,0.94)',
+  qrInk: '#14161A',
 } as const;
 
 type RawKey = keyof typeof RAW;

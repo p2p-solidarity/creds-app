@@ -23,11 +23,12 @@
 import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { View } from 'react-native';
+import Animated, { useReducedMotion } from 'react-native-reanimated';
 
-import { SfIcon } from '@/components/icons/SfIcon';
+import { InfoButton } from '@/components/common/InfoSheet';
 import { ToggleRow } from '@/components/settings/SettingRow';
 import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
-import { Colors } from '@/constants/Colors';
+import { fadeUpIn, LIST_LAYOUT } from '@/feedback/motion';
 import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
 import { useProfileSnapshotStore } from '@/people/profileSnapshots';
@@ -43,6 +44,7 @@ import {
 } from '@/pear/useCardExchange';
 import { useMutualCardExchange, type MutualExchangePhase } from '@/pear/useMutualCardExchange';
 import { usePresentRequestFlow } from '@/pear/usePresentRequestFlow';
+import { Colors } from '@/constants/Colors';
 import { usePreferences } from '@/settings/preferences';
 
 import { VerifiedProfileView } from '@/components/scan/VerifiedProfileView';
@@ -291,7 +293,7 @@ function DisabledPearExchange(): ReactNode {
           variant="secondary"
           fullWidth
           onPress={() => {
-            router.push('/settings/connections');
+            router.push('/settings');
           }}
         />
       </ThemedSurface>
@@ -308,6 +310,8 @@ function EnabledCardExchangeSection({ did, verifiedDisplayName }: CardExchangeSe
   const reachable = useReachableMode(did, peerLabel);
   const mergeVerified = useProfileSnapshotStore((s) => s.mergeVerified);
   const [saving, setSaving] = useState(false);
+  const reduceMotion = useReducedMotion();
+  const layout = reduceMotion ? undefined : LIST_LAYOUT;
 
   const phase = requestFlow.phase;
   const requestBusy = phase.kind === 'connecting' || phase.kind === 'authenticating' || phase.kind === 'requesting';
@@ -340,91 +344,139 @@ function EnabledCardExchangeSection({ did, verifiedDisplayName }: CardExchangeSe
   };
 
   return (
-    <View style={{ gap: 16 }}>
+    <View style={{ gap: 8 }}>
       <ThemedText variant="label" tone="tertiary">
         {t('pearExchange.sectionTitle')}
       </ThemedText>
 
-      <ThemedSurface variant="outlined" padded style={{ gap: 12 }}>
-        <ThemedButton
-          label={requestButtonLabel(phase, t)}
-          variant="secondary"
-          fullWidth
-          loading={requestBusy}
-          disabled={requestBusy}
-          leadingIcon={<SfIcon name="arrow.down.circle" size={16} color={Colors.text1} />}
-          onPress={() => {
-            requestFlow.start();
-          }}
-        />
-        <RequestStatusLine phase={phase} t={t} />
-        {phase.kind === 'received' ? (
-          <View style={{ gap: 12 }}>
-            <VerifiedProfileView record={phase.record} />
-            <ThemedButton
-              label={t('verifiedPage.updateInPeople')}
-              variant="primary"
-              fullWidth
-              loading={saving}
-              leadingIcon={<SfIcon name="person.badge.plus" size={16} color={Colors.pageBg} />}
-              onPress={onSaveReceived}
+      {/* One card, like the contact detail sections: each action is a row,
+          and a row's status / result grows in place (fadeUpIn + LIST_LAYOUT)
+          instead of each flow sitting in its own box. */}
+      <ThemedSurface variant="card" padded style={{ gap: 0 }}>
+        <ExchangeRow layout={layout} first>
+          <ThemedButton
+            label={requestButtonLabel(phase, t)}
+            variant="secondary"
+            fullWidth
+            loading={requestBusy}
+            disabled={requestBusy}
+            icon="arrow.down.circle"
+            onPress={() => {
+              requestFlow.start();
+            }}
+          />
+          <RequestStatusLine phase={phase} t={t} />
+          {phase.kind === 'received' ? (
+            <Animated.View entering={fadeUpIn(0, reduceMotion)} style={{ gap: 12 }}>
+              <VerifiedProfileView record={phase.record} />
+              <ThemedButton
+                label={t('verifiedPage.updateInPeople')}
+                variant="primary"
+                fullWidth
+                loading={saving}
+                icon="person.badge.plus"
+                onPress={onSaveReceived}
+              />
+            </Animated.View>
+          ) : null}
+        </ExchangeRow>
+
+        <ExchangeRow layout={layout}>
+          <ThemedButton
+            label={mutualButtonLabel(exchangePhase, t)}
+            variant="secondary"
+            fullWidth
+            loading={exchangeBusy}
+            disabled={exchangeBusy}
+            icon="arrow.left.arrow.right.circle"
+            onPress={() => {
+              exchangeFlow.start();
+            }}
+          />
+          {/* One line on screen; the non-atomic fine print sits behind the ⓘ. */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <ThemedText variant="caption" tone="tertiary" style={{ flex: 1 }}>
+              {t('pearExchange.mutual.subtitle', { name: peerLabel })}
+            </ThemedText>
+            <InfoButton
+              title={t('pearExchange.mutual.button')}
+              body={t('pearExchange.mutual.info')}
             />
           </View>
-        ) : null}
-      </ThemedSurface>
+          <MutualStatusLine phase={exchangePhase} t={t} />
+          {exchangePhase.kind === 'done' ? (
+            <Animated.View entering={fadeUpIn(0, reduceMotion)}>
+              <MutualResultView phase={exchangePhase} t={t} />
+            </Animated.View>
+          ) : null}
+        </ExchangeRow>
 
-      <ThemedSurface variant="outlined" padded style={{ gap: 12 }}>
-        <ThemedButton
-          label={mutualButtonLabel(exchangePhase, t)}
-          variant="secondary"
-          fullWidth
-          loading={exchangeBusy}
-          disabled={exchangeBusy}
-          leadingIcon={<SfIcon name="arrow.left.arrow.right.circle" size={16} color={Colors.text1} />}
-          onPress={() => {
-            exchangeFlow.start();
-          }}
-        />
-        <ThemedText variant="caption" tone="tertiary">
-          {t('pearExchange.mutual.subtitle', { name: peerLabel })}
-        </ThemedText>
-        <MutualStatusLine phase={exchangePhase} t={t} />
-        {exchangePhase.kind === 'done' ? <MutualResultView phase={exchangePhase} t={t} /> : null}
-      </ThemedSurface>
+        <ExchangeRow layout={layout}>
+          <ThemedButton
+            label={presentButtonLabel(presentPhase, t)}
+            variant="secondary"
+            fullWidth
+            loading={presentBusy}
+            disabled={presentBusy}
+            icon="checkmark.shield"
+            onPress={() => {
+              presentFlow.start();
+            }}
+          />
+          <PresentStatusLine phase={presentPhase} t={t} />
+          {presentPhase.kind === 'verified' ? (
+            <Animated.View entering={fadeUpIn(0, reduceMotion)}>
+              <PresentVerifiedView phase={presentPhase} t={t} />
+            </Animated.View>
+          ) : null}
+        </ExchangeRow>
 
-      <ThemedSurface variant="outlined" padded style={{ gap: 12 }}>
-        <ThemedButton
-          label={presentButtonLabel(presentPhase, t)}
-          variant="secondary"
-          fullWidth
-          loading={presentBusy}
-          disabled={presentBusy}
-          leadingIcon={<SfIcon name="checkmark.shield" size={16} color={Colors.text1} />}
-          onPress={() => {
-            presentFlow.start();
-          }}
-        />
-        <PresentStatusLine phase={presentPhase} t={t} />
-        {presentPhase.kind === 'verified' ? <PresentVerifiedView phase={presentPhase} t={t} /> : null}
-      </ThemedSurface>
-
-      <ThemedSurface variant="outlined" padded style={{ gap: 8 }}>
-        <ToggleRow
-          label={t('pearExchange.reachable.label', { name: peerLabel })}
-          value={reachableOn}
-          onChange={() => {
-            reachable.toggle();
-          }}
-        />
-        <ThemedText variant="caption" tone="tertiary">
-          {t('pearExchange.reachable.subtitle', { name: peerLabel })}
-        </ThemedText>
-        {reachableLine ? (
-          <ThemedText variant="caption" tone={reachable.status.kind === 'error' ? 'error' : 'secondary'}>
-            {reachableLine}
+        <ExchangeRow layout={layout}>
+          <ToggleRow
+            label={t('pearExchange.reachable.label', { name: peerLabel })}
+            value={reachableOn}
+            onChange={() => {
+              reachable.toggle();
+            }}
+          />
+          <ThemedText variant="caption" tone="tertiary">
+            {t('pearExchange.reachable.subtitle', { name: peerLabel })}
           </ThemedText>
-        ) : null}
+          {reachableLine ? (
+            <ThemedText variant="caption" tone={reachable.status.kind === 'error' ? 'error' : 'secondary'}>
+              {reachableLine}
+            </ThemedText>
+          ) : null}
+        </ExchangeRow>
       </ThemedSurface>
     </View>
+  );
+}
+
+/** One action inside the exchange card: hairline divider above every row but
+ *  the first, and a layout transition so rows below glide when this one
+ *  grows a status line or a result. */
+function ExchangeRow({
+  children,
+  layout,
+  first = false,
+}: {
+  readonly children: ReactNode;
+  readonly layout: typeof LIST_LAYOUT | undefined;
+  readonly first?: boolean;
+}): ReactNode {
+  return (
+    <Animated.View
+      layout={layout}
+      style={{
+        gap: 12,
+        paddingTop: first ? 0 : 16,
+        marginTop: first ? 0 : 16,
+        borderTopWidth: first ? 0 : 0.5,
+        borderTopColor: Colors.divider,
+      }}
+    >
+      {children}
+    </Animated.View>
   );
 }

@@ -37,7 +37,7 @@ export function LimitedAccessBanner({
   return (
     <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
       <View
-        className="bg-searchBg rounded-sm2"
+        className="bg-searchBg rounded-field"
         style={{ padding: 12, borderWidth: 0.5, borderColor: Colors.divider }}
       >
         <View className="flex-row items-center" style={{ marginBottom: 10 }}>

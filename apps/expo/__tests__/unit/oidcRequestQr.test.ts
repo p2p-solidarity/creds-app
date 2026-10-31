@@ -17,7 +17,7 @@ describe('OID4VP request QR payload', () => {
     expect(url).toContain('nonce=abc123');
     expect(url).toContain('state=state456');
     expect(url).toContain('response_mode=direct_post');
-    expect(url).toContain('response_uri=solidarity%3A%2F%2Foidc-callback');
+    expect(url).toContain('response_uri=credsid%3A%2F%2Foidc-callback');
     expect(url).toContain('presentation_definition=');
     expect(decodeURIComponent(url)).toContain('"id":"default-request"');
     expect(decodeURIComponent(url)).toContain('"id":"business-card"');

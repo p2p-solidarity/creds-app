@@ -13,7 +13,7 @@
  *   2b. await warmNostrKeyMirror()       — resident already; warms the
  *                                          userKey.ts sync-mirror cache
  *   3. sync seed all feature manifests   — zero await, frame-1 ready
- *      (cards, contacts, groups, vault, shoutouts, credentials, issuers)
+ *      (cards, contacts, groups, credentials, issuers)
  *   4. await installI18n + preferences   — cheap, on-the-spot
  *   5. setReady(true) → splash hides     — UI paints from manifests
  *   6. fire-and-forget bulk hydrate      — per-record decrypt in background;
@@ -27,14 +27,19 @@
  * data the moment each store's `details` map populates.
  */
 import 'react-native-get-random-values';
+
+// Below the polyfill on purpose: both modules pull in @solidarity/shared and
+// @noble/*, which the header above requires to evaluate AFTER crypto exists.
+import { startAutoBackup } from '@/backup/autoBackupScheduler';
+import { startCloudSync } from '@/backup/cloudSync';
+import { recoverPortableCommit } from '@/backup/portableStorage';
 import 'react-native-gesture-handler';
 import '../global.css';
 
 import { useEffect, useState } from 'react';
-import { Appearance } from 'react-native';
+import { Appearance, AppState, useColorScheme, View } from 'react-native';
 import { router, Stack } from 'expo-router';
 import * as Linking from 'expo-linking';
-import * as Notifications from 'expo-notifications';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -44,6 +49,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useCardStore } from '@/cards/cardManager';
 import { useReceivedCard } from '@/cards/receivedCard';
 import { ReceivedCardSheet } from '@/components/cards/ReceivedCardSheet';
+import { LaunchSplash } from '@/components/brand/LaunchSplash';
 import { VerifiedPageResultSheet } from '@/components/scan/VerifiedPageResultSheet';
 import { useContactStore } from '@/contacts/repository';
 import { useCredentialStore } from '@/credentials/store';
@@ -61,23 +67,28 @@ import { hydrateSensitiveActionPolicy } from '@/keychain';
 import { warmBadgeStatusCache } from '@/badges/badgeStatusCache';
 import { warmNostrKeyMirror } from '@/nostr/userKey';
 import { PearConsentOverlay, PearPresentConsentOverlay } from '@/pear/consent';
+import { maybeRefreshVerifiedContacts } from '@/people/contactAutoRefresh';
 import { hydrateProfileSnapshots } from '@/people/profileSnapshots';
+import { prepareProEntitlement } from '@/pro/entitlementStore';
+import { initProPurchases } from '@/pro/purchases';
 import { hydrateProfile } from '@/profile/store';
-import { syncOnce } from '@/sakura/inbox';
-import { registerForPushNotificationsAsync } from '@/sakura/pushRegistration';
+import { pushToast } from '@/feedback/toast';
+import { translate } from '@/i18n';
+import { renewDueProofs } from '@/zktls/flow';
+import { renewPassportStatement } from '@/passport/npubBinding';
+import { dropRetiredPassportZkData } from '@/passport/retiredZkData';
+import { DEFAULT_RELAYS } from '@/nostr/publish';
+import { hydrateZktlsProofs } from '@/zktls/store';
 import { hydratePreferences, usePreferences } from '@/settings/preferences';
-import { useShoutoutStore } from '@/shoutouts/store';
 import { initMmkv, ManifestStorage } from '@/storage';
-import { useVaultStore } from '@/vault/store';
 import { PRIMARY_TAB_HREFS } from '@/navigation/primaryTabs';
+import { themeRefreshLayout } from '@/navigation/themeRefresh';
 
 import { CARDS_MANIFEST_SCOPE } from '@/cards/cardManifest';
 import { CONTACTS_MANIFEST_SCOPE } from '@/contacts/contactManifest';
 import { CREDENTIALS_MANIFEST_SCOPE } from '@/credentials/credentialManifest';
 import { ISSUERS_MANIFEST_SCOPE } from '@/credentials/issuerManifest';
 import { GROUPS_MANIFEST_SCOPE } from '@/groups/groupManifest';
-import { SHOUTOUTS_MANIFEST_SCOPE } from '@/shoutouts/shoutoutManifest';
-import { VAULT_MANIFEST_SCOPE } from '@/vault/vaultManifest';
 
 // App-wide JS error boundary (wraps <Stack> below so it gets the React
 // component stack of any render throw) + global uncaught-JS handler (installed
@@ -99,8 +110,6 @@ const MIGRATION_SCOPES = [
   CARDS_MANIFEST_SCOPE,
   CONTACTS_MANIFEST_SCOPE,
   GROUPS_MANIFEST_SCOPE,
-  VAULT_MANIFEST_SCOPE,
-  SHOUTOUTS_MANIFEST_SCOPE,
   CREDENTIALS_MANIFEST_SCOPE,
   ISSUERS_MANIFEST_SCOPE,
 ] as const;
@@ -128,10 +137,16 @@ function warnBoot(message: string, error?: unknown): void {
 
 export default function RootLayout() {
   const [ready, setReady] = useState(false);
+  // Launch: the logo animates while boot runs; the app mounts under it once
+  // both are done, and the splash fades after the app's first layout.
+  const [logoSettled, setLogoSettled] = useState(false);
+  const [appShown, setAppShown] = useState(false);
+  const [splashFinished, setSplashFinished] = useState(false);
   const receivedCard = useReceivedCard((s) => s.card);
   const receivedVerification = useReceivedCard((s) => s.verificationStatus);
   const receivedSource = useReceivedCard((s) => s.source);
   const receivedSealedRoute = useReceivedCard((s) => s.sealedRoute);
+  const receivedNostrPointer = useReceivedCard((s) => s.nostrPointer);
   const dismissReceived = useReceivedCard((s) => s.dismiss);
   const upsertContact = useContactStore((s) => s.upsert);
   // Swift ThemeManager.applyColorScheme → here we forward the user pref to
@@ -139,37 +154,30 @@ export default function RootLayout() {
   // so toggling Light/Dark/System in Appearance settings actually flips
   // every `bg-pageBg` / `text-text1` style without a relaunch.
   const appColorScheme = usePreferences((s) => s.appColorScheme);
-  // Opt-in gate for the Sakura push rail (R25). Reflects the persisted value
-  // once boot runs `hydratePreferences()` (before `ready` flips true), so the
-  // registration effect below reads the real preference, not the default.
-  const remoteNotificationsEnabled = usePreferences((s) => s.notificationsRemote);
   const hasCompletedOnboarding = usePreferences((s) => s.hasCompletedOnboarding);
+  const backupEnabled = usePreferences((s) => s.backupEnabled);
   useEffect(() => {
     Appearance.setColorScheme(appColorScheme === 'system' ? 'unspecified' : appColorScheme);
   }, [appColorScheme]);
+  // Re-render on the scheme RN actually applied (it lands after the pref), so
+  // the overlays mounted here repaint too; screens use `themeRefreshLayout`.
+  useColorScheme();
 
   useEffect(() => {
     let cancelled = false;
     let shown = false;
 
-    const showApp = async (reason: string) => {
+    const showApp = (reason: string): void => {
       if (cancelled || shown) return;
       shown = true;
       logBoot(`show-app:${reason}`);
       setReady(true);
-      try {
-        await SplashScreen.hideAsync();
-      } catch (error) {
-        warnBoot('splash-hide-failed', error);
-      }
     };
 
     const hydrateDetailsInBackground = () => {
       void useCardStore.getState().hydrate();
       void useContactStore.getState().hydrate();
       void useGroupStore.getState().hydrate();
-      void useVaultStore.getState().hydrate();
-      void useShoutoutStore.getState().hydrate();
       void useCredentialStore.getState().hydrate();
       void useIssuerMetadataStore.getState().hydrate();
       void useIdentityData.getState().hydrate();
@@ -180,6 +188,9 @@ export default function RootLayout() {
         logBoot('mmkv:start');
         await initMmkv();
         logBoot('mmkv:done');
+        // Recover before any cache or manifest can seed process memory from
+        // a half-applied portable-data snapshot.
+        recoverPortableCommit();
         // Warm the Nostr sync mirror's MMKV reference NOW so every later
         // `hasNostrKeySync()` call (e.g. the Verify tab's badge-bindings
         // row) is a real synchronous read instead of a cold-cache `false`
@@ -197,8 +208,6 @@ export default function RootLayout() {
         useCardStore.getState().seedFromManifest();
         useContactStore.getState().seedFromManifest();
         useGroupStore.getState().seedFromManifest();
-        useVaultStore.getState().seedFromManifest();
-        useShoutoutStore.getState().seedFromManifest();
         useCredentialStore.getState().seedFromManifest();
         useIssuerMetadataStore.getState().seedFromManifest();
         logBoot('manifest-seed:done');
@@ -206,7 +215,18 @@ export default function RootLayout() {
         hydratePreferences();
         hydrateSensitiveActionPolicy();
         hydrateProfile();
+        hydrateZktlsProofs();
         hydrateProfileSnapshots();
+        // Awaited, not fired-and-forgotten: every Pro gate reads this store
+        // synchronously, so a late hydration would flash "locked" at someone
+        // who has already paid. It is one MMKV read behind an already-warm
+        // handle — the same warm-before-first-read pattern as the Nostr mirror.
+        await prepareProEntitlement();
+        // Deliberately NOT awaited: talking to the store is a network call, and
+        // the cached record above is already authoritative enough to paint. A
+        // renewal, refund, or purchase made on another device lands whenever
+        // this resolves.
+        void initProPurchases();
         logBoot('preferences:done');
 
         // First-boot migration: if any manifest is missing, block splash
@@ -221,8 +241,6 @@ export default function RootLayout() {
             useCardStore.getState().hydrate(),
             useContactStore.getState().hydrate(),
             useGroupStore.getState().hydrate(),
-            useVaultStore.getState().hydrate(),
-            useShoutoutStore.getState().hydrate(),
             useCredentialStore.getState().hydrate(),
             useIssuerMetadataStore.getState().hydrate(),
           ]);
@@ -242,10 +260,10 @@ export default function RootLayout() {
           logBoot('deeplink:initial', initial);
           handleDeepLink(initial);
         }
-        await showApp('boot-complete');
+        showApp('boot-complete');
       } catch (error) {
         warnBoot('boot-failed-before-first-paint', error);
-        await showApp('boot-error');
+        showApp('boot-error');
       } finally {
         // Background bulk-decrypt for the steady-state path (manifests
         // already exist). Idempotent — each store's `hydrate()` checks
@@ -256,7 +274,15 @@ export default function RootLayout() {
     };
 
     const timeout = setTimeout(() => {
-      void showApp(`timeout-${BOOT_TIMEOUT_MS}ms`);
+      // Never show screens before i18n: they would render raw keys
+      // (`ob.welcome.title`) and not re-render when boot installs it later.
+      void installI18n(usePreferences.getState().language)
+        .catch((error: unknown) => {
+          warnBoot('timeout-i18n-failed', error);
+        })
+        .finally(() => {
+          showApp(`timeout-${BOOT_TIMEOUT_MS}ms`);
+        });
     }, BOOT_TIMEOUT_MS);
 
     void boot().finally(() => {
@@ -276,78 +302,116 @@ export default function RootLayout() {
     return () => { sub.remove(); };
   }, []);
 
-  // Sakura push rail — inbox-sync listeners are always safe to attach: they
-  // only fire when the OS actually delivers a notification (none, if the user
-  // opted out), and they never touch permission. Mirrors Swift
-  // AppDelegate.didReceiveRemoteNotification.
   useEffect(() => {
-    const received = Notifications.addNotificationReceivedListener(() => {
-      // Inbox decrypt failures are not surfaced to the user; mirrors
-      // Swift MessageService logging behaviour.
-      if (usePreferences.getState().hasCompletedOnboarding) {
-        void syncOnce().catch(() => undefined);
-      }
+    if (!ready || !hasCompletedOnboarding || !backupEnabled) return;
+    // Sync and the dated-archive schedule share one foreground lifetime: both
+    // are foreground-only, and starting them together keeps a single place
+    // where cloud work can begin.
+    const start = () => {
+      const stopSync = startCloudSync();
+      const stopBackup = startAutoBackup();
+      return () => { stopSync(); stopBackup(); };
+    };
+    let stop = AppState.currentState === 'active' ? start() : undefined;
+    const sub = AppState.addEventListener('change', (state) => {
+      stop?.();
+      stop = state === 'active' ? start() : undefined;
     });
-    const response = Notifications.addNotificationResponseReceivedListener(() => {
-      if (usePreferences.getState().hasCompletedOnboarding) {
-        void syncOnce().catch(() => undefined);
+    return () => { stop?.(); sub.remove(); };
+  }, [ready, hasCompletedOnboarding, backupEnabled]);
+
+  // Contact auto-update (CREDS §3.3 訂閱憑據 lane, v1 — 05-spec §3): on boot
+  // and every return to foreground, run one THROTTLED sweep that re-resolves
+  // saved Verified Pages through their claimed `nostr:<npub>` HEAD (kind
+  // 30078) and merges real changes into 「最近更新」. Device-side only — no
+  // server, no push. The sweep itself is fire-and-forget and silent.
+  useEffect(() => {
+    if (!ready || !hasCompletedOnboarding) return;
+    maybeRefreshVerifiedContacts();
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active' && usePreferences.getState().hasCompletedOnboarding) {
+        maybeRefreshVerifiedContacts();
       }
     });
     return () => {
-      received.remove();
-      response.remove();
+      sub.remove();
     };
-  }, []);
+  }, [hasCompletedOnboarding, ready]);
 
-  // Registration is opt-in gated (R25). We only register once boot has
-  // hydrated the persisted preference (`ready`) AND remote notifications are
-  // enabled. The automatic path NEVER prompts — it registers only if the OS
-  // already granted permission — so a user who never opted in never sees a
-  // system dialog on cold launch. Fire-and-forget per Rule 10.
+  // zkTLS badges (docs/ref/10 D5): proofs past 30 days are re-proven silently
+  // on foreground (npub-signed, no Face ID); a failed renewal is told once.
   useEffect(() => {
-    if (!ready || !hasCompletedOnboarding || !remoteNotificationsEnabled) return;
-    void registerForPushNotificationsAsync().catch(() => undefined);
-    const tokenChange = Notifications.addPushTokenListener(() => {
-      void registerForPushNotificationsAsync().catch(() => undefined);
+    if (!ready || !hasCompletedOnboarding) return;
+    dropRetiredPassportZkData();
+    const renew = () => {
+      void renewDueProofs().then((failed) => {
+        if (failed.length > 0) pushToast(translate('zktls.renewFailed'), 'error');
+      });
+      void renewPassportStatement(DEFAULT_RELAYS);
+    };
+    renew();
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') renew();
     });
     return () => {
-      tokenChange.remove();
+      sub.remove();
     };
-  }, [hasCompletedOnboarding, ready, remoteNotificationsEnabled]);
-
-  if (!ready) return null;
+  }, [hasCompletedOnboarding, ready]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <KeyboardProvider>
-        <SafeAreaProvider>
-          <StatusBar style="auto" />
-          <AppErrorBoundary>
-            <Stack screenOptions={{ headerShown: false }} />
-          </AppErrorBoundary>
-          <ToastOverlay />
-          <ConfirmDialogOverlay />
-          <AppAlertOverlay />
-          <PearConsentOverlay />
-          <PearPresentConsentOverlay />
-          <ReceivedCardSheet
-            visible={receivedCard !== null}
-            card={receivedCard}
-            verificationStatus={receivedVerification}
-            source={receivedSource}
-            sealedRoute={receivedSealedRoute}
-            onSave={async (contact) => {
-              await upsertContact(contact);
-            }}
-            onShowMine={() => {
-              dismissReceived();
-              router.replace(PRIMARY_TAB_HREFS.present);
-            }}
-            onDismiss={dismissReceived}
-          />
-          <VerifiedPageResultSheet />
-        </SafeAreaProvider>
-      </KeyboardProvider>
+      {ready && logoSettled ? (
+        <View
+          style={{ flex: 1 }}
+          onLayout={() => {
+            setAppShown(true);
+          }}>
+          <KeyboardProvider>
+            <SafeAreaProvider>
+              <StatusBar style="auto" />
+              <AppErrorBoundary>
+                <Stack screenOptions={{ headerShown: false }} screenLayout={themeRefreshLayout} />
+              </AppErrorBoundary>
+              <ToastOverlay />
+              <ConfirmDialogOverlay />
+              <AppAlertOverlay />
+              <PearConsentOverlay />
+              <PearPresentConsentOverlay />
+              <ReceivedCardSheet
+                visible={receivedCard !== null}
+                card={receivedCard}
+                verificationStatus={receivedVerification}
+                source={receivedSource}
+                sealedRoute={receivedSealedRoute}
+                nostrPointer={receivedNostrPointer}
+                onSave={async (contact) => {
+                  await upsertContact(contact);
+                }}
+                onShowMine={() => {
+                  dismissReceived();
+                  router.replace(PRIMARY_TAB_HREFS.present);
+                }}
+                onDismiss={dismissReceived}
+              />
+              <VerifiedPageResultSheet />
+            </SafeAreaProvider>
+          </KeyboardProvider>
+        </View>
+      ) : null}
+      {!splashFinished ? (
+        <LaunchSplash
+          appShown={appShown}
+          onSettled={() => {
+            setLogoSettled(true);
+          }}
+          onFinished={() => {
+            setSplashFinished(true);
+          }}
+          onHideError={(error) => {
+            warnBoot('splash-hide-failed', error);
+          }}
+        />
+      ) : null}
     </GestureHandlerRootView>
   );
 }

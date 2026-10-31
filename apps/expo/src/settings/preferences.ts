@@ -17,10 +17,20 @@ import {
   captureLocalDataEpoch,
 } from '@/settings/localDataWipeBarrier';
 import type { ProviderKind } from '@/backup';
+import type { OnboardingState } from '@/onboarding/state';
 
 const KEY = 'prefs:v1';
 
-/** Per-action biometric requirement flags (mirrors Swift SensitiveAction). */
+/**
+ * Per-action biometric requirement flags (mirrors Swift SensitiveAction).
+ *
+ * DEAD SHAPE — retained only so persisted preference blobs keep round-tripping.
+ * The live biometric gate is `src/keychain/sensitiveActionPolicy.ts`: one
+ * user-chosen `BiometricGateMode` plus `RED_LINE_ACTIONS` no mode disarms.
+ * Do not reintroduce reads of `biometricPolicy`; call
+ * `requireSensitiveAction(action, prompt)` instead, which consults the real
+ * policy itself.
+ */
 export type SensitiveActionKey =
   | 'issueCredential'
   | 'presentProof'
@@ -33,28 +43,51 @@ export type SensitiveActionKey =
 /** Mirrors Swift AppColorScheme (system / light / dark). */
 export type AppColorScheme = 'system' | 'light' | 'dark';
 
-/** Mirrors Swift AnimalCharacter. */
-export type AnimalCharacter = 'dog' | 'horse' | 'pig' | 'sheep' | 'dove';
-
 export interface Preferences {
   readonly hasCompletedOnboarding: boolean;
-  /** Local v2 username used for the short `/name` public-page presentation. */
+  /** Where an unfinished onboarding stopped, so a relaunch resumes there; null once done. */
+  readonly onboardingProgress: OnboardingState | null;
+  /** Locally selected name, even while the network-backed page is unpublished. */
   readonly publicPageUsername: string;
+  /** Name most recently confirmed by the authenticated directory endpoint. */
+  readonly publicPageRegisteredUsername: string;
+  /** True only after directory registration and kind-0 reverse publication both completed. */
+  readonly publicPageBindingReady: boolean;
+  readonly publicPagePublishError:
+    | ''
+    | 'name_taken'
+    | 'rename_too_soon'
+    | 'profile_publish_failed'
+    | 'directory_unreachable'
+    | 'kind0_publish_failed'
+    | 'rate_limited'
+    | 'invalid_auth'
+    | 'invalid_request'
+    | 'server_error';
+  readonly publicPageRetryAt: number | null;
+  /**
+   * @deprecated Dormant — never read as behaviour. The biometric gate lives in
+   * `src/keychain/sensitiveActionPolicy.ts` (`mode`).
+   */
   readonly biometricSensitiveOps: boolean;
   readonly backupProvider: ProviderKind;
+  /**
+   * @deprecated Dormant — not read as behaviour since 2026-09-10. The Backup
+   * screen has one switch: `backupEnabled` on means automatic backups run
+   * (`src/backup/backupPolicy.ts`). Kept so persisted blobs and the Swift
+   * default parity (`BackupManager.Settings.autoBackup`) keep round-tripping.
+   */
   readonly autoBackupOnPull: boolean;
   readonly notificationsEnabled: boolean;
   readonly developerMode: boolean;
   readonly themeMode: 'auto' | 'light' | 'dark';
   /** Mirrors Swift ThemeManager.appColorScheme. */
   readonly appColorScheme: AppColorScheme;
-  /** Mirrors Swift ThemeManager.cardAccent (hex). */
-  readonly cardAccentHex: string;
-  /** Mirrors Swift ThemeManager.enableGlow. */
-  readonly enableGlow: boolean;
-  /** Mirrors Swift ThemeManager.selectedAnimal (null = none). */
-  readonly selectedAnimal: AnimalCharacter | null;
-  /** Per-action Face ID requirement flags (Swift SensitiveActionPolicyStore). */
+  /**
+   * Per-action Face ID requirement flags (Swift SensitiveActionPolicyStore).
+   *
+   * @deprecated No longer written or read as a gate — see `SensitiveActionKey`.
+   */
   readonly biometricPolicy: Readonly<Record<SensitiveActionKey, boolean>>;
   /** Mirrors Swift BackupSettings.enabled. */
   readonly backupEnabled: boolean;
@@ -109,17 +142,22 @@ const DEFAULT_BIOMETRIC_POLICY: Readonly<Record<SensitiveActionKey, boolean>> = 
 
 const DEFAULTS: Preferences = {
   hasCompletedOnboarding: false,
+  onboardingProgress: null,
   publicPageUsername: '',
+  publicPageRegisteredUsername: '',
+  publicPageBindingReady: false,
+  publicPagePublishError: '',
+  publicPageRetryAt: null,
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- dormant key, kept so persisted blobs round-trip
   biometricSensitiveOps: true,
   backupProvider: 'iCloud',
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- dormant key, kept so persisted blobs round-trip
   autoBackupOnPull: true,
   notificationsEnabled: true,
   developerMode: false,
   themeMode: 'auto',
   appColorScheme: 'system',
-  cardAccentHex: '#E091B3',
-  enableGlow: true,
-  selectedAnimal: null,
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- dormant key, kept so persisted blobs round-trip
   biometricPolicy: DEFAULT_BIOMETRIC_POLICY,
   backupEnabled: false,
   notificationsInAppToast: true,

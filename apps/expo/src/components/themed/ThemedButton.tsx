@@ -1,16 +1,19 @@
 /**
- * ThemedButton — single CTA primitive, 5 variants matching
- * solidarity/Views/Common/ThemedButtonStyles.swift verbatim.
+ * ThemedButton — single CTA primitive, the app twin of creds.id's `.btn`
+ * (airmeishi-web global.css; the web wins when they disagree).
  *
- *   primary       → bg=textPrimary (ink), fg=pageBg, 1pt 30% textPrimary stroke
- *   inverted      → bg=white, fg=black, NO border
- *   secondary     → bg=cardSurface, fg=textPrimary, 1pt divider stroke
+ *   primary       → `.btn`        `--color-inverted` fill: ink by day, cream by night
+ *   inverted      → bg=white, fg=black, NO border (on dark imagery)
+ *   secondary     → `.btn-ghost`  card fill, 1pt divider stroke
  *   dottedOutline → bg=clear, fg=primaryBlue, dashed primaryBlue stroke
  *   destructive   → bg=clear, fg=destructive, 1pt destructive stroke
  *
- * Every variant uses `clipShape(Rectangle())` → SQUARE corners (no borderRadius).
- * Font is 16pt medium (primary/inverted/destructive) or 16pt regular
- * (secondary/dottedOutline). 24h/14v padding. Pressed scale = 0.98.
+ * Every variant: 6pt corners (`--radius-button`), 16pt medium label (13pt at
+ * `sm`, like `.btn-sm`), pressed scale 0.97. Height is FIXED per size — 36 /
+ * 48 / 56, the web's `.btn-sm` and the editor's 48pt control line — so an
+ * icon, a spinner or a shrunk label never makes two buttons differ. Pass
+ * `icon` (an SF Symbol) rather than a hand-coloured `leadingIcon`: the glyph
+ * then takes the label's colour in either theme.
  *
  * Haptic policy (aniseekr CLAUDE rule 7):
  *   primary/inverted/destructive → heavyImpact (Swift)
@@ -33,9 +36,15 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 
+import type { SFSymbol } from 'expo-symbols';
+
+import { SfIcon } from '@/components/icons/SfIcon';
+import { textFont } from '@/constants/fonts';
 import { useThemeColors, type ThemeColors } from '@/constants/useThemeColors';
 import { haptic as fireHaptic, type HapticKind } from '@/feedback/haptics';
 import { ON_DARK, ON_LIGHT } from './contrast';
+import { Radius } from '@/constants/radius';
+import { SCALE, SPRING } from '@/feedback/motion';
 
 export type ButtonVariant =
   | 'primary'
@@ -46,15 +55,23 @@ export type ButtonVariant =
 
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
-/** Vertical padding per Swift (.padding(.vertical, 14)). Height = padding * 2 + line. */
-const SIZE_PADDING_Y: Readonly<Record<ButtonSize, number>> = {
-  sm: 10,
-  md: 14,
-  lg: 18,
+/** creds.id `--radius-button`. */
+const BUTTON_RADIUS = Radius.button;
+
+/** One control height per size: `.btn-sm` 36, the editor's 48 line, a hero 56. */
+const SIZE_HEIGHT: Readonly<Record<ButtonSize, number>> = {
+  sm: 36,
+  md: 48,
+  lg: 56,
 };
-/** Horizontal padding per Swift (.padding(.horizontal, 24)). */
+const SIZE_ICON: Readonly<Record<ButtonSize, number>> = {
+  sm: 13,
+  md: 16,
+  lg: 17,
+};
+/** `.btn` 24 / `.btn-sm` 14 side padding. */
 const SIZE_PADDING_X: Readonly<Record<ButtonSize, number>> = {
-  sm: 16,
+  sm: 14,
   md: 24,
   lg: 28,
 };
@@ -83,6 +100,9 @@ export interface ThemedButtonProps extends Omit<PressableProps, 'children' | 'st
   readonly size?: ButtonSize;
   readonly fullWidth?: boolean;
   readonly loading?: boolean;
+  /** Leading SF Symbol, drawn in the label's colour. */
+  readonly icon?: SFSymbol;
+  /** A custom leading node (brand glyphs); prefer `icon`. */
   readonly leadingIcon?: ReactNode;
   /** Override the default haptic, or pass `false` to disable. */
   readonly haptic?: HapticKind | false;
@@ -94,6 +114,7 @@ export function ThemedButton({
   size = 'md',
   fullWidth = false,
   loading = false,
+  icon,
   leadingIcon,
   haptic,
   disabled,
@@ -108,10 +129,10 @@ export function ThemedButton({
   const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
   const handlePressIn = () => {
-    scale.value = withSpring(0.98, { damping: 100, stiffness: 600 });
+    scale.value = withSpring(SCALE.press, SPRING.press);
   };
   const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 100, stiffness: 600 });
+    scale.value = withSpring(1, SPRING.press);
   };
 
   const handlePress = (e: GestureResponderEvent) => {
@@ -119,11 +140,11 @@ export function ThemedButton({
     onPress?.(e);
   };
 
-  // Swift uses `.clipShape(Rectangle())` — square corners on every variant.
   const containerStyle = {
+    borderRadius: BUTTON_RADIUS,
     backgroundColor: cfg.bg,
     paddingHorizontal: SIZE_PADDING_X[size],
-    paddingVertical: SIZE_PADDING_Y[size],
+    height: SIZE_HEIGHT[size],
     borderWidth: cfg.borderWidth,
     borderColor: cfg.borderColor,
     borderStyle: cfg.dashed ? ('dashed' as const) : ('solid' as const),
@@ -150,8 +171,29 @@ export function ThemedButton({
           <ActivityIndicator color={cfg.fg} />
         ) : (
           <>
-            {leadingIcon ? <View style={styles.icon}>{leadingIcon}</View> : null}
-            <Text style={{ color: cfg.fg, fontSize: 16, fontWeight: cfg.weight }}>{label}</Text>
+            {icon ? (
+              <View style={styles.icon}>
+                <SfIcon name={icon} size={SIZE_ICON[size]} color={cfg.fg} weight="medium" />
+              </View>
+            ) : leadingIcon ? <View style={styles.icon}>{leadingIcon}</View> : null}
+            {/* CTA labels are single-line: a long locale string (e.g. English in
+                a half-width row) shrinks slightly instead of wrapping, which
+                would give side-by-side buttons unequal heights. */}
+            <Text
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.85}
+              // iOS gives a shrinkable label the full row width and draws it
+              // left-aligned; centre it inside its own box too.
+              style={{
+                color: cfg.fg,
+                fontSize: size === 'sm' ? 13 : 16,
+                fontFamily: textFont(cfg.weight),
+                textAlign: 'center',
+                flexShrink: 1,
+              }}>
+              {label}
+            </Text>
           </>
         )}
       </Pressable>
@@ -163,9 +205,9 @@ function variantConfig(variant: ButtonVariant, theme: ThemeColors): VariantStyle
   switch (variant) {
     case 'primary':
       return {
-        bg: theme.text1,
-        fg: theme.pageBg,
-        borderColor: `${theme.text1}4D`,
+        bg: theme.invertedButtonBg,
+        fg: theme.invertedButtonText,
+        borderColor: 'transparent',
         borderWidth: 1,
         weight: '500',
       };
@@ -182,7 +224,7 @@ function variantConfig(variant: ButtonVariant, theme: ThemeColors): VariantStyle
         fg: theme.text1,
         borderColor: theme.divider,
         borderWidth: 1,
-        weight: '400',
+        weight: '500',
       };
     case 'dottedOutline':
       return {
@@ -191,7 +233,7 @@ function variantConfig(variant: ButtonVariant, theme: ThemeColors): VariantStyle
         borderColor: theme.primaryBlue,
         borderWidth: 1,
         dashed: true,
-        weight: '400',
+        weight: '500',
       };
     case 'destructive':
       return {

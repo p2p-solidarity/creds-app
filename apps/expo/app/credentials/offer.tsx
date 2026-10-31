@@ -32,8 +32,8 @@ import {
   type CredentialOffer,
 } from '@/oidc/credentialIssuance';
 import { usePreferences } from '@/settings/preferences';
+import { MONO } from '@/constants/fonts';
 
-const MONO = Platform.OS === 'ios' ? 'Menlo' : 'monospace';
 
 // MARK: - Parsed offer
 
@@ -172,7 +172,6 @@ function ReviewView({
     <View className="flex-1 gap-4">
       <ThemedSurface
         variant="inset"
-        className="rounded-none"
         style={{
           borderWidth: 1,
           borderColor: Colors.divider,
@@ -343,7 +342,7 @@ function ErrorView({
 
 export default function ReceiveCredentialRoute() {
   const developerMode = usePreferences((state) => state.developerMode);
-  if (!developerMode) return <Redirect href="/settings/advanced" />;
+  if (!developerMode) return <Redirect href="/settings" />;
 
   return <ReceiveCredentialScreen />;
 }

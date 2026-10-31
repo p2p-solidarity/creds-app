@@ -1,6 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import { safeBack } from '@/navigation/safeBack';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Linking } from 'react-native';
 
 import { getAtprotoSession } from '@/atproto/oauth';
@@ -9,6 +9,8 @@ import { haptic } from '@/feedback/haptics';
 import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
 import { fetchBlueskyAvatar, type BlueskyAvatarError } from '@/profile/avatar';
+import { linkDisplay } from '@/profile/linkPresentation';
+import { useLinkPreviewStore } from '@/profile/linkPreviewStore';
 import { persistLocalAvatar, readLocalAvatarUri, removeLocalAvatar } from '@/profile/localAvatar';
 import type { ProfileRecord } from '@solidarity/shared';
 
@@ -22,16 +24,24 @@ export type ProfileCommitResult =
   | 'saveFailed'
   | 'publishFailed';
 
+/** A profile picture already fetched for one of the Page's links. */
+export interface LinkAvatarChoice {
+  readonly picture: string;
+  readonly label: string;
+}
+
 export interface AvatarEditorController {
   readonly localAvatar: string | null;
   readonly sheetOpen: boolean;
   readonly phase: AvatarPickerPhase;
   readonly canUseBluesky: boolean;
   readonly canRemove: boolean;
+  readonly linkAvatars: readonly LinkAvatarChoice[];
   readonly open: () => void;
   readonly close: () => void;
   readonly chooseFromLibrary: () => Promise<void>;
   readonly useBluesky: () => Promise<void>;
+  readonly useLinkAvatar: (picture: string) => Promise<void>;
   readonly remove: () => Promise<void>;
   readonly resetError: () => void;
 }
@@ -63,6 +73,7 @@ export function useAvatarEditor({
   const [phase, setPhase] = useState<AvatarPickerPhase>({ step: 'ready' });
   const [localAvatar, setLocalAvatar] = useState(readLocalAvatarUri);
   const handle = blueskyHandle(record);
+  const linkAvatars = useLinkAvatars(record);
 
   const close = () => {
     setSheetOpen(false);
@@ -149,12 +160,16 @@ export function useAvatarEditor({
       setPhase({ step: 'error', message: errorMessage(fetched.error) });
       return;
     }
+    await commitRemoteAvatar(fetched.value);
+  };
 
+  /** Sign a remote picture into the Page — a Bluesky avatar or a link's. */
+  const commitRemoteAvatar = async (picture: string): Promise<void> => {
     setPhase({
       step: 'loading',
       message: t(willPublish ? 'meEdit.avatar.publishing' : 'meEdit.avatar.savingProfile'),
     });
-    const committed = await commitProfile(fetched.value);
+    const committed = await commitProfile(picture);
     if (committed === 'cancelled') {
       close();
       return;
@@ -221,6 +236,7 @@ export function useAvatarEditor({
     sheetOpen,
     phase,
     canUseBluesky: handle !== null,
+    linkAvatars,
     canRemove: record?.avatar != null || localAvatar !== null,
     open: () => {
       setPhase({ step: 'ready' });
@@ -229,9 +245,34 @@ export function useAvatarEditor({
     close,
     chooseFromLibrary,
     useBluesky,
+    useLinkAvatar: commitRemoteAvatar,
     remove,
     resetError: () => {
       setPhase({ step: 'ready' });
     },
   };
+}
+
+/** Profile pictures the Page's own links already serve (X, GitHub, …), so the
+ *  owner can pick one instead of uploading. Only fetched pictures — never a
+ *  guess at a URL. */
+function useLinkAvatars(record: ProfileRecord | null): readonly LinkAvatarChoice[] {
+  const entries = useLinkPreviewStore((s) => s.entries);
+  const load = useLinkPreviewStore((s) => s.load);
+  const links = record?.links;
+  useEffect(() => {
+    for (const link of links ?? []) load(link.url);
+  }, [links, load]);
+  return useMemo(() => {
+    const seen = new Set<string>();
+    const choices: LinkAvatarChoice[] = [];
+    for (const link of links ?? []) {
+      const entry = entries[link.url];
+      const picture = entry?.status === 'ready' ? entry.preview.avatar : null;
+      if (picture === null || seen.has(picture)) continue;
+      seen.add(picture);
+      choices.push({ picture, label: linkDisplay(link.label, link.url).text });
+    }
+    return choices;
+  }, [entries, links]);
 }

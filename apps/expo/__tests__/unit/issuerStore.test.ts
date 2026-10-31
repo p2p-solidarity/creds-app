@@ -1,8 +1,7 @@
 /**
  * IssuerMetadataStore + trust anchor — cache, eviction, fetch.
  *
- * Mirrors the test pattern in groupStore.test.ts / sharingSettingsStore.test.ts:
- * stub `@/storage/mmkv` + `@/storage/encryptionManager` with in-memory shims so
+ * Stubs `@/storage/mmkv` + `@/storage/encryptionManager` with in-memory shims so
  * the encrypted-blob round-trip is observable without touching native code.
  *
  * Pins:

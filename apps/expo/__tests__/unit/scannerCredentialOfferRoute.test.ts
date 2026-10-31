@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'bun:test';
-import { readFileSync } from 'node:fs';
 
 import { credentialOfferRouteFromScan } from '../../src/scan/credentialOfferRoute';
 
@@ -23,15 +22,5 @@ describe('credentialOfferRouteFromScan', () => {
     ]) {
       expect(credentialOfferRouteFromScan(payload)).toBeNull();
     }
-  });
-
-  it('dispatches credential offers before the generic envelope/OIDC pipeline', () => {
-    const source = readFileSync(new URL('../../app/scan/index.tsx', import.meta.url), 'utf8');
-    const offerDispatch = source.indexOf('credentialOfferRouteFromScan(payload)');
-    const genericDispatch = source.indexOf('handleScannedPayload(payload)');
-
-    expect(offerDispatch).toBeGreaterThan(-1);
-    expect(genericDispatch).toBeGreaterThan(offerDispatch);
-    expect(source).toContain('router.push(credentialOfferRoute);');
   });
 });

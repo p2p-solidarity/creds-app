@@ -1,26 +1,32 @@
+import { getMmkv } from '@/storage/mmkv';
 import { Image } from 'expo-image';
-import * as Clipboard from 'expo-clipboard';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { useWindowDimensions, View } from 'react-native';
 
+import { CopyableAddress } from '@/components/common/CopyableAddress';
 import { PressableScale } from '@/components/common/PressableScale';
+import { BrandIcon } from '@/components/icons/BrandIcon';
 import { SfIcon } from '@/components/icons/SfIcon';
-import { ThemedSurface, ThemedText } from '@/components/themed';
+import { brandIconForHost } from '@/profile/linkPresentation';
+import { ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
-import { haptic } from '@/feedback/haptics';
-import { SCALE } from '@/feedback/motion';
-import { pushToast } from '@/feedback/toast';
+import { useContentWidth } from '@/constants/layout';
 import { useTranslation } from '@/i18n';
 import { resolveProfileAvatarSource } from '@/profile/avatar';
 import { readLocalAvatarUri } from '@/profile/localAvatar';
 import type { ProfileRecord } from '@solidarity/shared';
 
+import { PageBioSheet } from './PageBioSheet';
+import { PageHeaderAction, PageHeaderActions } from './PageHeaderAction';
 import { pageHeaderLayout } from './pageHeaderLayout';
 import { ProfileShareSurface } from './ProfileShareSurface';
-import { ProfileInlineQr } from './ProfileShareSurface';
 import { useProfileShareSelection } from './useProfileShareSelection';
 import { displayProfileShareUrl, type PublicPageShareSource } from './meProfileModel';
+
+/** `.me-ava` — the Page tab's own avatar size, distinct from the 92pt one
+ *  the public page draws. */
+export const ME_AVATAR_SIZE = 56;
 
 export interface ProfileHeroProps {
   readonly record: ProfileRecord;
@@ -44,9 +50,11 @@ export function ProfileHero({
   onOpenSettings,
 }: ProfileHeroProps): ReactNode {
   const { t } = useTranslation();
-  const { width, fontScale } = useWindowDimensions();
+  const { fontScale } = useWindowDimensions();
+  const width = useContentWidth();
   const layout = pageHeaderLayout(width, fontScale);
   const [localAvatar, setLocalAvatar] = useState(readLocalAvatarUri);
+  const [bioOpen, setBioOpen] = useState(false);
   const shareSelection = useProfileShareSelection(
     shareRecord,
     shareJws,
@@ -62,76 +70,64 @@ export function ProfileHero({
   useFocusEffect(
     useCallback(() => {
       setLocalAvatar(readLocalAvatarUri());
+      const subscription = getMmkv().addOnValueChangedListener((key) => {
+        if (key === 'profile:local-avatar:v1') setLocalAvatar(readLocalAvatarUri());
+      });
+      return () => { subscription.remove(); };
     }, [])
   );
 
-  const copyShareUrl = useCallback(async (): Promise<void> => {
-    if (shareUrl === null) return;
-    try {
-      await Clipboard.setStringAsync(shareUrl);
-      haptic('success');
-      pushToast(t('meHome.pageUrlCopied'), 'success');
-    } catch {
-      haptic('error');
-      pushToast(t('meHome.pageUrlCopyFailed'), 'error');
-    }
-  }, [shareUrl, t]);
-
   return (
-    <View className="gap-2 px-4">
-      <View className="flex-row items-start gap-3">
+    <View className="gap-3 px-4">
+      {/* Narrow screens (e.g. 360pt Android) give the name the full row and
+          keep the page actions at the top, on their own line above it. */}
+      {layout === 'stacked' ? (
+        <View className="flex-row justify-end">
+          <ProfileHeaderActions
+            shareRecord={shareRecord}
+            shareJws={shareJws}
+            publicPage={publicPage}
+            nostrShortUrlReady={nostrShortUrlReady}
+            appearanceLabel={t('mePage.appearance')}
+            settingsLabel={t('mePage.settings')}
+            onOpenAppearance={onOpenAppearance}
+            onOpenSettings={onOpenSettings}
+          />
+        </View>
+      ) : null}
+
+      {/* `.me-top` — 56pt avatar, name, mono page address, and the three
+          whole-page actions, all on one line (mock §`#s-page`). */}
+      <View className="flex-row items-center" style={{ gap: 14, paddingTop: 4, paddingBottom: 4 }}>
         <PressableScale
           haptic="tap"
           onPress={onEditAvatar}
           accessibilityRole="button"
           accessibilityLabel={t('meHome.editPhoto')}
-          style={{ width: 72, height: 72 }}>
+          style={{ width: ME_AVATAR_SIZE, height: ME_AVATAR_SIZE }}>
           <ProfileAvatar
             avatar={record.avatar}
             localAvatar={localAvatar}
             displayName={record.displayName}
           />
-          <ThemedSurface
-            variant="elevated"
-            className="absolute bottom-0 right-0 h-7 w-7 items-center justify-center rounded-full">
-            <SfIcon name="camera" size={12} color={Colors.text1} />
-          </ThemedSurface>
         </PressableScale>
 
-        <View className="flex-1 gap-1 pt-1">
-          <ThemedText variant="headlineMedium" numberOfLines={2}>
+        <View className="flex-1" style={{ gap: 1 }}>
+          <ThemedText variant="headlineMedium" numberOfLines={1}>
             {record.displayName.length > 0 ? record.displayName : t('mePage.unnamed')}
           </ThemedText>
 
           {shareUrl !== null && displayShareUrl !== null ? (
-            <PressableScale
-              haptic={false}
-              onPress={() => {
-                void copyShareUrl();
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={t('meHome.copyPageUrl', { url: displayShareUrl })}
-              containerStyle={{ alignSelf: 'stretch' }}
-              style={{ minHeight: 44, justifyContent: 'center' }}>
-              <ThemedSurface
-                variant="card"
-                className="flex-row items-center gap-2 rounded-none px-3 py-2">
-                <ThemedText
-                  variant="label"
-                  numberOfLines={1}
-                  ellipsizeMode="middle"
-                  style={{ flex: 1 }}>
-                  {displayShareUrl}
-                </ThemedText>
-                <SfIcon name="doc.on.doc" size={14} color={Colors.primaryBlue} />
-              </ThemedSurface>
-            </PressableScale>
-          ) : null}
-
-          {record.bio.length > 0 ? (
-            <ThemedText variant="bodyMedium" tone="secondary">
-              {record.bio}
-            </ThemedText>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <BrandIcon name={brandIconForHost(shareUrl)} size={16} color={Colors.text2} />
+              <CopyableAddress
+                address={shareUrl}
+                displayAddress={displayShareUrl}
+                accessibilityLabel={t('meHome.copyPageUrl', { url: displayShareUrl })}
+                copiedMessage={t('meHome.pageUrlCopied')}
+                failedMessage={t('meHome.pageUrlCopyFailed')}
+              />
+            </View>
           ) : null}
         </View>
 
@@ -149,27 +145,29 @@ export function ProfileHero({
         ) : null}
       </View>
 
-      {layout === 'stacked' ? (
-        <View className="flex-row justify-end">
-          <ProfileHeaderActions
-            shareRecord={shareRecord}
-            shareJws={shareJws}
-            publicPage={publicPage}
-            nostrShortUrlReady={nostrShortUrlReady}
-            appearanceLabel={t('mePage.appearance')}
-            settingsLabel={t('mePage.settings')}
-            onOpenAppearance={onOpenAppearance}
-            onOpenSettings={onOpenSettings}
-          />
-        </View>
-      ) : null}
-
-      <ProfileInlineQr
-        record={shareRecord}
-        jws={shareJws}
-        publicPage={publicPage}
-        nostrShortUrlReady={nostrShortUrlReady}
-      />
+      {/* The bio, under the name like the visitor page's `.pub-bio`; a tap
+          edits it in place. No bio yet → one quiet invitation. */}
+      <PressableScale
+        haptic="tap"
+        onPress={() => { setBioOpen(true); }}
+        accessibilityRole="button"
+        accessibilityLabel={record.bio.length > 0 ? t('pageBio.edit') : t('pageBio.add')}
+        style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+        {record.bio.length > 0 ? (
+          <ThemedText variant="bodyMedium" tone="secondary" numberOfLines={3} style={{ flex: 1 }}>
+            {record.bio}
+          </ThemedText>
+        ) : (
+          <>
+            <SfIcon name="plus" size={13} color={Colors.primaryBlue} />
+            <ThemedText variant="bodyMedium" style={{ color: Colors.primaryBlue, flex: 1 }}>
+              {t('pageBio.add')}
+            </ThemedText>
+          </>
+        )}
+        {record.bio.length > 0 ? <SfIcon name="pencil" size={13} color={Colors.text3} /> : null}
+      </PressableScale>
+      <PageBioSheet visible={bioOpen} bio={record.bio} onClose={() => { setBioOpen(false); }} />
     </View>
   );
 }
@@ -194,42 +192,20 @@ function ProfileHeaderActions({
   readonly onOpenSettings: () => void;
 }): ReactNode {
   return (
-    <View className="flex-row">
+    <PageHeaderActions>
       <ProfileShareSurface
         record={shareRecord}
         jws={shareJws}
         publicPage={publicPage}
         nostrShortUrlReady={nostrShortUrlReady}
       />
-      <ProfileHeaderAction
-        icon="paintbrush"
+      <PageHeaderAction
+        icon="circle.lefthalf.filled"
         label={appearanceLabel}
         onPress={onOpenAppearance}
       />
-      <ProfileHeaderAction icon="gearshape" label={settingsLabel} onPress={onOpenSettings} />
-    </View>
-  );
-}
-
-function ProfileHeaderAction({
-  icon,
-  label,
-  onPress,
-}: {
-  readonly icon: 'paintbrush' | 'gearshape';
-  readonly label: string;
-  readonly onPress: () => void;
-}): ReactNode {
-  return (
-    <PressableScale
-      haptic="tap"
-      scaleTo={SCALE.icon}
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
-      <SfIcon name={icon} size={17} color={Colors.text1} />
-    </PressableScale>
+      <PageHeaderAction icon="gearshape" label={settingsLabel} onPress={onOpenSettings} />
+    </PageHeaderActions>
   );
 }
 
@@ -252,8 +228,8 @@ export function ProfileAvatar({
   const initial = (displayName.trim().charAt(0) || '?').toUpperCase();
   return (
     <View
-      className="overflow-hidden rounded-full border border-divider bg-warmCream"
-      style={{ width: 72, height: 72 }}>
+      className="overflow-hidden rounded-pill bg-warmCream"
+      style={{ width: ME_AVATAR_SIZE, height: ME_AVATAR_SIZE }}>
       <View className="absolute inset-0 items-center justify-center">
         <ThemedText variant="headlineMedium" style={{ color: Colors.primaryBlue }}>
           {initial}
@@ -262,7 +238,7 @@ export function ProfileAvatar({
       {imageUrl && !imageFailed ? (
         <Image
           source={{ uri: imageUrl }}
-          style={{ width: 72, height: 72 }}
+          style={{ width: ME_AVATAR_SIZE, height: ME_AVATAR_SIZE }}
           contentFit="cover"
           cachePolicy="memory-disk"
           transition={0}

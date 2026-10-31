@@ -29,7 +29,7 @@
 import { beforeAll, beforeEach, describe, expect, it } from 'bun:test';
 
 import derivedVectors from '../../../../packages/shared/vectors/derive.json';
-import { verifyNostrEvent, type NostrEvent, type NostrFilter, type SubscriptionHandle } from '@/dag/nostrAdapter';
+import { verifyNostrEvent, type NostrEvent, type NostrFilter, type SubscriptionHandle } from '@/nostr/nostrAdapter';
 
 type Res<T> =
   | { readonly ok: true; readonly value: T }
@@ -67,6 +67,20 @@ type SubscribeEventsFn = (
 
 interface PublishMod {
   readonly DEFAULT_RELAYS: readonly string[];
+  readonly eventMatchesFilter: (event: NostrEvent, filter: NostrFilter) => boolean;
+  readonly fetchLatestEvent: (
+    relays: readonly string[],
+    filter: NostrFilter,
+    subscribeFn: SubscribeEventsFn,
+    timeoutMs: number,
+    opts?: { readonly graceMs?: number; readonly onEvent?: (event: NostrEvent) => void }
+  ) => Promise<{ readonly event: NostrEvent | null; readonly confirmed: boolean }>;
+  readonly fetchLatestProfilePointer: (
+    relays: readonly string[],
+    pubkeyHex: string,
+    subscribeFn: SubscribeEventsFn,
+    timeoutMs: number
+  ) => Promise<{ readonly event: NostrEvent | null; readonly confirmed: boolean }>;
   readonly PROFILE_D_TAG: string;
   readonly KIND_PROFILE_POINTER: number;
   readonly KIND_METADATA: number;
@@ -87,6 +101,7 @@ interface PublishMod {
   }) => Promise<Res<PublishReport>>;
   readonly updateKind0AlsoKnownAs: (opts: {
     readonly did: string;
+    readonly nip05?: string;
     readonly relays: readonly string[];
     readonly timeoutMs?: number;
     readonly fetchTimeoutMs?: number;
@@ -435,6 +450,36 @@ describe('updateKind0AlsoKnownAs', () => {
     expect(content.alsoKnownAs.sort()).toEqual(['at://alice.bsky.social', DID].sort());
   });
 
+  it('sets the requested NIP-05 identifier while preserving all existing metadata', async () => {
+    await userKeyMod.provisionFromRootMnemonic();
+    const existing = await userKeyMod.signNostrEvent({
+      kind: 0,
+      tags: [],
+      content: JSON.stringify({ name: 'Alice', nip05: 'old@creds.id' }),
+      created_at: 1_000,
+    });
+    expect(existing.ok).toBe(true);
+    if (!existing.ok) return;
+    const { fn: subFn } = makeFakeSubscribe({ a: [existing.value] });
+    const { fn: pubFn } = makeFakePublish({ a: true });
+
+    const result = await mod.updateKind0AlsoKnownAs({
+      did: DID,
+      nip05: 'alice@creds.id',
+      relays: ['a'],
+      subscribeEventsFn: subFn,
+      publishEventFn: pubFn,
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(JSON.parse(result.value.event.content)).toEqual({
+      name: 'Alice',
+      nip05: 'alice@creds.id',
+      alsoKnownAs: [DID],
+    });
+  });
+
   it('picks the newest kind-0 across relays by created_at', async () => {
     await userKeyMod.provisionFromRootMnemonic();
 
@@ -515,6 +560,43 @@ describe('updateKind0AlsoKnownAs', () => {
     expect(pubCalls).toEqual([]); // but never wrote
   });
 
+  it('waits for a slow relay holding the real kind-0 even after a fast relay says "none" (no reader grace on the write path)', async () => {
+    await userKeyMod.provisionFromRootMnemonic();
+    const existing = await userKeyMod.signNostrEvent({
+      kind: mod.KIND_METADATA,
+      tags: [],
+      content: JSON.stringify({ name: 'Kidney', about: 'keep me' }),
+      created_at: 1_700_000_000,
+    });
+    if (!existing.ok) throw new Error(existing.error);
+    // "a" answers EOSE-empty at once; "b" has the user's kind-0 but answers
+    // well past the reader grace window. Writing on "a"'s answer alone would
+    // wipe name/about.
+    const subFn: SubscribeEventsFn = (relayUrl, _filter, onEvent, onEose) => {
+      if (relayUrl === 'a') setTimeout(() => onEose?.(), 0);
+      else
+        setTimeout(() => {
+          onEvent(existing.value);
+          onEose?.();
+        }, 600);
+      return { subscriptionId: `fake-${relayUrl}`, close: () => undefined };
+    };
+    const { fn: pubFn } = makeFakePublish({ a: true, b: true });
+
+    const r = await mod.updateKind0AlsoKnownAs({
+      did: DID,
+      relays: ['a', 'b'],
+      subscribeEventsFn: subFn,
+      publishEventFn: pubFn,
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const content = JSON.parse(r.value.event.content) as { name?: string; about?: string; alsoKnownAs: string[] };
+    expect(content.name).toBe('Kidney');
+    expect(content.about).toBe('keep me');
+    expect(content.alsoKnownAs).toEqual([DID]);
+  });
+
   it('still publishes fresh when ≥1 relay confirms (EOSE) no existing kind-0, even if others are unreachable', async () => {
     await userKeyMod.provisionFromRootMnemonic();
 
@@ -561,5 +643,184 @@ describe('DEFAULT_RELAYS', () => {
     for (const defaultRelay of mod.DEFAULT_RELAYS) {
       expect(calls).not.toContain(defaultRelay);
     }
+  });
+});
+
+// ── eventMatchesFilter — a signed event is not automatically the event we
+//    asked for. Signature validity rules out forgery, not substitution across
+//    the SAME author's other parameterized records. ─────────────────────────
+
+describe('eventMatchesFilter', () => {
+  const base: NostrEvent = {
+    id: 'a'.repeat(64),
+    pubkey: 'b'.repeat(64),
+    created_at: 1_700_000_000,
+    kind: 30078,
+    tags: [['d', 'solidarity.profile']],
+    content: '',
+    sig: 'c'.repeat(128),
+  };
+
+  it('accepts an event that satisfies every requested constraint', () => {
+    expect(
+      mod.eventMatchesFilter(base, {
+        kinds: [30078],
+        authors: [base.pubkey],
+        '#d': ['solidarity.profile'],
+      })
+    ).toBe(true);
+  });
+
+  it('rejects the same author\'s other parameterized record', () => {
+    const otherSlot: NostrEvent = { ...base, tags: [['d', 'solidarity.disclosure.age']] };
+    expect(
+      mod.eventMatchesFilter(otherSlot, {
+        kinds: [30078],
+        authors: [base.pubkey],
+        '#d': ['solidarity.profile'],
+      })
+    ).toBe(false);
+  });
+
+  it('rejects an event carrying no d tag at all', () => {
+    expect(
+      mod.eventMatchesFilter({ ...base, tags: [] }, { '#d': ['solidarity.profile'] })
+    ).toBe(false);
+  });
+
+  it('still enforces kind and author', () => {
+    expect(mod.eventMatchesFilter(base, { kinds: [30000] })).toBe(false);
+    expect(mod.eventMatchesFilter(base, { authors: ['d'.repeat(64)] })).toBe(false);
+  });
+});
+
+describe('fetchLatestProfilePointer', () => {
+  it('ignores a newer wrong-d-tag event from the same author', async () => {
+    const pubkey = 'b'.repeat(64);
+    const wanted: NostrEvent = {
+      id: 'a'.repeat(64),
+      pubkey,
+      created_at: 1_700_000_000,
+      kind: mod.KIND_PROFILE_POINTER,
+      tags: [['d', mod.PROFILE_D_TAG]],
+      content: 'the real pointer',
+      sig: 'c'.repeat(128),
+    };
+    // A relay answering with the author's newer record from a DIFFERENT slot:
+    // validly signed, still not the record we asked for.
+    const substituted: NostrEvent = {
+      ...wanted,
+      id: 'e'.repeat(64),
+      created_at: wanted.created_at + 600,
+      tags: [['d', 'solidarity.disclosure.age']],
+      content: 'a different parameterized record',
+    };
+    const relay = 'wss://relay.test';
+    const { fn } = makeFakeSubscribe({ [relay]: [wanted, substituted] });
+
+    const result = await mod.fetchLatestProfilePointer([relay], pubkey, fn, 500);
+
+    expect(result.event?.content).toBe('the real pointer');
+  });
+});
+
+// ── Progressive read: the first relay paints, later relays only refine. ──
+
+describe('fetchLatestEvent — progressive read', () => {
+  const pubkey = 'b'.repeat(64);
+  const filter: NostrFilter = { kinds: [30078], authors: [pubkey], '#d': ['solidarity.profile'] };
+  const ev = (createdAt: number, content: string, d = 'solidarity.profile'): NostrEvent => ({
+    id: `${createdAt}`.padStart(64, '0'),
+    pubkey,
+    created_at: createdAt,
+    kind: 30078,
+    tags: [['d', d]],
+    content,
+    sig: 'c'.repeat(128),
+  });
+  /** Per relay: events to emit, then EOSE, after `delayMs`; `null` = never answers. */
+  function scripted(
+    plan: Readonly<Record<string, { readonly delayMs: number; readonly events: readonly NostrEvent[] } | null>>
+  ): SubscribeEventsFn {
+    return (relayUrl, _filter, onEvent, onEose) => {
+      const step = plan[relayUrl];
+      if (step) {
+        setTimeout(() => {
+          for (const e of step.events) onEvent(e);
+          onEose?.();
+        }, step.delayMs);
+      }
+      return { subscriptionId: `fake-${relayUrl}`, close: () => undefined };
+    };
+  }
+
+  it('settles a grace window after the first EOSE instead of waiting out a dead relay', async () => {
+    const seen: string[] = [];
+    const started = Date.now();
+    const r = await mod.fetchLatestEvent(
+      ['fast', 'dead'],
+      filter,
+      scripted({ fast: { delayMs: 0, events: [ev(100, 'v1')] }, dead: null }),
+      3000,
+      { graceMs: 50, onEvent: (e) => seen.push(e.content) }
+    );
+    expect(Date.now() - started).toBeLessThan(1000);
+    expect(r.event?.content).toBe('v1');
+    expect(r.confirmed).toBe(true);
+    expect(seen).toEqual(['v1']);
+  });
+
+  it('hands over the first event, then a newer one from a later relay; never an older or mismatched one', async () => {
+    const seen: string[] = [];
+    const r = await mod.fetchLatestEvent(
+      ['first', 'newer', 'older'],
+      filter,
+      scripted({
+        first: { delayMs: 0, events: [ev(100, 'v1'), ev(500, 'other slot', 'solidarity.disclosure.age')] },
+        newer: { delayMs: 20, events: [ev(200, 'v2')] },
+        older: { delayMs: 40, events: [ev(50, 'v0')] },
+      }),
+      3000,
+      { graceMs: 200, onEvent: (e) => seen.push(e.content) }
+    );
+    expect(seen).toEqual(['v1', 'v2']);
+    expect(r.event?.content).toBe('v2');
+  });
+
+  it('reports blind (not confirmed, no event) when every relay times out', async () => {
+    const seen: string[] = [];
+    const started = Date.now();
+    const r = await mod.fetchLatestEvent(['x', 'y'], filter, scripted({ x: null, y: null }), 80, {
+      graceMs: 10,
+      onEvent: (e) => seen.push(e.content),
+    });
+    expect(Date.now() - started).toBeGreaterThanOrEqual(70);
+    expect(r).toEqual({ event: null, confirmed: false });
+    expect(seen).toEqual([]);
+  });
+
+  it('counts a relay once even when it reports an error twice (onerror + onclose)', async () => {
+    // A real damus failure fires `onError` from both ws.onerror and ws.onclose.
+    // Counting both would settle before the slow relay that holds the event.
+    const twiceFailing: SubscribeEventsFn = (relayUrl, f, onEvent, onEose, onError) => {
+      if (relayUrl !== 'flaky') return scripted({ empty: { delayMs: 0, events: [] }, slow: { delayMs: 150, events: [ev(100, 'late')] } })(relayUrl, f, onEvent, onEose, onError);
+      setTimeout(() => {
+        onError?.('websocket error');
+        onError?.('closed (code 1006)');
+      }, 0);
+      return { subscriptionId: 'fake-flaky', close: () => undefined };
+    };
+    const r = await mod.fetchLatestEvent(['flaky', 'empty', 'slow'], filter, twiceFailing, 3000);
+    expect(r.event?.content).toBe('late');
+  });
+
+  it('without a grace window, waits for every relay (the writer default)', async () => {
+    const r = await mod.fetchLatestEvent(
+      ['fast', 'slow'],
+      filter,
+      scripted({ fast: { delayMs: 0, events: [] }, slow: { delayMs: 150, events: [ev(100, 'late')] } }),
+      3000
+    );
+    expect(r.event?.content).toBe('late');
   });
 });

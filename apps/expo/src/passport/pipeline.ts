@@ -1,27 +1,18 @@
 /**
- * Passport pipeline — mirrors Swift PassportPipelineService.swift +
- * PassportPipelineViewModel.swift (combined into one TS surface).
+ * Passport pipeline — the passport-setup screen's state machine:
  *
- * The state machine matches Swift verbatim:
+ *   mrz ──validateMRZ──→ nfc ──readNFCChip──→ persist
  *
- *   mrz ──validateMRZ──→ nfc ──readNFCChip──→ proof ──generateProof──→ persist
- *
- * Each transition is gated by the previous artifact:
  *   - mrz     → needs a validated PassportMRZDraft
- *   - nfc     → needs a PassportChipSnapshot (real or simulated)
- *   - proof   → needs a PassportProofResult (mopro-noir / semaphore / sd-jwt)
- *   - persist → issues IdentityCardEntity (handled by the calling screen)
+ *   - nfc     → needs a PassportChipSnapshot (real chip, passive auth done
+ *               natively; or the developer-mode simulation)
+ *   - persist → saves the credential and signs the device-attested passport
+ *               statement (handled by the calling screen, docs/ref/11 §6.1)
  *
- * The exported `runPassportPipeline` function keeps the old one-shot API
- * for tests/scripts. Callers that need step-level UI control use the
- * `createPassportPipeline()` factory which returns a reducer + helpers.
+ * There is no proof step: the app no longer proves anything about the
+ * passport in a circuit (docs/ref/11 P2).
  */
-import type { CardError, Result } from '@solidarity/shared';
-import { err, ok } from '@solidarity/shared';
-import type {
-  PassportMRZ,
-  PassportReadResult,
-} from '@solidarity/nitro-nfc-passport';
+import type { PassportReadResult } from '@solidarity/nitro-attest';
 
 // ---------------------------------------------------------------------------
 // Chip-snapshot helpers — mirror Swift PassportPipelineService.realNFCRead +
@@ -29,7 +20,7 @@ import type {
 // digest logic can be unit-tested without spinning up the Nitro bridge.
 // ---------------------------------------------------------------------------
 
-export type PassportPipelineStep = 'mrz' | 'nfc' | 'proof' | 'persist';
+export type PassportPipelineStep = 'mrz' | 'nfc' | 'persist';
 
 export interface PassportMRZDraft {
   readonly passportNumber: string;
@@ -56,38 +47,6 @@ export interface PassportChipSnapshot {
   readonly nationalityCode: string;
   readonly maskedDocNumber: string;
   readonly dataGroupsRead: readonly string[];
-  readonly openAcV3WitnessBundleJson?: string;
-  readonly activeAuthJson?: string;
-}
-
-/**
- * Public attributes the verifier sees alongside the retired disclosure
- * proof. Kept for legacy payloads; passport-noir 0.3.0 uses OpenAC v3
- * proof envelopes instead.
- */
-export interface PassportDisclosure {
-  /** 3-letter ICAO code, or null if the user opted to hide nationality. */
-  readonly nationality: string | null;
-  /** Display name (given + surname), or null if hidden. */
-  readonly name: string | null;
-  /** True if `age >= ageThreshold` was proven, null if hidden. */
-  readonly isOlder: boolean | null;
-  /** Threshold the prover committed to (e.g. 18). */
-  readonly ageThreshold: number;
-  /** Hex of `mrz_hash` — public anchor for chaining to a verify proof. */
-  readonly mrzHashHex: string;
-}
-
-export interface PassportProofResult {
-  readonly proofType: string;
-  readonly proofPayload: string;
-  readonly trustLevel: string;
-  readonly generationFailed: boolean;
-  /**
-   * Legacy disclosure outputs. Null for passport-noir 0.3.0 OpenAC proofs,
-   * SD-JWT fallback, or any non-disclosure proof path.
-   */
-  readonly disclosure?: PassportDisclosure | null;
 }
 
 export interface ValidationError {
@@ -136,7 +95,6 @@ export interface PassportPipelineState {
   readonly step: PassportPipelineStep;
   readonly draft: PassportMRZDraft;
   readonly chip: PassportChipSnapshot | null;
-  readonly proof: PassportProofResult | null;
   readonly isLoading: boolean;
   readonly nfcProgressMessage: string;
   /** 0..100, mirrors the native NfcReadProgress.percent we receive. */
@@ -150,14 +108,6 @@ export interface PassportPipelineState {
     | 'verifying'
     | 'done'
     | 'error';
-  readonly proofProgressMessage: string;
-  /**
-   * Explicit overlay stage for proof generation — real milestones only
-   * (CLAUDE.md rule 8): 'init' when the prover is starting, 'proving' on
-   * the first real generate event, 'done' on actual completion, null when
-   * no overlay should show.
-   */
-  readonly proofOverlayStage: 'init' | 'proving' | 'done' | null;
   readonly errorMessage: string | null;
 }
 
@@ -170,13 +120,10 @@ export const initialPassportPipelineState: PassportPipelineState = {
     expiryDate: '',
   },
   chip: null,
-  proof: null,
   isLoading: false,
   nfcProgressMessage: 'Connecting to chip...',
   nfcProgressPercent: 0,
   nfcProgressPhase: 'idle',
-  proofProgressMessage: '',
-  proofOverlayStage: null,
   errorMessage: null,
 };
 
@@ -192,13 +139,7 @@ export type PassportPipelineAction =
       readonly percent: number;
       readonly message: string;
     }
-  | { readonly type: 'setProofProgress'; readonly message: string }
-  | {
-      readonly type: 'setProofOverlayStage';
-      readonly stage: PassportPipelineState['proofOverlayStage'];
-    }
   | { readonly type: 'setChip'; readonly chip: PassportChipSnapshot }
-  | { readonly type: 'setProof'; readonly proof: PassportProofResult }
   | { readonly type: 'setError'; readonly message: string | null };
 
 export function passportPipelineReducer(
@@ -230,14 +171,8 @@ export function passportPipelineReducer(
             : Math.max(state.nfcProgressPercent, action.percent),
         nfcProgressMessage: action.message,
       };
-    case 'setProofProgress':
-      return { ...state, proofProgressMessage: action.message };
-    case 'setProofOverlayStage':
-      return { ...state, proofOverlayStage: action.stage };
     case 'setChip':
-      return { ...state, chip: action.chip, step: 'proof' };
-    case 'setProof':
-      return { ...state, proof: action.proof, step: 'persist' };
+      return { ...state, chip: action.chip, step: 'persist' };
     case 'setError':
       return { ...state, errorMessage: action.message };
   }
@@ -260,54 +195,12 @@ export const PASSPORT_STEP_META: Readonly<
     title: 'passportSetup.step.read.title',
     subtitle: 'passportSetup.step.read.subtitle',
   },
-  proof: {
-    id: 'PASS-3',
-    title: 'passportSetup.step.check.title',
-    subtitle: 'passportSetup.step.check.subtitle',
-  },
   persist: {
-    id: 'PASS-4',
+    id: 'PASS-3',
     title: 'passportSetup.step.save.title',
     subtitle: 'passportSetup.step.save.subtitle',
   },
 };
-
-// ---------------------------------------------------------------------------
-// Legacy one-shot pipeline (kept for tests / scripts that drove the simple
-// runPassportPipeline + onStep callback API).
-// ---------------------------------------------------------------------------
-
-export type PassportStep =
-  | { readonly type: 'mrzScanned'; readonly mrz: PassportMRZ }
-  | { readonly type: 'nfcReading' }
-  | { readonly type: 'nfcRead'; readonly result: PassportReadResult }
-  | { readonly type: 'proofGenerating' }
-  | { readonly type: 'proofGenerated'; readonly proof: ArrayBuffer }
-  | { readonly type: 'vcIssued'; readonly jwt: string }
-  | { readonly type: 'error'; readonly message: string };
-
-export interface PassportPipelineDeps {
-  readonly readChip: (mrz: PassportMRZ) => Promise<PassportReadResult>;
-  readonly generateProof: (chipData: PassportReadResult) => Promise<ArrayBuffer>;
-  readonly issueVc: (chipData: PassportReadResult, proof: ArrayBuffer) => Promise<string>;
-}
-
-export async function runPassportPipeline(
-  mrz: PassportMRZ,
-  deps: PassportPipelineDeps,
-  onStep: (step: PassportStep) => void
-): Promise<string> {
-  onStep({ type: 'mrzScanned', mrz });
-  onStep({ type: 'nfcReading' });
-  const chip = await deps.readChip(mrz);
-  onStep({ type: 'nfcRead', result: chip });
-  onStep({ type: 'proofGenerating' });
-  const proof = await deps.generateProof(chip);
-  onStep({ type: 'proofGenerated', proof });
-  const vcJwt = await deps.issueVc(chip, proof);
-  onStep({ type: 'vcIssued', jwt: vcJwt });
-  return vcJwt;
-}
 
 /** Translate a Nitro PassportReadResult into the UI snapshot model. */
 export function chipFromNitro(
@@ -349,8 +242,6 @@ export function chipFromNitro(
     nationalityCode: result.mrz.nationality || fallbackNationality,
     maskedDocNumber: maskDocumentNumber(result.mrz.documentNumber || fallbackDocNumber),
     dataGroupsRead,
-    openAcV3WitnessBundleJson: result.openAcV3WitnessBundleJson,
-    activeAuthJson: result.activeAuthJson,
   };
 }
 
@@ -508,199 +399,15 @@ export function selectNfcReadStrategy(
   return { kind: 'real' };
 }
 
-/** Convert raw proof bytes to a base64-encoded payload. */
-export function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-  for (const b of bytes) binary += String.fromCharCode(b);
-  if (typeof btoa !== 'undefined') return btoa(binary);
-  // RN fallback: leave as binary string (rare path; mock proof only).
-  return binary;
-}
-
-// ---------------------------------------------------------------------------
-// ICAO 9303 check-digit helpers + Result-returning pipeline wrapper.
-//
-// Mirrors Swift `MRZScannerService.computeCheckDigit` byte-for-byte so a
-// failing checksum surfaces the same `validationError` payload on both
-// sides (CardError.validationError on Swift, { type: 'validationError' } on
-// TS via @solidarity/shared/cardError).
-//
-// Why this exists in TS as well: until the Nitro NFC module is linked on
-// Android we still need to validate user-entered MRZ strings before
-// hitting the chip, otherwise an off-by-one OCR scan wastes a 30-second
-// NFC attempt for an error that should have been caught up front.
-// ---------------------------------------------------------------------------
-
-const MRZ_WEIGHTS: readonly [number, number, number] = [7, 3, 1];
-
-/**
- * Compute the ICAO 9303 check digit for an MRZ field. Mirrors Swift's
- * `MRZScannerService.computeCheckDigit` — `<` = 0, digits keep value,
- * letters map to (asciiValue - 'A') + 10. Sum * weight(7,3,1 cycle) mod 10.
- */
-export function mrzCheckDigit(field: string): number {
-  let sum = 0;
-  for (let i = 0; i < field.length; i += 1) {
-    const ch = field.charAt(i);
-    let value = 0;
-    if (ch === '<') {
-      value = 0;
-    } else if (ch >= '0' && ch <= '9') {
-      value = ch.charCodeAt(0) - 48;
-    } else if (ch >= 'A' && ch <= 'Z') {
-      value = ch.charCodeAt(0) - 65 + 10;
-    } else if (ch >= 'a' && ch <= 'z') {
-      value = ch.charCodeAt(0) - 97 + 10;
-    } else {
-      value = 0;
-    }
-    const weight = MRZ_WEIGHTS[i % 3] ?? 1;
-    sum += value * weight;
-  }
-  return sum % 10;
-}
-
-/**
- * Validate the embedded check digits on a `PassportMRZ` payload.
- *
- * Expectations (per ICAO 9303 + Swift NFCPassportReaderService.buildMRZKey):
- *   - `documentNumber` is the 9-char passport number padded with `<`
- *     followed by exactly one digit check digit (10 chars total).
- *     If the input is shorter than 10 chars we left-pad with `<` so the
- *     wire format matches what the chip expects.
- *   - `dateOfBirth` / `dateOfExpiry` are 6 chars (YYMMDD). They do NOT
- *     embed a check digit on the wire because the chip computes them
- *     internally — we only validate the document-number digit here.
- *
- * Returns `validationError` (mirrors Swift CardError.validationError)
- * on mismatch. Success carries `void`.
- */
-export function validateMrzChecksum(
-  mrz: Pick<PassportMRZ, 'documentNumber' | 'dateOfBirth' | 'dateOfExpiry'>
-): Result<void, CardError> {
-  const docNumber = mrz.documentNumber.trim();
-  if (docNumber.length < 2) {
-    return err<CardError>({
-      type: 'validationError',
-      message: 'Passport number is too short for a check digit.',
-    });
-  }
-  // Last char must be a digit (the check digit). If it isn't, the caller
-  // never embedded one, which is itself a validation failure for the
-  // strict "with check digit included" contract on PassportMRZ.
-  const expected = docNumber.charAt(docNumber.length - 1);
-  if (expected < '0' || expected > '9') {
-    return err<CardError>({
-      type: 'validationError',
-      message: 'Passport number check digit is missing or non-numeric.',
-    });
-  }
-  const body = docNumber.slice(0, -1);
-  // Pad the document body to 9 chars with `<` (ICAO TD3 field width).
-  // This matches Swift `NFCPassportReaderService.pad(_:fieldLength:)`.
-  const paddedBody = (body + '<<<<<<<<<').slice(0, 9);
-  const computed = mrzCheckDigit(paddedBody);
-  if (computed !== Number(expected)) {
-    return err<CardError>({
-      type: 'validationError',
-      message: `MRZ check digit mismatch for passport number (expected ${String(computed)}, got ${expected}).`,
-    });
-  }
-  // YYMMDD fields are not validated here — chip-level CA verifies them
-  // against DG1. A wrong DOB or expiry will surface as BAC failure later.
-  if (mrz.dateOfBirth.length !== 6 || mrz.dateOfExpiry.length !== 6) {
-    return err<CardError>({
-      type: 'validationError',
-      message: 'MRZ dates must be YYMMDD (6 chars).',
-    });
-  }
-  return ok(undefined);
-}
-
-/**
- * Run the legacy callback-style pipeline and wrap thrown errors as
- * structured `CardError`s. Mirrors Swift `PassportPipelineService`
- * which returns `CardResult<T>` from every step (validateMRZ →
- * validationError, readNFCChip → configurationError on NFC failure,
- * generateProof → validationError on MRZ-digest mismatch /
- * configurationError otherwise).
- *
- * Tests use this wrapper to assert typed error codes without losing the
- * step-event stream (`onStep` still fires up to the failure point).
- */
-export async function runPassportPipelineSafe(
-  mrz: PassportMRZ,
-  deps: PassportPipelineDeps,
-  onStep: (step: PassportStep) => void
-): Promise<Result<string, CardError>> {
-  // Up-front checksum validation (mirrors Swift PassportPipelineService.validateMRZ).
-  const checksum = validateMrzChecksum(mrz);
-  if (!checksum.ok) {
-    onStep({ type: 'error', message: checksum.error.message });
-    return checksum;
-  }
-  try {
-    const jwt = await runPassportPipeline(mrz, deps, onStep);
-    return ok(jwt);
-  } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
-    const type = classifyPassportError(message);
-    onStep({ type: 'error', message });
-    return err<CardError>({ type, message });
-  }
-}
-
-/** Map a thrown error message into a typed CardError variant. */
-function classifyPassportError(message: string): CardError['type'] {
-  const lower = message.toLowerCase();
-  if (lower.includes('nfc') || lower.includes('chip') || lower.includes('bac') || lower.includes('pace') || lower.includes('passive')) {
-    return 'configurationError';
-  }
-  if (lower.includes('mrz') || lower.includes('checksum') || lower.includes('digest mismatch')) {
-    return 'validationError';
-  }
-  if (lower.includes('proof') || lower.includes('verify')) {
-    return 'proofGenerationError';
-  }
-  return 'configurationError';
-}
-
-// ---------------------------------------------------------------------------
-// ZK passport proof — verifier + public-input derivation.
-//
-// Swift reference: MoproProofService.generateWithOpenPassport →
-// publicSignals = ["is_human", "age_over_18"?, "nationality:XXX"]. Verifier
-// returns Bool. We expose the same shape on the TS side so tests can
-// generate a proof through the Nitro bridge, build the same public inputs,
-// then assert verifyNoirProof returns true.
-//
-// Field ordering MUST match Swift's JSONEncoder(sortedKeys) — alphabetical
-// by UTF-8. See packages/parity-fixtures/fixtures/passport/*.json for the
-// reference layout.
-// ---------------------------------------------------------------------------
-
-/**
- * Public-signal payload exposed by a passport ZK proof. Mirrors Swift
- * `MoproProofOutput.publicSignals` — the disclosed claims that downstream
- * verifiers need to bind to the proof bytes.
- */
+/** What the passport statement discloses, read from the chip's DG1. */
 export interface PassportPublicSignals {
-  /** True when the chip witness attested DOB → current age ≥ 18. */
+  /** True when DG1's date of birth → current age ≥ 18. */
   readonly ageOver18: boolean;
-  /** Disclosed nationality (ISO 3166 alpha-3) or empty if undisclosed. */
+  /** Nationality (ICAO alpha-3). */
   readonly nationality: string;
-  /** Hex digest of the DG1 MRZ bytes (lowercase, no `0x` prefix). */
-  readonly mrzHashHex: string;
-  /** Always true for any passport that produced a valid witness. */
-  readonly isHuman: boolean;
 }
 
-/**
- * Derive the public signal payload from raw passport chip data.
- * Mirrors Swift `MoproProofService.buildDisclosureWitness` — same input
- * → same signals. No randomness; safe to use as a parity fixture key.
- */
+/** Derive the disclosed signals from the DG1 MRZ. No randomness. */
 export function derivePassportPublicSignals(args: {
   readonly dg1MRZData: string;
   readonly fallbackNationality: string;
@@ -713,8 +420,6 @@ export function derivePassportPublicSignals(args: {
     return {
       ageOver18: false,
       nationality: args.fallbackNationality.toUpperCase().slice(0, 3),
-      mrzHashHex: '',
-      isHuman: true,
     };
   }
   // TD3 line 2 positions 10-12 = nationality, 13-18 = DOB.
@@ -724,8 +429,6 @@ export function derivePassportPublicSignals(args: {
   return {
     ageOver18: isAgeAtLeast18(dob, args.currentDateYyMmDd),
     nationality: nationality || args.fallbackNationality.toUpperCase().slice(0, 3),
-    mrzHashHex: '', // computed by the caller via @solidarity/shared sha256Bytes
-    isHuman: true,
   };
 }
 
@@ -766,28 +469,4 @@ function isAgeAtLeast18(dobYyMmDd: string, currentYyMmDd: string): boolean {
     (currentMonth === birthMonth && currentDay >= birthDay);
   if (!birthdayPassed && age > 0) age -= 1;
   return age >= 18;
-}
-
-/**
- * Serialize public signals + proof metadata into the JSON shape Swift
- * `buildOpenPassportPayload` emits. Keys are alphabetically sorted —
- * MUST stay in lockstep with Swift JSONEncoder(sortedKeys) for parity.
- */
-export function serializePassportProofPayload(args: {
-  readonly proofType: string;
-  readonly mrzHashHex: string;
-  readonly publicSignals: PassportPublicSignals;
-  readonly proofB64: string;
-  readonly vkB64: string;
-}): string {
-  const payload = {
-    age_over_18: args.publicSignals.ageOver18,
-    is_human: args.publicSignals.isHuman,
-    mrz_hash: args.mrzHashHex,
-    nationality: args.publicSignals.nationality,
-    proof_b64: args.proofB64,
-    proof_type: args.proofType,
-    vk_b64: args.vkB64,
-  };
-  return JSON.stringify(payload);
 }

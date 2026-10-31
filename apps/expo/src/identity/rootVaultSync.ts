@@ -1,0 +1,512 @@
+import {
+  base64UrlDecode,
+  base64UrlEncode,
+  deriveRootVaultAccess,
+  deriveSecp256k1Scalar,
+  HKDF_INFO_NOSTR,
+  nostrPublicKeyHex,
+  rootVaultLocator,
+  rootVaultPrfInput,
+  sealRootVault,
+  sealRootVaultMeta,
+  sha256Bytes,
+  utf8ToBytes,
+  type Result,
+  type RootVaultRecordV1,
+} from '@solidarity/shared';
+import { Platform } from 'react-native';
+
+import { passkeyAaguid, passkeyProvider } from './passkeyAaguid';
+import { getPasskeyRegistry, type PasskeyRow } from './passkeyRegistry';
+import type { PendingRootVaultUpload } from './rootVaultSyncState';
+
+export const ROOT_VAULT_RP_ID = 'creds.id';
+export const ROOT_VAULT_ORIGIN = 'https://creds.id';
+
+export interface PasskeyPrfCreateInput {
+  readonly rpId: string;
+  readonly userName: string;
+  readonly userId: string;
+  readonly prfInput: string;
+  readonly excludeCredentialIds: string[];
+}
+
+export interface PasskeyPrfCreateResult {
+  readonly credentialId: string;
+  readonly prfOutput: string;
+  readonly attachment?: string;
+  readonly attestationObject?: string;
+}
+
+export interface PasskeyPrfClient {
+  createCredential(
+    input: PasskeyPrfCreateInput,
+  ): Promise<PasskeyPrfCreateResult>;
+}
+
+/**
+ * Owner index credentials for an upload (08 §5): the seed-derived owner
+ * secret authenticates; `meta` is the locator-bound sealed row metadata.
+ */
+export interface RootVaultUploadOwner {
+  readonly ownerSecret: Uint8Array;
+  readonly meta?: string;
+}
+
+export interface RootVaultUploadClient {
+  put(
+    locator: string,
+    record: RootVaultRecordV1,
+    owner?: RootVaultUploadOwner,
+  ): Promise<Result<void, RootVaultSyncError>>;
+}
+
+export interface RootVaultPendingStore {
+  set(locator: string, record: RootVaultRecordV1, row?: PasskeyRow, meta?: string): void;
+  clear(): void;
+}
+
+export type RootVaultSyncError = (
+  | { readonly kind: 'cancelled' }
+  | { readonly kind: 'unsupported' }
+  | { readonly kind: 'noPrf' }
+  | { readonly kind: 'invalidCredential' }
+  | { readonly kind: 'invalidMnemonic' }
+  | { readonly kind: 'alreadyConnected' }
+  | { readonly kind: 'alreadyRegistered' }
+  | { readonly kind: 'storageFailed' }
+  | { readonly kind: 'busy' }
+  | { readonly kind: 'networkFailed' }
+) & {
+  /**
+   * PII-free native or transport diagnostic (provider exception type, HTTP
+   * status) for the error report sheet. Never rendered as UI copy.
+   */
+  readonly detail?: string;
+};
+
+/** Bounded so a provider's verbose message can't swamp the report. */
+function errorDetail(error: unknown): string {
+  return (error instanceof Error ? error.message : String(error)).slice(0, 300);
+}
+
+function classifyNativeError(error: unknown): RootVaultSyncError {
+  const message = errorDetail(error);
+  // Native errors carry a `passkey_prf_*` code (the bridge may prefix the
+  // exception class); provider text after it is report detail only and must
+  // not steer the classification.
+  const code = /passkey_prf_[a-z_]+/.exec(message)?.[0] ?? message;
+  if (code.includes('cancelled') || code.includes('canceled')) {
+    return { kind: 'cancelled' };
+  }
+  if (code.includes('already_registered')) return { kind: 'alreadyRegistered' };
+  if (code.includes('unsupported')) return { kind: 'unsupported', detail: message };
+  if (code.includes('no_prf')) return { kind: 'noPrf', detail: message };
+  return { kind: 'invalidCredential', detail: message };
+}
+
+export async function connectRootIdentityToPasskey(input: {
+  readonly mnemonic: string;
+  readonly userName: string;
+  readonly passkey: PasskeyPrfClient;
+  readonly upload: RootVaultUploadClient;
+  readonly userId?: Uint8Array;
+  readonly nostrScalar?: Uint8Array;
+  readonly pending?: RootVaultPendingStore;
+  readonly excludeCredentialIds?: string[];
+  readonly registration?: {
+    readonly binding: string;
+    readonly device: string;
+    readonly platform: string;
+    readonly registry: ReturnType<typeof getPasskeyRegistry>;
+  };
+}): Promise<Result<void, RootVaultSyncError>> {
+  let created: PasskeyPrfCreateResult;
+  try {
+    const userId = input.userId ?? crypto.getRandomValues(new Uint8Array(16));
+    created = await input.passkey.createCredential({
+      rpId: ROOT_VAULT_RP_ID,
+      userName: input.userName,
+      userId: base64UrlEncode(userId),
+      prfInput: base64UrlEncode(rootVaultPrfInput()),
+      excludeCredentialIds: input.excludeCredentialIds ?? [],
+    });
+  } catch (error) {
+    return { ok: false, error: classifyNativeError(error) };
+  }
+
+  let credentialId: Uint8Array;
+  let prfOutput: Uint8Array;
+  try {
+    credentialId = base64UrlDecode(created.credentialId);
+    prfOutput = base64UrlDecode(created.prfOutput);
+  } catch {
+    return { ok: false, error: { kind: 'invalidCredential', detail: 'credential id or PRF output is not base64url' } };
+  }
+
+  try {
+    const locator = rootVaultLocator(credentialId);
+    const row: PasskeyRow | undefined = input.registration ? {
+      binding: input.registration.binding,
+      credentialId: base64UrlEncode(credentialId), locator,
+      createdAt: new Date().toISOString(),
+      device: input.registration.device, platform: input.registration.platform,
+      attachment: created.attachment === 'platform' || created.attachment === 'cross-platform' ? created.attachment : null,
+      aaguid: passkeyAaguid(created.attestationObject), status: 'pending',
+    } : undefined;
+    if (row && input.registration) {
+      const saved = input.registration.registry.save(row);
+      if (!saved.ok) return saved;
+    }
+    const sealed = sealRootVault(
+      input.mnemonic,
+      credentialId,
+      prfOutput,
+      undefined,
+      input.nostrScalar,
+    );
+    const access = deriveRootVaultAccess(input.mnemonic);
+    if (!access.ok) return { ok: false, error: { kind: 'invalidMnemonic' } };
+    const platform = row?.platform === 'android' ? 'android' : row?.platform === 'ios' ? 'ios' : null;
+    const meta = row && platform ? sealRootVaultMeta({
+      v: 1,
+      label: (passkeyProvider(row.aaguid) ?? row.device).slice(0, 64),
+      credentialId: row.credentialId,
+      createdAt: row.createdAt,
+      platform,
+      device: row.device.slice(0, 64),
+      aaguid: row.aaguid,
+    }, locator, access.value.metaKey) : null;
+    access.value.metaKey.fill(0);
+    const owner: RootVaultUploadOwner = {
+      ownerSecret: access.value.ownerSecret,
+      ...(meta?.ok ? { meta: meta.value } : {}),
+    };
+    if (!sealed.ok) {
+      if (sealed.error.kind === 'invalidMnemonic') {
+        return { ok: false, error: { kind: 'invalidMnemonic' } };
+      }
+      if (sealed.error.kind === 'invalidPrfOutput') {
+        return { ok: false, error: { kind: 'noPrf' } };
+      }
+      return { ok: false, error: { kind: 'invalidCredential', detail: `seal failed: ${sealed.error.kind}` } };
+    }
+    try {
+      input.pending?.set(locator, sealed.value, row, owner.meta);
+    } catch {
+      owner.ownerSecret.fill(0);
+      return { ok: false, error: { kind: 'storageFailed' } };
+    }
+    const uploaded = await input.upload.put(locator, sealed.value, owner);
+    owner.ownerSecret.fill(0);
+    if (uploaded.ok) {
+      if (row && input.registration) {
+        const saved = input.registration.registry.save({ ...row, status: 'synced' });
+        if (!saved.ok) return saved;
+      }
+      input.pending?.clear();
+    }
+    return uploaded;
+  } catch (error) {
+    return { ok: false, error: { kind: 'networkFailed', detail: errorDetail(error) } };
+  } finally {
+    credentialId.fill(0);
+    prfOutput.fill(0);
+  }
+}
+
+async function nativePasskey(): Promise<PasskeyPrfClient> {
+  const { getPasskeyPrf } = await import('@solidarity/nitro-keystone');
+  const native = getPasskeyPrf();
+  if (!native.isSupported()) {
+    throw new Error('passkey_prf_unsupported');
+  }
+  return {
+    createCredential: (input) =>
+      native.createCredential(
+        input.rpId,
+        input.userName,
+        input.userId,
+        input.prfInput,
+        input.excludeCredentialIds,
+      ),
+  };
+}
+
+/** `X-Creds-Signature` for a creds.id request; `null` when the root key can't sign. */
+export type SignCredsRequest = (method: 'PUT' | 'DELETE', path: string) => Promise<string | null>;
+
+export const signWithRootKey: SignCredsRequest = async (method, path) => {
+  const { signRootRequest } = await import('./rootKey');
+  const signed = await signRootRequest(method, path);
+  return signed.ok ? signed.value : null;
+};
+
+export function createRootVaultUploadClient(
+  origin = ROOT_VAULT_ORIGIN,
+  sign: SignCredsRequest = signWithRootKey,
+): RootVaultUploadClient {
+  return {
+    put: async (locator, record, owner) => {
+      // An owned row records the did that may delete it (creds-api 0005).
+      const signature = owner ? await sign('PUT', `/vault/root/${locator}`) : null;
+      if (owner && signature === null) {
+        return { ok: false, error: { kind: 'networkFailed', detail: 'request signing failed' } };
+      }
+      let response: Response;
+      try {
+        response = await fetch(`${origin}/vault/root/${locator}`, {
+          method: 'PUT',
+          headers: {
+            accept: 'application/json',
+            'content-type': 'application/json',
+            ...(owner ? { authorization: `Bearer ${base64UrlEncode(owner.ownerSecret)}` } : {}),
+            ...(signature === null ? {} : { 'x-creds-signature': signature }),
+          },
+          body: JSON.stringify(owner?.meta === undefined
+            ? { v: record.v, ciphertext: record.ciphertext }
+            : { v: record.v, ciphertext: record.ciphertext, meta: owner.meta }),
+        });
+      } catch (error) {
+        return {
+          ok: false,
+          error: { kind: 'networkFailed', detail: errorDetail(error) },
+        };
+      }
+      if (response.status === 200 || response.status === 201) {
+        return { ok: true, value: undefined };
+      }
+      if (response.status === 409) {
+        return { ok: false, error: { kind: 'alreadyConnected' } };
+      }
+      return { ok: false, error: { kind: 'networkFailed', detail: `HTTP ${response.status}` } };
+    },
+  };
+}
+
+let connecting = false;
+export async function connectRootIdentityWithNativePasskey(input: {
+  readonly mnemonic: string;
+  readonly userName: string;
+  readonly retryOnly?: boolean;
+}): Promise<Result<string, RootVaultSyncError>> {
+  if (connecting) return { ok: false, error: { kind: 'busy' } };
+  connecting = true;
+  try {
+    return await connectNative(input);
+  } catch (error) {
+    return { ok: false, error: { kind: 'invalidCredential', detail: errorDetail(error) } };
+  } finally {
+    connecting = false;
+  }
+}
+
+async function connectNative(input: {
+  readonly retryOnly?: boolean;
+  readonly mnemonic: string;
+  readonly userName: string;
+}): Promise<Result<string, RootVaultSyncError>> {
+  const { deriveDidFromMnemonic } = await import('./rootKey');
+  const rootDid = deriveDidFromMnemonic(input.mnemonic);
+  if (!rootDid.ok) {
+    return { ok: false, error: { kind: 'invalidMnemonic' } };
+  }
+  const { readNostrScalarForPasskeyConnection } = await import(
+    '@/nostr/userKey'
+  );
+  const nostrScalar = await readNostrScalarForPasskeyConnection();
+  if (!nostrScalar.ok) {
+    return { ok: false, error: { kind: 'invalidCredential', detail: 'nostr key could not be read' } };
+  }
+  try {
+    const fallbackScalar =
+      nostrScalar.value === null
+        ? deriveSecp256k1Scalar(input.mnemonic, HKDF_INFO_NOSTR)
+        : null;
+    const activeNostrScalar = nostrScalar.value ?? fallbackScalar;
+    const binding = base64UrlEncode(
+      sha256Bytes(
+        utf8ToBytes(
+          `${rootDid.value}\n${nostrPublicKeyHex(activeNostrScalar!)}`,
+        ),
+      ),
+    );
+    fallbackScalar?.fill(0);
+
+    const upload = createRootVaultUploadClient();
+    const state = await import('./rootVaultSyncState');
+    const registry = getPasskeyRegistry();
+    const excluded = registry.excludeCredentialIds(binding);
+    if (!excluded.ok) return excluded;
+    const pendingResult = state.readPendingRootVaultUpload();
+    // An unreadable pending record can never be retried. Drop it rather than
+    // refuse every future connect; a row it belonged to stays "pending" and
+    // can be hidden from the list.
+    if (!pendingResult.ok) state.clearPendingRootVaultUpload();
+    const pending = pendingResult.ok ? pendingResult.value : null;
+    if (pending !== null) {
+      if (pending.binding !== binding) {
+        state.clearPendingRootVaultUpload();
+      } else {
+        const access = deriveRootVaultAccess(input.mnemonic);
+        if (!access.ok) return { ok: false, error: { kind: 'invalidMnemonic' } };
+        access.value.metaKey.fill(0);
+        const retried = await retryPasskeyUpload(pending, upload, registry, access.value.ownerSecret)
+          .finally(() => access.value.ownerSecret.fill(0));
+        if (!retried.ok) return retried;
+        state.setRootVaultSyncState('connected', binding);
+        state.clearPendingRootVaultUpload();
+        return { ok: true, value: binding };
+      }
+    }
+
+    if (input.retryOnly) return { ok: false, error: { kind: 'storageFailed' } };
+    const device = Platform.OS === 'ios'
+      ? (Platform.constants.interfaceIdiom === 'pad' ? 'iPad' : 'iPhone')
+      : Platform.OS === 'android' ? Platform.constants.Model : Platform.OS;
+    let passkey: PasskeyPrfClient;
+    try {
+      passkey = await nativePasskey();
+    } catch (error) {
+      return { ok: false, error: classifyNativeError(error) };
+    }
+    const connected = await connectRootIdentityToPasskey({
+      ...input,
+      userId: sha256Bytes(utf8ToBytes(rootDid.value)),
+      nostrScalar: nostrScalar.value ?? undefined,
+      passkey,
+      upload,
+      excludeCredentialIds: await liveExcludedCredentialIds(input.mnemonic, binding, registry, excluded.value),
+      registration: { binding, device, platform: Platform.OS, registry },
+      pending: {
+        set: (locator, record, row, meta) => {
+          state.setPendingRootVaultUpload({ binding, locator, record, row, owned: true, ...(meta === undefined ? {} : { meta }) });
+          state.rememberRootVaultBinding(binding);
+        },
+        clear: state.clearPendingRootVaultUpload,
+      },
+    });
+    if (connected.ok) state.setRootVaultSyncState('connected', binding);
+    return connected.ok ? { ok: true, value: binding } : connected;
+  } finally {
+    nostrScalar.value?.fill(0);
+  }
+}
+
+export async function getStoredRootVaultIdentityBinding(): Promise<string | null> {
+  const { readMnemonicForPasskeyConnection } = await import('./rootKey');
+  const mnemonic = await readMnemonicForPasskeyConnection();
+  if (!mnemonic.ok) return null;
+  const { readNostrScalarForPasskeyConnection } = await import('@/nostr/userKey');
+  const nostrScalar = await readNostrScalarForPasskeyConnection();
+  if (!nostrScalar.ok) return null;
+  try {
+    const { deriveDidFromMnemonic } = await import('./rootKey');
+    const rootDid = deriveDidFromMnemonic(mnemonic.value);
+    if (!rootDid.ok) return null;
+    const fallbackScalar =
+      nostrScalar.value === null
+        ? deriveSecp256k1Scalar(mnemonic.value, HKDF_INFO_NOSTR)
+        : null;
+    const activeNostrScalar = nostrScalar.value ?? fallbackScalar;
+    const binding = base64UrlEncode(
+      sha256Bytes(
+        utf8ToBytes(
+          `${rootDid.value}\n${nostrPublicKeyHex(activeNostrScalar!)}`,
+        ),
+      ),
+    );
+    fallbackScalar?.fill(0);
+    return binding;
+  } catch {
+    return null;
+  } finally {
+    nostrScalar.value?.fill(0);
+  }
+}
+
+/**
+ * Credential ids to exclude when creating a passkey: the ones the server
+ * still lists, plus rows whose upload is pending. A row whose server record
+ * is gone (removed in the list, on the web, by account deletion) would
+ * otherwise block a new passkey forever while the list shows none. If the
+ * server can't be read, every local row stays excluded, as before.
+ */
+async function liveExcludedCredentialIds(
+  mnemonic: string,
+  binding: string,
+  registry: ReturnType<typeof getPasskeyRegistry>,
+  fallback: string[],
+): Promise<string[]> {
+  const listed = registry.list(binding, false);
+  if (!listed.ok) return fallback;
+  const rows = listed.value.filter((row): row is PasskeyRow => !('legacy' in row));
+  const access = deriveRootVaultAccess(mnemonic);
+  if (!access.ok) return fallback;
+  try {
+    const { createPasskeyIndexClient, listIndexedPasskeys } = await import('./passkeyIndex');
+    const indexed = await listIndexedPasskeys({
+      access: access.value,
+      client: createPasskeyIndexClient(),
+      localRows: rows,
+    });
+    if (!indexed.ok) return fallback;
+    const live = new Set(indexed.value.map(row => row.locator));
+    return [...new Set(rows
+      .filter(row => row.status === 'pending' || live.has(row.locator))
+      .map(row => row.credentialId))];
+  } catch {
+    return fallback;
+  } finally {
+    access.value.ownerSecret.fill(0);
+    access.value.metaKey.fill(0);
+  }
+}
+
+export async function connectStoredRootIdentityWithNativePasskey(retryOnly = false): Promise<
+  Result<string, RootVaultSyncError>
+> {
+  const { readMnemonicForPasskeyConnection } = await import('./rootKey');
+  const mnemonic = await readMnemonicForPasskeyConnection();
+  if (!mnemonic.ok) {
+    return {
+      ok: false,
+      error:
+        mnemonic.error.kind === 'invalidMnemonic'
+          ? { kind: 'invalidMnemonic' }
+          : { kind: 'invalidCredential', detail: `root phrase could not be read: ${mnemonic.error.kind}` },
+    };
+  }
+  return connectRootIdentityWithNativePasskey({
+    mnemonic: mnemonic.value,
+    userName: 'Solidarity',
+    retryOnly,
+  });
+}
+
+
+/** Retry the exact ciphertext; no credential creation or new sealing on this path. */
+export async function retryPasskeyUpload(
+  pending: PendingRootVaultUpload,
+  upload: RootVaultUploadClient,
+  registry: ReturnType<typeof getPasskeyRegistry>,
+  ownerSecret?: Uint8Array,
+): Promise<Result<void, RootVaultSyncError>> {
+  try {
+    if (pending.row) {
+      const saved = registry.save({ ...pending.row, status: 'pending' });
+      if (!saved.ok) return saved;
+    }
+    // The server accepts a retry only if it repeats the first attempt byte for
+    // byte, so an upload saved before the owner index retries unowned (the
+    // Passkeys screen claims it afterwards).
+    const owner = pending.owned && ownerSecret
+      ? { ownerSecret, ...(pending.meta === undefined ? {} : { meta: pending.meta }) }
+      : undefined;
+    const uploaded = await upload.put(pending.locator, pending.record, owner);
+    if (!uploaded.ok) return uploaded;
+    return pending.row ? registry.save({ ...pending.row, status: 'synced' }) : uploaded;
+  } catch {
+    return { ok: false, error: { kind: 'networkFailed' } };
+  }
+}

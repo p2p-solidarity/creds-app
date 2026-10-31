@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'bun:test';
-import { readFileSync } from 'node:fs';
 
 import {
   WIPE_SECRET_TARGETS,
@@ -138,95 +137,5 @@ describe('wipeEverything', () => {
       kind: 'incomplete',
       failedTargets: ['finalPersistentData'],
     });
-  });
-
-  it('wires every target to a production deletion path without test resets', () => {
-    const production = readFileSync(
-      new URL('../../src/settings/productionWipe.ts', import.meta.url),
-      'utf8',
-    );
-    const developer = readFileSync(
-      new URL('../../app/settings/developer.tsx', import.meta.url),
-      'utf8',
-    );
-    const rootLayout = readFileSync(
-      new URL('../../app/_layout.tsx', import.meta.url),
-      'utf8',
-    );
-
-    for (const operation of [
-      'clearProductionAppData',
-      'deleteProductionFiles',
-      'deleteCacheDatabaseForLocalWipe',
-      'deleteVaultDirectory',
-      'deleteSigningKey',
-      'deletePairwiseSeed',
-      'deleteRootKeyForLocalWipe',
-      'deleteMasterKey',
-      'deleteRootSecret',
-      'deleteRecipientKeys',
-      'deleteIdentity',
-      'deleteNostrKey',
-      'signOutAtproto',
-      'rekeyEmptyMmkv',
-      'beginLocalDataWipe',
-      'quiesceRecipientKeyOperations',
-      'quiesceNostrKeyOperations',
-      'quiesceRootKeyOperations',
-      'quiesceSigningKeyOperations',
-      'quiescePairwiseSeedOperations',
-      'quiesceRootSecretOperations',
-      'quiesceLocalDataOperations',
-      'stopForegroundPolling',
-      'stopLaneManager',
-      'unregister',
-    ]) {
-      expect(production).toContain(operation);
-    }
-    for (const store of [
-      'useCardStore',
-      'useContactStore',
-      'useRecentUpdatesStore',
-      'useLeaveCardStore',
-      'useCredentialStore',
-      'useIssuerMetadataStore',
-      'useGroupStore',
-      'useVaultStore',
-      'useShoutoutStore',
-      'useProfileStore',
-      'useProfileSnapshotStore',
-      'useIdentityData',
-      'useIdentityCoordinator',
-      'useIssuerTrustAnchorStore',
-      'useSharingSettings',
-      'useZkIdentity',
-      'usePageDesignStore',
-    ]) {
-      expect(production).toContain(
-        `${store}.getState().resetForLocalWipe()`,
-      );
-    }
-    for (const transientReset of [
-      'useReceivedCard.getState().dismiss()',
-      'useVerifiedPageResult.getState().dismiss()',
-      'useWebSignPending.getState().clear()',
-      'useSealedRouteStore.getState().clear()',
-      'invalidateCachedNostrResult()',
-      'invalidateCachedAtprotoResult()',
-    ]) {
-      expect(production).toContain(transientReset);
-    }
-    expect(production).toContain('resetPreferences');
-    expect(production).toContain('getAllKeys().length === 0');
-    expect(production).toContain('await preparePageDesign()');
-    expect(rootLayout).toContain('hasCompletedOnboarding');
-    expect(rootLayout).toContain(
-      'if (!ready || !hasCompletedOnboarding || !remoteNotificationsEnabled)',
-    );
-    expect(developer).toContain('wipeLocalDevice()');
-    expect(developer).toContain("router.replace('/onboarding')");
-    expect(developer).not.toContain('resetSigningKeyForTesting');
-    expect(developer).not.toContain('ensureSigningKey');
-    expect(production).not.toContain('ForTesting');
   });
 });

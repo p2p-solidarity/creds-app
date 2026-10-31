@@ -15,87 +15,81 @@
  * deep link) renders an honest not-found state rather than a blank screen.
  */
 import { useLocalSearchParams } from 'expo-router';
-import { safeBack } from '@/navigation/safeBack';
-import type { ReactNode } from 'react';
-import { Linking, ScrollView, View } from 'react-native';
+import { useMemo, type ReactNode } from 'react';
+import { ScrollView, View } from 'react-native';
+import Animated, { useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PressableScale } from '@/components/common/PressableScale';
+import { BrandIcon } from '@/components/icons/BrandIcon';
 import { SfIcon } from '@/components/icons/SfIcon';
+import {
+  ChipBase,
+  PersonHeroCard,
+  PersonLinksCard,
+  buildLinkRows,
+} from '@/components/people/personDetailSupport';
+import { snapshotDisplayName } from '@/components/people/ContactsList';
 import { ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
+import { fadeUpIn } from '@/feedback/motion';
 import { useTranslation } from '@/i18n';
+import { safeBack } from '@/navigation/safeBack';
 import { useDeclaredSnapshot } from '@/people/profileSnapshots';
+import { linkDisplay } from '@/profile/linkPresentation';
 
 export default function DeclaredPageDetailScreen(): ReactNode {
   const { t } = useTranslation();
+  const reduceMotion = useReducedMotion();
   const { id } = useLocalSearchParams<{ id: string }>();
   const snapshot = useDeclaredSnapshot(id);
   const insets = useSafeAreaInsets();
+  const linkRows = useMemo(
+    () => (snapshot ? buildLinkRows([{ label: '', url: snapshot.sourceUrl }, ...snapshot.links]) : []),
+    [snapshot],
+  );
 
+  // Same chrome and card as the contact / saved Page detail: a declared Page
+  // is a person in People too — only its chip says it is unverified.
   return (
     <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
-      <View className="flex-row items-center" style={{ paddingHorizontal: 16, height: 44 }}>
+      <View className="flex-row items-center px-3" style={{ height: 56 }}>
         <PressableScale
-          haptic="tap"
           onPress={() => { safeBack(); }}
           accessibilityRole="button"
-          style={{ width: 44, height: 44, alignItems: 'flex-start', justifyContent: 'center' }}
+          accessibilityLabel={t('personDetail.back')}
+          style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
         >
-          <SfIcon name="chevron.left" size={18} color={Colors.text1} />
+          <SfIcon name="chevron.left" size={24} color={Colors.text1} />
         </PressableScale>
       </View>
 
       {snapshot ? (
-        <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
-          <View style={{ gap: 4 }}>
-            <ThemedText variant="titleLarge">
-              {snapshot.title && snapshot.title.trim().length > 0 ? snapshot.title : hostnameOf(snapshot.sourceUrl)}
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 32, gap: 16 }}>
+          <Animated.View entering={fadeUpIn(0, reduceMotion)}>
+            <PersonHeroCard>
+              <View
+                className="items-center justify-center rounded-full bg-searchBg"
+                style={{ width: 88, height: 88 }}
+              >
+                <BrandIcon name={linkDisplay('', snapshot.sourceUrl).brand} size={36} color={Colors.text2} />
+              </View>
+              <ThemedText variant="headlineMedium" numberOfLines={2} style={{ textAlign: 'center' }}>
+                {snapshotDisplayName(snapshot)}
+              </ThemedText>
+              <ChipBase icon="questionmark.circle" iconColor={Colors.text2} label={t('declaredPage.badge')} />
+            </PersonHeroCard>
+          </Animated.View>
+
+          <Animated.View entering={fadeUpIn(1, reduceMotion)}>
+            <ThemedText variant="bodySmall" tone="secondary">
+              {t('declaredPage.disclaimer')}
             </ThemedText>
-            <PressableScale
-              haptic="tap"
-              onPress={() => { void Linking.openURL(snapshot.sourceUrl).catch(() => undefined); }}
-              accessibilityRole="link"
-            >
-              <ThemedText variant="caption" tone="tertiary" selectable>
-                {snapshot.sourceUrl}
-              </ThemedText>
-            </PressableScale>
-          </View>
+          </Animated.View>
 
-          <View
-            className="flex-row items-center rounded-lg border border-divider"
-            style={{ borderStyle: 'dashed', gap: 8, paddingHorizontal: 10, paddingVertical: 8, alignSelf: 'flex-start' }}
-          >
-            <SfIcon name="questionmark.circle" size={14} color={Colors.text2} />
-            <ThemedText variant="label">{t('declaredPage.badge')}</ThemedText>
-          </View>
-
-          <ThemedText variant="bodyMedium" tone="secondary">
-            {t('declaredPage.disclaimer')}
-          </ThemedText>
-
-          {snapshot.links.length > 0 ? (
-            <View style={{ gap: 8 }}>
-              <ThemedText variant="caption" tone="tertiary">
-                {t('verifiedPage.linksHeader')}
-              </ThemedText>
-              {snapshot.links.map((link) => (
-                <PressableScale
-                  key={`${link.label}-${link.url}`}
-                  haptic="tap"
-                  onPress={() => { void Linking.openURL(link.url).catch(() => undefined); }}
-                  accessibilityRole="link"
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
-                >
-                  <SfIcon name="link" size={13} color={Colors.text2} />
-                  <ThemedText variant="bodySmall" tone="secondary" style={{ flexShrink: 1 }}>
-                    {link.label.length > 0 ? `${link.label} · ${link.url}` : link.url}
-                  </ThemedText>
-                </PressableScale>
-              ))}
-            </View>
-          ) : null}
+          <Animated.View entering={fadeUpIn(2, reduceMotion)}>
+            <PersonLinksCard rows={linkRows} />
+          </Animated.View>
         </ScrollView>
       ) : (
         <View className="flex-1 items-center justify-center gap-2 px-8">
@@ -107,12 +101,4 @@ export default function DeclaredPageDetailScreen(): ReactNode {
       )}
     </View>
   );
-}
-
-function hostnameOf(url: string): string {
-  try {
-    return new URL(url).hostname;
-  } catch {
-    return url;
-  }
 }
