@@ -48,7 +48,52 @@ Settings → 重設 → 刪除帳號 (`03-delete-screen.jpg`) → confirm dialog
   bound purchase was not deleted end to end. Route covered by backend tests.
 - Inbox step: no legacy Shoutouts key on a fresh install → "nothing";
   the route is deployed and covered by backend tests.
-- The failure → "incomplete, keys kept, Retry" path was not forced on the
-  simulator; it is covered by `__tests__/unit/accountDeletion.test.ts`.
 - Android not run.
-- The last commit's padding tweak on the screen was not re-screenshotted.
+
+## Run 2 — signed requests (every server delete carries the account's own signature)
+
+Backend redeployed with `X-Creds-Signature` (root did:key ES256 JWS, bound to
+method + path, ±300 s, single-use `jti`): `solidarity-id` `66925740`,
+`airmeishi-backend` `bcedcaf0`.
+
+Scripted checks against production before the app run: unsigned owned PUT →
+401, signed PUT → 201, bearer-only DELETE (no signature) → 401.
+
+App, fresh throwaway `e2esigdel`: passkey connected → D1 `root_vaults` row
+`nQz_gn4g…` carries `owner_did did:key:zDnaeX9U…` (the app's signed PUT).
+The Page publish failed (relays down), so no name was registered.
+
+Settings → 刪除帳號 with the shortened copy (`08-simplified-copy.jpg`) → one
+Face ID → 公開頁面 **失敗**, 名稱 / 線上備份 / Pro 連結 已刪除, 這支手機 等待中,
+footer + 重試刪除 (`09-signed-run-nostr-failed.jpg`). damus and nos.lol were
+unreachable, so the Nostr step had no 2-of-3 quorum; the phone kept its keys.
+After nos.lol came back: 重試刪除 → Face ID → every step done, local wipe ran,
+"帳號已刪除" and onboarding (`10-retry-deleted.jpg`).
+
+D1 after: `root_vaults` rows for that did = 0; `signed_request_nonces` in use.
+
+## Web — creds.id/delete-account path (no app)
+
+Throwaway `e2eweb1031` set up through the web builder (pubkey `26afc569…`):
+kind 0 `{"name":"keep-me", nip05, alsoKnownAs did:}`, a creds 30078 record,
+and a foreign `com.other.app` 30078 record.
+
+`deleteAccountFromWeb` (web-dev, transport `https://creds.id`): first run
+name / vault / pro done, nostr failed (relay outage). Retry after relays
+recovered → `deleted`, all four steps done.
+
+| Thing | Result |
+| --- | --- |
+| D1 `nip05_handles` `e2eweb1031` | `pubkey 'erased' / released` |
+| primal kind 0 | `{"name":"keep-me"}` (only the creds fields removed) |
+| primal kind 30078 creds record | gone; kind 5 present |
+| primal `com.other.app` | intact (not ours, not touched) |
+
+## Still not verified
+
+- relay.damus.io unreachable from this machine all day; its state was never read.
+- The web page UI was driven via its module in the dev server, not by
+  clicking through a real passkey sign-in on creds.id.
+- `Cancel` in the confirm dialog shows in English under zh-Hant (shared
+  confirmDialog default, outside this change).
+
