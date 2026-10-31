@@ -121,6 +121,10 @@ private final class PasskeyRegistrationCoordinator: NSObject,
   /// already lives there. The error code only exists on iOS 18+, and the
   /// deployment target is lower, so the comparison needs the guard.
   private static func isMatchedExcludedCredential(_ error: NSError) -> Bool {
+    // Seen on device (2026-10-31): the same refusal arrives as WKErrorDomain
+    // code 8, "At least one credential matches an entry of the
+    // excludeCredentials list in the platform attached authenticator."
+    if error.domain == "WKErrorDomain" && error.code == 8 { return true }
     guard error.domain == ASAuthorizationError.errorDomain else { return false }
     if #available(iOS 18.0, *) {
       return error.code == ASAuthorizationError.matchedExcludedCredential.rawValue

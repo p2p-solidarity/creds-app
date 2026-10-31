@@ -376,7 +376,7 @@ async function connectNative(input: {
       nostrScalar: nostrScalar.value ?? undefined,
       passkey,
       upload,
-      excludeCredentialIds: excluded.value,
+      excludeCredentialIds: await liveExcludedCredentialIds(input.mnemonic, binding, registry, excluded.value),
       registration: { binding, device, platform: Platform.OS, registry },
       pending: {
         set: (locator, record, row, meta) => {
@@ -422,6 +422,44 @@ export async function getStoredRootVaultIdentityBinding(): Promise<string | null
     return null;
   } finally {
     nostrScalar.value?.fill(0);
+  }
+}
+
+/**
+ * Credential ids to exclude when creating a passkey: the ones the server
+ * still lists, plus rows whose upload is pending. A row whose server record
+ * is gone (removed in the list, on the web, by account deletion) would
+ * otherwise block a new passkey forever while the list shows none. If the
+ * server can't be read, every local row stays excluded, as before.
+ */
+async function liveExcludedCredentialIds(
+  mnemonic: string,
+  binding: string,
+  registry: ReturnType<typeof getPasskeyRegistry>,
+  fallback: string[],
+): Promise<string[]> {
+  const listed = registry.list(binding, false);
+  if (!listed.ok) return fallback;
+  const rows = listed.value.filter((row): row is PasskeyRow => !('legacy' in row));
+  const access = deriveRootVaultAccess(mnemonic);
+  if (!access.ok) return fallback;
+  try {
+    const { createPasskeyIndexClient, listIndexedPasskeys } = await import('./passkeyIndex');
+    const indexed = await listIndexedPasskeys({
+      access: access.value,
+      client: createPasskeyIndexClient(),
+      localRows: rows,
+    });
+    if (!indexed.ok) return fallback;
+    const live = new Set(indexed.value.map(row => row.locator));
+    return [...new Set(rows
+      .filter(row => row.status === 'pending' || live.has(row.locator))
+      .map(row => row.credentialId))];
+  } catch {
+    return fallback;
+  } finally {
+    access.value.ownerSecret.fill(0);
+    access.value.metaKey.fill(0);
   }
 }
 
