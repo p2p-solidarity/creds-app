@@ -1541,5 +1541,5 @@
   "deleteAccount.confirmAction": "Delete",
   "deleteAccount.doneTitle": "Account deleted",
   "deleteAccount.doneMessage": "Your creds account has been deleted. Remember to cancel creds Pro in the store if you subscribed.",
-  "deleteAccount.webHint": "No phone? Request deletion at creds.id/delete-account"
+  "deleteAccount.webHint": "No phone? Delete it at creds.id/delete-account with a passkey"
 }

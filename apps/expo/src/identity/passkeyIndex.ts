@@ -15,7 +15,7 @@ import {
 
 import { passkeyProvider } from './passkeyAaguid';
 import type { PasskeyRow } from './passkeyRegistry';
-import { ROOT_VAULT_ORIGIN } from './rootVaultSync';
+import { ROOT_VAULT_ORIGIN, signWithRootKey, type SignCredsRequest } from './rootVaultSync';
 
 export interface IndexedPasskey {
   readonly locator: string;
@@ -47,7 +47,11 @@ function isOwnedRow(value: unknown): value is OwnedRow {
     && (row['meta'] === null || typeof row['meta'] === 'string');
 }
 
-export function createPasskeyIndexClient(fetchImpl: FetchLike = fetch, origin = ROOT_VAULT_ORIGIN) {
+export function createPasskeyIndexClient(
+  fetchImpl: FetchLike = fetch,
+  origin = ROOT_VAULT_ORIGIN,
+  sign: SignCredsRequest = signWithRootKey,
+) {
   const auth = (secret: Uint8Array) => ({ authorization: `Bearer ${base64UrlEncode(secret)}`, accept: 'application/json' });
   const send = async (path: string, init: RequestInit): Promise<Result<Response, PasskeyIndexError>> => {
     try {
@@ -63,6 +67,12 @@ export function createPasskeyIndexClient(fetchImpl: FetchLike = fetch, origin = 
     return response.value.status === 404
       ? { ok: false, error: { kind: 'notFound' } }
       : { ok: false, error: { kind: 'networkFailed', detail: `HTTP ${response.value.status}` } };
+  };
+  /** Claim and delete also need the root did's signature for that exact request. */
+  const signed = async (method: 'PUT' | 'DELETE', path: string, init: RequestInit): Promise<Result<void, PasskeyIndexError>> => {
+    const signature = await sign(method, path);
+    if (signature === null) return { ok: false, error: { kind: 'notProvisioned' } };
+    return mutation(path, { ...init, method, headers: { ...(init.headers as Record<string, string>), 'x-creds-signature': signature } });
   };
   const withMeta = (secret: Uint8Array, meta: string): RequestInit => ({
     headers: { ...auth(secret), 'content-type': 'application/json' },
@@ -85,9 +95,9 @@ export function createPasskeyIndexClient(fetchImpl: FetchLike = fetch, origin = 
     rename: (locator: string, meta: string, secret: Uint8Array) =>
       mutation(`/vault/root/${locator}/meta`, { method: 'PATCH', ...withMeta(secret, meta) }),
     claim: (locator: string, meta: string, secret: Uint8Array) =>
-      mutation(`/vault/root/${locator}/owner`, { method: 'PUT', ...withMeta(secret, meta) }),
+      signed('PUT', `/vault/root/${locator}/owner`, withMeta(secret, meta)),
     remove: (locator: string, secret: Uint8Array) =>
-      mutation(`/vault/root/${locator}`, { method: 'DELETE', headers: auth(secret) }),
+      signed('DELETE', `/vault/root/${locator}`, { headers: auth(secret) }),
   };
 }
 

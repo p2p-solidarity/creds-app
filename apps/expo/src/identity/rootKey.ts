@@ -91,6 +91,7 @@ import {
   err,
   generateMnemonic,
   ok,
+  base64UrlEncode,
   publicKeyFromPrivate,
   signCompact,
   type Result,
@@ -500,20 +501,35 @@ export async function getRootSigner(): Promise<Result<Signer, RootKeyError>> {
   return ok(signer);
 }
 
-/** `aud` of the creds.id `DELETE /pro/binding` request (airmeishi-backend). */
-export const PRO_BINDING_DELETE_AUDIENCE = 'creds.id/pro/binding/delete';
+/**
+ * The creds.id requests the root key may sign without its own Face ID sheet:
+ * owner-index writes and deletes of a root vault row, and dropping the Pro
+ * binding. Anything else is refused, so this can't become a general signer.
+ */
+const ROOT_REQUEST_TARGETS: readonly (readonly [string, RegExp])[] = [
+  ['PUT', /^\/vault\/root\/[A-Za-z0-9_-]{43}(\/owner)?$/u],
+  ['DELETE', /^\/vault\/root\/[A-Za-z0-9_-]{43}$/u],
+  ['DELETE', /^\/pro\/binding$/u],
+];
 
 /**
- * Account deletion's root-key signature. The caller has already passed the
- * ONE red-line gate (`rotateMasterKey`) for the deletion; a red-line pass
- * never arms the grace bucket, so `getRootSigner()` would show a second sheet
- * for the same intent. This signs exactly one fixed payload — "drop the Pro
- * binding of this did, now" — and nothing else, so it can't be turned into an
- * ungated general-purpose signer.
+ * `X-Creds-Signature` for one creds.id request (airmeishi-backend
+ * `src/lib/signedRequest.ts`): an ES256 JWS by the root did over
+ * `{aud, m, p, iat, jti}`, single-use and valid five minutes. Every delete —
+ * and every owner-index write, which decides who may delete later — needs it.
+ *
+ * No biometric gate of its own, like `readMnemonicForPasskeyConnection`: the
+ * passkey connect that uploads a row reads the mnemonic the same way, and
+ * account deletion already passed its one red-line gate (`rotateMasterKey`
+ * never arms the grace bucket, so `getRootSigner()` would ask again).
  */
-export async function signRootProBindingDeletion(
-  nowSeconds: number,
+export async function signRootRequest(
+  method: 'PUT' | 'DELETE',
+  path: string,
 ): Promise<Result<string, RootKeyError>> {
+  if (!ROOT_REQUEST_TARGETS.some(([m, pattern]) => m === method && pattern.test(path))) {
+    return err({ kind: 'storageFailed', message: 'not a signable creds.id request' });
+  }
   let mnemonic: string | null;
   try {
     mnemonic = await activeStorage.getMnemonic();
@@ -530,8 +546,9 @@ export async function signRootProBindingDeletion(
     return err({ kind: 'invalidMnemonic', message: e instanceof Error ? e.message : String(e) });
   }
   try {
+    const jti = base64UrlEncode(crypto.getRandomValues(new Uint8Array(18)));
     const jws = await signCompact(
-      { did: did.value, aud: PRO_BINDING_DELETE_AUDIENCE, iat: nowSeconds },
+      { aud: 'creds.id', m: method, p: path, iat: Math.floor(Date.now() / 1000), jti },
       did.value,
       (digest) => Promise.resolve(p256.sign(digest, scalar, { prehash: false })),
     );

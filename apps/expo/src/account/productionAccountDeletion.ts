@@ -5,15 +5,16 @@
  * The caller has already passed the ONE red-line Face ID gate. Nothing here
  * prompts again: the Nostr key signs ungated (publish is the consent, see
  * `userKey.ts`), the owner secret is a derived bearer, and the Pro request is
- * signed by `signRootProBindingDeletion`, which can sign only that payload.
+ * every creds.id delete is signed by `signRootRequest`, which signs only
+ * vault and Pro-binding requests.
  */
 import { ed25519 } from '@noble/curves/ed25519.js';
 import * as SecureStore from 'expo-secure-store';
-import { base64Decode, base64Encode, buildNip98Authorization, utf8ToBytes } from '@solidarity/shared';
+import { base64Decode, base64Encode, base64UrlEncode, buildNip98Authorization, utf8ToBytes } from '@solidarity/shared';
 
 import { createPasskeyIndexClient, listIndexedPasskeys, readStoredVaultAccess } from '@/identity/passkeyIndex';
 import { getPasskeyRegistry, type PasskeyRow } from '@/identity/passkeyRegistry';
-import { hasRootKey, signRootProBindingDeletion } from '@/identity/rootKey';
+import { hasRootKey, signRootRequest } from '@/identity/rootKey';
 import { getStoredRootVaultIdentityBinding } from '@/identity/rootVaultSync';
 import { NIP05_SERVICE_ORIGIN } from '@/nip05/client';
 import { publishEvent, subscribeEvents } from '@/nostr/nostrAdapter';
@@ -107,12 +108,11 @@ async function deleteVaults(): Promise<StepRunResult> {
 
 async function deleteProBinding(): Promise<StepRunResult> {
   if (!(await hasRootKey())) return NOTHING;
-  const request = await signRootProBindingDeletion(Math.floor(Date.now() / 1000));
-  if (!request.ok) return FAILED;
+  const signature = await signRootRequest('DELETE', '/pro/binding');
+  if (!signature.ok) return FAILED;
   const response = await send(`${NIP05_SERVICE_ORIGIN}/pro/binding`, {
     method: 'DELETE',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ request: request.value }),
+    headers: { 'x-creds-signature': signature.value },
   });
   return response?.ok === true ? DONE : FAILED;
 }
@@ -132,11 +132,12 @@ async function purgeLegacyInbox(): Promise<StepRunResult> {
   try {
     const pubkey = base64Encode(ed25519.getPublicKey(secret));
     const ts = Math.floor(Date.now() / 1000);
-    const sig = base64Encode(ed25519.sign(utf8ToBytes(`creds-inbox-delete:${pubkey}:${ts}`), secret));
+    const nonce = base64UrlEncode(crypto.getRandomValues(new Uint8Array(18)));
+    const sig = base64Encode(ed25519.sign(utf8ToBytes(`creds-inbox-delete:${pubkey}:${ts}:${nonce}`), secret));
     const response = await send(`${LEGACY_INBOX_ORIGIN}/inbox/delete`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ pubkey, ts, sig }),
+      body: JSON.stringify({ pubkey, ts, nonce, sig }),
     });
     return response?.ok === true ? DONE : FAILED;
   } finally {

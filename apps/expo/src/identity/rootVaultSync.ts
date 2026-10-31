@@ -233,11 +233,26 @@ async function nativePasskey(): Promise<PasskeyPrfClient> {
   };
 }
 
+/** `X-Creds-Signature` for a creds.id request; `null` when the root key can't sign. */
+export type SignCredsRequest = (method: 'PUT' | 'DELETE', path: string) => Promise<string | null>;
+
+export const signWithRootKey: SignCredsRequest = async (method, path) => {
+  const { signRootRequest } = await import('./rootKey');
+  const signed = await signRootRequest(method, path);
+  return signed.ok ? signed.value : null;
+};
+
 export function createRootVaultUploadClient(
   origin = ROOT_VAULT_ORIGIN,
+  sign: SignCredsRequest = signWithRootKey,
 ): RootVaultUploadClient {
   return {
     put: async (locator, record, owner) => {
+      // An owned row records the did that may delete it (creds-api 0005).
+      const signature = owner ? await sign('PUT', `/vault/root/${locator}`) : null;
+      if (owner && signature === null) {
+        return { ok: false, error: { kind: 'networkFailed', detail: 'request signing failed' } };
+      }
       let response: Response;
       try {
         response = await fetch(`${origin}/vault/root/${locator}`, {
@@ -246,6 +261,7 @@ export function createRootVaultUploadClient(
             accept: 'application/json',
             'content-type': 'application/json',
             ...(owner ? { authorization: `Bearer ${base64UrlEncode(owner.ownerSecret)}` } : {}),
+            ...(signature === null ? {} : { 'x-creds-signature': signature }),
           },
           body: JSON.stringify(owner?.meta === undefined
             ? { v: record.v, ciphertext: record.ciphertext }

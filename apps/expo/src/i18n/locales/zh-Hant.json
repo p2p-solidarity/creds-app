@@ -1541,5 +1541,5 @@
   "deleteAccount.confirmAction": "刪除",
   "deleteAccount.doneTitle": "帳號已刪除",
   "deleteAccount.doneMessage": "你的 creds 帳號已刪除。如果有訂閱 creds Pro，記得到商店取消。",
-  "deleteAccount.webHint": "沒有手機？到 creds.id/delete-account 申請刪除"
+  "deleteAccount.webHint": "沒有手機？也可以到 creds.id/delete-account 用 passkey 刪除"
 }
