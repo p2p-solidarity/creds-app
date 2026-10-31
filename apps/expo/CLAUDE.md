@@ -1,8 +1,9 @@
-# `apps/expo` — Solidarity Expo client
+# `apps/expo` — creds.id app (Expo)
 
-Identity + business-card app. Port of `solidarity/` (SwiftUI). Aims for
-**1:1 visual + behavioural parity** with Swift v1.3.1 plus full Android
-support via Expo + Nitro Modules.
+The phone half of creds.id: an own-your-key link page (Page), verified badges
+(optional ZK), People and Verify, on iOS and Android via Expo + Nitro Modules.
+The look follows the creds.id web app (`../airmeishi-web`), not the deleted
+SwiftUI app — "Swift parity" comments in code are history.
 
 ## Quick start
 
@@ -12,7 +13,7 @@ cd apps/expo
 bunx expo prebuild --clean --platform ios --no-install
 bun run ios                                                  # launches simulator
 bun run typecheck                                            # 0 errors expected
-bun test                                                     # 78+ unit + parity
+bun run test                                                 # unit + parity
 bun run lint                                                 # 0 errors (cosmetic warnings ok)
 ```
 
@@ -22,7 +23,7 @@ bun run lint                                                 # 0 errors (cosmeti
 a `BareKit` TurboModule + a vendored `BareKit.xcframework` / Bare Android
 runtime. Expo Go only bundles Expo's own module set, so **Expo Go cannot run
 this app** — it never could, given the existing Nitro modules
-(`nitro-nfc-passport`, `nitro-passport-zk`, `nitro-spruce-did`, …), but
+(`nitro-attest`, `nitro-keystone`, …), but
 bare-kit makes it explicit. Always build a **dev client**:
 
 ```bash
@@ -69,7 +70,6 @@ you re-introduce bugs the aniseekr team already paid for.
 
 ### Rule 4. Colours from `Colors` token, never inline hex
 - `src/constants/Colors.ts` is the **single source** for brand hex.
-  Mirrors Swift `Color.Theme.*` names 1:1.
 - NativeWind classes (`bg-pageBg`, `text-text1`, `bg-accentRose`) read
   from `tailwind.config.js` which references `Colors`.
 - Hex literals are allowed **only** in `Colors.ts` and `contrast.ts`
@@ -116,37 +116,31 @@ apps/expo/
 ├── app/                       ← Expo Router screens (file-based)
 │   ├── _layout.tsx            ← MMKV init + i18n + deep-link wiring
 │   ├── index.tsx              ← onboarding gate (reads usePreferences)
-│   ├── (tabs)/                ← people/share/me
-│   ├── onboarding/            ← 7-step flow
-│   ├── settings/              ← hub + 6 sub-pages
-│   ├── people/[id].tsx        ← PersonDetail (with MauvePetalMotif watermark)
-│   ├── cards/edit.tsx         ← BusinessCardForm
+│   ├── (tabs)/                ← people / me (Page) / verify
+│   ├── onboarding/            ← V2 flow
+│   ├── settings/              ← hub + sub-pages
+│   ├── people/[id].tsx        ← PersonDetail
 │   ├── credentials/{index,[id],offer}.tsx
-│   ├── groups/{index,[id]}.tsx
-│   ├── shoutouts/{index,[id],new}.tsx
-│   ├── vault/{index,new}.tsx
 │   ├── passport/index.tsx
 │   ├── scan/index.tsx         ← vision-camera QR scanner
 │   └── oidc/consent.tsx
 ├── src/
 │   ├── components/
 │   │   ├── themed/            ← Themed{Text,Surface,Button} + contrast
-│   │   ├── brand/Wordmark.tsx ← Swift Wordmark.svg port
 │   │   ├── decor/             ← DecorativeBlobs / MauvePetalMotif / PaperStack
 │   │   ├── people/ContactRow + ContactsList
 │   │   ├── settings/SettingRow + ToggleRow
 │   │   └── share/RadarMatching
 │   ├── constants/Colors.ts    ← brand palette (single source)
+│   ├── constants/radius.ts    ← radius + shadow roles (= creds.id web tokens)
 │   ├── storage/               ← MMKV + secure-store + AES-GCM
 │   ├── keychain/              ← signing key + pairwise + biometric gate
 │   ├── backup/                ← iCloud + Drive + gesture-triggered
 │   ├── contacts/              ← repository (zustand) + VCF importer
-│   ├── cards/cardManager      ← business card CRUD (zustand)
+│   ├── cards/                 ← legacy card store + card-wire DECODE only (10 §4)
 │   ├── credentials/store      ← VC library (zustand)
-│   ├── groups/store           ← group + member (zustand)
-│   ├── shoutouts/store        ← Sakura messaging (zustand)
-│   ├── vault/{store,storage}  ← encrypted file vault
-│   ├── sakura/client          ← messaging relay client + ECIES
+│   ├── groups/store           ← frozen; UI removed (10 §5), store kept for wipe/backup
+│   ├── vault/secretsKeychain  ← legacy vault root secret (wipe only)
 │   ├── oidc/{parseAuthRequest,proofVerifier}
 │   ├── passport/pipeline      ← MRZ → NFC → ZK orchestrator
 │   ├── deeplink/{parser,router}
@@ -156,7 +150,7 @@ apps/expo/
 │   ├── onboarding/{state,steps}
 │   ├── people/usePeopleScreen
 │   └── scan/{QrScanner,useCameraPermission}
-└── __tests__/{unit,parity}/   ← 13 suites, 78 passing
+└── __tests__/{unit,parity}/   ← feature, security and parity tests
 ```
 
 ## Why some files use `expo-file-system/legacy`
@@ -172,7 +166,23 @@ iOS releases ship via **Xcode Cloud** (Apple Developer 25 h/month free,
 auto cert mgmt). The `withXcodeCloudScripts` config plugin
 (`apps/expo/plugins/`) re-creates `ios/ci_scripts/ci_post_clone.sh`
 after every `expo prebuild --clean` from the persistent source at
-`ci-scripts/ci_post_clone.sh`.
+`ci-scripts/ci_post_clone.sh`. `withPrecompiledVisionCameraResizerMetal`
+stages a pinned `default.metallib` so Archive never depends on Xcode Cloud's
+unreliable optional Metal Toolchain; regenerate it with
+`scripts/build-vision-camera-resizer-metallib.sh` after shader updates.
+`withExpoModulesJsiPatches` rewrites `scripts/build-xcframework.sh` of the
+installed `expo-modules-jsi` (58.0.21) at prebuild so Xcode 27 can archive it:
+it wraps the nested `xcodebuild -quiet` whose spurious "error: … exited with
+code 0" line otherwise fails the phase with "Command PhaseScriptExecution
+emitted errors but did not return a nonzero exit code" (archive-only; plain
+build tolerates it). The patch is anchor-checked and idempotent; drop it once
+upstream stops emitting `error:` lines from that phase. `expo install --check`
+must stay clean; `react-native-get-random-values` 2.0.0 is deliberately kept
+via `expo.install.exclude` (Expo's table pins 1.11). The pod caches its xcframework in
+`node_modules/expo-modules-jsi/apple/{Products,.DerivedData}` — a local
+"BUILD SUCCEEDED" proves nothing about its Swift unless those are cleared first.
+Never add a `ci_pre_xcodebuild.sh` that runs `xcodebuild -downloadComponent
+metalToolchain`: on Xcode Cloud it exits 70 ("Failed fetching catalog for assetType").
 
 Android builds via **EAS Build** or `expo prebuild --platform android`
 + `./gradlew bundleRelease`.
@@ -205,7 +215,7 @@ call site (e.g. don't mount the native view when its module is unavailable).
 
 ### Self-identifying crashes — `MrzInstallCrashDiagnostics`
 
-`nitro-modules/mrz-ocr/ios/MrzVisionGuard.mm` installs a process-wide
+`nitro-modules/attest/ios/MrzVisionGuard.mm` installs a process-wide
 `std::set_terminate` handler **at app launch** (`+load` → `dispatch_async(main)`
 so it wraps RN/Hermes' handlers). On any uncaught exception it writes the
 demangled type + message into:
@@ -251,7 +261,7 @@ globals. On that runtime:
 - ✅ Hand results back to JS via **SharedValues** (the one channel shared across
   runtimes), drained by a JS-thread poll. See `MRZCameraStep.tsx`
   (`acceptSeq`/`errorSeq` channel + 100 ms drain). `scheduleOnRN` IS fine on the
-  UI runtime (gestures/animations, e.g. `FocusedCardView.tsx`) — the ban is
+  UI runtime (gestures/animations, e.g. `SlideUpSheet.tsx`) — the ban is
   async-runner only.
 
 ### Native (Nitro / Vision) rules

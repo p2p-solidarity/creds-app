@@ -17,6 +17,7 @@ import { useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
 import { Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/radius';
 
 import { parseMarkdown, type MarkdownBlock } from './markdownParser';
 export { parseMarkdown, type MarkdownBlock } from './markdownParser';
@@ -63,7 +64,7 @@ export function MarkdownDocumentView({ source }: MarkdownDocumentViewProps) {
             marginHorizontal: 16,
             padding: 16,
             backgroundColor: Colors.mutedSurface,
-            borderRadius: 12,
+            borderRadius: Radius.card,
           }}
         >
           <Text style={{ fontSize: 13, color: Colors.destructive }}>{error}</Text>

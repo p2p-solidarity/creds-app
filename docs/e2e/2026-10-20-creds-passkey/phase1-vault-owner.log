@@ -1,0 +1,15 @@
+owner hash stored server-side: "aSaOKOlp…"
+PUT Web passkey A (owned=true): 201
+PUT Web passkey B (owned=true): 201
+PUT Legacy app passkey (owned=false): 201
+list after 2 owned + 1 legacy: ["Web passkey A","Web passkey B"]
+claim legacy: 200
+list after claim: ["Web passkey A","Web passkey B","Legacy app passkey"]
+rename B: 200
+list after rename: ["Web passkey A","Renamed B","Legacy app passkey"]
+stranger delete A: 404
+owner delete A: 204
+list after delete: ["Renamed B","Legacy app passkey"]
+public GET deleted A: 404
+public GET B keys: ["v","ciphertext"]
+B unlocks to same mnemonic: true

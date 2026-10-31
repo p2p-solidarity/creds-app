@@ -9,14 +9,16 @@
  *      `bindingMismatch`).
  * Plus the reachability honesty split (`notFound` vs `unreachable`).
  *
- * Relay IO is injected (`subscribeEventsFn`) — no real WebSocket. The signed
- * profile fixture reuses packages/shared's own test key, same as
- * verifiedPageHandler.test.ts, so a JWS built here is cross-checkable.
+ * Relay IO is injected (`subscribeEventsFn`) — no real WebSocket. That trusted
+ * post-transport seam intentionally uses placeholder event id/signature bytes,
+ * while still matching the requested npub author. The signed profile fixture
+ * reuses packages/shared's own test key, same as verifiedPageHandler.test.ts,
+ * so a JWS built here is cross-checkable.
  */
 import { describe, expect, it } from 'bun:test';
 import { p256 } from '@noble/curves/nist.js';
 
-import type { NostrEvent } from '@/dag/nostrAdapter';
+import type { NostrEvent } from '@/nostr/nostrAdapter';
 import type { SubscribeEventsFn } from '@/nostr/publish';
 import { hexToBytes, signCompact, type Signer } from '@solidarity/shared';
 
@@ -28,6 +30,7 @@ const subjectSigner: Signer = async (digest) => p256.sign(digest, SUBJECT_PRIV, 
 
 // A real NIP-19 npub (nostr-tools reference vector) — `npubDecode` accepts it.
 const NPUB = 'npub10elfcs4fr0l0r8af98jlmgdh9c8tcxjvz9qkw038js35mp4dma8qzvjptg';
+const NOSTR_PUBKEY = '7e7e9c42a91bfef19fa929e5fda1b72e0ebc1a4c1141673e2794234d86addf4e';
 
 function profile(alsoKnownAs: readonly string[]): object {
   return {
@@ -48,7 +51,7 @@ async function pointerEvent(alsoKnownAs: readonly string[]): Promise<NostrEvent>
   const jws = await signCompact(profile(alsoKnownAs), SUBJECT_DID, subjectSigner);
   return {
     id: '00'.repeat(32),
-    pubkey: 'ab'.repeat(32),
+    pubkey: NOSTR_PUBKEY,
     created_at: 1_700_000_000,
     kind: 30078,
     tags: [['d', 'solidarity.profile']],
@@ -124,6 +127,35 @@ describe('resolveProfileByNpub', () => {
     expect(r.kind).toBe('invalid');
     if (r.kind !== 'invalid') return;
     expect(r.reason).toBe('unreachable');
+  });
+
+  it('paints the first verified, reverse-bound page before the slowest relay answers', async () => {
+    const ev = await pointerEvent([`nostr:${NPUB}`]);
+    const interim: string[] = [];
+    const dead: SubscribeEventsFn = (relay) => ({ subscriptionId: `dead-${relay}`, close: () => undefined });
+    const fast = fakeSubscribe({ a: [ev] });
+    const started = Date.now();
+    const r = await resolveProfileByNpub(NPUB, {
+      relays: ['a', 'dead'],
+      timeoutMs: 3000,
+      subscribeEventsFn: (relay, ...rest) => (relay === 'a' ? fast : dead)(relay, ...rest),
+      onInterim: (v) => interim.push(v.record.displayName),
+    });
+    expect(Date.now() - started).toBeLessThan(1500);
+    expect(interim).toEqual(['Alice']);
+    expect(r.kind).toBe('verified');
+  });
+
+  it('never paints a relay-substituted page that does not claim the npub back', async () => {
+    const ev = await pointerEvent([]);
+    const interim: unknown[] = [];
+    const r = await resolveProfileByNpub(NPUB, {
+      relays: ['a'],
+      subscribeEventsFn: fakeSubscribe({ a: [ev] }),
+      onInterim: (v) => interim.push(v),
+    });
+    expect(interim).toEqual([]);
+    expect(r.kind).toBe('invalid');
   });
 
   it('rejects a malformed npub before any relay call → malformedPayload', async () => {

@@ -1,0 +1,25 @@
+{
+  "name": "@solidarity/nitro-attest",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Attestation-lifecycle Nitro module: MRZ OCR capture (Vision / ML Kit), ePassport NFC read with passive authentication (NFCPassportReader / jmrtd), Semaphore group proofs, and App Attest / Key Attestation device keys.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "nitrogen": "nitrogen",
+    "build:semaphore:ios": "bash semaphore/rust/build-ios.sh",
+    "build:semaphore:android": "bash semaphore/rust/build-android.sh",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "react-native": {
+    "supportedPlatforms": ["ios", "android"]
+  },
+  "peerDependencies": {
+    "react-native-nitro-modules": "*",
+    "react-native-vision-camera": "*"
+  },
+  "devDependencies": {
+    "react-native-nitro-modules": "^0.37.1"
+  }
+}

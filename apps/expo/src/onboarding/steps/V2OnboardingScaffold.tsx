@@ -1,12 +1,15 @@
 import type { ReactNode } from 'react';
-import { ScrollView, View } from 'react-native';
-import Animated, { Easing, FadeIn, ReduceMotion } from 'react-native-reanimated';
+import { View } from 'react-native';
+import { KeyboardAwareScrollView, KeyboardStickyView } from 'react-native-keyboard-controller';
+import Animated, { FadeIn, ReduceMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/radius';
+import { DURATION, EASE_OUT } from '@/feedback/motion';
 import { useTranslation } from '@/i18n';
 import { ONBOARDING_STEP_COUNT } from '@/onboarding/state';
 
@@ -41,20 +44,21 @@ export function V2OnboardingScaffold({
             style={{
               width: index === stepIndex ? 20 : 7,
               height: 7,
-              borderRadius: 4,
+              borderRadius: Radius.pill,
               backgroundColor: index <= stepIndex ? Colors.primaryMauve : Colors.divider,
             }}
           />
         ))}
       </View>
 
-      <ScrollView
+      <KeyboardAwareScrollView
         keyboardShouldPersistTaps="handled"
+        bottomOffset={16}
         contentContainerStyle={{
           flexGrow: 1,
           paddingHorizontal: 24,
           paddingTop: 12,
-          paddingBottom: insets.bottom + 24,
+          paddingBottom: footer ? 24 : insets.bottom + 24,
           gap: 24,
         }}>
         {onBack ? (
@@ -70,10 +74,11 @@ export function V2OnboardingScaffold({
           <View style={{ height: 44 }} />
         )}
 
+        {/* A pure fade has no movement, so it stays on under Reduce Motion. */}
         <Animated.View
-          entering={FadeIn.duration(220)
-            .easing(Easing.out(Easing.cubic))
-            .reduceMotion(ReduceMotion.System)}
+          entering={FadeIn.duration(DURATION.enter)
+            .easing(EASE_OUT)
+            .reduceMotion(ReduceMotion.Never)}
           style={{ flex: 1, gap: 24 }}>
           {title || subtitle ? (
             <View style={{ gap: 8 }}>
@@ -87,9 +92,18 @@ export function V2OnboardingScaffold({
           ) : null}
 
           <View style={{ flex: 1 }}>{children}</View>
-          {footer ? <View>{footer}</View> : null}
         </Animated.View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
+
+      {/* The step's action lives in one fixed bar on every step — same place,
+          riding above the keyboard — instead of wherever the content ends. */}
+      {footer ? (
+        <KeyboardStickyView
+          offset={{ closed: 0, opened: insets.bottom }}
+          style={{ paddingHorizontal: 24, paddingTop: 12, paddingBottom: insets.bottom + 16 }}>
+          {footer}
+        </KeyboardStickyView>
+      ) : null}
     </View>
   );
 }

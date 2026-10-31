@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  AndroidManifest.xml
+  @solidarity/nitro-attest (Android)
+
+  Empty manifest — the Rust semaphore_bindings cdylib is loaded at runtime
+  via JNA; no Android permissions or features needed. The
+  host app's manifest already declares NFC + anything else it needs.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" />

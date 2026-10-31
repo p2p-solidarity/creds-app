@@ -1,4 +1,6 @@
-import { ActivityIndicator, Modal, ScrollView, View } from 'react-native';
+import { Image } from 'expo-image';
+import { ActivityIndicator, ScrollView, View } from 'react-native';
+import { ModalSheet, sheetTopInset } from '@/components/common/ModalSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { ReactNode } from 'react';
 
@@ -6,7 +8,10 @@ import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/radius';
 import { useTranslation } from '@/i18n';
+
+import type { LinkAvatarChoice } from './useAvatarEditor';
 
 export type AvatarPickerPhase =
   | { readonly step: 'ready' }
@@ -18,9 +23,12 @@ export interface AvatarPickerSheetProps {
   readonly phase: AvatarPickerPhase;
   readonly canUseBluesky: boolean;
   readonly canRemove: boolean;
+  /** Pictures the Page's links already serve — one tap instead of an upload. */
+  readonly linkAvatars: readonly LinkAvatarChoice[];
   readonly onClose: () => void;
   readonly onChooseLibrary: () => void;
   readonly onUseBluesky: () => void;
+  readonly onUseLinkAvatar: (picture: string) => void;
   readonly onRemove: () => void;
   readonly onResetError: () => void;
 }
@@ -30,9 +38,11 @@ export function AvatarPickerSheet({
   phase,
   canUseBluesky,
   canRemove,
+  linkAvatars,
   onClose,
   onChooseLibrary,
   onUseBluesky,
+  onUseLinkAvatar,
   onRemove,
   onResetError,
 }: AvatarPickerSheetProps): ReactNode {
@@ -42,15 +52,13 @@ export function AvatarPickerSheet({
   const close = loading ? () => undefined : onClose;
 
   return (
-    <Modal
+    <ModalSheet
       visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
       onRequestClose={close}>
       {visible ? (
         <View
           className="flex-1 bg-pageBg"
-          style={{ paddingTop: insets.top, paddingBottom: insets.bottom + 12 }}>
+          style={{ paddingTop: sheetTopInset(insets.top), paddingBottom: insets.bottom + 12 }}>
           <View className="min-h-14 flex-row items-center justify-between border-b border-divider px-4">
             <View style={{ width: 44 }} />
             <ThemedText variant="titleMedium">{t('meEdit.avatar.title')}</ThemedText>
@@ -103,11 +111,41 @@ export function AvatarPickerSheet({
               </ThemedSurface>
             ) : null}
 
+            {phase.step === 'ready' && linkAvatars.length > 0 ? (
+              <View className="gap-2">
+                <ThemedText variant="label" tone="secondary">
+                  {t('meEdit.avatar.fromLinks')}
+                </ThemedText>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 14 }}>
+                  {linkAvatars.map((choice) => (
+                    <PressableScale
+                      key={choice.picture}
+                      haptic="tap"
+                      onPress={() => { onUseLinkAvatar(choice.picture); }}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('meEdit.avatar.useFromLink', { label: choice.label })}
+                      style={{ width: 72, alignItems: 'center', gap: 6 }}>
+                      <Image
+                        source={{ uri: choice.picture }}
+                        contentFit="cover"
+                        accessibilityIgnoresInvertColors
+                        style={{ width: 64, height: 64, borderRadius: Radius.pill, backgroundColor: Colors.chipSurface }}
+                      />
+                      <ThemedText variant="caption" tone="secondary" numberOfLines={1}>
+                        {choice.label}
+                      </ThemedText>
+                    </PressableScale>
+                  ))}
+                </ScrollView>
+              </View>
+            ) : null}
+
             {phase.step === 'ready' ? (
               <View className="gap-2">
                 <AvatarActionRow
                   icon="photo"
                   label={t('meEdit.avatar.library')}
+                  detail={t('meEdit.avatar.libraryHint')}
                   onPress={onChooseLibrary}
                 />
                 {canUseBluesky ? (
@@ -130,7 +168,7 @@ export function AvatarPickerSheet({
           </ScrollView>
         </View>
       ) : null}
-    </Modal>
+    </ModalSheet>
   );
 }
 

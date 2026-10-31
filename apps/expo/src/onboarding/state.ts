@@ -25,6 +25,17 @@ export const initialOnboardingState: OnboardingState = {
   keysGenerated: false,
 };
 
+/**
+ * The state to open onboarding on: a saved unfinished run (iPad users get
+ * switched away mid-flow; a relaunch used to restart at welcome while the
+ * name draft survived), else the start. A step name the current build no
+ * longer has falls back to the start.
+ */
+export function resumeOnboardingState(saved: OnboardingState | null): OnboardingState {
+  if (saved === null || !ONBOARDING_STEPS.includes(saved.step)) return initialOnboardingState;
+  return { step: saved.step, keysGenerated: saved.keysGenerated };
+}
+
 export type OnboardingAction =
   | { readonly type: 'next' }
   | { readonly type: 'back' }

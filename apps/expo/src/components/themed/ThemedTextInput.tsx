@@ -17,17 +17,26 @@
  *  - trailing affordances: reveal (auto for `secret`), paste, clear;
  *  - every colour from a `Colors` token (rule 4) — no new hex.
  *
+ * Shape = creds.id's form row (`.land-row`, airmeishi-web global.css): one
+ * bordered 48pt row at `--radius-field`, an optional icon well flush left
+ * behind a divider (`icon` / `leading`), an inline mono prefix
+ * (`creds.id/@`, `t.me/`) and the primary border of `.field-input:focus-visible`.
+ * Technical text — URLs, handles, keys — is monospace, value and
+ * placeholder alike, as on the web.
+ *
  * Controlled field (`value`/`onChangeText`); focus + reveal are local UI
  * state (rule 9). Label is optional — omit it where the row already has its
  * own heading (e.g. the link-label input inside a bordered card).
  */
 import type { ReactNode } from 'react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
+  Pressable,
   TextInput,
   View,
   type KeyboardTypeOptions,
   type ReturnKeyTypeOptions,
+  type TextInputInstance,
   type TextInputProps as RNTextInputProps,
 } from 'react-native';
 import type { SFSymbol } from 'expo-symbols';
@@ -35,9 +44,12 @@ import type { SFSymbol } from 'expo-symbols';
 import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { Colors } from '@/constants/Colors';
+import { useThemeColors } from '@/constants/useThemeColors';
+import { MONO, textFont } from '@/constants/fonts';
 import { useTranslation } from '@/i18n';
 
 import { ThemedText } from './ThemedText';
+import { Radius } from '@/constants/radius';
 
 export type TextInputKind = 'text' | 'url' | 'handle' | 'secret' | 'did';
 
@@ -49,22 +61,44 @@ interface KindConfig {
   readonly textContentType?: RNTextInputProps['textContentType'];
   readonly mono?: boolean;
   readonly secret?: boolean;
+  /** Technical text: no red squiggles, no autocorrect on commit ("creds" → "cress"). */
+  readonly technical?: boolean;
 }
 
+
+/** creds.id `.field-input`: 16pt side padding, `--radius-field`. */
+const FIELD_PAD_X = 16;
+const FIELD_RADIUS = Radius.field;
+// Names and URLs are ASCII: `ascii-capable` keeps a Zhuyin or kana software
+// keyboard from composing them into bopomofo (the iPad default for a zh-Hant
+// user). Not `url`: on iPad that type still opens the user's Zhuyin layout
+// (seen on the iPad Pro 13" simulator, 2026-10-31). A hardware keyboard
+// ignores keyboardType altogether.
 const KIND_CONFIG: Readonly<Record<TextInputKind, KindConfig>> = {
   text: {},
   url: {
-    keyboardType: 'url',
+    technical: true,
+    mono: true,
+    keyboardType: 'ascii-capable',
     autoCapitalize: 'none',
     autoCorrect: false,
     autoComplete: 'off',
     textContentType: 'URL',
   },
-  handle: { autoCapitalize: 'none', autoCorrect: false, autoComplete: 'off' },
+  handle: {
+    technical: true,
+    keyboardType: 'ascii-capable',
+    autoCapitalize: 'none',
+    autoCorrect: false,
+    autoComplete: 'off',
+    mono: true,
+  },
   // `oneTimeCode`, NEVER `password` — a raw crypto key (nsec/seed) must not
   // be offered to the iOS password manager (that would cache the very thing
   // that must stay uncached). `oneTimeCode` still disables autofill/correct.
   secret: {
+    technical: true,
+    keyboardType: 'ascii-capable',
     autoCapitalize: 'none',
     autoCorrect: false,
     autoComplete: 'off',
@@ -72,7 +106,14 @@ const KIND_CONFIG: Readonly<Record<TextInputKind, KindConfig>> = {
     mono: true,
     secret: true,
   },
-  did: { autoCapitalize: 'none', autoCorrect: false, autoComplete: 'off', mono: true },
+  did: {
+    technical: true,
+    keyboardType: 'ascii-capable',
+    autoCapitalize: 'none',
+    autoCorrect: false,
+    autoComplete: 'off',
+    mono: true,
+  },
 };
 
 export interface ThemedTextInputProps {
@@ -81,6 +122,12 @@ export interface ThemedTextInputProps {
   readonly kind?: TextInputKind;
   readonly label?: string;
   readonly placeholder?: string;
+  /** Leading icon well (`.land-well`) with this SF Symbol in it. */
+  readonly icon?: SFSymbol;
+  /** A custom node for the well (a brand glyph); wins over `icon`. */
+  readonly leading?: ReactNode;
+  /** Override the kind's typeface: `true` mono, `false` text. */
+  readonly mono?: boolean;
   /** Read-only format guidance rendered inside the field at the trailing edge. */
   readonly inlineSuffix?: string | null;
   /** Read-only fixed part rendered inside the field at the leading edge —
@@ -111,10 +158,12 @@ export interface ThemedTextInputProps {
   readonly testID?: string;
 }
 
-const MIN_HEIGHT = 48; // comfortably ≥44pt (rule 6)
-const MULTILINE_MIN_HEIGHT = 88;
+const MIN_HEIGHT = 48; // comfortably ≥44pt (rule 6), the web's `--land-ctl`
+const MULTILINE_MIN_HEIGHT = 96;
 const TRAILING_SLOT = 44;
-const INLINE_SUFFIX_WIDTH = 96;
+/** `.land-well` is the row height minus its two border pixels. */
+const WELL_WIDTH = MIN_HEIGHT - 2;
+const FIELD_FONT_SIZE = 15;
 
 export function ThemedTextInput({
   value,
@@ -122,6 +171,9 @@ export function ThemedTextInput({
   kind = 'text',
   label,
   placeholder,
+  icon,
+  leading,
+  mono,
   inlineSuffix = null,
   inlinePrefix = null,
   error = null,
@@ -143,15 +195,13 @@ export function ThemedTextInput({
   testID,
 }: ThemedTextInputProps): ReactNode {
   const { t } = useTranslation();
+  const c = useThemeColors();
   const cfg = KIND_CONFIG[kind];
+  const inputRef = useRef<TextInputInstance>(null);
   const [focused, setFocused] = useState(false);
   const [revealed, setRevealed] = useState(false);
-  // Measured on layout; until then an estimate keeps the caret from
-  // overlapping the prefix on the first frame.
-  const [prefixWidth, setPrefixWidth] = useState(0);
-  const effectivePrefixWidth = inlinePrefix
-    ? (prefixWidth > 0 ? prefixWidth : inlinePrefix.length * 8) + 4
-    : 0;
+  const fontFamily = (mono ?? cfg.mono) === true ? MONO : textFont();
+  const focusInput = () => { inputRef.current?.focus(); };
 
   const trailing: ReactNode[] = [];
   if (cfg.secret) {
@@ -198,18 +248,65 @@ export function ThemedTextInput({
     );
   }
 
-  const borderColor = error ? Colors.destructive : focused ? Colors.primaryBlue : Colors.divider;
-  const trailingWidth = trailing.length * TRAILING_SLOT;
+  const borderColor = error ? c.destructive : focused ? c.primaryBlue : c.divider;
+  const well = leading ?? (icon ? <SfIcon name={icon} size={17} color={focused ? c.primaryBlue : c.text3} /> : null);
+  const padLeft = inlinePrefix ? 0 : well ? 14 : FIELD_PAD_X;
+  const padRight = trailing.length > 0 || inlineSuffix ? 4 : FIELD_PAD_X;
 
   return (
     <View style={{ gap: label ? 8 : 6 }}>
       {label ? <ThemedText variant="label">{label}</ThemedText> : null}
-      <View style={{ justifyContent: 'center' }}>
+      {/* A tap on the well still lands the caret in the field (`.land-row`'s
+          `cursor: text`). Never wrap the input itself in a pressable, and
+          never change the row's shadow on focus: on device both left the
+          field unable to take focus (2026-10-30). Focus shows as the border. */}
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: multiline ? 'stretch' : 'center',
+          minHeight: multiline ? MULTILINE_MIN_HEIGHT : MIN_HEIGHT,
+          borderWidth: 1,
+          borderColor,
+          borderRadius: FIELD_RADIUS,
+          backgroundColor: c.cardBg,
+        }}>
+        {well ? (
+          <Pressable
+            accessible={false}
+            disabled={!editable}
+            onPress={focusInput}
+            style={{
+              width: WELL_WIDTH,
+              alignSelf: 'stretch',
+              alignItems: 'center',
+              justifyContent: multiline ? 'flex-start' : 'center',
+              paddingTop: multiline ? 14 : 0,
+              backgroundColor: c.chipSurface,
+              borderRightWidth: 1,
+              borderRightColor: c.divider,
+            }}>
+            {well}
+          </Pressable>
+        ) : null}
+        {inlinePrefix ? (
+          <ThemedText
+            numberOfLines={1}
+            style={{
+              paddingLeft: well ? 14 : FIELD_PAD_X,
+              fontFamily: MONO,
+              fontSize: FIELD_FONT_SIZE,
+              color: c.text3,
+              flexShrink: 0,
+            }}>
+            {inlinePrefix}
+          </ThemedText>
+        ) : null}
         <TextInput
+          ref={inputRef}
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          placeholderTextColor={Colors.text3}
+          placeholderTextColor={c.text3}
           editable={editable}
           autoFocus={autoFocus}
           multiline={multiline}
@@ -217,6 +314,7 @@ export function ThemedTextInput({
           keyboardType={keyboardType ?? cfg.keyboardType}
           autoCapitalize={autoCapitalize ?? cfg.autoCapitalize}
           autoCorrect={autoCorrect ?? cfg.autoCorrect}
+          spellCheck={cfg.technical === true ? false : undefined}
           maxLength={maxLength}
           autoComplete={cfg.autoComplete}
           textContentType={cfg.textContentType}
@@ -229,71 +327,30 @@ export function ThemedTextInput({
             setFocused(false);
             onBlur?.();
           }}
-          accessibilityLabel={accessibilityLabel ?? label}
+          accessibilityLabel={accessibilityLabel ?? label ?? placeholder}
           testID={testID}
-          className="bg-searchBg text-text1"
+          selectionColor={c.primaryBlue}
           style={{
-            paddingHorizontal: 14,
-            paddingLeft: 14 + effectivePrefixWidth,
-            paddingRight:
-              14 + trailingWidth + (inlineSuffix ? INLINE_SUFFIX_WIDTH : 0),
+            flex: 1,
+            alignSelf: 'stretch',
+            paddingLeft: padLeft,
+            paddingRight: padRight,
             paddingVertical: 12,
-            minHeight: multiline ? MULTILINE_MIN_HEIGHT : MIN_HEIGHT,
-            fontSize: 15,
-            fontFamily: cfg.mono ? 'Menlo' : undefined,
+            fontSize: FIELD_FONT_SIZE,
+            fontFamily,
+            color: c.text1,
             textAlignVertical: multiline ? 'top' : 'center',
-            borderWidth: 1,
-            borderColor,
           }}
         />
         {inlineSuffix ? (
-          <View
-            pointerEvents="none"
-            style={{
-              position: 'absolute',
-              right: 14 + trailingWidth,
-              width: INLINE_SUFFIX_WIDTH,
-              top: 0,
-              bottom: 0,
-              alignItems: 'flex-end',
-              justifyContent: 'center',
-            }}>
+          <View pointerEvents="none" style={{ paddingRight: trailing.length > 0 ? 0 : FIELD_PAD_X, justifyContent: 'center' }}>
             <ThemedText variant="bodySmall" tone="tertiary" numberOfLines={1}>
               {inlineSuffix}
             </ThemedText>
           </View>
         ) : null}
-        {inlinePrefix ? (
-          <View
-            pointerEvents="none"
-            style={{
-              position: 'absolute',
-              left: 14,
-              top: 0,
-              bottom: 0,
-              justifyContent: 'center',
-            }}>
-            <ThemedText
-              variant="bodySmall"
-              tone="tertiary"
-              numberOfLines={1}
-              onLayout={(e) => {
-                setPrefixWidth(e.nativeEvent.layout.width);
-              }}>
-              {inlinePrefix}
-            </ThemedText>
-          </View>
-        ) : null}
         {trailing.length > 0 ? (
-          <View
-            style={{
-              position: 'absolute',
-              right: 0,
-              top: 0,
-              bottom: 0,
-              flexDirection: 'row',
-              alignItems: 'center',
-            }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'stretch' }}>
             {trailing}
           </View>
         ) : null}

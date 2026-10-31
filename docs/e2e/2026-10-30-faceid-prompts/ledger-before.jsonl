@@ -1,0 +1,28 @@
+{"story":"1a","mode":"balanced","key":"js-gated","total":1,"intents":2,"perIntent":["create identity (PasskeyStep \"Not now\")=0","LinksStep save + background publish=1"]}
+{"story":"1a","mode":"balanced","key":"native-acl (legacy SE)","total":1,"intents":2,"perIntent":["create identity (PasskeyStep \"Not now\")=0","LinksStep save + background publish=1"]}
+{"story":"1a","mode":"everyTime","key":"js-gated","total":3,"intents":2,"perIntent":["create identity (PasskeyStep \"Not now\")=0","LinksStep save + background publish=3"]}
+{"story":"1a","mode":"everyTime","key":"native-acl (legacy SE)","total":3,"intents":2,"perIntent":["create identity (PasskeyStep \"Not now\")=0","LinksStep save + background publish=3"]}
+{"story":"1b","mode":"balanced","key":"js-gated","total":2,"intents":1,"perIntent":["LinksStep: provision Nostr key + save + publish=2"]}
+{"story":"1b","mode":"balanced","key":"native-acl (legacy SE)","total":2,"intents":1,"perIntent":["LinksStep: provision Nostr key + save + publish=2"]}
+{"story":"1b","mode":"everyTime","key":"js-gated","total":4,"intents":1,"perIntent":["LinksStep: provision Nostr key + save + publish=4"]}
+{"story":"1b","mode":"everyTime","key":"native-acl (legacy SE)","total":4,"intents":1,"perIntent":["LinksStep: provision Nostr key + save + publish=4"]}
+{"story":"2","mode":"balanced","key":"js-gated","total":1,"intents":4,"perIntent":["add link 1=1","add link 2=0","confirm link 1 → green check (re-sign)=0","confirm link 2 → green check (re-sign)=0"]}
+{"story":"2","mode":"balanced","key":"native-acl (legacy SE)","total":1,"intents":4,"perIntent":["add link 1=1","add link 2=0","confirm link 1 → green check (re-sign)=0","confirm link 2 → green check (re-sign)=0"]}
+{"story":"2","mode":"everyTime","key":"js-gated","total":12,"intents":4,"perIntent":["add link 1=3","add link 2=3","confirm link 1 → green check (re-sign)=3","confirm link 2 → green check (re-sign)=3"]}
+{"story":"2","mode":"everyTime","key":"native-acl (legacy SE)","total":12,"intents":4,"perIntent":["add link 1=3","add link 2=3","confirm link 1 → green check (re-sign)=3","confirm link 2 → green check (re-sign)=3"]}
+{"story":"3","mode":"balanced","key":"js-gated","total":1,"intents":2,"perIntent":["open Present QR=1","toggle a field (QR rebuilt)=0"]}
+{"story":"3","mode":"balanced","key":"native-acl (legacy SE)","total":1,"intents":2,"perIntent":["open Present QR=1(native 1)","toggle a field (QR rebuilt)=0"]}
+{"story":"3","mode":"everyTime","key":"js-gated","total":2,"intents":2,"perIntent":["open Present QR=1","toggle a field (QR rebuilt)=1"]}
+{"story":"3","mode":"everyTime","key":"native-acl (legacy SE)","total":1,"intents":2,"perIntent":["open Present QR=1(native 1)","toggle a field (QR rebuilt)=0"]}
+{"story":"4","mode":"balanced","key":"js-gated","total":2,"intents":1,"perIntent":["Pear exchange: handshake sign + card release=2"]}
+{"story":"4","mode":"balanced","key":"native-acl (legacy SE)","total":2,"intents":1,"perIntent":["Pear exchange: handshake sign + card release=2"]}
+{"story":"4","mode":"everyTime","key":"js-gated","total":2,"intents":1,"perIntent":["Pear exchange: handshake sign + card release=2"]}
+{"story":"4","mode":"everyTime","key":"native-acl (legacy SE)","total":2,"intents":1,"perIntent":["Pear exchange: handshake sign + card release=2"]}
+{"story":"5","mode":"balanced","key":"js-gated","total":3,"intents":5,"perIntent":["proof: device-binding signature=1","save passport (issueCredential gate)=0","npub binding (device-binding signature)=0","publish public disclosure=1","next action: open Present QR=1"]}
+{"story":"5","mode":"balanced","key":"native-acl (legacy SE)","total":3,"intents":5,"perIntent":["proof: device-binding signature=1(native 1)","save passport (issueCredential gate)=1","npub binding (device-binding signature)=0","publish public disclosure=1","next action: open Present QR=0"]}
+{"story":"5","mode":"everyTime","key":"js-gated","total":8,"intents":5,"perIntent":["proof: device-binding signature=1","save passport (issueCredential gate)=1","npub binding (device-binding signature)=1","publish public disclosure=4","next action: open Present QR=1"]}
+{"story":"5","mode":"everyTime","key":"native-acl (legacy SE)","total":6,"intents":5,"perIntent":["proof: device-binding signature=1(native 1)","save passport (issueCredential gate)=1","npub binding (device-binding signature)=0","publish public disclosure=4","next action: open Present QR=0"]}
+{"story":"6","mode":"balanced","key":"js-gated","total":1,"intents":3,"perIntent":["add link=1","open Present QR=0","add another link=0"]}
+{"story":"6","mode":"balanced","key":"native-acl (legacy SE)","total":2,"intents":3,"perIntent":["add link=1","open Present QR=1(native 1)","add another link=0"]}
+{"story":"6","mode":"everyTime","key":"js-gated","total":7,"intents":3,"perIntent":["add link=3","open Present QR=1","add another link=3"]}
+{"story":"6","mode":"everyTime","key":"native-acl (legacy SE)","total":7,"intents":3,"perIntent":["add link=3","open Present QR=1(native 1)","add another link=3"]}

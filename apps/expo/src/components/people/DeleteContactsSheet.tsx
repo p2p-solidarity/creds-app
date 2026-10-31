@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { Modal, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
+import { ModalSheet, sheetTopInset } from '@/components/common/ModalSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
@@ -26,19 +27,16 @@ export function DeleteContactsSheet({
   const insets = useSafeAreaInsets();
 
   return (
-    <Modal
+    <ModalSheet
       visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
       onRequestClose={() => {
         if (!deleting) onClose();
-      }}
-    >
+      }}>
       <View
         style={{
           flex: 1,
           backgroundColor: Colors.pageBg,
-          paddingTop: insets.top,
+          paddingTop: sheetTopInset(insets.top),
         }}
       >
         <ScrollView
@@ -53,16 +51,13 @@ export function DeleteContactsSheet({
             {t('peopleList.deleteCountTitle', { count: contacts.length })}
           </ThemedText>
 
-          <ThemedSurface variant="card" padded>
+          <ThemedSurface variant="inset" padded>
             <View style={{ gap: 10 }}>
               <ThemedText variant="bodyMedium" tone="secondary">
                 {t('peopleList.deleteCardsNotes')}
               </ThemedText>
               <ThemedText variant="bodyMedium" tone="secondary">
                 {t('peopleList.deleteOthersUnaffected')}
-              </ThemedText>
-              <ThemedText variant="bodyMedium" tone="error">
-                {t('peopleList.deleteNoUndo')}
               </ThemedText>
             </View>
           </ThemedSurface>
@@ -80,7 +75,7 @@ export function DeleteContactsSheet({
                 }}
               >
                 <View
-                  className="items-center justify-center rounded-full bg-searchBg"
+                  className="items-center justify-center rounded-pill bg-searchBg"
                   style={{ width: 32, height: 32 }}
                 >
                   <ThemedText variant="bodySmall" tone="secondary">
@@ -109,6 +104,7 @@ export function DeleteContactsSheet({
             label={t('peopleList.delete')}
             loading={deleting}
             disabled={contacts.length === 0}
+            accessibilityHint={t('peopleList.deleteNoUndo')}
             onPress={onConfirm}
           />
           <ThemedButton
@@ -120,7 +116,7 @@ export function DeleteContactsSheet({
           />
         </View>
       </View>
-    </Modal>
+    </ModalSheet>
   );
 }
 

@@ -14,18 +14,6 @@ RUN_POD_INSTALL="${AIRMEISHI_RUN_POD_INSTALL:-1}"
 PREBUILD_CLEAN="${AIRMEISHI_IOS_PREBUILD_CLEAN:-0}"
 BUN_INSTALL_ARGS="${AIRMEISHI_BUN_INSTALL_ARGS:-}"
 SETUP_IOS_NATIVE_BINDINGS="${AIRMEISHI_SETUP_IOS_NATIVE_BINDINGS:-1}"
-PASSPORT_NOIR_DIR="${AIRMEISHI_PASSPORT_NOIR_DIR:-$(cd "$REPO_ROOT/.." && pwd)/passport-noir}"
-PASSPORT_MOPRO_VERSION="${AIRMEISHI_PASSPORT_MOPRO_VERSION:-v0.3.2}"
-PASSPORT_MOPRO_ZIP_URL="${AIRMEISHI_PASSPORT_MOPRO_ZIP_URL:-https://github.com/p2p-solidarity/passport-noir/releases/download/${PASSPORT_MOPRO_VERSION}/PassportMoproBindings.xcframework.zip}"
-PASSPORT_MOPRO_SHA256="${AIRMEISHI_PASSPORT_MOPRO_SHA256-3a81c5e6a743f3a875e88c3b54b9fd3c4ca8cc250a31d3cc79b53b87dc940c49}"
-# OpenAC v3 uses one merged `passport.srs.bin`. It is large (128MB) and
-# gitignored, so staging prefers local passport-noir build artifacts; when they
-# are absent (fresh checkout / Xcode Cloud) the SHA-pinned copy attached to the
-# passport-noir release is downloaded into the same local path first. The
-# stage-openac-srs.sh helper itself never downloads (it also runs as an Xcode
-# build phase, which must stay offline + deterministic).
-PASSPORT_OPENAC_SRS_URL="${AIRMEISHI_PASSPORT_OPENAC_SRS_URL:-https://github.com/p2p-solidarity/passport-noir/releases/download/${PASSPORT_MOPRO_VERSION}/passport.srs.bin}"
-PASSPORT_OPENAC_SRS_SHA256="${AIRMEISHI_PASSPORT_OPENAC_SRS_SHA256-7d368f9342b99252a06249e46a3edfbda9aa2e9afb482bfe848245ab538c6996}"
 SEMAPHORE_SWIFT_REF="${AIRMEISHI_SEMAPHORE_SWIFT_REF:-850680a5adcc258d6861005b55a4925bd08a48eb}"
 SEMAPHORE_SWIFT_ZIP_URL="${AIRMEISHI_SEMAPHORE_SWIFT_ZIP_URL:-https://github.com/zkmopro/SemaphoreSwift/archive/${SEMAPHORE_SWIFT_REF}.zip}"
 SEMAPHORE_SWIFT_SHA256="${AIRMEISHI_SEMAPHORE_SWIFT_SHA256-}"
@@ -105,6 +93,22 @@ xcframework_has_static_module() {
   done
 }
 
+# Staged (downloaded) xcframeworks carry a `.airmeishi-ref` stamp naming the
+# pin they came from, so a pin bump invalidates them. Locally built copies
+# have no stamp; whether that counts as valid is the caller's decision —
+# see ensure_semaphore_bindings_xcframework.
+xcframework_stamp_matches() {
+  local root="$1"
+  local expected="$2"
+
+  [[ -f "$root/.airmeishi-ref" ]] || return 1
+  [[ "$(cat "$root/.airmeishi-ref")" == "$expected" ]]
+}
+
+write_xcframework_stamp() {
+  printf '%s\n' "$2" > "$1/.airmeishi-ref"
+}
+
 download_zip() {
   local url="$1"
   local output="$2"
@@ -161,31 +165,20 @@ stage_xcframework_from_zip() {
   rm -rf "$temp_dir"
 }
 
-ensure_passport_mopro_xcframework() {
-  local xcf="$PASSPORT_NOIR_DIR/mopro-binding/MoproiOSBindings/MoproBindings.xcframework"
-
-  if xcframework_has_static_module "$xcf" passport_zk_mopro passport_zk_moproFFI.h libpassport_zk_mopro.a; then
-    green "OK Passport MoproBindings.xcframework already present"
-    return 0
-  fi
-
-  stage_xcframework_from_zip \
-    "Passport MoproBindings.xcframework ($PASSPORT_MOPRO_VERSION)" \
-    "$PASSPORT_MOPRO_ZIP_URL" \
-    "$PASSPORT_MOPRO_SHA256" \
-    "MoproBindings.xcframework" \
-    "$xcf" \
-    "passport-mopro.zip"
-
-  xcframework_has_static_module "$xcf" passport_zk_mopro passport_zk_moproFFI.h libpassport_zk_mopro.a \
-    || die "Passport MoproBindings.xcframework is incomplete at $xcf"
-}
-
 ensure_semaphore_bindings_xcframework() {
-  local xcf="$REPO_ROOT/nitro-modules/semaphore/mopro/SemaphoreBindings.xcframework"
+  local xcf="$REPO_ROOT/nitro-modules/attest/semaphore/mopro/SemaphoreBindings.xcframework"
 
-  if xcframework_has_static_module "$xcf" semaphore_bindings semaphore_bindingsFFI.h libsemaphore_bindings.a; then
-    green "OK SemaphoreBindings.xcframework already present"
+  # An unstamped copy here is treated as STALE and restaged.
+  # The committed mopro.swift is generated from the SEMAPHORE_SWIFT_REF pin
+  # (byte-identical to that archive's wrapper), while the vendored rust crate
+  # still pins uniffi 0.28 — a local build-ios.sh artifact therefore CANNOT
+  # match the committed bindings and dies at runtime with a SIGTRAP in
+  # uniffiEnsureSemaphoreBindingsInitialized (seen 2026-08-30: a pre-pin
+  # v26 leftover survived the old presence-only check for months). If the
+  # crate ever catches up, sync mopro/ios/mopro.swift and stamp the build.
+  if xcframework_has_static_module "$xcf" semaphore_bindings semaphore_bindingsFFI.h libsemaphore_bindings.a \
+    && xcframework_stamp_matches "$xcf" "$SEMAPHORE_SWIFT_REF"; then
+    green "OK SemaphoreBindings.xcframework already present (pin $SEMAPHORE_SWIFT_REF)"
     return 0
   fi
 
@@ -199,47 +192,14 @@ ensure_semaphore_bindings_xcframework() {
 
   xcframework_has_static_module "$xcf" semaphore_bindings semaphore_bindingsFFI.h libsemaphore_bindings.a \
     || die "SemaphoreBindings.xcframework is incomplete at $xcf"
-}
-
-# Stage the OpenAC v3 merged SRS proving key. Local passport-noir build
-# artifacts win; a fresh checkout (Xcode Cloud) downloads the SHA-pinned
-# release copy into that same local path first. Staging itself stays in
-# stage-openac-srs.sh, which also runs as an Xcode build phase and therefore
-# must never touch the network. Doing all this before `pod install` keeps
-# CocoaPods' generated resource scripts and input paths in a good state.
-ensure_passport_openac_srs() {
-  local srs_dir="$PASSPORT_NOIR_DIR/mopro-binding/test-vectors/srs"
-  local srs_file="$srs_dir/passport.srs.bin"
-
-  if [[ ! -f "$srs_file" && -z "${AIRMEISHI_PASSPORT_OPENAC_SRS_PATH:-}" ]]; then
-    step "Downloading OpenAC v3 merged SRS ($PASSPORT_MOPRO_VERSION)"
-    mkdir -p "$srs_dir"
-    local srs_tmp="$srs_file.download.$$"
-    if ! download_zip "$PASSPORT_OPENAC_SRS_URL" "$srs_tmp"; then
-      rm -f "$srs_tmp"
-      die "Could not download OpenAC v3 merged SRS from $PASSPORT_OPENAC_SRS_URL.
-  Attach passport.srs.bin to the passport-noir $PASSPORT_MOPRO_VERSION Release,
-  or point AIRMEISHI_PASSPORT_OPENAC_SRS_URL / AIRMEISHI_PASSPORT_OPENAC_SRS_PATH
-  at a copy of the merged SRS."
-    fi
-    verify_sha256 "$srs_tmp" "$PASSPORT_OPENAC_SRS_SHA256"
-    mv "$srs_tmp" "$srs_file"
-    green "OK downloaded OpenAC v3 merged SRS to $srs_file"
-  fi
-
-  AIRMEISHI_EXPO_APP_DIR="$APP_DIR" \
-  AIRMEISHI_REPO_ROOT="$REPO_ROOT" \
-  AIRMEISHI_PASSPORT_NOIR_DIR="$PASSPORT_NOIR_DIR" \
-    "$SCRIPT_DIR/stage-openac-srs.sh"
+  write_xcframework_stamp "$xcf" "$SEMAPHORE_SWIFT_REF"
 }
 
 stage_ios_native_bindings() {
   ensure_command curl
   ensure_command unzip
 
-  ensure_passport_mopro_xcframework
   ensure_semaphore_bindings_xcframework
-  ensure_passport_openac_srs
 }
 
 # The "Bundle React Native code and images" archive phase runs Metro under
@@ -378,7 +338,9 @@ if is_enabled "$RUN_BUN_INSTALL"; then
     # shellcheck disable=SC2206
     bun_args=($BUN_INSTALL_ARGS)
   fi
-  bun install "${bun_args[@]}"
+  # bash 3.2 (macOS default) + `set -u` treats an empty-array expansion as
+  # unbound; the `+` guard keeps this runnable outside CI's newer bash.
+  bun install ${bun_args[@]+"${bun_args[@]}"}
 fi
 
 ensure_bundle_node_deps

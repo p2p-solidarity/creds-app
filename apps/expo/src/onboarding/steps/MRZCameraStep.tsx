@@ -12,7 +12,7 @@
  *                     number, nationality, DOB, expiry; Rescan + Use This.
  *   4. NavBar with Cancel button (left).
  *
- * MRZ recognition runs through the `@solidarity/nitro-mrz-ocr` plugin
+ * MRZ recognition runs through the `@solidarity/nitro-attest` plugin
  * (Vision on iOS, ML Kit Text Recognition on Android). Native now
  * returns a TD3 draft only after ICAO 9303 check-digit validation; JS only
  * drives transient scan phase UI and advances once a draft appears.
@@ -30,7 +30,7 @@ import {
   type Frame,
 } from 'react-native-vision-camera';
 
-import { getMrzOcr, type MrzOcr, type MrzScanResult } from '@solidarity/nitro-mrz-ocr';
+import { getMrzOcr, type MrzOcr, type MrzScanResult } from '@solidarity/nitro-attest';
 
 import { SfIcon } from '@/components/icons/SfIcon';
 import {
@@ -41,6 +41,8 @@ import { ThemedButton } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { useTranslation } from '@/i18n';
 import { useCameraPermission } from '@/scan/useCameraPermission';
+import { MONO } from '@/constants/fonts';
+import { Radius } from '@/constants/radius';
 
 export interface PassportMRZDraft {
   readonly passportNumber: string;
@@ -836,13 +838,13 @@ const styles = StyleSheet.create({
   instructionLabel: { color: '#FFFFFF', fontSize: 12, textAlign: 'center' },
   confirmationCard: {
     backgroundColor: Colors.cardBg,
-    borderRadius: 12,
+    borderRadius: Radius.card,
     padding: 16,
     gap: 10,
   },
   confirmationTitle: { color: Colors.text1, fontSize: 17, fontWeight: '600' },
   infoLabel: { color: Colors.text3, fontSize: 12, fontWeight: '600', width: 100 },
-  infoValue: { color: Colors.text1, fontSize: 12, fontFamily: 'Menlo' },
+  infoValue: { color: Colors.text1, fontSize: 12, fontFamily: MONO },
   permissionScreen: {
     flex: 1,
     alignItems: 'center',

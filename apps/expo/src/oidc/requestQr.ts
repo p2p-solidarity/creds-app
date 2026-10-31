@@ -1,3 +1,5 @@
+import { APP_SCHEME } from '@/deeplink/appScheme';
+
 export interface Oid4VpRequestUrlOptions {
   readonly nonce: string;
   readonly state?: string;
@@ -37,7 +39,7 @@ export function buildOid4VpRequestUrl({
   clientId = 'https://solidarity.gg/oidc/me',
   responseMode = 'direct_post',
   state,
-  redirectUri = 'solidarity://oidc-callback',
+  redirectUri = `${APP_SCHEME}://oidc-callback`,
   responseUri,
   presentationDefinition = DEFAULT_PRESENTATION_DEFINITION,
 }: Oid4VpRequestUrlOptions): string {

@@ -9,6 +9,8 @@ import { resolveProfileByNpub } from '@/nostr/resolveProfile';
 import { presentVerifiedPageResolving, presentVerifiedPageResult } from '@/scan/verifiedPageResult';
 import { verifyFragment } from '@/scan/verifiedPageHandler';
 import { isDeveloperOnlyDeepLinkKind } from '@/scan/technicalFlowGate';
+import { pushToast } from '@/feedback/toast';
+import { translate } from '@/i18n';
 import { usePreferences } from '@/settings/preferences';
 import { presentWebSignEntry } from '@/websign/pendingRequest';
 
@@ -19,8 +21,10 @@ export { parseDeepLink };
 
 /** Side-effecting handler — call from a `useLinking()` listener. */
 export function handleDeepLink(raw: string): DeepLinkRoute {
-  const route = parseDeepLink(raw);
   const developerMode = usePreferences.getState().developerMode;
+  // Dev mode also admits `DEV_PRODUCT_HOSTS` (05-spec §8-B mechanism) so a
+  // pre-launch domain's link surface stays testable before launch.
+  const route = parseDeepLink(raw, { devProductHosts: developerMode });
   if (!developerMode && isDeveloperOnlyDeepLinkKind(route.kind)) {
     // Keep the parsed result available to callers for logging, but never let
     // a regular-user deep link mount a protocol consent/issuance/signing UI.
@@ -32,7 +36,9 @@ export function handleDeepLink(raw: string): DeepLinkRoute {
       router.push({ pathname: '/people/[id]', params: { id: route.cardId } });
       break;
     case 'groupInvite':
-      router.push({ pathname: '/settings/groups', params: { invite: route.token } });
+      // Groups were frozen (06-plan) and their screens removed (10 §5); an old
+      // invite link says so instead of opening nothing.
+      pushToast(translate('deeplink.groupsRetired'), 'info');
       break;
     case 'oidc':
       router.push({ pathname: '/oidc/consent', params: { q: route.query } });
@@ -47,19 +53,22 @@ export function handleDeepLink(raw: string): DeepLinkRoute {
       // which screen is currently focused.
       presentVerifiedPageResult(verifyFragment(route.fragment));
       break;
-    case 'verifiedPointer':
+    case 'verifiedPointer': {
       // Short `#nostr:<npub>` form — open the sheet in its loading state,
-      // then swap in the resolved verdict once relays answer (or an honest
-      // unreachable/notFound/bindingMismatch). Fire-and-forget: the sheet is
-      // store-driven, so it doesn't matter that `handleDeepLink` returns
-      // before resolution completes. `resolveProfileByNpub` never throws.
-      presentVerifiedPageResolving();
-      void resolveProfileByNpub(route.npub).then(presentVerifiedPageResult);
+      // paint the first relay's verified page, then swap in the resolved
+      // verdict (or an honest unreachable/notFound/bindingMismatch).
+      // Fire-and-forget: the sheet is store-driven, so it doesn't matter that
+      // `handleDeepLink` returns before resolution completes.
+      // `resolveProfileByNpub` never throws.
+      const present = presentVerifiedPageResolving();
+      void resolveProfileByNpub(route.npub, { onInterim: present }).then(present);
       break;
-    case 'verifiedHandle':
-      presentVerifiedPageResolving();
-      void resolveProfileByHandle(route.handle).then(presentVerifiedPageResult);
+    }
+    case 'verifiedHandle': {
+      const present = presentVerifiedPageResolving();
+      void resolveProfileByHandle(route.handle, { onInterim: present }).then(present);
       break;
+    }
     case 'pear':
       // Task A5.4 (US-20) — reuse the Verified Page detail route: it already
       // renders the full card-exchange surface for a did with a saved

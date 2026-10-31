@@ -15,6 +15,7 @@ import { useMemo } from 'react';
 import { create } from 'zustand';
 
 import { decryptJson, encryptJson } from '@/storage/encryptionManager';
+import { forgetPassportStatement } from '@/passport/statementStore';
 import { getMmkv } from '@/storage/mmkv';
 import {
   canCommitLocalData,
@@ -71,8 +72,15 @@ function deserializeCard(s: SerializedCard): IdentityCardEntity {
 }
 
 function serializeClaim(c: ProvableClaimEntity): SerializedClaim {
+  // Scrub a device-local field an earlier build on this branch derived and
+  // persisted. Whether THIS device can present a claim is answered at the
+  // presentation chokepoint, never by hiding portable evidence — but rows
+  // written before that may still carry it at runtime (the type no longer
+  // has it), and one phone's witness state must never reach another.
+  const portable: Record<string, unknown> = { ...c };
+  Reflect.deleteProperty(portable, 'isPresentableOnDevice');
   return {
-    ...c,
+    ...(portable as Omit<ProvableClaimEntity, 'lastPresentedAt' | 'createdAt' | 'updatedAt'>),
     lastPresentedAt: c.lastPresentedAt ? c.lastPresentedAt.toISOString() : undefined,
     createdAt: c.createdAt.toISOString(),
     updatedAt: c.updatedAt.toISOString(),
@@ -270,6 +278,8 @@ export const useIdentityData = create<IdentityDataState>((set, get) => ({
         ...credentialPassportIds,
       ]
     );
+    // Every passport goes, so no statement may keep being re-signed.
+    forgetPassportStatement();
     for (const id of passportCardIds) {
       if (generation !== localWipeGeneration || !canCommitLocalData(writeEpoch)) return;
       getMmkv().remove(`${CARD_PREFIX}${id}`);

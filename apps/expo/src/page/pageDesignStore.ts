@@ -16,6 +16,7 @@ import {
   pageDesignFromPublicPage,
   publicPageDesignEquals,
   removePageBlock,
+  setPageBlockSize,
   syncLapsedAlert,
   togglePageBlock,
   toPublicPageDesign,
@@ -24,6 +25,7 @@ import {
   type LapsedEvidence,
   type PageAppearance,
   type PageBlock,
+  type PageCardSize,
   type PageBlockType,
   type PageDesign,
 } from './pageDesign';
@@ -82,11 +84,13 @@ interface PageDesignState {
   readonly status: PageDesignStatus;
   readonly error: string | null;
   readonly design: PageDesign;
-  readonly addBlock: (type: Exclude<PageBlockType, 'links'>, title?: string) => void;
+  /** Returns the new block's id, or `null` when the design is full / unsaved. */
+  readonly addBlock: (type: Exclude<PageBlockType, 'links'>, title?: string) => string | null;
   readonly updateBlock: (
     id: string,
     patch: Partial<Pick<PageBlock, 'title' | 'items' | 'style'>>
   ) => void;
+  readonly setBlockSize: (id: string, size: PageCardSize) => void;
   readonly removeBlock: (id: string) => void;
   readonly setBlockVisible: (id: string, visible: boolean) => void;
   readonly moveBlock: (id: string, direction: 'up' | 'down') => void;
@@ -133,10 +137,15 @@ export const usePageDesignStore = create<PageDesignState>((set, get) => {
   return {
     ...INITIAL_STATE,
     addBlock: (type, title) => {
-      commit(addPageBlock(get().design, type, uuid(), title));
+      const id = uuid();
+      commit(addPageBlock(get().design, type, id, title));
+      return get().design.blocks.some((block) => block.id === id) ? id : null;
     },
     updateBlock: (id, patch) => {
       commit(updatePageBlock(get().design, id, patch));
+    },
+    setBlockSize: (id, size) => {
+      commit(setPageBlockSize(get().design, id, size));
     },
     removeBlock: (id) => {
       commit(removePageBlock(get().design, id));

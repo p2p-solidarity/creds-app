@@ -42,6 +42,9 @@ export default tseslint.config(
       // covered by `**/dist/**`.
       'apps/expo/pear/worklet/index.js',
       'apps/expo/scripts/**',
+      // Bun-run notary key ceremony + E2E driver; the Worker itself is linted.
+      'apps/notary/scripts/**',
+      '**/.wrangler/**',
       'packages/shared/test/**',
       'apps/ios-legacy/**',
       'solidarity/**',

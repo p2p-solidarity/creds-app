@@ -18,7 +18,7 @@ import {
 
 export type PresentationCredential = Pick<
   StoredCredential,
-  'id' | 'holderDid' | 'rawJwt' | 'metadataTags'
+  'id' | 'type' | 'holderDid' | 'rawJwt' | 'metadataTags'
 >;
 
 export interface BuildPresentationProofInput {
@@ -106,6 +106,14 @@ export function buildPresentationProofJson(
         'Credential is unverified (issuer signature not checked) and cannot be presented as evidence',
       ),
     );
+  }
+
+  // A passport is never presented as a QR payload (docs/ref/11 §6.1): its
+  // badge is the device-attested statement on nostr, and its stored record
+  // holds no proof. Fail closed here, where every surface that replays a
+  // STORED credential as a QR payload funnels through.
+  if (credential.type === 'passport') {
+    return err(disclosureError('not-redactable', 'A passport is never presented as a QR payload'));
   }
 
   const base = {

@@ -28,4 +28,7 @@ config.resolver.nodeModulesPaths = [
 // Leave `disableHierarchicalLookup` at its default (false) so Metro can
 // resolve peer deps through bun's .bun/<pkg>/ layout.
 
-module.exports = withNativeWind(config, { input: './global.css' });
+// rem = 16, the same as creds.id (airmeishi-web theme.css). NativeWind's
+// default is 14, which shipped every Tailwind spacing / radius at ×0.875 of
+// the design value (p-4 = 14, rounded-xl = 10.5) — see creds-design handoff.
+module.exports = withNativeWind(config, { input: './global.css', inlineRem: 16 });

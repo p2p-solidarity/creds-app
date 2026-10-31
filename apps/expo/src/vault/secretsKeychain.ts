@@ -6,7 +6,7 @@
  * leaves the device storage. As of v1.3.x the at-rest representation is
  * upgraded from "raw 32 bytes in expo-secure-store" to "ECIES / AES-GCM
  * blob wrapped by a hardware-backed key" via
- * `@solidarity/nitro-secrets-vault`:
+ * `@solidarity/nitro-keystone`:
  *
  *   iOS    : Secure Enclave P-256 KeyAgreement key + HPKE-style ECIES.
  *            The wrapped blob lives in expo-secure-store (still
@@ -39,8 +39,6 @@
 import * as SecureStore from 'expo-secure-store';
 
 import {
-  aesGcmOpen,
-  aesGcmSeal,
   base64Decode,
   base64Encode,
   generateAesKey,
@@ -50,9 +48,8 @@ import {
   getSecretsVault,
   type SecretsVault,
   type WrappedSecret,
-} from '@solidarity/nitro-secrets-vault';
+} from '@solidarity/nitro-keystone';
 
-import { requireBiometric } from '@/keychain/biometric';
 import {
   deletionFailed,
   deletionSucceeded,
@@ -63,9 +60,7 @@ import {
   captureLocalDataEpoch,
   type LocalDataEpoch,
 } from '@/settings/localDataWipeBarrier';
-import * as FileSystem from 'expo-file-system/legacy';
 
-import type { VaultItem } from './store';
 
 /** Storage alias — distinct from the masterKey aliases used by MMKV/backup. */
 const ROOT_SECRET_ALIAS = 'gg.solidarity.vault.rootSecret.v1';
@@ -335,7 +330,7 @@ async function unwrapRoot(env: EncodedRootSecret): Promise<Uint8Array | null> {
 /**
  * Read the root secret with the requested access mode. Generates a fresh
  * 32-byte key on first call. The biometric mode goes through
- * `requireBiometric('exchange')` first so the failure surface is
+ * `requireSensitiveAction('exportGraph')` first so the failure surface is
  * identical to every other Face ID-gated path (matches CLAUDE.md Sec
  * rules).
  */
@@ -359,18 +354,22 @@ async function getOrCreateRootSecretAtEpoch(
   }
 
   if (mode === 'biometric') {
-    // TODO(biometric-gate): swap for
-    //   const gate = await requireSensitiveAction(
-    //     action /* 'exportGraph' | 'rotateMasterKey' | 'revealRecoveryBundle' */,
-    //     promptFor(action)
-    //   );
-    //   if (!gate.success) return { kind: 'err', reason: 'biometricDenied' };
-    // so the unlock obeys the per-action policy in
-    // `useSensitiveActionPolicy`. Pass `action` as an extra arg, defaulting
-    // to `'exportGraph'`. Today this always demands biometric regardless
-    // of the user's policy preferences.
-    const allowed = await requireBiometric('exchange');
-    if (!allowed) return { kind: 'err', reason: 'biometricDenied' };
+    // Vault unlock is ACCESS-LEVEL (`exportGraph`), so it follows the user's
+    // Face ID mode: `redLineOnly` unlocks without a prompt, `everyTime` prompts
+    // on every call. Migrated off the policy-blind `requireBiometric('exchange')`
+    // on 2026-09-08.
+    // Lazy import: a static one would pull `sensitiveActionPolicy` ->
+    // `@/storage/mmkv` -> Nitro into every consumer of this module, including
+    // tests with no native runtime. Mirrors `rootKey.ts`'s gate loader.
+    const { requireSensitiveAction } = await import('@/keychain/biometricGatekeeper');
+    // English literal on purpose: `@/i18n` pulls expo-localization ->
+    // expo-modules-core, which needs a RN runtime this module must not require.
+    // The old `requireBiometric('exchange')` prompt was hardcoded English too.
+    const gate = await requireSensitiveAction(
+      'exportGraph',
+      'Authenticate to unlock your vault.'
+    );
+    if (!gate.success) return { kind: 'err', reason: 'biometricDenied' };
     if (!canCommitLocalData(writeEpoch)) {
       return { kind: 'err', reason: 'storageFailed' };
     }
@@ -484,149 +483,6 @@ async function maybeUpgradeToHardware(
 /** Clear the in-memory copy. Triggers a fresh prompt on next access. */
 export function evictCachedRootSecret(): void {
   cachedSecret = null;
-}
-
-export interface RotationProgress {
-  readonly processed: number;
-  readonly total: number;
-  readonly currentItemId?: string;
-}
-
-export interface RotationResult {
-  readonly kind: 'ok' | 'partial' | 'err';
-  readonly resealedItemIds: readonly string[];
-  readonly failedItemIds: readonly string[];
-  readonly reason?: 'biometricDenied' | 'storageFailed';
-}
-
-/**
- * Rotate the root secret: generate a fresh key, re-seal every existing
- * vault file with the new key, then commit the new key.
- *
- * Best-effort: failures to re-seal individual items are recorded in the
- * result rather than aborting. Callers may inspect `failedItemIds` and
- * surface a retry. The new key is only persisted if at least one item
- * was successfully re-sealed (or if there are no items).
- */
-export function rotateRootSecret(
-  items: readonly VaultItem[],
-  onProgress?: (p: RotationProgress) => void
-): Promise<RotationResult> {
-  return trackRootSecretOperation(
-    rotateRootSecretAtEpoch(items, onProgress, captureLocalDataEpoch()),
-  );
-}
-
-async function rotateRootSecretAtEpoch(
-  items: readonly VaultItem[],
-  onProgress: ((p: RotationProgress) => void) | undefined,
-  writeEpoch: LocalDataEpoch,
-): Promise<RotationResult> {
-  if (!canCommitLocalData(writeEpoch)) {
-    return {
-      kind: 'err',
-      resealedItemIds: [],
-      failedItemIds: items.map((item) => item.id),
-      reason: 'storageFailed',
-    };
-  }
-  const current = await getOrCreateRootSecret('biometric');
-  if (current.kind === 'err') {
-    return {
-      kind: 'err',
-      resealedItemIds: [],
-      failedItemIds: items.map((i) => i.id),
-      reason: current.reason,
-    };
-  }
-
-  const next = generateAesKey();
-  const resealed: string[] = [];
-  const failed: string[] = [];
-
-  for (const [index, item] of items.entries()) {
-    if (!canCommitLocalData(writeEpoch)) {
-      return {
-        kind: 'err',
-        resealedItemIds: resealed,
-        failedItemIds: [...failed, ...items.slice(index).map((rest) => rest.id)],
-        reason: 'storageFailed',
-      };
-    }
-    onProgress?.({ processed: index, total: items.length, currentItemId: item.id });
-    try {
-      const sealedB64 = await FileSystem.readAsStringAsync(item.encryptedPath, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-      if (!canCommitLocalData(writeEpoch)) {
-        return {
-          kind: 'err',
-          resealedItemIds: resealed,
-          failedItemIds: [...failed, ...items.slice(index).map((rest) => rest.id)],
-          reason: 'storageFailed',
-        };
-      }
-      const plaintext = aesGcmOpen(current.bytes, base64Decode(sealedB64));
-      const resealedBytes = aesGcmSeal(next, plaintext);
-      await FileSystem.writeAsStringAsync(
-        item.encryptedPath,
-        base64Encode(resealedBytes),
-        { encoding: FileSystem.EncodingType.Base64 }
-      );
-      if (!canCommitLocalData(writeEpoch)) {
-        return {
-          kind: 'err',
-          resealedItemIds: resealed,
-          failedItemIds: [...failed, ...items.slice(index).map((rest) => rest.id)],
-          reason: 'storageFailed',
-        };
-      }
-      resealed.push(item.id);
-    } catch {
-      failed.push(item.id);
-    }
-  }
-  onProgress?.({ processed: items.length, total: items.length });
-
-  if (!canCommitLocalData(writeEpoch)) {
-    return {
-      kind: 'err',
-      resealedItemIds: resealed,
-      failedItemIds: failed,
-      reason: 'storageFailed',
-    };
-  }
-
-  if (items.length > 0 && resealed.length === 0) {
-    return { kind: 'err', resealedItemIds: [], failedItemIds: failed, reason: 'storageFailed' };
-  }
-
-  try {
-    const envelope = await wrapRoot(next, writeEpoch);
-    await writeEnvelope(envelope, 'biometric', writeEpoch);
-    if (!canCommitLocalData(writeEpoch)) {
-      return {
-        kind: 'err',
-        resealedItemIds: resealed,
-        failedItemIds: failed,
-        reason: 'storageFailed',
-      };
-    }
-    cachedSecret = next;
-  } catch {
-    return {
-      kind: 'err',
-      resealedItemIds: resealed,
-      failedItemIds: failed,
-      reason: 'storageFailed',
-    };
-  }
-
-  return {
-    kind: failed.length === 0 ? 'ok' : 'partial',
-    resealedItemIds: resealed,
-    failedItemIds: failed,
-  };
 }
 
 /** Permanently delete the vault root secret and both wrapping-key versions. */

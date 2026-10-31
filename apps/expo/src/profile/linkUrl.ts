@@ -40,6 +40,8 @@ export const LINK_LABEL_PRESETS = [
   'x',
   'github',
   'youtube',
+  'threads',
+  'tiktok',
   'website',
 ] as const;
 
@@ -59,6 +61,8 @@ export function linkPresetForHostname(hostname: string): LinkLabelPreset | null 
   if (normalized === 'x.com' || normalized === 'twitter.com') return 'x';
   if (normalized === 'github.com' || normalized.endsWith('.github.com')) return 'github';
   if (normalized === 'youtube.com' || normalized === 'youtu.be') return 'youtube';
+  if (normalized === 'threads.com' || normalized === 'threads.net') return 'threads';
+  if (normalized === 'tiktok.com' || normalized.endsWith('.tiktok.com')) return 'tiktok';
   return null;
 }
 
@@ -84,6 +88,8 @@ const HANDLE_URL_BUILDERS: Readonly<
   x: (handle) => `https://x.com/${handle}`,
   github: (handle) => `https://github.com/${handle}`,
   youtube: (handle) => `https://youtube.com/@${handle}`,
+  threads: (handle) => `https://threads.com/@${handle}`,
+  tiktok: (handle) => `https://tiktok.com/@${handle}`,
 };
 
 export function normalizeLinkUrl(raw: string): string {

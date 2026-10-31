@@ -52,7 +52,7 @@ export function VerifiedCredentialRow({
       onPress={onPress}
       accessibilityRole="button"
       containerStyle={{ marginHorizontal: 16 }}>
-      <ThemedSurface variant="inset" className="rounded-none p-3">
+      <ThemedSurface variant="inset" className="p-3">
         <View className="flex-row items-center gap-2 pb-3">
           <View style={{ width: 18, height: 18, alignItems: 'center', justifyContent: 'center' }}>
             <SfIcon name={icon} size={14} color={Colors.text1} />
@@ -92,7 +92,7 @@ function capitalize(s: string): string {
 function levelColorForTone(tone: TrustDisplayTone): string {
   switch (tone) {
     case 'green':
-      return Colors.terminalGreen;
+      return Colors.terminalGreenText;
     case 'blue':
       return Colors.primaryBlue;
     default:

@@ -1,16 +1,67 @@
-import { Image } from 'expo-image';
+/**
+ * PageLivePreview — the ONE Verified Page rendering in the app, ported from
+ * `creds-design/verified-linkinbio-mock-v3.html` (`#s-public` / `.pub`).
+ *
+ * The same component paints three surfaces so they can never drift:
+ *   • the Me tab's page preview          (`variant="editor"`)
+ *   • the appearance sheet's live sample (`variant="editor"`)
+ *   • a scanned visitor page             (`variant="public"`)
+ *
+ * Layout follows the mock 1:1 — avatar → name → handle → bio → link cards →
+ * block sections → a quiet footer — with only the metrics scaled down for the
+ * embedded editor sample. Public mode shows every signed item and opens safe
+ * external URLs; editor mode stays a compact sample.
+ *
+ * Deliberately NOT ported: the mock's per-link "✓ 已驗證" seal. A signed
+ * `ProfileLink` carries only `label` + `url`, so there is no per-link check
+ * result to render and a decorative seal would be fake data (Rule 8).
+ *
+ * Row-level pieces live in `PagePreviewItems`, the header/footer in
+ * `PagePreviewChrome`, and every measurement in `pagePreviewTheme`.
+ */
 import { LinearGradient } from 'expo-linear-gradient';
 import type { ReactNode } from 'react';
-import { Linking, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
-import { PressableScale } from '@/components/common/PressableScale';
-import { readableTextOn, ThemedSurface, ThemedText } from '@/components/themed';
-import { Colors } from '@/constants/Colors';
+import { cardSizeOf, type PageAppearance, type PageBlock } from '@/page/pageDesign';
+import { richMediaForBlock } from '@/page/richMedia';
+import type { ProfileRecord } from '@solidarity/shared';
+
 import { useTranslation } from '@/i18n';
-import type { PageAppearance, PageBlock, PageBlockItem } from '@/page/pageDesign';
-import { isRenderableLinkUrl, type ProfileRecord } from '@solidarity/shared';
 
-export type PageLivePreviewVariant = 'editor' | 'public';
+import { DraggableRow, RowDragArea, resetRowDrag, useRowDragController } from './rowDrag';
+import { ROW_GAP } from './pageRowStyles';
+import {
+  PagePreviewEmpty,
+  PagePreviewFooter,
+  PagePreviewHeader,
+  PagePreviewSectionTitle,
+} from './PagePreviewChrome';
+import {
+  EmbedPlate,
+  FeatureRow,
+  ItemCapsule,
+  LinkCard,
+  MediaTile,
+  PagePreviewMediaFacade,
+  ShopRow,
+  sized,
+  type BlockRenderProps,
+} from './PagePreviewItems';
+import {
+  PREVIEW_METRICS,
+  blockItems,
+  fontFor,
+  paletteFor,
+  type PageLivePreviewVariant,
+  type PreviewItem,
+} from './pagePreviewTheme';
+import { ThemedText } from '@/components/themed';
+
+/** The phone mock's screen corner — a device shape, not a UI surface role. */
+export const PHONE_SCREEN_RADIUS = 24;
+
+export type { PageLivePreviewVariant } from './pagePreviewTheme';
 
 export interface PageLivePreviewProps {
   readonly record: ProfileRecord;
@@ -19,403 +70,430 @@ export interface PageLivePreviewProps {
   /** Public mode is the signed visitor surface: show every item and allow
    * safe external URLs to open. Editor mode remains a compact preview. */
   readonly variant?: PageLivePreviewVariant;
+  /** Real, already-resolved page address (`creds.id/@name`). Rendered under
+   * the display name exactly as the mock's `.pub-handle`; omitted entirely
+   * when the caller has no address to show. */
+  readonly handle?: string | null;
+  /** The owner's Page tab: a tapped non-links block opens its editor and a
+   *  long-pressed one drags to a new place; empty or hidden blocks still
+   *  paint (hidden ones dimmed and tagged) so they can be found. Visitors
+   *  never pass it. */
+  readonly editing?: PreviewBlockEditing;
 }
 
-function backgroundFor(appearance: PageAppearance): string {
-  if (appearance.customBackground) return appearance.customBackground;
-  switch (appearance.background) {
-    case 'white': return Colors.cardBg;
-    case 'mint': return Colors.pageMint;
-    case 'rose': return Colors.pageRose;
-    case 'ink': return Colors.pageInk;
-    default: return Colors.warmCream;
-  }
+export interface PreviewBlockEditing {
+  readonly onEdit: (block: PageBlock) => void;
+  /** `destination` is a slot among the non-links blocks, links excluded. */
+  readonly onMove: (block: PageBlock, destination: number) => void;
 }
 
-function textFor(appearance: PageAppearance): string {
-  if (appearance.customBackground) return readableTextOn(appearance.customBackground);
-  return appearance.template === 'ink' || appearance.template === 'night' || appearance.template === 'gradient' || appearance.background === 'ink'
-    ? Colors.pageLightText
-    : Colors.text1;
-}
-
-function fontFor(font: PageAppearance['font']): string | undefined {
-  switch (font) {
-    case 'serif': return 'Georgia';
-    case 'rounded': return 'Arial Rounded MT Bold';
-    case 'mincho': return 'Hiragino Mincho ProN';
-    case 'mono': return 'Courier';
-    default: return undefined;
-  }
-}
+/** Travel per block before a block has measured itself; real heights win. */
+const BLOCK_DRAG_STRIDE = 120;
 
 export function PageLivePreview({
   record,
   blocks,
   appearance,
   variant = 'editor',
+  handle = null,
+  editing,
 }: PageLivePreviewProps): ReactNode {
   const { t } = useTranslation();
-  const textColor = textFor(appearance);
+  const drag = useRowDragController();
+  const palette = paletteFor(appearance);
   const fontFamily = fontFor(appearance.font);
-  const visibleBlocks = blocks.filter((block) => block.visible);
+  const metrics = PREVIEW_METRICS[variant];
+  const chrome = { palette, metrics, fontFamily, variant };
+  const renderedBlocks = blocks.filter(
+    (block) => (editing !== undefined && block.type !== 'links')
+      || (block.visible && (block.type === 'leave-card' || blockItems(block, record).length > 0)),
+  );
+
+  const movable = editing === undefined ? [] : renderedBlocks.filter((block) => block.type !== 'links');
+
+  const renderBody = (block: PageBlock): ReactNode => {
+    const items = blockItems(block, record);
+    const editable = editing !== undefined && block.type !== 'links';
+    const empty = items.length === 0;
+    return (
+      <>
+        {block.type === 'links' ? null : (
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+            <View style={{ flex: 1 }}>
+              <PagePreviewSectionTitle title={block.title} palette={palette} fontFamily={fontFamily} />
+            </View>
+            {editable && !block.visible ? (
+              <ThemedText variant="caption" style={{ color: palette.subtle, fontFamily }}>
+                {t('pageDesign.hiddenOnPage')}
+              </ThemedText>
+            ) : null}
+          </View>
+        )}
+        <PreviewBlockItems
+          block={block}
+          items={items}
+          palette={palette}
+          metrics={metrics}
+          textColor={palette.text}
+          fontFamily={fontFamily}
+          variant={variant}
+          emptyHint={editable && empty ? t('pageDesign.emptyBlockHint') : undefined}
+        />
+      </>
+    );
+  };
+
   const content = (
-    <View style={{ gap: 12, padding: 18 }}>
-      <View style={{ alignItems: 'center', gap: 4 }}>
-        <View
-          style={{
-            width: 48,
-            height: 48,
-            borderRadius: 24,
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: Colors.pagePreviewGlass,
-          }}>
-          <ThemedText variant="titleMedium" style={{ color: textColor, fontFamily }}>
-            {(record.displayName.trim().charAt(0) || '?').toUpperCase()}
-          </ThemedText>
+    <View
+      style={{
+        paddingTop: metrics.padTop,
+        paddingHorizontal: metrics.padX,
+        paddingBottom: metrics.padBottom,
+      }}>
+      <PagePreviewHeader record={record} handle={handle} {...chrome} />
+
+      {renderedBlocks.length === 0 ? <PagePreviewEmpty {...chrome} /> : null}
+
+      {(editing === undefined ? renderedBlocks : renderedBlocks.filter((block) => block.type === 'links')).map((block) => (
+        <View key={block.id} style={{ marginTop: metrics.sectionGap }}>
+          {renderBody(block)}
         </View>
-        <ThemedText variant="titleMedium" style={{ color: textColor, fontFamily }}>
-          {record.displayName || t('mePage.unnamed')}
-        </ThemedText>
-        {record.bio ? (
-          <ThemedText variant="caption" style={{ color: textColor, fontFamily, textAlign: 'center' }}>
-            {record.bio}
-          </ThemedText>
-        ) : null}
-      </View>
+      ))}
 
-      {visibleBlocks.map((block) => {
-        const items = block.type === 'links'
-          ? record.links.map((link) => ({ id: link.url, title: link.label, url: link.url }))
-          : block.items;
-        if (block.type !== 'leave-card' && items.length === 0) return null;
-        return (
-          <ThemedSurface
-            key={block.id}
-            variant="card"
-            style={{
-              gap: 8,
-              padding: 12,
-              borderColor: Colors.pagePreviewBorder,
-              backgroundColor: Colors.pagePreviewGlass,
-            }}>
-            <ThemedText variant="label" style={{ color: textColor, fontFamily }}>
-              {block.title}
-            </ThemedText>
-            <PreviewBlockItems
-              block={block}
-              items={items}
-              textColor={textColor}
-              fontFamily={fontFamily}
-              variant={variant}
-            />
-          </ThemedSurface>
-        );
-      })}
-
-      {appearance.footerText ? (
-        <ThemedText variant="caption" style={{ color: textColor, fontFamily, textAlign: 'center' }}>
-          {appearance.footerText}
-        </ThemedText>
-      ) : appearance.showBrand ? (
-        <ThemedText variant="caption" style={{ color: textColor, fontFamily, textAlign: 'center' }}>
-          creds.id
-        </ThemedText>
+      {editing !== undefined && movable.length > 0 ? (
+        // Rows sit exactly ROW_GAP apart (the drag's slot math); the rest
+        // of the section gap is padding inside each row.
+        <View style={{ marginTop: ROW_GAP, gap: ROW_GAP }}>
+          {movable.map((block, index) => (
+            <DraggableRow
+              key={`${block.id}-${String(index)}`}
+              controller={drag}
+              index={index}
+              stride={BLOCK_DRAG_STRIDE}
+              style={{ paddingTop: metrics.sectionGap - ROW_GAP }}>
+              <RowDragArea
+                controller={drag}
+                index={index}
+                itemCount={movable.length}
+                stride={BLOCK_DRAG_STRIDE}
+                label={t('pageDesign.editSection', { title: block.title })}
+                moveLabel={t('pageDesign.dragHint')}
+                onPress={() => { editing.onEdit(block); }}
+                onMove={(destination) => {
+                  editing.onMove(block, destination);
+                  resetRowDrag(drag);
+                }}>
+                <View style={{ opacity: block.visible ? 1 : 0.45 }}>{renderBody(block)}</View>
+              </RowDragArea>
+            </DraggableRow>
+          ))}
+        </View>
       ) : null}
+
+      <PagePreviewFooter appearance={appearance} {...chrome} />
     </View>
   );
 
-  // A custom color is an explicit override. Apply it before template
-  // backgrounds so every preview responds immediately to the control.
-  if (appearance.customBackground) {
-    return (
-      <View
-        style={{
-          borderRadius: 24,
-          overflow: 'hidden',
-          backgroundColor: appearance.customBackground,
-        }}>
-        {content}
-      </View>
-    );
-  }
-
-  if (appearance.template === 'gradient' || appearance.template === 'sun') {
-    const colors: readonly [string, string] = appearance.template === 'gradient'
-      ? [Colors.pageGradientStart, Colors.pageGradientEnd]
-      : [Colors.pageSunStart, Colors.pageSunEnd];
-    return (
-      <LinearGradient colors={colors} style={{ borderRadius: 24, overflow: 'hidden' }}>
-        {content}
-      </LinearGradient>
-    );
-  }
-
-  const templateBackground = appearance.template === 'night'
-    ? Colors.pageNight
-    : appearance.template === 'mint'
-      ? Colors.pageMint
-      : appearance.template === 'minimal'
-        ? Colors.cardBg
-        : backgroundFor(appearance);
-  return <View style={{ borderRadius: 24, overflow: 'hidden', backgroundColor: templateBackground }}>{content}</View>;
+  return <PageGround appearance={appearance}>{content}</PageGround>;
 }
 
-type PreviewItem = Pick<PageBlockItem, 'id' | 'title' | 'url' | 'media' | 'price'>;
+/**
+ * One block exactly as the Page paints it, on the Page's own ground — the
+ * block editor's live card, so a title, item or style change shows at once.
+ */
+export function PageBlockPreview({
+  block,
+  record,
+  appearance,
+  emptyHint,
+}: {
+  readonly block: PageBlock;
+  readonly record: ProfileRecord;
+  readonly appearance: PageAppearance;
+  /** Shown in the block's own shape while it has no items yet. */
+  readonly emptyHint?: string;
+}): ReactNode {
+  const palette = paletteFor(appearance);
+  const fontFamily = fontFor(appearance.font);
+  const metrics = PREVIEW_METRICS.public;
+  const items = blockItems(block, record);
+  return (
+    <PageGround appearance={appearance}>
+      <View style={{ padding: metrics.padX, gap: 4 }}>
+        <PagePreviewSectionTitle title={block.title} palette={palette} fontFamily={fontFamily} />
+        <PreviewBlockItems
+          block={block}
+          items={items}
+          palette={palette}
+          metrics={metrics}
+          textColor={palette.text}
+          fontFamily={fontFamily}
+          variant="public"
+          emptyHint={emptyHint}
+        />
+      </View>
+    </PageGround>
+  );
+}
+
+/**
+ * Some items of a block on the Page's ground, without the section title — a
+ * single link's card in its action sheet, at the size the block uses.
+ */
+export function PageItemsPreview({
+  block,
+  items,
+  appearance,
+}: {
+  readonly block: PageBlock;
+  readonly items: readonly PreviewItem[];
+  readonly appearance: PageAppearance;
+}): ReactNode {
+  const palette = paletteFor(appearance);
+  const metrics = PREVIEW_METRICS.public;
+  return (
+    <PageGround appearance={appearance}>
+      <View style={{ padding: metrics.padX }}>
+        <PreviewBlockItems
+          block={block}
+          items={items}
+          palette={palette}
+          metrics={metrics}
+          textColor={palette.text}
+          fontFamily={fontFor(appearance.font)}
+          variant="public"
+        />
+      </View>
+    </PageGround>
+  );
+}
+
+/** The ground is the web palette's: one stop is flat; the gradient template
+ *  runs 165° and sun 180°, as `GRADIENT_GROUND` / `SUN_GROUND` do. */
+function PageGround({
+  appearance,
+  children,
+}: {
+  readonly appearance: PageAppearance;
+  readonly children: ReactNode;
+}): ReactNode {
+  const palette = paletteFor(appearance);
+  const frame = { borderRadius: PHONE_SCREEN_RADIUS, overflow: 'hidden' as const };
+  const [first = palette.cardBg, second, ...rest] = palette.stops;
+  if (second === undefined) {
+    return <View style={[frame, { backgroundColor: first }]}>{children}</View>;
+  }
+  const diagonal = appearance.template === 'gradient';
+  return (
+    <LinearGradient
+      colors={[first, second, ...rest]}
+      start={diagonal ? { x: 0.37, y: 0 } : { x: 0.5, y: 0 }}
+      end={diagonal ? { x: 0.63, y: 1 } : { x: 0.5, y: 1 }}
+      style={frame}>
+      {children}
+    </LinearGradient>
+  );
+}
 
 function PreviewBlockItems({
   block,
   items,
-  textColor,
-  fontFamily,
-  variant,
-}: {
+  emptyHint,
+  ...render
+}: BlockRenderProps & {
   readonly block: PageBlock;
   readonly items: readonly PreviewItem[];
-  readonly textColor: string;
-  readonly fontFamily: string | undefined;
-  readonly variant: PageLivePreviewVariant;
+  /** Owner-only: an empty block still shows its shape, holding this hint. */
+  readonly emptyHint?: string;
 }): ReactNode {
+  const { palette, metrics, textColor, fontFamily, variant } = render;
+  const size = cardSizeOf(block);
+  const sizedRender = { ...render, size };
   const visibleItems = variant === 'public' ? items : items.slice(0, 3);
-  if (visibleItems.length === 0) return null;
+  if (visibleItems.length === 0 && block.type !== 'leave-card') {
+    if (emptyHint === undefined) return null;
+    const hint = (
+      <ThemedText variant="caption" style={{ color: palette.subtle, fontFamily, textAlign: block.style === 'card' ? 'center' : 'left' }}>
+        {emptyHint}
+      </ThemedText>
+    );
+    // A card-style block keeps its panel, so picking 卡片 shows a card.
+    return block.style === 'card' ? (
+      <View
+        style={{
+          alignItems: 'center',
+          padding: 18,
+          borderWidth: 1,
+          borderColor: palette.cardBorder,
+          borderRadius: palette.cardRadius,
+          backgroundColor: palette.cardBg,
+        }}>
+        {hint}
+      </View>
+    ) : hint;
+  }
+  // Web `richOr`: a Spotify / YouTube item plays instead of being a row.
+  const richOr = (item: PreviewItem, fallback: ReactNode): ReactNode => {
+    const media = richMediaForBlock(block.type, item.url);
+    return media === null ? fallback : (
+      <PagePreviewMediaFacade
+        key={item.id}
+        media={media}
+        title={item.title}
+        palette={palette}
+        fontFamily={fontFamily}
+        size={size}
+      />
+    );
+  };
 
   switch (block.style) {
     case 'plain':
       return (
-        <View style={{ gap: 4 }}>
+        <View style={{ gap: 6 }}>
           {visibleItems.map((item) => (
-            <ItemLabel key={item.id} item={item} textColor={textColor} fontFamily={fontFamily} variant={variant} />
+            <ThemedText key={item.id} variant="bodyMedium" style={{ color: textColor, fontFamily }}>
+              {item.title}
+            </ThemedText>
           ))}
         </View>
       );
     case 'card':
+      // `.leave-card` — a bordered, centred panel. A leave-card block carries
+      // the CTA capsule; a text block reuses the same panel without one.
+      return (
+        <View
+          style={{
+            alignItems: 'center',
+            gap: 10,
+            padding: 18,
+            borderWidth: 1,
+            borderColor: palette.cardBorder,
+            borderRadius: palette.cardRadius,
+            backgroundColor: palette.cardBg,
+          }}>
+          {visibleItems.map((item) => (
+            <ThemedText
+              key={item.id}
+              variant="bodyMedium"
+              style={{ color: textColor, fontFamily, textAlign: 'center' }}>
+              {item.title}
+            </ThemedText>
+          ))}
+          {block.type === 'leave-card' ? (
+            <ItemCapsule
+              item={{ id: block.id, title: block.title }}
+              palette={palette}
+              fontFamily={fontFamily}
+              variant={variant}
+              filled
+            />
+          ) : null}
+        </View>
+      );
     case 'list':
       return (
-        <View style={{ gap: 7 }}>
+        <View style={{ gap: metrics.cardGap }}>
           {visibleItems.map((item) => (
-            <PreviewItemCard key={item.id} item={item} textColor={textColor} fontFamily={fontFamily} variant={variant} />
+            block.type === 'shop'
+              ? <ShopRow key={item.id} item={item} {...render} />
+              : richOr(item, <LinkCard key={item.id} item={item} {...sizedRender} />)
           ))}
         </View>
       );
-    case 'grid':
+    case 'grid': {
+      const columns = size === 'small' ? metrics.gridColumns + 1 : size === 'large' ? 2 : metrics.gridColumns;
       return (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
           {visibleItems.map((item) => (
             <View
               key={item.id}
-              style={{
-                width: '48%',
-                minHeight: 64,
-                justifyContent: 'center',
-                padding: 9,
-                borderRadius: 12,
-                backgroundColor: Colors.pagePreviewGlass,
-              }}>
-              <ItemLabel item={item} textColor={textColor} fontFamily={fontFamily} variant={variant} />
+              style={{ width: `${100 / columns}%`, aspectRatio: 1, padding: 4 }}>
+              <MediaTile item={item} {...render} />
             </View>
           ))}
         </View>
       );
+    }
     case 'carousel': {
       const cards = visibleItems.map((item) => (
-        <View
-          key={item.id}
-          style={{
-            width: 128,
-            minHeight: 76,
-            justifyContent: 'flex-end',
-            padding: 10,
-            borderRadius: 12,
-            backgroundColor: Colors.pagePreviewGlass,
-          }}>
-          <ItemLabel item={item} textColor={textColor} fontFamily={fontFamily} variant={variant} />
+        <View key={item.id} style={{ width: sized(128, size), height: sized(128, size) }}>
+          <MediaTile item={item} {...render} />
         </View>
       ));
       // A signed visitor page must expose every signed item, including cards
       // beyond the viewport. The editor remains a compact visual sample.
       return variant === 'public' ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
           {cards}
         </ScrollView>
-      ) : <View style={{ flexDirection: 'row', gap: 7, overflow: 'hidden' }}>{cards}</View>;
+      ) : <View style={{ flexDirection: 'row', gap: 8, overflow: 'hidden' }}>{cards}</View>;
     }
-    case 'large-card': {
+    case 'large-card':
+      // `.fe-card` — 76pt thumbnail beside title + secondary line.
       return (
-        <View style={{ gap: 7 }}>
+        <View style={{ gap: metrics.cardGap }}>
           {(variant === 'public' ? visibleItems : visibleItems.slice(0, 1)).map((item) => (
-            <View
-              key={item.id}
-              style={{
-                minHeight: 104,
-                justifyContent: 'flex-end',
-                padding: 12,
-                borderRadius: 14,
-                backgroundColor: Colors.pagePreviewGlass,
-              }}>
-              <ItemLabel item={item} textColor={textColor} fontFamily={fontFamily} variant={variant} />
-            </View>
+            richOr(item, <FeatureRow key={item.id} item={item} thumbSize={sized(76, size)} {...render} />)
           ))}
         </View>
       );
-    }
-    case 'embed': {
+    case 'embed':
       return (
-        <View style={{ gap: 7 }}>
+        <View style={{ gap: metrics.cardGap }}>
           {(variant === 'public' ? visibleItems : visibleItems.slice(0, 1)).map((item) => (
-            <View
-              key={item.id}
-              style={{
-                aspectRatio: 16 / 9,
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 4,
-                padding: 12,
-                borderRadius: 14,
-                backgroundColor: Colors.pagePreviewGlass,
-              }}>
-              <ThemedText variant="titleMedium" style={{ color: textColor, fontFamily }}>▶</ThemedText>
-              <ItemLabel item={item} textColor={textColor} fontFamily={fontFamily} variant={variant} centered />
-            </View>
+            richOr(item, (
+              <EmbedPlate
+                key={item.id}
+                item={item}
+                palette={palette}
+                fontFamily={fontFamily}
+                variant={variant}
+              />
+            ))
           ))}
         </View>
       );
-    }
     case 'thumbnail':
       return (
-        <View style={{ gap: 7 }}>
+        <View style={{ gap: metrics.cardGap }}>
           {visibleItems.map((item) => (
-            <View key={item.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <View style={{ flex: 1 }}>
-                <ItemLabel item={item} textColor={textColor} fontFamily={fontFamily} variant={variant} />
-              </View>
-            </View>
+            richOr(item, <FeatureRow key={item.id} item={item} thumbSize={54} {...render} />)
           ))}
         </View>
       );
     case 'button':
       return (
-        <View style={{ gap: 7 }}>
+        <View style={{ gap: metrics.cardGap }}>
           {visibleItems.map((item) => (
-            <View
+            <ItemCapsule
               key={item.id}
-              style={{
-                minHeight: 40,
-                alignItems: 'center',
-                justifyContent: 'center',
-                paddingHorizontal: 12,
-                borderRadius: 999,
-                backgroundColor: Colors.pagePreviewGlass,
-              }}>
-              <ItemLabel item={item} textColor={textColor} fontFamily={fontFamily} variant={variant} centered />
-            </View>
+              item={item}
+              palette={palette}
+              fontFamily={fontFamily}
+              variant={variant}
+              filled
+            />
           ))}
         </View>
       );
     case 'slots':
+      // `.bkslot` — outlined capsules that wrap.
       return (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {visibleItems.map((item) => (
-            <View
+            <ItemCapsule
               key={item.id}
-              style={{
-                minHeight: 34,
-                justifyContent: 'center',
-                paddingHorizontal: 10,
-                borderRadius: 10,
-                backgroundColor: Colors.pagePreviewGlass,
-              }}>
-              <ItemLabel item={item} textColor={textColor} fontFamily={fontFamily} variant={variant} />
-            </View>
+              item={item}
+              palette={palette}
+              fontFamily={fontFamily}
+              variant={variant}
+              filled={false}
+            />
           ))}
         </View>
       );
     default:
       return null;
   }
-}
-
-function PreviewItemCard({
-  item,
-  textColor,
-  fontFamily,
-  variant,
-}: {
-  readonly item: PreviewItem;
-  readonly textColor: string;
-  readonly fontFamily: string | undefined;
-  readonly variant: PageLivePreviewVariant;
-}): ReactNode {
-  return (
-    <View
-      style={{
-        minHeight: 36,
-        justifyContent: 'center',
-        paddingHorizontal: 10,
-        borderRadius: 12,
-        backgroundColor: Colors.pagePreviewGlass,
-      }}>
-      <ItemLabel item={item} textColor={textColor} fontFamily={fontFamily} variant={variant} />
-    </View>
-  );
-}
-
-function ItemLabel({
-  item,
-  textColor,
-  fontFamily,
-  variant,
-  centered = false,
-}: {
-  readonly item: PreviewItem;
-  readonly textColor: string;
-  readonly fontFamily: string | undefined;
-  readonly variant: PageLivePreviewVariant;
-  readonly centered?: boolean;
-}): ReactNode {
-  const mediaUrl = item.media && isRenderableLinkUrl(item.media) ? item.media : null;
-  const content = (
-    <View
-      style={{
-        flexDirection: mediaUrl ? 'row' : 'column',
-        alignItems: mediaUrl ? 'center' : undefined,
-        gap: mediaUrl ? 8 : 1,
-      }}>
-      {mediaUrl ? (
-        <Image
-          source={{ uri: mediaUrl }}
-          contentFit="cover"
-          accessibilityLabel={item.title}
-          style={{ width: 34, height: 34, borderRadius: 9, backgroundColor: Colors.pagePreviewGlass }}
-        />
-      ) : null}
-      <View style={{ flex: mediaUrl ? 1 : undefined, gap: 1 }}>
-        <ThemedText
-          variant="caption"
-          numberOfLines={1}
-          style={{ color: textColor, fontFamily, textAlign: centered ? 'center' : 'left' }}>
-          {item.title}
-        </ThemedText>
-        {item.price ? (
-          <ThemedText
-            variant="caption"
-            numberOfLines={1}
-            style={{ color: textColor, fontFamily, opacity: 0.76, textAlign: centered ? 'center' : 'left' }}>
-            {item.price}
-          </ThemedText>
-        ) : null}
-      </View>
-    </View>
-  );
-  const url = variant === 'public' && item.url && isRenderableLinkUrl(item.url) ? item.url : null;
-  if (!url) return content;
-  return (
-    <PressableScale
-      haptic="tap"
-      accessibilityRole="link"
-      accessibilityLabel={item.title.trim() || url}
-      onPress={() => { void Linking.openURL(url).catch(() => undefined); }}>
-      {content}
-    </PressableScale>
-  );
 }

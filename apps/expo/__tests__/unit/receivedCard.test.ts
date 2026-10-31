@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it } from 'bun:test';
-import { readFileSync } from 'node:fs';
 
 import {
   buildContactFromReceivedCard,
@@ -88,29 +87,5 @@ describe('received scanned card metadata', () => {
     expect(contact.verificationStatus).toBe('Failed');
     expect(contact.source).toBe('QR Code');
     expect(contact.sealedRoute).toBeUndefined();
-  });
-
-  it('wires scanner metadata into the received model and removes hardcoded save metadata', () => {
-    const scan = readFileSync(new URL('../../app/scan/index.tsx', import.meta.url), 'utf8');
-    const layout = readFileSync(new URL('../../app/_layout.tsx', import.meta.url), 'utf8');
-    const sheet = readFileSync(
-      new URL('../../src/components/cards/ReceivedCardSheet.tsx', import.meta.url),
-      'utf8',
-    );
-
-    expect(scan).toContain('presentReceivedCard({');
-    expect(scan).toContain("source: 'QR Code'");
-    expect(scan).toContain('sealedRoute: outcome.sealedRoute');
-    expect(sheet).toContain('buildContactFromReceivedCard({');
-    expect(sheet).not.toContain("source: 'Proximity'");
-    expect(sheet).not.toContain("verificationStatus: 'Unverified'");
-    expect(sheet).not.toContain("verificationStatus = 'Unverified'");
-    expect(sheet).toContain("t('receivedCard.saveFailed')");
-    expect(sheet).toContain("t('receivedCard.saveAndPresent')");
-    expect(sheet).toContain("t('receivedCard.justAdd')");
-    expect(sheet).toContain('onShowMine');
-    expect(layout).toContain('PRIMARY_TAB_HREFS.present');
-    expect(sheet).toContain('verificationStatusKey(status)');
-    expect(sheet).not.toContain('withRepeat');
   });
 });

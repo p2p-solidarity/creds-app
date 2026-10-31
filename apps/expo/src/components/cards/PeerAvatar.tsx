@@ -11,6 +11,7 @@ import type { Animal } from '@solidarity/shared';
 
 import { animalImageSource } from '@/cards/animals';
 import { Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/radius';
 
 export interface PeerAvatarProps {
   readonly animal: Animal;
@@ -32,7 +33,7 @@ export function PeerAvatar({
         style={{
           width: size,
           height: size,
-          borderRadius: size / 2,
+          borderRadius: Radius.pill,
           borderWidth: 1,
           borderColor: ringColor,
           overflow: 'hidden',

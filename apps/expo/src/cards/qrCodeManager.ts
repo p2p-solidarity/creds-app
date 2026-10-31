@@ -20,6 +20,8 @@
  */
 import { base64Encode, decodeJwtUnsafe, utf8ToBytes } from '@solidarity/shared';
 
+import { hasAppSchemePrefix } from '@/deeplink/appScheme';
+
 export type QrPayloadKind = 'card' | 'vp' | 'group' | 'oidc' | 'unknown';
 
 export interface ParsedQrPayload {
@@ -144,13 +146,19 @@ export function parseQrPayload(text: string): ParsedQrPayload {
     return { kind: 'oidc', raw: text };
   }
 
-  if (text.startsWith('solidarity://') || text.startsWith('airmeishi://')) {
+  if (hasAppSchemePrefix(text)) {
     if (text.includes('/group')) return { kind: 'group', raw: text };
     if (text.includes('/card')) return { kind: 'card', raw: text };
     return { kind: 'unknown', raw: text };
   }
 
   if (text.startsWith('BEGIN:VCARD')) {
+    return { kind: 'card', raw: text };
+  }
+
+  // CRD1 evidence pack / card share — verified + rebuilt by the envelope
+  // handler; classified here so scanner UIs route it as a card.
+  if (text.startsWith('CRD1:')) {
     return { kind: 'card', raw: text };
   }
 

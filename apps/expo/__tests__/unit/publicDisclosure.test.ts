@@ -170,9 +170,6 @@ describe('publishPassportClaimPublicly', () => {
     const dependencies: PublicDisclosurePublishDependencies = {
       nowMs: () => NOW_MS,
       createSlot: () => '0198a6e4-0c3d-7a21-9657-54a6b6b20275',
-      resetBiometricGrace: () => {
-        order.push('reset-biometric-grace');
-      },
       getRootDid: () => Promise.resolve({ ok: true, value: ROOT_DID }),
       getRootSigner: () => Promise.resolve({ ok: true, value: ROOT_SIGNER }),
       getCurrentCardDid: () => Promise.resolve(CURRENT_CARD_DID),
@@ -231,11 +228,9 @@ describe('publishPassportClaimPublicly', () => {
     ]);
     expect(result.value.partial).toBe(false);
     expect(order).toEqual([
-      'reset-biometric-grace',
       'publish-disclosure',
       'save-profile-badges',
       'publish-profile-projection',
-      'reset-biometric-grace',
     ]);
   });
 
@@ -244,9 +239,6 @@ describe('publishPassportClaimPublicly', () => {
     const dependencies: PublicDisclosurePublishDependencies = {
       nowMs: () => NOW_MS,
       createSlot: () => '0198a6e4-0c3d-7a21-9657-54a6b6b20275',
-      resetBiometricGrace: () => {
-        sensitiveActionCalled = true;
-      },
       getRootDid: () => Promise.resolve({ ok: true, value: ROOT_DID }),
       getRootSigner: () => {
         sensitiveActionCalled = true;
@@ -294,7 +286,6 @@ describe('publishPassportClaimPublicly', () => {
 
   it('does not add a badge when no relay accepts the disclosure', async () => {
     let profileTouched = false;
-    let graceResets = 0;
     const card = passportCard('valid');
     const claim = passportClaim('age', 'valid');
     const rejectedReport = {
@@ -308,9 +299,6 @@ describe('publishPassportClaimPublicly', () => {
     const dependencies: PublicDisclosurePublishDependencies = {
       nowMs: () => NOW_MS,
       createSlot: () => '0198a6e4-0c3d-7a21-9657-54a6b6b20275',
-      resetBiometricGrace: () => {
-        graceResets += 1;
-      },
       getRootDid: () => Promise.resolve({ ok: true, value: ROOT_DID }),
       getRootSigner: () => Promise.resolve({ ok: true, value: ROOT_SIGNER }),
       getCurrentCardDid: () => Promise.resolve(CURRENT_CARD_DID),
@@ -341,6 +329,5 @@ describe('publishPassportClaimPublicly', () => {
       },
     });
     expect(profileTouched).toBe(false);
-    expect(graceResets).toBe(2);
   });
 });

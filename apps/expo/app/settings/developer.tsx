@@ -13,7 +13,6 @@ import {
   invalidateCachedNostrResult,
 } from '@/badges/badgeStatusCache';
 import {
-  SettingsBackToolbar,
   SettingsBlockDangerRow,
   SettingsBlockRow,
   SettingsBlockSection,
@@ -26,7 +25,7 @@ import { appAlert, showError } from '@/feedback/appAlert';
 import { confirmDialog } from '@/feedback/confirmDialog';
 import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
-import { requireBiometric } from '@/keychain';
+import { requireSensitiveAction } from '@/keychain';
 import { safeBack } from '@/navigation/safeBack';
 import { usePreferences } from '@/settings/preferences';
 import { wipeLocalDevice } from '@/settings/productionWipe';
@@ -36,7 +35,7 @@ export default function DeveloperSettings() {
   const { t } = useTranslation();
   const developerMode = usePreferences((state) => state.developerMode);
   const simulateNfc = usePreferences((state) => state.simulateNfc);
-  const policy = usePreferences((state) => state.biometricPolicy);
+  const autoRepublish = usePreferences((state) => state.nostrAutoRepublish);
   const setPref = usePreferences((state) => state.set);
   const [busy, setBusy] = useState(false);
 
@@ -51,10 +50,12 @@ export default function DeveloperSettings() {
 
     setBusy(true);
     try {
-      if (policy.rotateMasterKey) {
-        const authorized = await requireBiometric('delete');
-        if (!authorized) return;
-      }
+      // rotateMasterKey is gated unconditionally — see RED_LINE_ACTIONS.
+      const gate = await requireSensitiveAction(
+        'rotateMasterKey',
+        t('security.prompt.wipeEverything')
+      );
+      if (!gate.success) return;
 
       const result = await wipeLocalDevice();
       if (result.kind === 'incomplete') {
@@ -85,8 +86,10 @@ export default function DeveloperSettings() {
   if (!developerMode) {
     return (
       <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
-        <SettingsBackToolbar onPress={() => { safeBack('/settings/advanced'); }} />
-        <SettingsScreenTitle title={t('developer.title')} />
+        <SettingsScreenTitle
+          title={t('developer.title')}
+          leadingAction={{ accessibilityLabel: t('common.back'), onPress: () => { safeBack('/settings'); } }}
+        />
         <ThemedText variant="caption" tone="secondary" className="px-4 pt-6">
           {t('developer.locked')}
         </ThemedText>
@@ -96,8 +99,10 @@ export default function DeveloperSettings() {
 
   return (
     <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
-      <SettingsBackToolbar onPress={() => { safeBack('/settings/advanced'); }} />
-      <SettingsScreenTitle title={t('developer.title')} />
+      <SettingsScreenTitle
+        title={t('developer.title')}
+        leadingAction={{ accessibilityLabel: t('common.back'), onPress: () => { safeBack('/settings'); } }}
+      />
 
       <ScrollView
         className="flex-1"
@@ -116,17 +121,6 @@ export default function DeveloperSettings() {
               value
               onValueChange={(next) => {
                 if (!next) setPref('developerMode', false);
-              }}
-            />
-          </SettingsBlockSection>
-
-          <SettingsBlockSection title={t('developer.identityKeys.header')}>
-            <SettingsBlockRow
-              icon="person.text.rectangle"
-              title={t('developer.identityKeys.inspector')}
-              subtitle={t('developer.identityKeys.inspectorSubtitle')}
-              onPress={() => {
-                router.push({ pathname: '/settings/dids', params: { readOnly: '1' } });
               }}
             />
           </SettingsBlockSection>
@@ -150,14 +144,6 @@ export default function DeveloperSettings() {
             <SettingsBlockRow
               icon="qrcode.viewfinder"
               title={t('developer.present.scanRequest')}
-              onPress={() => { router.push('/scan'); }}
-            />
-          </SettingsBlockSection>
-
-          <SettingsBlockSection title={t('developer.receive.header')}>
-            <SettingsBlockRow
-              icon="square.and.arrow.down"
-              title={t('developer.receive.scanOffer')}
               subtitle={t('developer.receive.scanOfferSubtitle')}
               onPress={() => { router.push('/scan'); }}
             />
@@ -176,13 +162,16 @@ export default function DeveloperSettings() {
           <SettingsBlockSection title={t('developer.publishSync.header')}>
             <SettingsBlockRow
               icon="antenna.radiowaves.left.and.right"
-              title={t('developer.publishSync.locations')}
-              onPress={() => { router.push('/settings/connections'); }}
+              title={t('developer.publishSync.nostr')}
+              subtitle={t('developer.publishSync.nostrSubtitle')}
+              onPress={() => { router.push('/verify/nostr'); }}
             />
-            <SettingsBlockRow
-              icon="arrow.up.arrow.down.square"
-              title={t('developer.publishSync.data')}
-              onPress={() => { router.push('/settings/data-sync'); }}
+            <SettingsBlockToggleRow
+              icon="arrow.triangle.2.circlepath"
+              title={t('developer.publishSync.autoRepublish')}
+              subtitle={t('developer.publishSync.autoRepublishSubtitle')}
+              value={autoRepublish}
+              onValueChange={(next) => { setPref('nostrAutoRepublish', next); }}
             />
           </SettingsBlockSection>
 

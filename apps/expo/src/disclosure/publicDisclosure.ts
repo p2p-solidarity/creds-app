@@ -129,7 +129,6 @@ type MaybePromise<T> = T | Promise<T>;
 export interface PublicDisclosurePublishDependencies {
   readonly nowMs: () => number;
   readonly createSlot: () => MaybePromise<string>;
-  readonly resetBiometricGrace: () => MaybePromise<void>;
   readonly getRootDid: () => Promise<Result<string, RootKeyError>>;
   readonly getRootSigner: () => Promise<Result<Signer, RootKeyError>>;
   readonly getCurrentCardDid: () => Promise<string>;
@@ -151,10 +150,6 @@ const DEFAULT_DEPENDENCIES: PublicDisclosurePublishDependencies = {
   createSlot: async () => {
     const { randomUUID } = await import('expo-crypto');
     return randomUUID();
-  },
-  resetBiometricGrace: async () => {
-    const { resetBiometricGrace } = await import('@/keychain/biometric');
-    resetBiometricGrace();
   },
   getRootDid: async () => {
     const { getRootDid } = await import('@/identity/rootKey');
@@ -407,17 +402,14 @@ export async function publishPassportClaimPublicly(
   dependencies: PublicDisclosurePublishDependencies = DEFAULT_DEPENDENCIES
 ): Promise<Result<PublicDisclosurePublishOutcome, PublicDisclosurePublishError>> {
   let disclosureMayBePublic = false;
-  let biometricSessionStarted = false;
   try {
     const prepared = await preparePublicDisclosure(input, dependencies);
     if (!prepared.ok) return prepared;
 
-    // The global gate normally has a five-minute grace. Clear it before and
-    // after this transaction so the first root signature live-prompts and
-    // this publication cannot reuse or leave behind another action's grace.
-    await dependencies.resetBiometricGrace();
-    biometricSessionStarted = true;
-
+    // No grace reset around this root signature any more (Kidney,
+    // 2026-10-30): it publishes an abstract claim, it does not touch key
+    // material, so it follows the user's gate mode like every other root
+    // signature. The UI's explicit "publish" confirmation is the consent.
     const signer = await dependencies.getRootSigner();
     if (!signer.ok) {
       return err({ kind: 'rootUnavailable', detail: rootErrorDetail(signer.error) });
@@ -446,7 +438,5 @@ export async function publishPassportClaimPublicly(
       detail: 'public disclosure failed safely',
       disclosureMayBePublic,
     });
-  } finally {
-    if (biometricSessionStarted) await dependencies.resetBiometricGrace();
   }
 }

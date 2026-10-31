@@ -11,6 +11,7 @@ import { Text, View } from 'react-native';
 import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/radius';
 import { SCALE } from '@/feedback/motion';
 
 export type MeActionTileProps = {
@@ -27,14 +28,14 @@ export function MeActionTile({ icon, title, onPress }: MeActionTileProps) {
       scaleTo={SCALE.tile}
       onPress={onPress}
       accessibilityRole="button"
-      className="flex-1 flex-row items-center gap-2 rounded-sm2 bg-mutedSurface px-3 py-4"
+      className="flex-1 flex-row items-center gap-2 rounded-card bg-mutedSurface px-3 py-4"
       style={{ minHeight: 72 }}
     >
       <View
         style={{
           width: 40,
           height: 40,
-          borderRadius: 20,
+          borderRadius: Radius.pill,
           backgroundColor: `${Colors.primaryBlue}26`,
           alignItems: 'center',
           justifyContent: 'center',

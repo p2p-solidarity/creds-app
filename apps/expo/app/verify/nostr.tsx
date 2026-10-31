@@ -21,7 +21,7 @@ import {
   PublishOutcomeStep,
   relayNodeStatuses,
 } from '@/components/publish/PublishOutcomeStep';
-import { SettingsBackToolbar, SettingsScreenTitle } from '@/components/settings/SettingsBlocks';
+import { SettingsScreenTitle } from '@/components/settings/SettingsBlocks';
 import { ThemedButton, ThemedSurface, ThemedText, ThemedTextInput } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { showError } from '@/feedback/appAlert';
@@ -51,7 +51,7 @@ type TFn = ReturnType<typeof useTranslation>['t'];
 
 export default function PublishPageRoute(): ReactNode {
   const developerMode = usePreferences((state) => state.developerMode);
-  if (!developerMode) return <Redirect href="/settings/advanced" />;
+  if (!developerMode) return <Redirect href="/settings" />;
 
   return <PublishPageScreen />;
 }
@@ -219,13 +219,10 @@ function PublishPageScreen(): ReactNode {
 
   return (
     <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
-      <SettingsBackToolbar
-        title={t('nostrConnect.cancel')}
-        onPress={() => {
-          safeBack();
-        }}
+      <SettingsScreenTitle
+        title={t('nostrConnect.title')}
+        leadingAction={{ icon: 'xmark', accessibilityLabel: t('common.cancel'), onPress: () => { safeBack(); } }}
       />
-      <SettingsScreenTitle title={t('nostrConnect.title')} />
 
       <KeyboardAwareScrollView
         contentContainerStyle={{
@@ -309,7 +306,7 @@ function ReadyStep({
   return (
     <View style={{ flex: 1, justifyContent: 'center', gap: 20 }}>
       <PublishingConstellation phase="ready" />
-      <ThemedSurface variant="inset" className="rounded-none p-4">
+      <ThemedSurface variant="inset" className="p-4">
         <View style={{ gap: 10 }}>
           <SfIcon name="checkmark.seal" size={24} color={Colors.primaryBlue} />
           <ThemedText variant="titleMedium">{t('nostrConnect.promiseTitle')}</ThemedText>
@@ -424,7 +421,7 @@ function ErrorStep({
         phase={outcome ? 'partial' : 'error'}
         relayStatuses={outcome ? relayNodeStatuses(outcome) : undefined}
       />
-      <ThemedSurface variant="outlined" className="rounded-none p-4">
+      <ThemedSurface variant="outlined" className="p-4">
         <View style={{ gap: 8 }}>
           <ThemedText variant="titleMedium" tone="error">
             {t('nostrConnect.errorTitle')}
@@ -467,13 +464,10 @@ function GateScreen({
   const insets = useSafeAreaInsets();
   return (
     <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
-      <SettingsBackToolbar
-        title={t('nostrConnect.cancel')}
-        onPress={() => {
-          safeBack();
-        }}
+      <SettingsScreenTitle
+        title={t('nostrConnect.title')}
+        leadingAction={{ icon: 'xmark', accessibilityLabel: t('common.cancel'), onPress: () => { safeBack(); } }}
       />
-      <SettingsScreenTitle title={t('nostrConnect.title')} />
       <View
         style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, padding: 32 }}>
         <ThemedText variant="bodyMedium" tone="secondary" style={{ textAlign: 'center' }}>

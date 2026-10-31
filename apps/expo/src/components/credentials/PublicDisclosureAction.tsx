@@ -211,7 +211,7 @@ export function PublicDisclosureAction() {
   };
 
   return (
-    <ThemedSurface variant="outlined" padded className="gap-3 rounded-none">
+    <ThemedSurface variant="outlined" padded className="gap-3">
       <View className="gap-1">
         <ThemedText variant="titleMedium">
           {t('publicDisclosure.title')}

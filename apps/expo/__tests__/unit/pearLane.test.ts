@@ -166,10 +166,18 @@ describe('pear/lane — startLane', () => {
     expect(result.error.code).toBe('worklet_start_failed');
   });
 
-  it('shutdown() terminates the worklet', () => {
+  // Regression (2026-10-31, request proof 閃退): a synchronous terminate with
+  // live sockets races bare-kit's native IPC poll teardown. Leave topics
+  // first, terminate only after the grace period.
+  it('shutdown() leaves every topic, then terminates the worklet after the grace period', async () => {
     const result = lane.startLane();
     if (!result.ok) throw new Error('setup failed');
+    result.value.joinTopic('ab'.repeat(32), 'client');
     result.value.shutdown();
+    const commands = writtenCommands(currentWorklet().IPC);
+    expect(commands.at(-1)).toEqual({ t: '_leave', topic: 'ab'.repeat(32) });
+    expect(lastWorklet?.terminated).toBe(false);
+    await new Promise((resolve) => setTimeout(resolve, lane.LANE_TERMINATE_GRACE_MS + 20));
     expect(lastWorklet?.terminated).toBe(true);
   });
 });

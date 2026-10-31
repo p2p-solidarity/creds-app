@@ -1,8 +1,10 @@
-import { Modal, Platform, View } from 'react-native';
-import { useState, type ReactNode } from 'react';
+import { Platform, View } from 'react-native';
+import { useEffect, useState, type ReactNode } from 'react';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { probeLatestBackup, restoreFromBackup } from '@/backup';
+import { ModalSheet } from '@/components/common/ModalSheet';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedButton, ThemedSurface, ThemedText, ThemedTextInput } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
@@ -10,7 +12,7 @@ import { showError } from '@/feedback/appAlert';
 import { haptic } from '@/feedback/haptics';
 import { useTranslation } from '@/i18n';
 import { importFromMnemonic, restoreRootKeyFromICloud } from '@/identity';
-import { ensureSigningKey, hasExistingSigningKey, requireBiometric } from '@/keychain';
+import { ensureSigningKey, hasExistingSigningKey, requireSensitiveAction } from '@/keychain';
 
 export function ExistingAccountSheet({
   visible,
@@ -26,6 +28,15 @@ export function ExistingAccountSheet({
   const [phase, setPhase] = useState<'options' | 'phrase'>('options');
   const [phrase, setPhrase] = useState('');
   const [busy, setBusy] = useState(false);
+  // Android Keystore keys never sync between phones, so on a fresh Android
+  // install there is nothing to sign in with: only offer it when a key exists.
+  const [hasDeviceKey, setHasDeviceKey] = useState(Platform.OS === 'ios');
+  useEffect(() => {
+    if (!visible || Platform.OS === 'ios') return;
+    let live = true;
+    void hasExistingSigningKey().then((has) => { if (live) setHasDeviceKey(has); });
+    return () => { live = false; };
+  }, [visible]);
 
   const finish = (): void => {
     haptic('success');
@@ -53,7 +64,11 @@ export function ExistingAccountSheet({
 
   const signInOnDevice = async (): Promise<void> => {
     if (!(await hasExistingSigningKey())) throw new Error('No synced sign-in key');
-    if (!(await requireBiometric('sign'))) return;
+    const gate = await requireSensitiveAction(
+      'presentProof',
+      t('security.prompt.presentProof')
+    );
+    if (!gate.success) return;
     finish();
   };
 
@@ -76,84 +91,89 @@ export function ExistingAccountSheet({
   };
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}>
-      <View
-        className="flex-1 bg-pageBg"
-        style={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16 }}>
-        <View className="flex-1 gap-5 px-4">
-          <ThemedText variant="headlineMedium">
-            {t(phase === 'options' ? 'login.title' : 'login.phrase')}
-          </ThemedText>
+    <ModalSheet visible={visible} onRequestClose={onClose}>
+      <View className="flex-1 bg-pageBg">
+        <KeyboardAwareScrollView
+          keyboardShouldPersistTaps="handled"
+          bottomOffset={16}
+          contentContainerStyle={{
+            flexGrow: 1,
+            paddingTop: insets.top + 16,
+            paddingBottom: insets.bottom + 16,
+          }}>
+          <View className="flex-1 gap-5 px-4">
+            <ThemedText variant="headlineMedium">
+              {t(phase === 'options' ? 'login.title' : 'login.phrase')}
+            </ThemedText>
 
-          {phase === 'options' ? (
-            <View style={{ gap: 10 }}>
-              <RecoveryOption
-                icon="faceid"
-                title={t('login.faceid')}
-                subtitle={t('login.faceid.sub')}
-                disabled={busy}
-                onPress={() => { void run(signInOnDevice); }}
-              />
-              {Platform.OS === 'ios' ? (
+            {phase === 'options' ? (
+              <View style={{ gap: 10 }}>
+                {hasDeviceKey ? (
+                  <RecoveryOption
+                    icon={Platform.OS === 'ios' ? 'faceid' : 'touchid'}
+                    title={t(Platform.OS === 'ios' ? 'login.faceid' : 'login.device.android')}
+                    subtitle={t(Platform.OS === 'ios' ? 'login.faceid.sub' : 'login.device.android.sub')}
+                    disabled={busy}
+                    onPress={() => { void run(signInOnDevice); }}
+                  />
+                ) : null}
+                {Platform.OS === 'ios' ? (
+                  <RecoveryOption
+                    icon="icloud"
+                    title={t('login.icloud')}
+                    subtitle={t('login.icloud.sub')}
+                    disabled={busy}
+                    onPress={() => { void run(restoreIcloud); }}
+                  />
+                ) : null}
                 <RecoveryOption
-                  icon="icloud"
-                  title={t('login.icloud')}
-                  subtitle={t('login.icloud.sub')}
+                  icon="square.and.pencil"
+                  title={t('login.phrase')}
+                  subtitle={t('login.phrase.sub')}
                   disabled={busy}
-                  onPress={() => { void run(restoreIcloud); }}
+                  onPress={() => { setPhase('phrase'); }}
                 />
-              ) : null}
-              <RecoveryOption
-                icon="square.and.pencil"
-                title={t('login.phrase')}
-                subtitle={t('login.phrase.sub')}
-                disabled={busy}
-                onPress={() => { setPhase('phrase'); }}
-              />
-            </View>
-          ) : (
-            <View style={{ gap: 16 }}>
-              <ThemedTextInput
-                kind="secret"
-                value={phrase}
-                onChangeText={setPhrase}
-                placeholder={t('login.phrase.placeholder')}
-                multiline
-              />
-              <ThemedButton
-                label={t('login.phrase.restore')}
-                variant="primary"
-                fullWidth
-                loading={busy}
-                disabled={phrase.trim().length === 0}
-                onPress={() => { void run(restorePhrase); }}
-              />
-              <ThemedButton
-                label={t('onboarding.back')}
-                variant="secondary"
-                fullWidth
-                disabled={busy}
-                onPress={() => { setPhase('options'); }}
-              />
-            </View>
-          )}
-        </View>
+              </View>
+            ) : (
+              <View style={{ gap: 16 }}>
+                <ThemedTextInput
+                  kind="secret"
+                  value={phrase}
+                  onChangeText={setPhrase}
+                  placeholder={t('login.phrase.placeholder')}
+                  multiline
+                />
+                <ThemedButton
+                  label={t('login.phrase.restore')}
+                  variant="primary"
+                  fullWidth
+                  loading={busy}
+                  disabled={phrase.trim().length === 0}
+                  onPress={() => { void run(restorePhrase); }}
+                />
+                <ThemedButton
+                  label={t('onboarding.back')}
+                  variant="secondary"
+                  fullWidth
+                  disabled={busy}
+                  onPress={() => { setPhase('options'); }}
+                />
+              </View>
+            )}
+          </View>
 
-        <View className="px-4 pt-4">
-          <ThemedButton
-            label={t('login.close')}
-            variant="secondary"
-            fullWidth
-            disabled={busy}
-            onPress={onClose}
-          />
-        </View>
+          <View className="px-4 pt-4">
+            <ThemedButton
+              label={t('login.close')}
+              variant="secondary"
+              fullWidth
+              disabled={busy}
+              onPress={onClose}
+            />
+          </View>
+        </KeyboardAwareScrollView>
       </View>
-    </Modal>
+    </ModalSheet>
   );
 }
 
@@ -164,14 +184,14 @@ function RecoveryOption({
   disabled,
   onPress,
 }: {
-  readonly icon: 'faceid' | 'icloud' | 'square.and.pencil';
+  readonly icon: 'faceid' | 'touchid' | 'icloud' | 'square.and.pencil';
   readonly title: string;
   readonly subtitle: string;
   readonly disabled: boolean;
   readonly onPress: () => void;
 }): ReactNode {
   return (
-    <ThemedSurface variant="outlined" className="rounded-none p-1">
+    <ThemedSurface variant="outlined" className="p-1">
       <ThemedButton
         label={title}
         variant="secondary"

@@ -1,24 +1,30 @@
+import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { ScrollView, View } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { useReducedMotion } from 'react-native-reanimated';
 
+import { PressableScale } from '@/components/common/PressableScale';
+import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedText } from '@/components/themed';
-import { STAGGER_MS } from '@/feedback/motion';
+import { useThemeColors } from '@/constants/useThemeColors';
+import { fadeUpIn } from '@/feedback/motion';
 import { useTranslation } from '@/i18n';
-import { usePageDesignStore } from '@/page/pageDesignStore';
+import { useDisplayClaims, useIdentityData } from '@/identity';
 import type { LinkVisibility } from '@/profile/projection';
 import type { ProfileRecord } from '@solidarity/shared';
 import type { PublicPageShareSource } from './meProfileModel';
 
+import { displayProfileShareUrl } from './meProfileModel';
+import { useProfileShareSelection } from './useProfileShareSelection';
+import { blockRowStyle } from './pageRowStyles';
+import { PageCollapsibleHeader } from './PageCollapsibleHeader';
 import { ProfileBadgeChips } from './ProfileBadgeChips';
 import { ProfileHero } from './ProfileHero';
 import { ProfileLinksList } from './ProfileLinksList';
 import { ProfileSectionsList } from './ProfileSectionsList';
+import { PageAddSheet } from './PageAddSheet';
 import { PageAppearanceSheet } from './PageAppearanceSheet';
 import { PageLapsedCheckAlert } from './PageLapsedCheckAlert';
-import { PageLivePreview } from './PageLivePreview';
-
-const ENTRANCE_DURATION_MS = 240;
 
 export interface MeProfilePageProps {
   /** The FULL record — the owner's own view: every link, including private
@@ -39,7 +45,7 @@ export interface MeProfilePageProps {
   readonly bottomInset: number;
   readonly onEdit: () => void;
   readonly onEditAvatar: () => void;
-  readonly onAddLink: () => void;
+  readonly onImportLinks: () => void;
   readonly onOpenSettings: () => void;
   readonly onOpenBindings: () => void;
 }
@@ -56,15 +62,44 @@ export function MeProfilePage({
   bottomInset,
   onEdit,
   onEditAvatar,
-  onAddLink,
+  onImportLinks,
   onOpenSettings,
   onOpenBindings,
 }: MeProfilePageProps): ReactNode {
   const { t } = useTranslation();
+  const colors = useThemeColors();
+  const reduceMotion = useReducedMotion();
   const [appearanceOpen, setAppearanceOpen] = useState(false);
-  const pageDesignStatus = usePageDesignStore((state) => state.status);
-  const pageDesign = usePageDesignStore((state) => state.design);
-  const entrance = (delay: number) => FadeInDown.duration(ENTRANCE_DURATION_MS).delay(delay);
+  // The tab's one add entry point: links, sections and attestations all start
+  // from the same "＋ 新增" sheet instead of three per-group buttons.
+  // The 區塊 group's ＋ opens the same sheet scoped to special objects; the
+  // scope outlives `addOpen` so the sheet keeps its content while leaving.
+  const [addOpen, setAddOpen] = useState(false);
+  const [addScope, setAddScope] = useState<'all' | 'sections'>('all');
+  // Linktree-simple: hero and links first; attestations fold to one row.
+  const [proofsOpen, setProofsOpen] = useState(false);
+  const claims = useDisplayClaims();
+  const claimsHydrated = useIdentityData((state) => state.hydrated);
+  const proofCount = claims.filter((claim) => claim.claimType !== 'profile_card').length;
+  const openAdd = (scope: 'all' | 'sections' = 'all') => {
+    setAddScope(scope);
+    setAddOpen(true);
+  };
+  // The preview's `.pub-handle` line shows the page's REAL address, or
+  // nothing at all while one is still unpublished.
+  const shareSelection = useProfileShareSelection(
+    shareRecord,
+    shareJws,
+    nostrShortUrlReady,
+    0,
+    publicPage,
+  );
+  const pageHandle = shareSelection.kind === 'ready'
+    ? displayProfileShareUrl(shareSelection.selected)
+    : null;
+  // Sections cascade in top to bottom (`fadeUpIn`: EASE_OUT, 40 ms steps);
+  // reduced motion keeps the fade and drops the rise.
+  const entrance = (index: number) => fadeUpIn(index, reduceMotion);
 
   return (
     <ScrollView
@@ -78,59 +113,84 @@ export function MeProfilePage({
           publicPage={publicPage}
           nostrShortUrlReady={nostrShortUrlReady}
           onEditAvatar={onEditAvatar}
-          onOpenAppearance={() => { setAppearanceOpen(true); }}
+          onOpenAppearance={() => {
+            setAppearanceOpen(true);
+          }}
           onOpenSettings={onOpenSettings}
         />
       </Animated.View>
 
       <PageLapsedCheckAlert record={record} nostrUploaded={nostrShortUrlReady} />
 
-      <Animated.View entering={entrance(STAGGER_MS)}>
+      <Animated.View entering={entrance(1)}>
         <ProfileLinksList
           links={record.links}
           linkVisibility={linkVisibility}
           onEdit={onEdit}
-          onAddFirstLink={onAddLink}
+          onAdd={() => { openAdd(); }}
+          onImportLinks={onImportLinks}
         />
       </Animated.View>
 
-      <Animated.View entering={entrance(STAGGER_MS * 2)}>
-        <ProfileSectionsList linkCount={record.links.length} />
-        {pageDesignStatus === 'ready' ? (
-          <View className="mt-5 gap-3 px-4">
-            <ThemedText accessibilityRole="header" variant="label" tone="tertiary">
-              {t('pageDesign.preview')}
-            </ThemedText>
-            <PageLivePreview
-              record={publicRecord}
-              blocks={pageDesign.blocks}
-              appearance={pageDesign.appearance}
-            />
-          </View>
-        ) : null}
+      <Animated.View entering={entrance(2)}>
+        <ProfileSectionsList
+          onAddSection={() => { openAdd('sections'); }}
+          previewRecord={publicRecord}
+          previewHandle={pageHandle}
+        />
       </Animated.View>
 
-      <Animated.View entering={entrance(STAGGER_MS * 3)}>
-        <ThemedText
-          accessibilityRole="header"
-          variant="label"
-          tone="tertiary"
-          className="px-4 pb-3">
-          {t('mePage.attestations')}
-        </ThemedText>
+      <Animated.View entering={entrance(3)}>
+        <View className="px-4 pb-1">
+          <PageCollapsibleHeader
+            title={t('mePage.attestations')}
+            summary={claimsHydrated ? t('mePage.groupCount', { count: proofCount }) : null}
+            open={proofsOpen}
+            onToggle={() => { setProofsOpen((open) => !open); }}
+          />
+        </View>
         <ProfileBadgeChips
+          expanded={proofsOpen}
           record={record}
           publicRecord={publicRecord}
           jws={jws}
           nostrUploaded={nostrShortUrlReady}
-          onManageBindings={onOpenBindings}
+          onCreateProof={onOpenBindings}
         />
       </Animated.View>
+
+      <Animated.View entering={entrance(4)} className="px-4">
+        <PressableScale
+          onPress={() => { router.push('/settings/passkeys'); }}
+          accessibilityRole="button"
+          accessibilityLabel={t('webEditing.title')}
+          style={blockRowStyle(colors)}>
+          <SfIcon name="desktopcomputer" size={18} color={colors.text2} />
+          <ThemedText variant="bodyMedium" style={{ flex: 1 }}>
+            {t('webEditing.title')}
+          </ThemedText>
+          <SfIcon name="chevron.right" size={13} color={colors.text3} />
+        </PressableScale>
+      </Animated.View>
+
+      <PageAddSheet
+        visible={addOpen}
+        scope={addScope}
+        onClose={() => {
+          setAddOpen(false);
+        }}
+        onImportLinks={onImportLinks}
+        onAddProof={onOpenBindings}
+      />
 
       <PageAppearanceSheet
         visible={appearanceOpen}
         record={publicRecord}
-        onClose={() => { setAppearanceOpen(false); }}
+        handle={pageHandle}
+        onEditAvatar={onEditAvatar}
+        onClose={() => {
+          setAppearanceOpen(false);
+        }}
       />
     </ScrollView>
   );

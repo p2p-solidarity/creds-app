@@ -1,0 +1,46 @@
+# User story 1 — 建立: a fresh install creates a creds.id identity on the device.
+# docs/ref/10-plan-simplify-and-verify.md §1 / §6.
+#
+# Stops at the Links step on purpose: finishing onboarding registers the name in
+# the production creds.id directory and publishes to public Nostr relays
+# (NIP05_SERVICE_ORIGIN is hard-wired to https://creds.id). That leg joins this
+# flow once a local creds.id worker + relay can stand in for production.
+# The username check is a read-only GET.
+#
+# Run (Debug build on a booted simulator, Metro on :8081):
+#   maestro test apps/expo/.maestro/01-create-identity.yaml
+appId: kidneyweakx.airmeishi
+name: Create identity
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- extendedWaitUntil:
+    visible: "Start|開始"
+    timeout: 90000
+- tapOn: "Start|開始"
+- assertVisible: "Choose a Username|選擇使用者名稱"
+- tapOn:
+    text: "yourname"
+- inputText: ${'e2e' + Math.floor(Math.random() * 1e9)}
+- extendedWaitUntil:
+    visible: ".*is available.*|.*可以使用.*"
+    timeout: 20000
+# The continue button sits under the keyboard.
+- hideKeyboard
+# Debug builds only: a LogBox warning toast covers the footer button; close it (its × has no label).
+- runFlow:
+    when:
+      visible: ".*Open debugger to view warnings.*"
+    commands:
+      - tapOn:
+          point: "96%,93%"
+- tapOn: "Use This Username.*|使用這個名稱.*"
+- extendedWaitUntil:
+    visible: "Not Now|稍後再說"
+    timeout: 20000
+- tapOn: "Not Now|稍後再說"
+- extendedWaitUntil:
+    visible: "Add Links|放上你的連結"
+    timeout: 30000
+- takeScreenshot: create-identity-links-step

@@ -1,4 +1,5 @@
 import * as FileSystem from 'expo-file-system/legacy';
+import * as SecureStore from 'expo-secure-store';
 
 import { signOutAtproto } from '@/atproto';
 import {
@@ -34,18 +35,11 @@ import {
 } from '@/nostr/userKey';
 import { stopLaneManager } from '@/pear/laneManager';
 import { preparePageDesign, usePageDesignStore } from '@/page/pageDesignStore';
+import { useProEntitlementStore } from '@/pro/entitlementStore';
 import { useProfileSnapshotStore } from '@/people/profileSnapshots';
 import { useProfileStore } from '@/profile/store';
-import {
-  deleteRecipientKeys,
-  quiesceRecipientKeyOperations,
-} from '@/sakura/recipientKeys';
-import { stopForegroundPolling } from '@/sakura/inbox';
-import { unregister } from '@/sakura/pushRegistration';
-import { useSealedRouteStore } from '@/sakura/sealedRouteStore';
 import { useVerifiedPageResult } from '@/scan/verifiedPageResult';
 import { useSharingSettings } from '@/sharing/settingsStore';
-import { useShoutoutStore } from '@/shoutouts/store';
 import { clearAllData, getMmkv } from '@/storage';
 import { deleteCacheDatabaseForLocalWipe } from '@/storage/cache';
 import {
@@ -59,10 +53,9 @@ import {
   deleteRootSecret,
   quiesceRootSecretOperations,
 } from '@/vault/secretsKeychain';
-import { deleteVaultDirectory } from '@/vault/storage';
-import { useVaultStore } from '@/vault/store';
 import { useWebSignPending } from '@/websign/pendingRequest';
 import { deleteIdentityForLocalWipe, useZkIdentity } from '@/zk';
+import { useZktlsProofs } from '@/zktls/store';
 
 import { usePreferences } from './preferences';
 import { clearProductionAppData } from './productionAppData';
@@ -108,8 +101,7 @@ function clearMemoryCaches(): void {
   useCredentialStore.getState().resetForLocalWipe();
   useIssuerMetadataStore.getState().resetForLocalWipe();
   useGroupStore.getState().resetForLocalWipe();
-  useVaultStore.getState().resetForLocalWipe();
-  useShoutoutStore.getState().resetForLocalWipe();
+  useZktlsProofs.getState().resetForLocalWipe();
   useProfileStore.getState().resetForLocalWipe();
   useProfileSnapshotStore.getState().resetForLocalWipe();
   useIdentityData.getState().resetForLocalWipe();
@@ -118,11 +110,14 @@ function clearMemoryCaches(): void {
   useSharingSettings.getState().resetForLocalWipe();
   useZkIdentity.getState().resetForLocalWipe();
   usePageDesignStore.getState().resetForLocalWipe();
+  // Cached authority data, not the authority: the subscription lives in the
+  // user's store account, so a wiped device re-verifies and gets it straight
+  // back on next launch.
+  useProEntitlementStore.getState().resetForLocalWipe();
 
   useReceivedCard.getState().dismiss();
   useVerifiedPageResult.getState().dismiss();
   useWebSignPending.getState().clear();
-  useSealedRouteStore.getState().clear();
   clearImageMemoryCache();
   invalidateCachedNostrResult();
   invalidateCachedAtprotoResult();
@@ -136,7 +131,6 @@ function deleteProductionAppData(): Promise<LocalDeletionResult> {
         cacheDirectory: FileSystem.cacheDirectory,
         deletePath: (path) =>
           FileSystem.deleteAsync(path, { idempotent: true }),
-        deleteVaultFiles: deleteVaultDirectory,
         deleteCacheDatabase: deleteCacheDatabaseForLocalWipe,
       }),
     clearPersistentData: clearAllData,
@@ -146,12 +140,9 @@ function deleteProductionAppData(): Promise<LocalDeletionResult> {
 
 async function quiesceBackgroundWork(): Promise<LocalDeletionResult> {
   beginLocalDataWipe();
-  stopForegroundPolling();
   stopLaneManager();
   try {
     await Promise.all([
-      unregister(),
-      quiesceRecipientKeyOperations(),
       quiesceNostrKeyOperations(),
       quiesceRootKeyOperations(),
       quiesceSigningKeyOperations(),
@@ -163,6 +154,21 @@ async function quiesceBackgroundWork(): Promise<LocalDeletionResult> {
   } catch {
     return deletionFailed();
   }
+}
+
+/**
+ * The retired Shoutouts relay kept two private keys in the keychain. Their code
+ * is gone, but a device that once provisioned them must still lose them on wipe.
+ */
+const LEGACY_RECIPIENT_KEY_ALIASES = ['gg.solidarity.sakura.enc.v1', 'gg.solidarity.sakura.sig.ed25519.v1'];
+
+async function deleteLegacyRecipientKeys(): Promise<LocalDeletionResult> {
+  const results = await Promise.allSettled(
+    LEGACY_RECIPIENT_KEY_ALIASES.map((alias) =>
+      SecureStore.deleteItemAsync(alias, { keychainAccessible: SecureStore.WHEN_UNLOCKED }),
+    ),
+  );
+  return results.some((r) => r.status === 'rejected') ? deletionFailed() : deletionSucceeded();
 }
 
 function resetPreferencesAndPolicies(): void {
@@ -181,6 +187,21 @@ function scrubAndVerifyPersistentData(): LocalDeletionResult {
   }
 }
 
+/**
+ * Reset App Data (Settings → Reset): clears every durable MMKV record
+ * and the in-memory store mirrors hydrated from them, then rehydrates the Page
+ * store so it cannot stay stuck at `loading`. Keychain-backed recovery/signing
+ * keys are deliberately preserved — that is what separates this from
+ * `wipeLocalDevice`. Ordering mirrors the wipe path: durable records first,
+ * memory second, so a racing store write-back cannot resurrect cleared data.
+ */
+export async function resetAppDataKeepingKeys(): Promise<void> {
+  clearAllData();
+  clearMemoryCaches();
+  resetPreferencesAndPolicies();
+  await preparePageDesign();
+}
+
 /** Assemble the real local stores behind the ordered wipe coordinator. */
 export async function wipeLocalDevice(): Promise<WipeEverythingResult> {
   const result = await wipeEverything({
@@ -194,7 +215,7 @@ export async function wipeLocalDevice(): Promise<WipeEverythingResult> {
     masterEncryptionKey: deleteMasterKey,
     freshEncryptionKey: () => captureDeletion(rekeyEmptyMmkv),
     vaultRootSecret: deleteRootSecret,
-    recipientKeys: () => captureDeletion(deleteRecipientKeys),
+    recipientKeys: deleteLegacyRecipientKeys,
     zkIdentity: deleteIdentityForLocalWipe,
     nostrKey: () => captureDeletion(deleteNostrKey),
     atprotoSession: deleteAtprotoSession,

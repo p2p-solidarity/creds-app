@@ -122,13 +122,14 @@ describe('pear/laneManager', () => {
     expect(laneManager.getLane('nope')).toBeNull();
   });
 
-  it('releaseLane shuts the worklet down and forgets the id', () => {
+  it('releaseLane shuts the worklet down and forgets the id', async () => {
     const result = laneManager.ensureLane('a');
     if (!result.ok) throw new Error('setup failed');
 
     laneManager.releaseLane('a');
 
     expect(laneManager.getLane('a')).toBeNull();
+    await afterTerminateGrace();
     expect(instances[0]?.terminated).toBe(true);
   });
 
@@ -138,7 +139,7 @@ describe('pear/laneManager', () => {
     }).not.toThrow();
   });
 
-  it('a background AppState transition shuts down every ensured lane', () => {
+  it('a background AppState transition shuts down every ensured lane', async () => {
     laneManager.ensureLane('a');
     laneManager.ensureLane('b');
 
@@ -146,6 +147,7 @@ describe('pear/laneManager', () => {
 
     expect(laneManager.getLane('a')).toBeNull();
     expect(laneManager.getLane('b')).toBeNull();
+    await afterTerminateGrace();
     expect(instances.every((w) => w.terminated)).toBe(true);
   });
 
@@ -187,13 +189,19 @@ describe('pear/laneManager', () => {
     expect(secondCalls).toBe(0);
   });
 
-  it('stopLaneManager tears down every lane and resets the started flag', () => {
+  it('stopLaneManager tears down every lane and resets the started flag', async () => {
     laneManager.ensureLane('a');
 
     laneManager.stopLaneManager();
 
     expect(laneManager._testIsLaneManagerStarted()).toBe(false);
     expect(laneManager.getLane('a')).toBeNull();
+    await afterTerminateGrace();
     expect(instances[0]?.terminated).toBe(true);
   });
 });
+
+/** `lane.ts` terminates a shut-down worklet only after LANE_TERMINATE_GRACE_MS (1500). */
+function afterTerminateGrace(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 1520));
+}

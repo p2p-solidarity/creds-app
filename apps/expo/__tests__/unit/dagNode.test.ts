@@ -1,6 +1,6 @@
 /**
  * DAG node — canonical serialization, deterministic id, sign / verify.
- * Spec: docs/dev-sandbox-identity-graph.md §6.
+ * Spec: docs/ref/notes-dev-sandbox-identity-graph.md §6.
  */
 import { describe, expect, test } from 'bun:test';
 import { schnorr } from '@noble/curves/secp256k1.js';
@@ -15,7 +15,7 @@ import {
   signNode,
   stableJSON,
   verifyNode,
-} from '@/dag/node';
+} from '@/nostr/dagNode';
 
 function makeKeypair(seed: number): { privkey: Uint8Array; pubkeyHex: string } {
   const privkey = new Uint8Array(32);
@@ -187,7 +187,7 @@ describe('dagNode hex helpers', () => {
   });
 
   test('decode rejects odd-length / invalid hex', () => {
-    const { hexDecode } = require('@/dag/node') as { hexDecode: (s: string) => Uint8Array };
+    const { hexDecode } = require('@/nostr/dagNode') as { hexDecode: (s: string) => Uint8Array };
     expect(() => hexDecode('abc')).toThrow(/even length/);
     expect(() => hexDecode('zz')).toThrow(/invalid hex/);
   });

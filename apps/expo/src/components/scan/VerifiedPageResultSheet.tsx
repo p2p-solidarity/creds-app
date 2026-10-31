@@ -18,7 +18,8 @@
  */
 import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
-import { ActivityIndicator, Modal, ScrollView, View } from 'react-native';
+import { ActivityIndicator, ScrollView, View } from 'react-native';
+import { ModalSheet, sheetTopInset } from '@/components/common/ModalSheet';
 import { useSafeAreaInsets, type EdgeInsets } from 'react-native-safe-area-context';
 
 import { PressableScale } from '@/components/common/PressableScale';
@@ -71,14 +72,11 @@ export function VerifiedPageResultSheet(): ReactNode {
   };
 
   return (
-    <Modal
+    <ModalSheet
       visible={result !== null || resolving}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={dismiss}
-    >
+      onRequestClose={dismiss}>
       {result ? (
-        <View style={{ flex: 1, backgroundColor: Colors.pageBg, paddingTop: insets.top }}>
+        <View style={{ flex: 1, backgroundColor: Colors.pageBg, paddingTop: sheetTopInset(insets.top) }}>
           <Toolbar title={t('verifiedPage.title')} onDone={dismiss} doneLabel={t('scan.close')} />
 
           <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
@@ -105,7 +103,7 @@ export function VerifiedPageResultSheet(): ReactNode {
                 fullWidth
                 loading={saving}
                 label={existing ? t('verifiedPage.updateInPeople') : t('verifiedPage.saveToPeople')}
-                leadingIcon={<SfIcon name="person.badge.plus" size={16} color={Colors.pageBg} />}
+                icon="person.badge.plus"
                 onPress={() => {
                   void onSave(false);
                 }}
@@ -125,7 +123,7 @@ export function VerifiedPageResultSheet(): ReactNode {
       ) : resolving ? (
         <ResolvingView insets={insets} onDone={dismiss} title={t('verifiedPage.title')} label={t('verifiedPage.resolving')} closeLabel={t('scan.close')} />
       ) : null}
-    </Modal>
+    </ModalSheet>
   );
 }
 
@@ -143,7 +141,7 @@ function ResolvingView({
   readonly closeLabel: string;
 }): ReactNode {
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.pageBg, paddingTop: insets.top }}>
+    <View style={{ flex: 1, backgroundColor: Colors.pageBg, paddingTop: sheetTopInset(insets.top) }}>
       <Toolbar title={title} onDone={onDone} doneLabel={closeLabel} />
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 }}>
         <ActivityIndicator size="small" color={Colors.text2} />
@@ -159,7 +157,7 @@ function ResolvingView({
 function InvalidCard({ reason }: { readonly reason: VerifiedPageErrorReason }): ReactNode {
   const { t } = useTranslation();
   return (
-    <View className="gap-3 rounded-xl border border-divider p-4">
+    <View className="gap-3 rounded-card border border-divider p-4">
       <View className="flex-row items-center" style={{ gap: 8 }}>
         <SfIcon name="xmark.seal.fill" size={18} color={Colors.destructive} />
         <ThemedText variant="titleMedium" style={{ color: Colors.destructive }}>

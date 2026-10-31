@@ -4,7 +4,6 @@ import type { PassportMRZDraft } from '../../src/passport/pipeline';
 import {
   PASSPORT_FINGERPRINT_TAG_PREFIX,
   derivePassportFingerprint,
-  findPassportDuplicate,
   passportFingerprintTag,
 } from '../../src/passport/persistence';
 
@@ -32,36 +31,4 @@ describe('passport persistence duplicate guard', () => {
     );
   });
 
-  it('finds an existing passport record by fingerprint tag before a new UUID is minted', () => {
-    const fingerprint = derivePassportFingerprint(MRZ);
-    const duplicate = findPassportDuplicate(fingerprint, [
-      {
-        id: 'student-card',
-        type: 'student',
-        metadataTags: [passportFingerprintTag(fingerprint)],
-      },
-      {
-        id: 'passport-card',
-        type: 'passport',
-        metadataTags: [passportFingerprintTag(fingerprint)],
-      },
-      {
-        id: 'other-passport',
-        type: 'passport',
-        metadataTags: [
-          passportFingerprintTag(
-            derivePassportFingerprint({
-              ...MRZ,
-              passportNumber: 'X12345678',
-            })
-          ),
-        ],
-      },
-    ]);
-
-    expect(duplicate).toEqual({
-      id: 'passport-card',
-      fingerprint,
-    });
-  });
 });

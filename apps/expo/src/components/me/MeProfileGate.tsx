@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, View } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { useReducedMotion } from 'react-native-reanimated';
 
+import { CredsMark } from '@/components/brand/CredsMark';
 import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
+import { fadeUpIn } from '@/feedback/motion';
 import { useTranslation } from '@/i18n';
 import { getRootDid } from '@/identity/rootKey';
 
@@ -16,6 +18,7 @@ export interface MeProfileGateProps {
 
 export function MeProfileGate({ onCreatePage, onSetUpIdentity }: MeProfileGateProps): ReactNode {
   const { t } = useTranslation();
+  const reduceMotion = useReducedMotion();
   const [state, setState] = useState<GateState>('loading');
   const requestId = useRef(0);
 
@@ -43,8 +46,8 @@ export function MeProfileGate({ onCreatePage, onSetUpIdentity }: MeProfileGatePr
 
   return (
     <View className="flex-1 justify-center px-4 pb-24">
-      <Animated.View entering={FadeInDown.duration(240)}>
-        <ThemedSurface variant="outlined" className="gap-4 rounded-none px-5 py-6">
+      <Animated.View entering={fadeUpIn(0, reduceMotion)}>
+        <ThemedSurface variant="outlined" className="gap-4 px-5 py-6">
           {state === 'loading' ? (
             <View className="items-center gap-3 py-2">
               <ActivityIndicator size="small" color={Colors.text3} />
@@ -62,7 +65,11 @@ export function MeProfileGate({ onCreatePage, onSetUpIdentity }: MeProfileGatePr
             </>
           ) : (
             <>
-              <ThemedText variant="titleLarge">
+              {/* The art carries the "your page" idea; the line stays short. */}
+              <View className="items-center">
+                <CredsMark size={64} />
+              </View>
+              <ThemedText variant="titleLarge" style={{ textAlign: 'center' }}>
                 {t(
                   state === 'createPage'
                     ? 'meHome.createPagePromise'

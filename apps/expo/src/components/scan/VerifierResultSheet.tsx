@@ -8,13 +8,15 @@
  * check / red X) is colour-coded off `result.valid`.
  */
 import type { ReactNode } from 'react';
-import { Modal, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
+import { ModalSheet, sheetTopInset } from '@/components/common/ModalSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { SfIcon } from '@/components/icons/SfIcon';
 import { SolidarityPlaceholderCard } from '@/components/passport/SolidarityPlaceholderCard';
 import { ThemedButton, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
+import { MONO } from '@/constants/fonts';
 
 export interface VerifierResult {
   readonly valid: boolean;
@@ -36,14 +38,12 @@ export function VerifierResultSheet({
   onClose,
 }: VerifierResultSheetProps): ReactNode {
   return (
-    <Modal
+    <ModalSheet
       visible={visible}
-      animationType="slide"
       presentationStyle="formSheet"
-      onRequestClose={onClose}
-    >
+      onRequestClose={onClose}>
       {result ? <SheetBody result={result} onClose={onClose} /> : null}
-    </Modal>
+    </ModalSheet>
   );
 }
 
@@ -58,7 +58,7 @@ function SheetBody({
   const badgeColor = result.valid ? Colors.terminalGreen : Colors.destructive;
   return (
     <View
-      style={{ flex: 1, backgroundColor: Colors.pageBg, paddingTop: insets.top }}
+      style={{ flex: 1, backgroundColor: Colors.pageBg, paddingTop: sheetTopInset(insets.top) }}
     >
       <View
         className="flex-row items-center justify-between"
@@ -101,7 +101,7 @@ function SheetBody({
             <ThemedText
               variant="bodySmall"
               tone="secondary"
-              style={{ fontFamily: 'Menlo' }}
+              style={{ fontFamily: MONO }}
               selectable
             >
               {result.issuerDid}

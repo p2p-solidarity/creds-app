@@ -1,28 +1,29 @@
 /**
- * Privacy Policy viewer — renders the bundled PRIVACY_POLICY.md via the
- * shared MarkdownDocument component. The markdown is copied into a TS
- * module at `src/legal/privacy.ts` so Metro bundles it as a string and
- * TypeScript keeps the import typed.
+ * Privacy Policy viewer — the same text as creds.id/privacy, bundled as Markdown per
+ * language in `src/legal/privacy.ts` (generated from airmeishi-web
+ * `src/content/legal/`), so it reads offline. Chinese UI → zh-Hant, else en.
  */
-import { safeBack } from '@/navigation/safeBack';
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MarkdownDocument } from '@/components/common/MarkdownDocument';
-import {
-  SettingsBackToolbar,
-  SettingsScreenTitle,
-} from '@/components/settings/SettingsBlocks';
+import { SettingsScreenTitle } from '@/components/settings/SettingsBlocks';
+import { useTranslation } from '@/i18n';
 import { PRIVACY_POLICY_MARKDOWN } from '@/legal/privacy';
+import { safeBack } from '@/navigation/safeBack';
 
 export default function PrivacyPolicyPage(): ReactNode {
   const insets = useSafeAreaInsets();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language.startsWith('zh') ? 'zh-Hant' : 'en';
   return (
     <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
-      <SettingsBackToolbar onPress={() => { safeBack(); }} />
-      <SettingsScreenTitle title="Privacy Policy" />
-      <MarkdownDocument source={PRIVACY_POLICY_MARKDOWN} />
+      <SettingsScreenTitle
+        title={t('pro.privacy')}
+        leadingAction={{ accessibilityLabel: t('common.back'), onPress: () => { safeBack(); } }}
+      />
+      <MarkdownDocument source={PRIVACY_POLICY_MARKDOWN[locale]} />
     </View>
   );
 }

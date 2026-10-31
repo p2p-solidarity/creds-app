@@ -23,6 +23,8 @@
  */
 import { decodeFragment, err, ok, type Result } from '@solidarity/shared';
 
+import { isAppSchemeProtocol } from '../deeplink/appScheme';
+
 /** Deep-link host / path segment for the webSign entry (`solidarity://websign`, `/websign`). */
 export const WEBSIGN_DEEPLINK_HOST = 'websign';
 /** Query/fragment parameter carrying the request payload. */
@@ -61,7 +63,7 @@ export function classifyWebSignScan(payload: string): string | null {
     return null;
   }
 
-  if (url.protocol === 'solidarity:' || url.protocol === 'airmeishi:') {
+  if (isAppSchemeProtocol(url.protocol)) {
     if (url.host !== WEBSIGN_DEEPLINK_HOST) return null;
     return nonEmptyOrNull(url.searchParams.get(WEBSIGN_REQUEST_PARAM));
   }

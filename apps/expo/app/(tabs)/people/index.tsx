@@ -1,14 +1,13 @@
-/**
- * Contacts tab — v2 bio-link surface using the app's existing visual system.
- * The source order mirrors solidarity-spec/v2.html while all rendered rows
- * continue to come from the contact and saved-page stores.
- */
-import * as FileSystem from 'expo-file-system/legacy';
+/** Contacts tab — creds mock v3, backed only by persisted contact data. */
 import { router, useLocalSearchParams } from 'expo-router';
-import * as Sharing from 'expo-sharing';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { ActivityIndicator, ScrollView, View } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import { useEffect, useMemo, useState, type ReactElement, type ReactNode } from 'react';
+import { ActivityIndicator, ScrollView, View, type RefreshControlProps } from 'react-native';
+import Animated, {
+  interpolate,
+  useAnimatedStyle,
+  useReducedMotion,
+  type SharedValue,
+} from 'react-native-reanimated';
 import { FlashList } from '@shopify/flash-list';
 import ReanimatedSwipeable, {
   SwipeDirection,
@@ -16,29 +15,43 @@ import ReanimatedSwipeable, {
 import { GestureDetector } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { makeGestureAutoBackup } from '@/backup';
+import { useGestureAutoBackup } from '@/backup';
 import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
-import { PaperStackIllustration } from '@/components/decor/PaperStackIllustration';
+import { PeopleFeatureArt } from '@/components/decor/CredsFeatureArt';
 import { ContactsAddSheet } from '@/components/people/ContactsAddSheet';
 import { ContactsActivitySections } from '@/components/people/ContactsActivitySections';
+import {
+  ContactSectionHeader,
+  flattenContactSections,
+  groupContactsByInitial,
+} from '@/components/people/ContactsList';
 import { DeleteContactsSheet } from '@/components/people/DeleteContactsSheet';
 import { ManualContactEntrySheet } from '@/components/people/ManualContactEntrySheet';
 import { PeopleSearchField } from '@/components/people/PeopleSearchField';
 import { TrustGraphContactRow } from '@/components/people/TrustGraphContactRow';
-import { VerifiedPagesSection } from '@/components/people/VerifiedPagesSection';
+import { SavedPageRow } from '@/components/people/SavedPageRow';
 import { LinkPageImportSheet, type LinkPageImportResult } from '@/components/profile/LinkPageImportSheet';
 import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/radius';
+import { useThemeColors } from '@/constants/useThemeColors';
 import { useTranslation } from '@/i18n';
 import { useContactStore, type ContactManifestEntry } from '@/contacts/repository';
-import { prepareContactVCardBundle } from '@/contacts/vCardBundle';
+import { shareContactVCard } from '@/contacts/shareContactVCard';
 import { confirmDialog } from '@/feedback/confirmDialog';
 import { haptic } from '@/feedback/haptics';
+import { fadeUpIn } from '@/feedback/motion';
 import { pushToast } from '@/feedback/toast';
-import { useProfileSnapshotStore } from '@/people/profileSnapshots';
+import { useProfileSnapshotStore, useSortedProfileSnapshots } from '@/people/profileSnapshots';
+import { usePagesPullRefresh } from '@/people/usePagesPullRefresh';
 import { usePeopleScreen } from '@/people/usePeopleScreen';
 import { usePreferences } from '@/settings/preferences';
+
+/** Rows (headers included) that cascade in when the list first paints — about
+ *  one screenful. Everything below the fold, and every recycled cell, just
+ *  appears: a stagger nobody can see only delays the list. */
+const ENTRANCE_ROWS = 10;
 
 export default function PeopleTab() {
   const { t } = useTranslation();
@@ -46,8 +59,12 @@ export default function PeopleTab() {
   const removeContact = useContactStore((s) => s.remove);
   const loadDetail = useContactStore((s) => s.loadDetail);
   const upsertDeclared = useProfileSnapshotStore((s) => s.upsertDeclared);
-  const autoEnabled = usePreferences((s) => s.autoBackupOnPull);
+  const savedPages = useSortedProfileSnapshots();
+  const savedPageCount = savedPages.length;
+  const pullRefresh = usePagesPullRefresh(savedPageCount);
+  const backupEnabled = usePreferences((s) => s.backupEnabled);
   const insets = useSafeAreaInsets();
+  const reduceMotion = useReducedMotion();
   const { edit } = useLocalSearchParams<{ edit?: string }>();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -60,13 +77,26 @@ export default function PeopleTab() {
   const [editMode, setEditMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(() => new Set());
 
+  const contactSections = useMemo(() => groupContactsByInitial(contacts, ''), [contacts]);
   const orderedContacts = useMemo(
-    () => filterContacts(contacts, ''),
-    [contacts],
+    () => contactSections.flatMap((section) =>
+      section.entries.flatMap((entry) => (entry.kind === 'contact' ? [entry.contact] : []))),
+    [contactSections],
   );
-  const filtered = useMemo(
-    () => filterContacts(orderedContacts, searchQuery),
-    [orderedContacts, searchQuery],
+  const filteredSections = useMemo(
+    // Selecting acts on contacts only (delete / export vCard), so saved Pages
+    // leave the list while selecting.
+    () => groupContactsByInitial(contacts, searchQuery, editMode ? [] : savedPages),
+    [contacts, searchQuery, editMode, savedPages],
+  );
+  const filteredCount = useMemo(
+    () => filteredSections.reduce((count, section) => count + section.entries.length, 0),
+    [filteredSections],
+  );
+  const searching = searchQuery.trim().length > 0;
+  const filteredListItems = useMemo(
+    () => flattenContactSections(filteredSections, !searching),
+    [filteredSections, searching],
   );
   const selectedContacts = useMemo(
     () => orderedContacts.filter((contact) => selectedIds.has(contact.id)),
@@ -103,9 +133,7 @@ export default function PeopleTab() {
   };
 
   const onLongPressContact = (c: ContactManifestEntry) => {
-    // The long-press 'heavy' haptic + zoom lift fire inside
-    // TrustGraphContactRow (coupled to the animation); this handler just
-    // arms select mode so the two can't drift out of sync.
+    // The row owns the long-press haptic; this handler owns selection state.
     if (!editMode) {
       setEditMode(true);
       setSelectedIds(new Set([c.id]));
@@ -175,21 +203,7 @@ export default function PeopleTab() {
     setExporting(true);
     void (async () => {
       try {
-        const bundle = await prepareContactVCardBundle(ids, loadDetail);
-        const cacheDirectory = FileSystem.cacheDirectory;
-        if (!cacheDirectory) throw new Error('Cache directory unavailable');
-        const fileUri = `${cacheDirectory}solidarity-contacts.vcf`;
-        await FileSystem.writeAsStringAsync(fileUri, bundle, {
-          encoding: FileSystem.EncodingType.UTF8,
-        });
-        if (!(await Sharing.isAvailableAsync())) {
-          throw new Error('System sharing unavailable');
-        }
-        await Sharing.shareAsync(fileUri, {
-          mimeType: 'text/vcard',
-          UTI: 'public.vcard',
-          dialogTitle: t('peopleList.exportVCard'),
-        });
+        await shareContactVCard(ids, loadDetail, t('peopleList.exportVCard'));
         pushToast(t('peopleList.exported', { count: ids.length }), 'success', 2000);
         exitEditMode();
       } catch {
@@ -200,14 +214,10 @@ export default function PeopleTab() {
     })();
   };
 
-  const backupGesture = useMemo(
-    () =>
-      makeGestureAutoBackup({
-        onComplete: () => { pushToast(t('peopleList.backedUp'), 'success', 2000); },
-        onError: () => { pushToast(t('peopleList.backupFailed'), 'error'); },
-      }),
-    [t],
-  );
+  const backupGesture = useGestureAutoBackup({
+    onComplete: () => { pushToast(t('peopleList.backedUp'), 'success', 2000); },
+    onError: () => { pushToast(t('peopleList.backupFailed'), 'error'); },
+  });
 
   const body = (
     <View className="flex-1">
@@ -273,57 +283,67 @@ export default function PeopleTab() {
         <ContactsLoadError onRetry={retry} />
       ) : loading ? (
         <LoadingState />
-      ) : contacts.length === 0 ? (
+      ) : contacts.length === 0 && savedPageCount === 0 ? (
         <EmptyContactsContent
           onImportPhone={() => { router.push('/contacts/import-phone'); }}
           onAdd={() => { setAddSheetOpen(true); }}
           activity={editMode ? null : <ContactsActivitySections onContactAdded={refresh} />}
+          refreshControl={pullRefresh}
         />
       ) : (
         <>
           {/* Search bar stays mounted whenever there is data so the input
               doesn't flicker in/out as users type past their last match. */}
-          <View className="px-4 pb-3">
-            <PeopleSearchField value={searchQuery} onChangeText={setSearchQuery} />
-          </View>
-          {editMode ? null : <ContactsActivitySections onContactAdded={refresh} />}
-          {filtered.length === 0 ? (
-            <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+          {!editMode ? (
+            <View className="px-4 pb-3">
+              <PeopleSearchField value={searchQuery} onChangeText={setSearchQuery} />
+            </View>
+          ) : null}
+          {!editMode && !searching ? <ContactsActivitySections onContactAdded={refresh} /> : null}
+          {filteredCount === 0 ? (
+            <View style={{ flex: 1, paddingHorizontal: 16 }}>
               <EmptySearchState
                 query={searchQuery}
                 onAdd={() => { setAddSheetOpen(true); }}
                 onImportPhone={() => { router.push('/contacts/import-phone'); }}
               />
-              {editMode ? null : (
-                <View className="px-4">
-                  <VerifiedPagesSection />
-                </View>
-              )}
-            </ScrollView>
+            </View>
           ) : (
-            <Animated.View entering={FadeIn.duration(280)} style={{ flex: 1 }}>
+            <View style={{ flex: 1 }}>
               <FlashList
-                data={filtered}
-                keyExtractor={(item) => item.id}
+                data={filteredListItems}
+                keyExtractor={(item) => item.key}
+                getItemType={(item) => item.kind}
                 contentContainerStyle={{
                   paddingHorizontal: 16,
                   paddingBottom: editMode ? 100 : 16,
                 }}
                 keyboardShouldPersistTaps="handled"
+                refreshControl={editMode ? undefined : pullRefresh}
                 extraData={{ editMode, selectedIds }}
-                ListFooterComponent={editMode ? null : <VerifiedPagesSection />}
-                renderItem={({ item }) => (
-                  <PeopleRow
-                    contact={item}
-                    editMode={editMode}
-                    selected={selectedIds.has(item.id)}
-                    onPress={() => { onSelectContact(item); }}
-                    onLongPress={() => { onLongPressContact(item); }}
-                    onSwipeDelete={() => { onDeleteContact(item); }}
-                  />
+                renderItem={({ item, index }) => (
+                  // Always wrapped, so a recycled cell keeps the same tree;
+                  // `entering` only runs on mount, never on recycle.
+                  <Animated.View
+                    entering={index < ENTRANCE_ROWS ? fadeUpIn(index, reduceMotion) : undefined}>
+                    {item.kind === 'header' ? (
+                      <ContactSectionHeader title={item.title} />
+                    ) : item.kind === 'page' ? (
+                      <SavedPageRow snapshot={item.snapshot} />
+                    ) : (
+                      <PeopleRow
+                        contact={item.contact}
+                        editMode={editMode}
+                        selected={selectedIds.has(item.contact.id)}
+                        onPress={() => { onSelectContact(item.contact); }}
+                        onLongPress={() => { onLongPressContact(item.contact); }}
+                        onSwipeDelete={() => { onDeleteContact(item.contact); }}
+                      />
+                    )}
+                  </Animated.View>
                 )}
               />
-            </Animated.View>
+            </View>
           )}
           {editMode ? (
             <BatchActionBar
@@ -340,7 +360,7 @@ export default function PeopleTab() {
 
   return (
     <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
-      {autoEnabled ? (
+      {backupEnabled ? (
         <GestureDetector gesture={backupGesture}>{body}</GestureDetector>
       ) : (
         body
@@ -350,9 +370,7 @@ export default function PeopleTab() {
 }
 
 /**
- * PeopleRow — wraps the existing TrustGraphContactRow with:
- *   - a leading selection circle when edit mode is active
- *   - ReanimatedSwipeable revealing a destructive "Delete" action on swipe
+ * PeopleRow — adds swipe-to-delete around the v3 selection-aware row.
  *
  * Swipe is disabled while edit mode is active so the gesture doesn't fight
  * the multi-select tap target. Long-press still enters edit mode.
@@ -372,47 +390,29 @@ function PeopleRow({
   readonly onLongPress: () => void;
   readonly onSwipeDelete: () => void;
 }) {
+  const c = useThemeColors();
   const inner = (
-    <View className="flex-row items-center bg-pageBg">
-      {editMode ? (
-        <View style={{ paddingLeft: 4, paddingRight: 8 }}>
-          <View
-            style={{
-              width: 22,
-              height: 22,
-              borderRadius: 11,
-              borderWidth: 1.5,
-              borderColor: selected ? Colors.destructive : Colors.text3,
-              backgroundColor: selected ? Colors.destructive : 'transparent',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            {selected ? (
-              <SfIcon name="checkmark" size={12} color={Colors.invertedButtonText} />
-            ) : null}
-          </View>
-        </View>
-      ) : null}
-      <View style={{ flex: 1 }}>
-        <TrustGraphContactRow
-          contact={contact}
-          onPress={onPress}
-          onLongPress={onLongPress}
-        />
-      </View>
-    </View>
+    <TrustGraphContactRow
+      contact={contact}
+      selectionMode={editMode}
+      selected={selected}
+      onPress={onPress}
+      onLongPress={onLongPress}
+    />
   );
 
   if (editMode) return inner;
 
   return (
     <ReanimatedSwipeable
+      // The delete action fills the row from behind; an opaque row hides it
+      // until a swipe slides the row aside.
+      childrenContainerStyle={{ backgroundColor: c.pageBg }}
       friction={2}
       rightThreshold={48}
       overshootRight={false}
-      renderRightActions={() => (
-        <SwipeDeleteAction onPress={onSwipeDelete} />
+      renderRightActions={(progress) => (
+        <SwipeDeleteAction progress={progress} onPress={onSwipeDelete} />
       )}
       onSwipeableOpen={(direction) => {
         if (direction === SwipeDirection.RIGHT) haptic('warning');
@@ -423,29 +423,52 @@ function PeopleRow({
   );
 }
 
-function SwipeDeleteAction({ onPress }: { readonly onPress: () => void }) {
+/** Width the row slides aside to uncover the delete button. */
+const SWIPE_ACTION_WIDTH = 84;
+
+/**
+ * The swipe's delete button: an inset rounded tile (not a full-height red
+ * slab) that grows in with the swipe, so a half swipe reads as a hint and a
+ * full one as the button.
+ */
+function SwipeDeleteAction({
+  progress,
+  onPress,
+}: {
+  readonly progress: SharedValue<number>;
+  readonly onPress: () => void;
+}) {
   const { t } = useTranslation();
+  const reduceMotion = useReducedMotion();
+  const reveal = useAnimatedStyle(() => ({
+    opacity: interpolate(progress.value, [0, 0.5, 1], [0, 0.6, 1], 'clamp'),
+    transform: [{ scale: reduceMotion ? 1 : interpolate(progress.value, [0, 1], [0.82, 1], 'clamp') }],
+  }));
   return (
-    <PressableScale
-      haptic="warning"
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={t('peopleList.deleteContactA11y')}
-      style={{
-        width: 88,
-        backgroundColor: Colors.destructive,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      <SfIcon name="trash" size={18} color={Colors.invertedButtonText} />
-      <ThemedText
-        variant="caption"
-        style={{ color: Colors.invertedButtonText, marginTop: 4 }}
-      >
-        {t('peopleList.delete')}
-      </ThemedText>
-    </PressableScale>
+    <View style={{ width: SWIPE_ACTION_WIDTH, paddingVertical: 6, paddingLeft: 6, paddingRight: 16 }}>
+      <Animated.View style={[{ flex: 1 }, reveal]}>
+        <PressableScale
+          fill
+          haptic="warning"
+          onPress={onPress}
+          accessibilityRole="button"
+          accessibilityLabel={t('peopleList.deleteContactA11y')}
+          style={{
+            flex: 1,
+            borderRadius: Radius.card,
+            backgroundColor: Colors.destructive,
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 3,
+          }}
+        >
+          <SfIcon name="trash" size={17} color={Colors.invertedButtonText} />
+          <ThemedText variant="caption" style={{ color: Colors.invertedButtonText, fontSize: 11 }}>
+            {t('peopleList.delete')}
+          </ThemedText>
+        </PressableScale>
+      </Animated.View>
+    </View>
   );
 }
 
@@ -484,14 +507,14 @@ function BatchActionBar({
           {t('peopleList.countSelected', { count })}
         </ThemedText>
         <ThemedButton
-          size="sm"
+          size="md"
           variant="destructive"
           label={t('peopleList.delete')}
           disabled={count === 0 || exporting}
           onPress={onDelete}
         />
         <ThemedButton
-          size="sm"
+          size="md"
           label={t('peopleList.exportVCard')}
           loading={exporting}
           disabled={count === 0}
@@ -538,7 +561,12 @@ function ContactsHeader({
         >
           {t('peopleList.title')}
         </ThemedText>
-        <HeaderAction label={t('peopleList.add')} onPress={onAdd} align="right" />
+        <HeaderAction
+          label={t('peopleList.add')}
+          onPress={onAdd}
+          align="right"
+          icon="plus"
+        />
       </View>
     );
   }
@@ -573,11 +601,13 @@ function HeaderAction({
   onPress,
   disabled = false,
   align,
+  icon,
 }: {
   readonly label: string;
   readonly onPress: () => void;
   readonly disabled?: boolean;
   readonly align: 'left' | 'right';
+  readonly icon?: 'plus';
 }) {
   return (
     <PressableScale
@@ -594,9 +624,13 @@ function HeaderAction({
         opacity: disabled ? 0.4 : 1,
       }}
     >
-      <ThemedText variant="bodyMedium" numberOfLines={1}>
-        {label}
-      </ThemedText>
+      {icon === 'plus' ? (
+        <SfIcon name="plus" size={20} color={Colors.primaryBlue} />
+      ) : (
+        <ThemedText variant="bodyMedium" numberOfLines={1}>
+          {label}
+        </ThemedText>
+      )}
     </PressableScale>
   );
 }
@@ -605,18 +639,17 @@ function EmptyContactsContent({
   onImportPhone,
   onAdd,
   activity,
+  refreshControl,
 }: {
   readonly onImportPhone: () => void;
   readonly onAdd: () => void;
   readonly activity: ReactNode;
+  readonly refreshControl: ReactElement<RefreshControlProps> | undefined;
 }) {
   return (
-    <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+    <ScrollView contentContainerStyle={{ flexGrow: 1 }} refreshControl={refreshControl}>
       {activity}
       <EmptyState onImportPhone={onImportPhone} onAdd={onAdd} />
-      <View className="px-4">
-        <VerifiedPagesSection />
-      </View>
     </ScrollView>
   );
 }
@@ -642,9 +675,9 @@ function EmptyState({
       }}
     >
       <View
-        style={{ width: 180, height: 180, alignItems: 'center', justifyContent: 'center' }}
+        style={{ width: 160, height: 160, alignItems: 'center', justifyContent: 'center' }}
       >
-        <PaperStackIllustration size={180} />
+        <PeopleFeatureArt size={160} />
       </View>
       <ThemedText variant="titleLarge" style={{ textAlign: 'center' }}>
         {t('peopleList.emptyTitle')}
@@ -653,7 +686,12 @@ function EmptyState({
         {t('peopleList.emptyBody')}
       </ThemedText>
       <View style={{ alignSelf: 'stretch', gap: 10, paddingTop: 10 }}>
-        <ThemedButton fullWidth label={t('peopleList.add')} onPress={onAdd} />
+        <ThemedButton
+          fullWidth
+          label={t('peopleList.add')}
+          icon="plus"
+          onPress={onAdd}
+        />
         <ThemedButton
           fullWidth
           variant="secondary"
@@ -702,13 +740,24 @@ function EmptySearchState({
 }) {
   const { t } = useTranslation();
   return (
-    <View className="flex-1 items-center justify-center gap-3 px-8 py-10">
-      <SfIcon name="magnifyingglass" size={36} color={Colors.text3} />
-      <ThemedText variant="bodySmall" tone="secondary" style={{ textAlign: 'center' }}>
+    <ThemedSurface
+      variant="outlined"
+      style={{ borderStyle: 'dashed', paddingHorizontal: 16, paddingVertical: 22, gap: 8 }}
+    >
+      <ThemedText variant="titleMedium">
         {t('peopleList.noResults', { query })}
       </ThemedText>
-      <View className="w-full gap-2 pt-3">
-        <ThemedButton fullWidth label={t('peopleList.add')} onPress={onAdd} />
+      <ThemedText variant="bodySmall" tone="secondary">
+        {t('peopleList.noResultsBody')}
+      </ThemedText>
+      <View className="w-full gap-2 pt-2">
+        <ThemedButton
+          fullWidth
+          variant="secondary"
+          label={t('peopleList.add')}
+          icon="plus"
+          onPress={onAdd}
+        />
         <ThemedButton
           fullWidth
           variant="secondary"
@@ -716,26 +765,6 @@ function EmptySearchState({
           onPress={onImportPhone}
         />
       </View>
-    </View>
+    </ThemedSurface>
   );
-}
-
-function filterContacts(
-  contacts: readonly ContactManifestEntry[],
-  query: string,
-): readonly ContactManifestEntry[] {
-  const trimmed = query.trim();
-  // Manifest `receivedAt` is an ISO string; lexicographic compare matches
-  // chronological order so we skip an unnecessary `new Date()` per row.
-  const sorted = [...contacts].sort((a, b) =>
-    a.receivedAt < b.receivedAt ? 1 : a.receivedAt > b.receivedAt ? -1 : 0,
-  );
-  if (trimmed.length === 0) return sorted;
-  const q = trimmed.toLowerCase();
-  return sorted.filter((c) => {
-    const name = c.name.toLowerCase();
-    const company = (c.company ?? '').toLowerCase();
-    const title = (c.title ?? '').toLowerCase();
-    return name.includes(q) || company.includes(q) || title.includes(q);
-  });
 }

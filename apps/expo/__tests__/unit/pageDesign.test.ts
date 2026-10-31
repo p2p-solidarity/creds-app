@@ -3,6 +3,7 @@ import { describe, expect, it } from 'bun:test';
 import {
   PAGE_BLOCK_CATALOG,
   PAGE_TEMPLATE_IDS,
+  MAX_PAGE_SECTIONS,
   addPageBlock,
   createInitialPageDesign,
   dismissLapsedAlert,
@@ -81,10 +82,10 @@ describe('v2 Page block model', () => {
 
   it('keeps local editing within the same section and item bounds as the signed Page', () => {
     let design = createInitialPageDesign();
-    for (let index = 1; index <= 15; index += 1) {
+    for (let index = 1; index <= MAX_PAGE_SECTIONS; index += 1) {
       design = addPageBlock(design, 'text', `text-${index}`);
     }
-    expect(design.blocks).toHaveLength(16);
+    expect(design.blocks).toHaveLength(MAX_PAGE_SECTIONS + 1);
     expect(addPageBlock(design, 'portfolio', 'too-many')).toBe(design);
 
     const withTooManyItems = updatePageBlock(design, 'text-1', {

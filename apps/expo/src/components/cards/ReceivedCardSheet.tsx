@@ -2,7 +2,7 @@
  * ReceivedCardSheet — incoming Card preview and save ceremony.
  *
  * Bottom-sheet preview for an incoming BusinessCard handed to the app
- * by a deep link. Mirrors the Swift screen: SakuraIcon ring header,
+ * by a deep link. Mirrors the Swift screen: creds ring-mark header,
  * card-detail block (avatar + name + title + company + verification +
  * email + phone) and the v2 reciprocal-exchange CTAs.
  *
@@ -10,13 +10,16 @@
  * attached until the Contact is persisted from the app root.
  */
 import { useState, type ReactNode } from 'react';
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
+import { ModalSheet, sheetTopInset } from '@/components/common/ModalSheet';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { SakuraIcon } from '@/components/brand/SakuraIcon';
+import { CredsMark } from '@/components/brand/CredsMark';
 import { PeerAvatar } from '@/components/cards/PeerAvatar';
 import { buildContactFromReceivedCard } from '@/cards/receivedCard';
+import type { NostrPointerClaim } from '@/cards/nostrPointerClaim';
+import { maybeBootstrapCardSubscription } from '@/people/cardSubscriptionBootstrap';
 import { DecorativeBlobs } from '@/components/decor/DecorativeBlobs';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedButton } from '@/components/themed/ThemedButton';
@@ -31,6 +34,8 @@ import type {
   ContactSource,
   VerificationStatus,
 } from '@solidarity/shared';
+import { displayFont } from '@/constants/fonts';
+import { Radius } from '@/constants/radius';
 
 export interface ReceivedCardSheetProps {
   readonly visible: boolean;
@@ -38,6 +43,10 @@ export interface ReceivedCardSheetProps {
   readonly verificationStatus: VerificationStatus;
   readonly source: ContactSource;
   readonly sealedRoute?: string;
+  /** Sender's verified subscription pointer — after a successful save it
+   *  kicks the silent-refresh bootstrap (existing dids only; see
+   *  people/cardSubscriptionBootstrap.ts). */
+  readonly nostrPointer?: NostrPointerClaim;
   readonly onSave: (contact: Contact) => void | Promise<void>;
   readonly onShowMine: () => void;
   readonly onDismiss: () => void;
@@ -49,29 +58,28 @@ export function ReceivedCardSheet({
   verificationStatus,
   source,
   sealedRoute,
+  nostrPointer,
   onSave,
   onShowMine,
   onDismiss,
 }: ReceivedCardSheetProps): ReactNode {
   return (
-    <Modal
+    <ModalSheet
       visible={visible && card !== null}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onDismiss}
-    >
+      onRequestClose={onDismiss}>
       {card ? (
         <ReceivedCardContent
           card={card}
           verificationStatus={verificationStatus}
           source={source}
           sealedRoute={sealedRoute}
+          nostrPointer={nostrPointer}
           onSave={onSave}
           onShowMine={onShowMine}
           onDismiss={onDismiss}
         />
       ) : null}
-    </Modal>
+    </ModalSheet>
   );
 }
 
@@ -80,6 +88,7 @@ function ReceivedCardContent({
   verificationStatus,
   source,
   sealedRoute,
+  nostrPointer,
   onSave,
   onShowMine,
   onDismiss,
@@ -88,6 +97,7 @@ function ReceivedCardContent({
   readonly verificationStatus: VerificationStatus;
   readonly source: ContactSource;
   readonly sealedRoute?: string;
+  readonly nostrPointer?: NostrPointerClaim;
   readonly onSave: (contact: Contact) => void | Promise<void>;
   readonly onShowMine: () => void;
   readonly onDismiss: () => void;
@@ -111,6 +121,10 @@ function ReceivedCardContent({
     try {
       await onSave(contact);
       setIsSaved(true);
+      // §3.3 card-wire bootstrap: silent refresh of an ALREADY-saved
+      // verified page through the sender's attested npub. Fire-and-forget;
+      // never creates a person, never blocks or fails the save.
+      maybeBootstrapCardSubscription(nostrPointer);
       haptic('success');
       pushToast(t('receivedCard.savedToast', { name: card.name }), 'success');
       if (showMine) {
@@ -128,7 +142,7 @@ function ReceivedCardContent({
 
   return (
     <View style={{ flex: 1, backgroundColor: Colors.pageBg }}>
-      <View style={{ paddingTop: insets.top }}>
+      <View style={{ paddingTop: sheetTopInset(insets.top) }}>
         <Toolbar onDone={onDismiss} />
       </View>
 
@@ -161,12 +175,12 @@ function ReceivedCardContent({
                 position: 'absolute',
                 width: 100,
                 height: 100,
-                borderRadius: 50,
+                borderRadius: Radius.pill,
                 borderWidth: 4,
                 borderColor: Colors.accentRose,
               }}
             />
-            <SakuraIcon size={40} color={Colors.accentRose} animating />
+            <CredsMark size={40} />
           </View>
 
           <View style={{ alignItems: 'center', rowGap: 8 }}>
@@ -243,7 +257,7 @@ function CardDetailBlock({
     <View
       style={{
         backgroundColor: Colors.cardSurface,
-        borderRadius: 16,
+        borderRadius: Radius.card,
         borderWidth: 1,
         borderColor: Colors.cardBorder,
         padding: 16,
@@ -261,7 +275,7 @@ function CardDetailBlock({
         >
           {t('receivedCard.details')}
         </Text>
-        <SakuraIcon size={24} color={Colors.accentRose} animating />
+        <CredsMark size={22} />
       </View>
 
       <View style={{ flexDirection: 'row', alignItems: 'center', columnGap: 12 }}>
@@ -342,7 +356,7 @@ function InitialAvatar({ name }: { readonly name: string }): ReactNode {
       style={{
         width: 56,
         height: 56,
-        borderRadius: 28,
+        borderRadius: Radius.pill,
         backgroundColor: Colors.searchBg,
         borderWidth: 1,
         borderColor: Colors.accentRose,
@@ -352,9 +366,8 @@ function InitialAvatar({ name }: { readonly name: string }): ReactNode {
     >
       <Text
         style={{
-          fontFamily: 'Menlo',
+          fontFamily: displayFont('700'),
           fontSize: 22,
-          fontWeight: '700',
           color: Colors.text1,
         }}
       >
