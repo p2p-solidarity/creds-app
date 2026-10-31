@@ -8,7 +8,7 @@ import {
 import { parseSdJwt } from './selectiveDisclosure';
 import type { StoredCredential, TrustLevel } from './store';
 
-export const VC_EXPORT_FILENAME = 'solidarity_vcs.json';
+export const VC_EXPORT_FILENAME = 'creds_vcs.json';
 
 export interface VcExportWrapper {
   readonly version: number;

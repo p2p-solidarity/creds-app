@@ -37,6 +37,8 @@ describe('deleteProductionFiles', () => {
       'file:///documents/images/',
       'file:///documents/wallet/',
       'file:///cache/wallet/',
+      'file:///cache/creds_vcs.json',
+      'file:///cache/creds-contacts.vcf',
       'file:///cache/solidarity_vcs.json',
       'file:///cache/solidarity-contacts.vcf',
       'file:///cache/solidarity-qr.png',

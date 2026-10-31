@@ -1,7 +1,7 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 
-const VCARD_FILENAME = 'solidarity-contacts.vcf';
+const VCARD_FILENAME = 'creds-contacts.vcf';
 
 /** Write vCard text to a short-lived file and present the native share sheet. */
 export async function shareVCard(vCard: string, dialogTitle: string): Promise<void> {

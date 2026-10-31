@@ -15,6 +15,9 @@ const DOCUMENT_ARTIFACTS = [
 
 const CACHE_ARTIFACTS = [
   'wallet/',
+  'creds_vcs.json',
+  'creds-contacts.vcf',
+  // Pre-rebrand names: older installs may still hold these.
   'solidarity_vcs.json',
   'solidarity-contacts.vcf',
   'solidarity-qr.png',
