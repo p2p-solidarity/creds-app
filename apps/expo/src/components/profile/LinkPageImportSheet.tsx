@@ -168,7 +168,8 @@ function LinkPageImportSheetContent({
               placeholderTextColor={Colors.text3}
               autoCapitalize="none"
               autoCorrect={false}
-              keyboardType="url"
+              spellCheck={false}
+              keyboardType="ascii-capable"
               editable={phase.step !== 'loading'}
               className="bg-searchBg text-text1"
               style={{

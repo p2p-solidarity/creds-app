@@ -61,27 +61,44 @@ interface KindConfig {
   readonly textContentType?: RNTextInputProps['textContentType'];
   readonly mono?: boolean;
   readonly secret?: boolean;
+  /** Technical text: no red squiggles, no autocorrect on commit ("creds" → "cress"). */
+  readonly technical?: boolean;
 }
 
 
 /** creds.id `.field-input`: 16pt side padding, `--radius-field`. */
 const FIELD_PAD_X = 16;
 const FIELD_RADIUS = Radius.field;
+// Names and URLs are ASCII: `ascii-capable` keeps a Zhuyin or kana software
+// keyboard from composing them into bopomofo (the iPad default for a zh-Hant
+// user). Not `url`: on iPad that type still opens the user's Zhuyin layout
+// (seen on the iPad Pro 13" simulator, 2026-10-31). A hardware keyboard
+// ignores keyboardType altogether.
 const KIND_CONFIG: Readonly<Record<TextInputKind, KindConfig>> = {
   text: {},
   url: {
+    technical: true,
     mono: true,
-    keyboardType: 'url',
+    keyboardType: 'ascii-capable',
     autoCapitalize: 'none',
     autoCorrect: false,
     autoComplete: 'off',
     textContentType: 'URL',
   },
-  handle: { autoCapitalize: 'none', autoCorrect: false, autoComplete: 'off', mono: true },
+  handle: {
+    technical: true,
+    keyboardType: 'ascii-capable',
+    autoCapitalize: 'none',
+    autoCorrect: false,
+    autoComplete: 'off',
+    mono: true,
+  },
   // `oneTimeCode`, NEVER `password` — a raw crypto key (nsec/seed) must not
   // be offered to the iOS password manager (that would cache the very thing
   // that must stay uncached). `oneTimeCode` still disables autofill/correct.
   secret: {
+    technical: true,
+    keyboardType: 'ascii-capable',
     autoCapitalize: 'none',
     autoCorrect: false,
     autoComplete: 'off',
@@ -89,7 +106,14 @@ const KIND_CONFIG: Readonly<Record<TextInputKind, KindConfig>> = {
     mono: true,
     secret: true,
   },
-  did: { autoCapitalize: 'none', autoCorrect: false, autoComplete: 'off', mono: true },
+  did: {
+    technical: true,
+    keyboardType: 'ascii-capable',
+    autoCapitalize: 'none',
+    autoCorrect: false,
+    autoComplete: 'off',
+    mono: true,
+  },
 };
 
 export interface ThemedTextInputProps {
@@ -290,6 +314,7 @@ export function ThemedTextInput({
           keyboardType={keyboardType ?? cfg.keyboardType}
           autoCapitalize={autoCapitalize ?? cfg.autoCapitalize}
           autoCorrect={autoCorrect ?? cfg.autoCorrect}
+          spellCheck={cfg.technical === true ? false : undefined}
           maxLength={maxLength}
           autoComplete={cfg.autoComplete}
           textContentType={cfg.textContentType}
