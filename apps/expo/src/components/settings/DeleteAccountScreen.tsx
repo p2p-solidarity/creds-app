@@ -106,7 +106,7 @@ export function DeleteAccountScreen() {
         <View className="gap-6">
           <SettingsBlockSection index={0} title={t('deleteAccount.section.deleted')}>
             <View style={{ gap: 6, paddingHorizontal: 12, paddingVertical: 10 }}>
-              {(['page', 'name', 'vault', 'pro', 'device'] as const).map((key) => (
+              {(['page', 'account', 'device'] as const).map((key) => (
                 <ThemedText key={key} variant="bodySmall">{`• ${t(`deleteAccount.deleted.${key}`)}`}</ThemedText>
               ))}
             </View>
@@ -114,7 +114,7 @@ export function DeleteAccountScreen() {
 
           <SettingsBlockSection index={1} title={t('deleteAccount.section.kept')}>
             <View style={{ gap: 6, paddingHorizontal: 12, paddingVertical: 10 }}>
-              {(['name', 'relays', 'others', 'backups'] as const).map((key) => (
+              {(['name', 'copies', 'backups'] as const).map((key) => (
                 <ThemedText key={key} variant="bodySmall" tone="secondary">{`• ${t(`deleteAccount.kept.${key}`)}`}</ThemedText>
               ))}
             </View>
