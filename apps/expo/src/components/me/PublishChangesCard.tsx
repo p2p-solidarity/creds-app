@@ -22,8 +22,10 @@ import { iconTileStyle } from './pageRowStyles';
 export type PublishCardState =
   | { readonly kind: 'pending' }
   | { readonly kind: 'publishing' }
-  | { readonly kind: 'done'; readonly handle: string | null }
-  | { readonly kind: 'error' };
+  | { readonly kind: 'done'; readonly handle: string | null; readonly partial: boolean }
+  /** `save`: signing the edited Page failed. `relay`: it is signed on this
+   *  phone but no relay took it, so visitors still see the old Page. */
+  | { readonly kind: 'error'; readonly reason: 'save' | 'relay' };
 
 export function PublishChangesCard({
   state,
@@ -70,13 +72,27 @@ export function PublishChangesCard({
       </View>
 
       {done ? (
-        <StatusBox tone="ok" text={state.handle === null ? t('pageDesign.publishSuccess') : t('pageDesign.publishedAt', { handle: state.handle })} />
+        <StatusBox
+          tone={state.partial ? 'warn' : 'ok'}
+          text={
+            state.partial
+              ? t('pageDesign.publishedPartially')
+              : state.handle === null
+                ? t('pageDesign.publishSuccess')
+                : t('pageDesign.publishedAt', { handle: state.handle })
+          }
+        />
       ) : (
         <>
           <ThemedText variant="bodySmall" tone="secondary">
             {t('pageDesign.publishHint')}
           </ThemedText>
-          {state.kind === 'error' ? <StatusBox tone="warn" text={t('pageDesign.publishError')} /> : null}
+          {state.kind === 'error' ? (
+            <StatusBox
+              tone="warn"
+              text={t(state.reason === 'save' ? 'pageDesign.publishError' : 'pageDesign.publishRelayError')}
+            />
+          ) : null}
           <ThemedButton
             label={t(state.kind === 'error' ? 'mePage.retry' : 'pageDesign.publishButton')}
             icon="square.and.arrow.up"

@@ -838,6 +838,8 @@
   "pageDesign.publishHint": "發布後，QR Code 與分享連結會使用這份已簽名的頁面。",
   "pageDesign.publishSuccess": "已發布頁面變更",
   "pageDesign.publishError": "無法發布頁面變更。請檢查區塊內容後再試一次。",
+  "pageDesign.publishRelayError": "頁面已存在這台裝置，但沒有中繼站收到，訪客看到的還是舊版本。請檢查網路後再試一次。",
+  "pageDesign.publishedPartially": "只有部分中繼站收到新版本，有些訪客可能要稍後才看得到。",
   "meShare.title": "分享你的頁",
   "meShare.close": "關閉分享",
   "meShare.pageUrl": "你的頁面連結",

@@ -838,6 +838,8 @@
   "pageDesign.publishHint": "Publish a signed Page for your QR code and share link.",
   "pageDesign.publishSuccess": "Page changes published",
   "pageDesign.publishError": "Couldn't publish Page changes. Check the section details and try again.",
+  "pageDesign.publishRelayError": "Saved on this phone, but no relay took it, so visitors still see the old version. Check your connection and try again.",
+  "pageDesign.publishedPartially": "Only some relays took the new version, so some visitors may see it a little later.",
   "meShare.title": "Share your page",
   "meShare.close": "Close sharing",
   "meShare.pageUrl": "Your page URL",

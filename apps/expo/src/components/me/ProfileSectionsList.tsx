@@ -36,9 +36,17 @@ import { useProGate } from '@/pro/useProGate';
 import { CardSizePicker } from './CardSizePicker';
 import { PHONE_SCREEN_RADIUS, PageBlockPreview, PageLivePreview, type PreviewBlockEditing } from './PageLivePreview';
 import { PageCollapsibleHeader } from './PageCollapsibleHeader';
-import { PublishChangesCard } from './PublishChangesCard';
+import { PublishChangesCard, type PublishCardState } from './PublishChangesCard';
+import {
+  isBiometricCancellation,
+  isNostrPublishOutcomePartiallyAccepted,
+  isNostrPublishOutcomeSuccessful,
+  publishWithNostrAutoSetup,
+} from '@/nostr/connectWizard';
+import { DEFAULT_RELAYS } from '@/nostr/publish';
+import { hasNostrKey, provisionFromRootMnemonic } from '@/nostr/userKey';
 import { useProfileStore } from '@/profile/store';
-import { uuid, type ProfileRecord } from '@solidarity/shared';
+import { uuid, type ProfileRecord, type PublicPageDesign } from '@solidarity/shared';
 
 export interface ProfileSectionsListProps {
   /** Opens the add sheet scoped to sections (the header's ＋). */
@@ -64,18 +72,25 @@ export function ProfileSectionsList({
   const moveBlock = usePageDesignStore((state) => state.moveBlock);
   const { locked } = useProGate();
   const record = useProfileStore((state) => state.record);
-  const savePageDesign = useProfileStore((state) => state.savePageDesign);
+  const published = useProfileStore((state) => state.published);
+  const nostrPublishedJws = useProfileStore((state) => state.nostrPublishedJws);
   const [editing, setEditing] = useState<PageBlock | null>(null);
   const [publishing, setPublishing] = useState(false);
-  // What the last publish actually did; `done` stays until dismissed or the
-  // next edit, `error` until the next try.
-  const [publishResult, setPublishResult] = useState<'idle' | 'done' | 'error'>('idle');
+  // What the last publish actually did. `done` / `partial` stay until
+  // dismissed or the next edit; the others until the next try. Everything
+  // after a successful local sign (`unpublished`, `relayError`) keeps the
+  // card up even though the signed record already matches the editor.
+  const [publishResult, setPublishResult] = useState<PublishResult>('idle');
   const [open, setOpen] = useState(false);
   const publishedDesign = record?.page ?? toPublicPageDesign(createInitialPageDesign());
   const pageHasChanges = status === 'ready' && record !== null && !publicPageDesignEquals(
     toPublicPageDesign(design),
     publishedDesign,
   );
+  // Signed here but never confirmed on a relay (an earlier local-only save,
+  // or a publish that failed): visitors still get the older Page.
+  const pageNotLive = record !== null && published !== null && nostrPublishedJws !== published.jws;
+  const needsPublish = pageHasChanges || pageNotLive;
   const movableBlocks = blocks.filter((block) => block.type !== 'links');
 
   // A section added from ＋ 新增 unfolds this group, so its placeholder shows
@@ -111,22 +126,20 @@ export function ProfileSectionsList({
     },
   };
 
+  // Sign locally (only when the design moved), then publish to Nostr — the
+  // card says "live" only once relays have actually taken the new record.
   const publishPageChanges = (): void => {
     if (publishing || !record || status !== 'ready') return;
     setPublishing(true);
-    void savePageDesign(toPublicPageDesign(design))
+    void signAndPublishPage(pageHasChanges ? toPublicPageDesign(design) : null)
       .then((result) => {
-        if (result.ok) {
-          haptic('success');
-          setPublishResult('done');
-          return;
-        }
-        haptic('error');
-        setPublishResult('error');
+        if (result === 'done' || result === 'partial') haptic('success');
+        else if (result !== 'unpublished') haptic('error');
+        setPublishResult(result);
       })
       .catch(() => {
         haptic('error');
-        setPublishResult('error');
+        setPublishResult('relayError');
       })
       .finally(() => { setPublishing(false); });
   };
@@ -187,15 +200,9 @@ export function ProfileSectionsList({
       )}
 
       {/* Outside the fold: unpublished changes always show, folded or not. */}
-      {status === 'ready' && (pageHasChanges || publishResult === 'done') ? (
+      {status === 'ready' && (needsPublish || publishResult !== 'idle') ? (
         <PublishChangesCard
-          state={
-            publishing
-              ? { kind: 'publishing' }
-              : pageHasChanges
-                ? publishResult === 'error' ? { kind: 'error' } : { kind: 'pending' }
-                : { kind: 'done', handle: previewHandle }
-          }
+          state={publishCardState(publishing, pageHasChanges, needsPublish, publishResult, previewHandle)}
           onPublish={publishPageChanges}
           onDismiss={() => { setPublishResult('idle'); }}
         />
@@ -204,6 +211,38 @@ export function ProfileSectionsList({
       <PageBlockEditorSheet block={editing} onClose={() => { setEditing(null); }} />
     </View>
   );
+}
+
+type PublishResult = 'idle' | 'done' | 'partial' | 'unpublished' | 'saveError' | 'relayError';
+
+async function signAndPublishPage(page: PublicPageDesign | null): Promise<PublishResult> {
+  const { savePageDesign, publishToNostr } = useProfileStore.getState();
+  if (page !== null) {
+    const saved = await savePageDesign(page);
+    if (!saved.ok) return isBiometricCancellation(saved.error) ? 'idle' : 'saveError';
+  }
+  const published = await publishWithNostrAutoSetup({
+    hasKey: hasNostrKey,
+    provision: provisionFromRootMnemonic,
+    publish: async () => await publishToNostr(DEFAULT_RELAYS),
+  });
+  if (!published.ok) return isBiometricCancellation(published.error) ? 'unpublished' : 'relayError';
+  if (isNostrPublishOutcomeSuccessful(published.value)) return 'done';
+  return isNostrPublishOutcomePartiallyAccepted(published.value) ? 'partial' : 'relayError';
+}
+
+function publishCardState(
+  publishing: boolean,
+  pageHasChanges: boolean,
+  needsPublish: boolean,
+  result: PublishResult,
+  handle: string | null,
+): PublishCardState {
+  if (publishing) return { kind: 'publishing' };
+  if (result === 'saveError' && pageHasChanges) return { kind: 'error', reason: 'save' };
+  if (result === 'relayError') return { kind: 'error', reason: 'relay' };
+  if (needsPublish || result === 'unpublished' || result === 'idle') return { kind: 'pending' };
+  return { kind: 'done', handle, partial: result === 'partial' };
 }
 
 function openProSettings(): void {
