@@ -25,6 +25,7 @@ import {
   ContactSectionHeader,
   flattenContactSections,
   groupContactsByInitial,
+  snapshotDisplayName,
 } from '@/components/people/ContactsList';
 import { DeleteContactsSheet } from '@/components/people/DeleteContactsSheet';
 import { ManualContactEntrySheet } from '@/components/people/ManualContactEntrySheet';
@@ -43,7 +44,11 @@ import { confirmDialog } from '@/feedback/confirmDialog';
 import { haptic } from '@/feedback/haptics';
 import { fadeUpIn } from '@/feedback/motion';
 import { pushToast } from '@/feedback/toast';
-import { useProfileSnapshotStore, useSortedProfileSnapshots } from '@/people/profileSnapshots';
+import {
+  useProfileSnapshotStore,
+  useSortedProfileSnapshots,
+  type ProfileSnapshot,
+} from '@/people/profileSnapshots';
 import { usePagesPullRefresh } from '@/people/usePagesPullRefresh';
 import { usePeopleScreen } from '@/people/usePeopleScreen';
 import { usePreferences } from '@/settings/preferences';
@@ -57,6 +62,7 @@ export default function PeopleTab() {
   const { t } = useTranslation();
   const { contacts, loading, error, refresh, retry } = usePeopleScreen();
   const removeContact = useContactStore((s) => s.remove);
+  const removePage = useProfileSnapshotStore((s) => s.remove);
   const loadDetail = useContactStore((s) => s.loadDetail);
   const upsertDeclared = useProfileSnapshotStore((s) => s.upsertDeclared);
   const savedPages = useSortedProfileSnapshots();
@@ -77,17 +83,16 @@ export default function PeopleTab() {
   const [editMode, setEditMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(() => new Set());
 
-  const contactSections = useMemo(() => groupContactsByInitial(contacts, ''), [contacts]);
-  const orderedContacts = useMemo(
-    () => contactSections.flatMap((section) =>
-      section.entries.flatMap((entry) => (entry.kind === 'contact' ? [entry.contact] : []))),
-    [contactSections],
+  // Every selectable row (contacts and saved Pages), keyed like the list, so
+  // select / select-all / delete treat a saved Page as a person too.
+  const selectableItems = useMemo(
+    () => flattenContactSections(groupContactsByInitial(contacts, '', savedPages), false)
+      .flatMap((item) => (item.kind === 'header' ? [] : [item])),
+    [contacts, savedPages],
   );
   const filteredSections = useMemo(
-    // Selecting acts on contacts only (delete / export vCard), so saved Pages
-    // leave the list while selecting.
-    () => groupContactsByInitial(contacts, searchQuery, editMode ? [] : savedPages),
-    [contacts, searchQuery, editMode, savedPages],
+    () => groupContactsByInitial(contacts, searchQuery, savedPages),
+    [contacts, searchQuery, savedPages],
   );
   const filteredCount = useMemo(
     () => filteredSections.reduce((count, section) => count + section.entries.length, 0),
@@ -98,14 +103,20 @@ export default function PeopleTab() {
     () => flattenContactSections(filteredSections, !searching),
     [filteredSections, searching],
   );
-  const selectedContacts = useMemo(
-    () => orderedContacts.filter((contact) => selectedIds.has(contact.id)),
-    [orderedContacts, selectedIds],
+  const selectedItems = useMemo(
+    () => selectableItems.filter((item) => selectedIds.has(item.key)),
+    [selectableItems, selectedIds],
   );
+  const selectedContacts = useMemo(
+    () => selectedItems.flatMap((item) => (item.kind === 'contact' ? [item.contact] : [])),
+    [selectedItems],
+  );
+  const allSelected =
+    selectableItems.length > 0 && selectableItems.every((item) => selectedIds.has(item.key));
 
   useEffect(() => {
-    if (edit === '1' && orderedContacts.length > 0) setEditMode(true);
-  }, [edit, orderedContacts.length]);
+    if (edit === '1' && selectableItems.length > 0) setEditMode(true);
+  }, [edit, selectableItems.length]);
 
   const exitEditMode = () => {
     setEditMode(false);
@@ -132,14 +143,32 @@ export default function PeopleTab() {
     });
   };
 
-  const onLongPressContact = (c: ContactManifestEntry) => {
+  const onLongPressItem = (key: string) => {
     // The row owns the long-press haptic; this handler owns selection state.
     if (!editMode) {
       setEditMode(true);
-      setSelectedIds(new Set([c.id]));
+      setSelectedIds(new Set([key]));
       return;
     }
-    toggleSelected(c.id);
+    toggleSelected(key);
+  };
+
+  const onDeletePage = (snapshot: ProfileSnapshot) => {
+    void (async () => {
+      const ok = await confirmDialog({
+        title: t('peopleList.deleteNameTitle', { name: snapshotDisplayName(snapshot) }),
+        message: t('peopleList.deleteOnePageMessage'),
+        confirmLabel: t('peopleList.delete'),
+        destructive: true,
+      });
+      if (!ok) return;
+      if (removePage(snapshot)) {
+        haptic('success');
+      } else {
+        haptic('error');
+        pushToast(t('peopleList.deleteFailed'), 'error');
+      }
+    })();
   };
 
   const onDeleteContact = (c: ContactManifestEntry) => {
@@ -163,24 +192,25 @@ export default function PeopleTab() {
   };
 
   const onBatchDelete = (): void => {
-    if (selectedContacts.length === 0) return;
+    if (selectedItems.length === 0) return;
     setDeleteSheetOpen(true);
   };
 
   const confirmBatchDelete = (): void => {
-    const ids = selectedContacts.map((contact) => contact.id);
-    if (deleting || ids.length === 0) return;
+    const items = selectedItems;
+    if (deleting || items.length === 0) return;
     setDeleting(true);
     void (async () => {
       try {
-        for (const id of ids) {
-          await removeContact(id);
+        for (const item of items) {
+          if (item.kind === 'contact') await removeContact(item.contact.id);
+          else if (!removePage(item.snapshot)) throw new Error('page delete refused');
         }
         haptic('success');
         pushToast(
-          ids.length === 1
+          items.length === 1
             ? t('peopleList.contactDeleted')
-            : t('peopleList.deletedCount', { count: ids.length }),
+            : t('peopleList.deletedCount', { count: items.length }),
           'success',
           2000,
         );
@@ -196,10 +226,9 @@ export default function PeopleTab() {
   };
 
   const onExportVCard = (): void => {
-    if (exporting || selectedIds.size === 0) return;
-    const ids = orderedContacts
-      .filter((contact) => selectedIds.has(contact.id))
-      .map((contact) => contact.id);
+    // vCard export covers contacts only; a saved Page has no vCard fields.
+    const ids = selectedContacts.map((contact) => contact.id);
+    if (exporting || ids.length === 0) return;
     setExporting(true);
     void (async () => {
       try {
@@ -223,22 +252,13 @@ export default function PeopleTab() {
     <View className="flex-1">
       <ContactsHeader
         editMode={editMode}
-        hasContacts={orderedContacts.length > 0}
-        allSelected={
-          orderedContacts.length > 0 &&
-          orderedContacts.every((contact) => selectedIds.has(contact.id))
-        }
+        hasContacts={selectableItems.length > 0}
+        allSelected={allSelected}
         onAdd={() => { setAddSheetOpen(true); }}
         onEnterEditMode={() => { setEditMode(true); }}
         onExitEditMode={exitEditMode}
         onToggleSelectAll={() => {
-          setSelectedIds((prev) => {
-            const allSelected =
-              orderedContacts.length > 0 &&
-              orderedContacts.every((contact) => prev.has(contact.id));
-            if (allSelected) return new Set();
-            return new Set(orderedContacts.map((contact) => contact.id));
-          });
+          setSelectedIds(allSelected ? new Set() : new Set(selectableItems.map((item) => item.key)));
         }}
       />
 
@@ -273,7 +293,10 @@ export default function PeopleTab() {
 
       <DeleteContactsSheet
         visible={deleteSheetOpen}
-        contacts={selectedContacts}
+        names={selectedItems.map((item) =>
+          item.kind === 'contact'
+            ? { key: item.key, name: item.contact.name }
+            : { key: item.key, name: snapshotDisplayName(item.snapshot) })}
         deleting={deleting}
         onConfirm={confirmBatchDelete}
         onClose={() => { setDeleteSheetOpen(false); }}
@@ -329,16 +352,31 @@ export default function PeopleTab() {
                     {item.kind === 'header' ? (
                       <ContactSectionHeader title={item.title} />
                     ) : item.kind === 'page' ? (
-                      <SavedPageRow snapshot={item.snapshot} />
+                      <SwipeToDelete
+                        enabled={!editMode}
+                        onDelete={() => { onDeletePage(item.snapshot); }}>
+                        <SavedPageRow
+                          snapshot={item.snapshot}
+                          selection={{
+                            selectionMode: editMode,
+                            selected: selectedIds.has(item.key),
+                            onToggle: () => { toggleSelected(item.key); },
+                            onLongPress: () => { onLongPressItem(item.key); },
+                          }}
+                        />
+                      </SwipeToDelete>
                     ) : (
-                      <PeopleRow
-                        contact={item.contact}
-                        editMode={editMode}
-                        selected={selectedIds.has(item.contact.id)}
-                        onPress={() => { onSelectContact(item.contact); }}
-                        onLongPress={() => { onLongPressContact(item.contact); }}
-                        onSwipeDelete={() => { onDeleteContact(item.contact); }}
-                      />
+                      <SwipeToDelete
+                        enabled={!editMode}
+                        onDelete={() => { onDeleteContact(item.contact); }}>
+                        <TrustGraphContactRow
+                          contact={item.contact}
+                          selectionMode={editMode}
+                          selected={selectedIds.has(item.key)}
+                          onPress={() => { onSelectContact(item.contact); }}
+                          onLongPress={() => { onLongPressItem(item.key); }}
+                        />
+                      </SwipeToDelete>
                     )}
                   </Animated.View>
                 )}
@@ -347,7 +385,8 @@ export default function PeopleTab() {
           )}
           {editMode ? (
             <BatchActionBar
-              count={selectedIds.size}
+              count={selectedItems.length}
+              contactCount={selectedContacts.length}
               onDelete={onBatchDelete}
               onExport={onExportVCard}
               exporting={exporting}
@@ -370,38 +409,21 @@ export default function PeopleTab() {
 }
 
 /**
- * PeopleRow — adds swipe-to-delete around the v3 selection-aware row.
- *
- * Swipe is disabled while edit mode is active so the gesture doesn't fight
- * the multi-select tap target. Long-press still enters edit mode.
+ * SwipeToDelete — swipe-to-delete around any People row (contact or saved
+ * Page). Disabled while selecting so the gesture doesn't fight the
+ * multi-select tap target; long-press still enters selection.
  */
-function PeopleRow({
-  contact,
-  editMode,
-  selected,
-  onPress,
-  onLongPress,
-  onSwipeDelete,
+function SwipeToDelete({
+  enabled,
+  onDelete,
+  children,
 }: {
-  readonly contact: ContactManifestEntry;
-  readonly editMode: boolean;
-  readonly selected: boolean;
-  readonly onPress: () => void;
-  readonly onLongPress: () => void;
-  readonly onSwipeDelete: () => void;
+  readonly enabled: boolean;
+  readonly onDelete: () => void;
+  readonly children: ReactNode;
 }) {
   const c = useThemeColors();
-  const inner = (
-    <TrustGraphContactRow
-      contact={contact}
-      selectionMode={editMode}
-      selected={selected}
-      onPress={onPress}
-      onLongPress={onLongPress}
-    />
-  );
-
-  if (editMode) return inner;
+  if (!enabled) return children;
 
   return (
     <ReanimatedSwipeable
@@ -412,13 +434,13 @@ function PeopleRow({
       rightThreshold={48}
       overshootRight={false}
       renderRightActions={(progress) => (
-        <SwipeDeleteAction progress={progress} onPress={onSwipeDelete} />
+        <SwipeDeleteAction progress={progress} onPress={onDelete} />
       )}
       onSwipeableOpen={(direction) => {
         if (direction === SwipeDirection.RIGHT) haptic('warning');
       }}
     >
-      {inner}
+      {children}
     </ReanimatedSwipeable>
   );
 }
@@ -474,11 +496,13 @@ function SwipeDeleteAction({
 
 function BatchActionBar({
   count,
+  contactCount,
   onDelete,
   onExport,
   exporting,
 }: {
   readonly count: number;
+  readonly contactCount: number;
   readonly onDelete: () => void;
   readonly onExport: () => void;
   readonly exporting: boolean;
@@ -517,7 +541,7 @@ function BatchActionBar({
           size="md"
           label={t('peopleList.exportVCard')}
           loading={exporting}
-          disabled={count === 0}
+          disabled={contactCount === 0}
           onPress={onExport}
         />
       </ThemedSurface>

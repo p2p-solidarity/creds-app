@@ -43,26 +43,7 @@ export function ContactRow({
       accessibilityState={selectionMode ? { selected } : undefined}
       className="flex-row items-center gap-3 py-3"
     >
-      {selectionMode ? (
-        <View style={{ width: 22 }}>
-          <View
-            style={{
-              width: 22,
-              height: 22,
-              borderRadius: Radius.pill,
-              borderWidth: 1.5,
-              borderColor: selected ? Colors.primaryBlue : Colors.text3,
-              backgroundColor: selected ? Colors.primaryBlue : 'transparent',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            {selected ? (
-              <SfIcon name="checkmark" size={12} weight="bold" color={Colors.invertedButtonText} />
-            ) : null}
-          </View>
-        </View>
-      ) : null}
+      {selectionMode ? <SelectionCheck selected={selected} /> : null}
 
       <PageAvatar avatar={null} displayName={contact.name} size={38} />
       <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
@@ -80,6 +61,30 @@ export function ContactRow({
         <SfIcon name="chevron.right" size={12} weight="semibold" color={Colors.text3} />
       ) : null}
     </PressableScale>
+  );
+}
+
+/** The round multi-select check shared by contact and saved-Page rows. */
+export function SelectionCheck({ selected }: { readonly selected: boolean }): ReactNode {
+  return (
+    <View style={{ width: 22 }}>
+      <View
+        style={{
+          width: 22,
+          height: 22,
+          borderRadius: Radius.pill,
+          borderWidth: 1.5,
+          borderColor: selected ? Colors.primaryBlue : Colors.text3,
+          backgroundColor: selected ? Colors.primaryBlue : 'transparent',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {selected ? (
+          <SfIcon name="checkmark" size={12} weight="bold" color={Colors.invertedButtonText} />
+        ) : null}
+      </View>
+    </View>
   );
 }
 

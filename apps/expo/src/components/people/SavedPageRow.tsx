@@ -13,10 +13,12 @@ import { View } from 'react-native';
 
 import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
+import { SelectionCheck } from '@/components/people/ContactRow';
 import { snapshotDisplayName } from '@/components/people/ContactsList';
 import { PageAvatar } from '@/components/people/PageAvatar';
 import { ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
+import { haptic } from '@/feedback/haptics';
 import { useTranslation } from '@/i18n';
 import type {
   DeclaredSnapshot,
@@ -25,31 +27,58 @@ import type {
 } from '@/people/profileSnapshots';
 import { verifiedAtRelative } from '@/people/relativeVerifiedAt';
 
+/** Multi-select state from the People list; absent outside the list. */
+export interface PageRowSelection {
+  readonly selectionMode: boolean;
+  readonly selected: boolean;
+  readonly onToggle: () => void;
+  readonly onLongPress: () => void;
+}
+
 export function SavedPageRow({
   snapshot,
+  selection,
 }: {
   readonly snapshot: ProfileSnapshot;
+  readonly selection?: PageRowSelection;
 }): ReactNode {
   return snapshot.kind === 'verified' ? (
-    <VerifiedPageRow snapshot={snapshot} />
+    <VerifiedPageRow snapshot={snapshot} selection={selection} />
   ) : (
-    <DeclaredPageRow snapshot={snapshot} />
+    <DeclaredPageRow snapshot={snapshot} selection={selection} />
   );
+}
+
+/** Press handlers for a row: a tap toggles while selecting, else opens. */
+function rowPressProps(selection: PageRowSelection | undefined, open: () => void) {
+  const selecting = selection?.selectionMode === true;
+  return {
+    onPress: selecting ? selection.onToggle : open,
+    onLongPress: selection
+      ? () => {
+          haptic('heavy');
+          selection.onLongPress();
+        }
+      : undefined,
+    accessibilityState: selecting ? { selected: selection.selected } : undefined,
+  };
 }
 
 function VerifiedPageRow({
   snapshot,
+  selection,
 }: {
   readonly snapshot: VerifiedSnapshot;
+  readonly selection: PageRowSelection | undefined;
 }): ReactNode {
+  const selecting = selection?.selectionMode === true;
   const { t } = useTranslation();
 
   return (
     <PressableScale
-      haptic="tap"
-      onPress={() => {
+      {...rowPressProps(selection, () => {
         router.push({ pathname: '/people/profile/[did]', params: { did: snapshot.did } });
-      }}
+      })}
       accessibilityRole="button"
       accessibilityLabel={snapshot.record.displayName}
       className="flex-row items-center gap-3 py-3"
@@ -58,6 +87,7 @@ function VerifiedPageRow({
         borderBottomColor: Colors.divider,
       }}
     >
+      {selecting ? <SelectionCheck selected={selection.selected} /> : null}
       <PageAvatar avatar={snapshot.record.avatar} displayName={snapshot.record.displayName} size={38} />
       <View className="flex-1" style={{ gap: 2 }}>
         <ThemedText variant="bodyLarge" numberOfLines={1}>
@@ -70,25 +100,29 @@ function VerifiedPageRow({
           </ThemedText>
         </View>
       </View>
-      <SfIcon name="chevron.right" size={12} weight="semibold" color={Colors.text3} />
+      {!selecting ? (
+        <SfIcon name="chevron.right" size={12} weight="semibold" color={Colors.text3} />
+      ) : null}
     </PressableScale>
   );
 }
 
 function DeclaredPageRow({
   snapshot,
+  selection,
 }: {
   readonly snapshot: DeclaredSnapshot;
+  readonly selection: PageRowSelection | undefined;
 }): ReactNode {
+  const selecting = selection?.selectionMode === true;
   const { t } = useTranslation();
   const displayTitle = snapshotDisplayName(snapshot);
 
   return (
     <PressableScale
-      haptic="tap"
-      onPress={() => {
+      {...rowPressProps(selection, () => {
         router.push({ pathname: '/people/declared/[id]', params: { id: snapshot.id } });
-      }}
+      })}
       accessibilityRole="button"
       accessibilityLabel={displayTitle}
       className="flex-row items-center gap-3 py-3"
@@ -97,6 +131,7 @@ function DeclaredPageRow({
         borderBottomColor: Colors.divider,
       }}
     >
+      {selecting ? <SelectionCheck selected={selection.selected} /> : null}
       <View
         className="items-center justify-center overflow-hidden rounded-full bg-searchBg"
         style={{ width: 38, height: 38 }}
@@ -122,7 +157,9 @@ function DeclaredPageRow({
           {t('peopleList.declaredBadge')}
         </ThemedText>
       </View>
-      <SfIcon name="chevron.right" size={12} weight="semibold" color={Colors.text3} />
+      {!selecting ? (
+        <SfIcon name="chevron.right" size={12} weight="semibold" color={Colors.text3} />
+      ) : null}
     </PressableScale>
   );
 }

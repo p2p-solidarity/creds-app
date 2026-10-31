@@ -358,6 +358,7 @@
   "peopleList.deletedCount": "Deleted {{count}} contacts",
   "peopleList.deleteNameTitle": "Delete {{name}}?",
   "peopleList.deleteOneMessage": "This contact will be permanently removed.",
+  "peopleList.deleteOnePageMessage": "This saved Page will be removed from this device.",
   "peopleList.deselectAll": "Deselect All",
   "peopleList.done": "Done",
   "peopleList.emptyBody": "Cards you exchange land here and stay up to date.",

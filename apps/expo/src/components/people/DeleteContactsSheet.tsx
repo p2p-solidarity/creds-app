@@ -4,13 +4,13 @@ import { ModalSheet, sheetTopInset } from '@/components/common/ModalSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
-import type { ContactManifestEntry } from '@/contacts/repository';
 import { Colors } from '@/constants/Colors';
 import { useTranslation } from '@/i18n';
 
 export interface DeleteContactsSheetProps {
   readonly visible: boolean;
-  readonly contacts: readonly ContactManifestEntry[];
+  /** The selected people (contacts and saved Pages) by list key and name. */
+  readonly names: readonly { readonly key: string; readonly name: string }[];
   readonly deleting: boolean;
   readonly onConfirm: () => void;
   readonly onClose: () => void;
@@ -18,7 +18,7 @@ export interface DeleteContactsSheetProps {
 
 export function DeleteContactsSheet({
   visible,
-  contacts,
+  names,
   deleting,
   onConfirm,
   onClose,
@@ -48,7 +48,7 @@ export function DeleteContactsSheet({
           }}
         >
           <ThemedText variant="titleLarge">
-            {t('peopleList.deleteCountTitle', { count: contacts.length })}
+            {t('peopleList.deleteCountTitle', { count: names.length })}
           </ThemedText>
 
           <ThemedSurface variant="inset" padded>
@@ -63,13 +63,13 @@ export function DeleteContactsSheet({
           </ThemedSurface>
 
           <ThemedSurface variant="outlined">
-            {contacts.map((contact, index) => (
+            {names.map((contact, index) => (
               <View
-                key={contact.id}
+                key={contact.key}
                 className="flex-row items-center px-4"
                 style={{
                   minHeight: 52,
-                  borderBottomWidth: index === contacts.length - 1 ? 0 : 0.5,
+                  borderBottomWidth: index === names.length - 1 ? 0 : 0.5,
                   borderBottomColor: Colors.divider,
                   gap: 12,
                 }}
@@ -103,7 +103,7 @@ export function DeleteContactsSheet({
             variant="destructive"
             label={t('peopleList.delete')}
             loading={deleting}
-            disabled={contacts.length === 0}
+            disabled={names.length === 0}
             accessibilityHint={t('peopleList.deleteNoUndo')}
             onPress={onConfirm}
           />

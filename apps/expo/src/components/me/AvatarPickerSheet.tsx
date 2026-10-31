@@ -195,7 +195,7 @@ function AvatarActionRow({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
-      className="min-h-14 flex-row items-center gap-3 border border-divider bg-cardBg px-4 py-3">
+      className="min-h-14 flex-row items-center gap-3 rounded-card border border-divider bg-cardBg px-4 py-3">
       <View className="w-7 items-center">
         <SfIcon name={icon} size={18} color={color} />
       </View>

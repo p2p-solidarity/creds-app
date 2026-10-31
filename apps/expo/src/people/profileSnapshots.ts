@@ -522,6 +522,9 @@ interface ProfileSnapshotState {
     title: string | null,
     links: readonly ProfileLink[]
   ) => DeclaredSnapshot;
+  /** Forget a saved Page on this device: every scope of a verified did, or
+   *  the one declared entry. Returns false when the write was refused. */
+  readonly remove: (snapshot: ProfileSnapshot) => boolean;
   /** Drop every live snapshot reference after the local store is wiped. */
   readonly resetForLocalWipe: () => void;
 }
@@ -592,6 +595,19 @@ export const useProfileSnapshotStore = create<ProfileSnapshotState>((set, get) =
     next.set(id, snapshot);
     if (writePersisted(next, writeEpoch)) set({ snapshots: next });
     return snapshot;
+  },
+
+  remove: (snapshot) => {
+    const writeEpoch = captureLocalDataEpoch();
+    const next = new Map(get().snapshots);
+    if (snapshot.kind === 'verified') {
+      for (const scope of SCOPE_BY_RANK) next.delete(verifiedKey(snapshot.did, scope));
+    } else {
+      next.delete(snapshot.id);
+    }
+    if (!writePersisted(next, writeEpoch)) return false;
+    set({ snapshots: next });
+    return true;
   },
 
   resetForLocalWipe: () => {

@@ -358,6 +358,7 @@
   "peopleList.deletedCount": "已刪除 {{count}} 位聯絡人",
   "peopleList.deleteNameTitle": "刪除 {{name}}？",
   "peopleList.deleteOneMessage": "此聯絡人將被永久移除。",
+  "peopleList.deleteOnePageMessage": "這個已儲存的頁面會從這台裝置上移除。",
   "peopleList.deselectAll": "取消全選",
   "peopleList.done": "完成",
   "peopleList.emptyBody": "交換過的名片會出現在這裡，並自動保持最新。",
