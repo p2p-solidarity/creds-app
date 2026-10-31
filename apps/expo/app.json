@@ -210,6 +210,7 @@
       "./plugins/withIosBuildNumber.js",
       "./plugins/withAndroidReleaseSigning.js",
       ["./plugins/withAndroidDisplayName.js", { "name": "creds.id" }],
+      ["./plugins/withAndroidAssetStatements.js", { "sites": ["creds.id"] }],
       "expo-sqlite",
       "expo-asset",
       "expo-image",
