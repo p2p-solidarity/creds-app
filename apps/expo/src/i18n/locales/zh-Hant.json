@@ -296,6 +296,8 @@
   "login.title": "登入",
   "login.faceid": "用 Face ID 登入",
   "login.faceid.sub": "使用這台裝置現有的安全登入",
+  "login.device.android": "用螢幕鎖定登入",
+  "login.device.android.sub": "使用這支手機上已有的身分",
   "login.icloud": "從 iCloud 找回",
   "login.icloud.sub": "找回身分與最近可用的備份",
   "login.phrase": "輸入復原字詞",

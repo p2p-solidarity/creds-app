@@ -1,5 +1,5 @@
 import { Platform, View } from 'react-native';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -28,6 +28,15 @@ export function ExistingAccountSheet({
   const [phase, setPhase] = useState<'options' | 'phrase'>('options');
   const [phrase, setPhrase] = useState('');
   const [busy, setBusy] = useState(false);
+  // Android Keystore keys never sync between phones, so on a fresh Android
+  // install there is nothing to sign in with: only offer it when a key exists.
+  const [hasDeviceKey, setHasDeviceKey] = useState(Platform.OS === 'ios');
+  useEffect(() => {
+    if (!visible || Platform.OS === 'ios') return;
+    let live = true;
+    void hasExistingSigningKey().then((has) => { if (live) setHasDeviceKey(has); });
+    return () => { live = false; };
+  }, [visible]);
 
   const finish = (): void => {
     haptic('success');
@@ -99,13 +108,15 @@ export function ExistingAccountSheet({
 
             {phase === 'options' ? (
               <View style={{ gap: 10 }}>
-                <RecoveryOption
-                  icon="faceid"
-                  title={t('login.faceid')}
-                  subtitle={t('login.faceid.sub')}
-                  disabled={busy}
-                  onPress={() => { void run(signInOnDevice); }}
-                />
+                {hasDeviceKey ? (
+                  <RecoveryOption
+                    icon={Platform.OS === 'ios' ? 'faceid' : 'touchid'}
+                    title={t(Platform.OS === 'ios' ? 'login.faceid' : 'login.device.android')}
+                    subtitle={t(Platform.OS === 'ios' ? 'login.faceid.sub' : 'login.device.android.sub')}
+                    disabled={busy}
+                    onPress={() => { void run(signInOnDevice); }}
+                  />
+                ) : null}
                 {Platform.OS === 'ios' ? (
                   <RecoveryOption
                     icon="icloud"
@@ -173,7 +184,7 @@ function RecoveryOption({
   disabled,
   onPress,
 }: {
-  readonly icon: 'faceid' | 'icloud' | 'square.and.pencil';
+  readonly icon: 'faceid' | 'touchid' | 'icloud' | 'square.and.pencil';
   readonly title: string;
   readonly subtitle: string;
   readonly disabled: boolean;

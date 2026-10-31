@@ -296,6 +296,8 @@
   "login.title": "Sign In",
   "login.faceid": "Sign in with Face ID",
   "login.faceid.sub": "Use the secure sign-in already on this device",
+  "login.device.android": "Sign in with screen lock",
+  "login.device.android.sub": "Use the identity already on this phone",
   "login.icloud": "Restore from iCloud",
   "login.icloud.sub": "Restore your identity and latest available backup",
   "login.phrase": "Enter Recovery Phrase",
