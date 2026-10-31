@@ -31,3 +31,5 @@ Built with `build:android:local`, submitted (EAS 4f09c49d), updated from Play on
 - vc31 submitted to internal (EAS), then swapped into the production draft (vc12 excluded, 100% rollout, en-US notes) and sent for review from Publishing overview.
 - Not run: vc31 on a phone (adb disconnected before the update). Play warns of fewer supported devices: phones 11,504 → 8,687 (−24%), Chromebook −45% (minSdk 26→29 is likely most of it).
 - zh-TW release notes did not show on the review page; only en-US is attached.
+- First send for review was refused by Play's pre-check: the App access ("登入詳細資料") declaration said "nothing restricted", but the app has a Pro subscription, QR exchange, biometric gates and second-device witnesses. Switched to "restricted" with one "No account needed" entry (no username/password, reviewer steps in English) and resent.
+- Result: production 2.0.0 (vc31) live on Google Play, full rollout, 2026-11-01 03:28.
