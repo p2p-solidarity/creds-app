@@ -70,6 +70,8 @@ export function normalizePublicPageUsernameInput(value: string): string {
     .replace(/^https?:\/\//u, '')
     .replace(/^(www\.)?creds\.id\/?/u, '')
     .replace(/^@/u, '')
+    // A pasted link's `?ref=…`, `#…` or trailing path is not part of the name.
+    .replace(/[/?#].*$/u, '')
     .replace(/[^a-z0-9]/gu, '');
 }
 

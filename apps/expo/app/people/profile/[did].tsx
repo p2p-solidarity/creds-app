@@ -53,12 +53,12 @@ export default function VerifiedProfileDetailScreen(): ReactNode {
   const insets = useSafeAreaInsets();
   const reduceMotion = useReducedMotion();
 
-  // The Page's own signed link: its short `#nostr:` pointer when it has one,
-  // otherwise the self-contained fragment — either verifies for whoever opens it.
+  // The saved Page's self-contained signed fragment. Not the short `#nostr:`
+  // pointer: a snapshot that arrived by QR or offline link gives no proof the
+  // owner ever published that pointer, so a short link could resolve to nothing.
   const onShare = (): void => {
     if (!snapshot) return;
-    const model = buildProfileShareModel(snapshot.record, snapshot.jws);
-    const url = model.shortUrl ?? model.offlineUrl;
+    const url = buildProfileShareModel(snapshot.record, snapshot.jws).offlineUrl;
     void Share.share({ title: snapshot.record.displayName, message: url, url }).catch(() => {
       haptic('error');
       pushToast(t('personDetail.shareFailed'), 'error');
