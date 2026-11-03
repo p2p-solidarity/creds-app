@@ -1,8 +1,8 @@
 /**
- * Publish card for unpublished section / appearance changes — the creds.id
- * web `PublishPanel` look: a bordered card whose `.sec-head` is a round chip
- * well with the upload glyph and the title, one line of intro, the button,
- * then an `.okbox` / `.warnbox` carrying what actually happened.
+ * Publish control for unpublished section / appearance changes: one button,
+ * with an `.okbox` / `.warnbox` above it only when publishing failed or the
+ * draft can't be signed. After a publish it becomes the creds.id web
+ * `PublishPanel` result card (checkmark title + what actually happened).
  */
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
@@ -25,7 +25,10 @@ export type PublishCardState =
   | { readonly kind: 'done'; readonly handle: string | null; readonly partial: boolean }
   /** `save`: signing the edited Page failed. `relay`: it is signed on this
    *  phone but no relay took it, so visitors still see the old Page. */
-  | { readonly kind: 'error'; readonly reason: 'save' | 'relay' };
+  | { readonly kind: 'error'; readonly reason: 'save' | 'relay' }
+  /** The draft fails the schema; `problem` names what to fix. No retry
+   *  until it is fixed — signing would only fail again. */
+  | { readonly kind: 'blocked'; readonly problem: string };
 
 export function PublishChangesCard({
   state,
@@ -41,6 +44,30 @@ export function PublishChangesCard({
   const reduceMotion = useReducedMotion();
   const done = state.kind === 'done';
 
+  // Unpublished changes are one button — the draft is already saved on this
+  // phone; a box above it only when something stands in the way.
+  if (!done) {
+    return (
+      <Animated.View entering={fadeUpIn(0, reduceMotion)} style={{ gap: 10 }}>
+        {state.kind === 'error' ? (
+          <StatusBox
+            tone="warn"
+            text={t(state.reason === 'save' ? 'pageDesign.publishError' : 'pageDesign.publishRelayError')}
+          />
+        ) : null}
+        {state.kind === 'blocked' ? <StatusBox tone="warn" text={state.problem} /> : null}
+        <ThemedButton
+          label={t(state.kind === 'error' ? 'mePage.retry' : 'pageDesign.publishButton')}
+          icon="square.and.arrow.up"
+          loading={state.kind === 'publishing'}
+          disabled={state.kind === 'blocked'}
+          fullWidth
+          onPress={onPublish}
+        />
+      </Animated.View>
+    );
+  }
+
   return (
     <Animated.View
       entering={fadeUpIn(0, reduceMotion)}
@@ -54,54 +81,31 @@ export function PublishChangesCard({
       }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
         <View style={iconTileStyle(c.chipSurface)}>
-          <SfIcon name={done ? 'checkmark' : 'square.and.arrow.up'} size={16} color={c.primaryBlue} />
+          <SfIcon name="checkmark" size={16} color={c.primaryBlue} />
         </View>
         <ThemedText variant="titleMedium" style={{ flex: 1 }}>
-          {t(done ? 'pageDesign.publishSuccess' : 'pageDesign.publishChanges')}
+          {t('pageDesign.publishSuccess')}
         </ThemedText>
-        {done ? (
-          <PressableScale
-            haptic="tap"
-            onPress={onDismiss}
-            accessibilityRole="button"
-            accessibilityLabel={t('common.done')}
-            style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}>
-            <SfIcon name="xmark" size={13} color={c.text2} />
-          </PressableScale>
-        ) : null}
+        <PressableScale
+          haptic="tap"
+          onPress={onDismiss}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.done')}
+          style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+          <SfIcon name="xmark" size={13} color={c.text2} />
+        </PressableScale>
       </View>
 
-      {done ? (
-        <StatusBox
-          tone={state.partial ? 'warn' : 'ok'}
-          text={
-            state.partial
-              ? t('pageDesign.publishedPartially')
-              : state.handle === null
-                ? t('pageDesign.publishSuccess')
-                : t('pageDesign.publishedAt', { handle: state.handle })
-          }
-        />
-      ) : (
-        <>
-          <ThemedText variant="bodySmall" tone="secondary">
-            {t('pageDesign.publishHint')}
-          </ThemedText>
-          {state.kind === 'error' ? (
-            <StatusBox
-              tone="warn"
-              text={t(state.reason === 'save' ? 'pageDesign.publishError' : 'pageDesign.publishRelayError')}
-            />
-          ) : null}
-          <ThemedButton
-            label={t(state.kind === 'error' ? 'mePage.retry' : 'pageDesign.publishButton')}
-            icon="square.and.arrow.up"
-            loading={state.kind === 'publishing'}
-            fullWidth
-            onPress={onPublish}
-          />
-        </>
-      )}
+      <StatusBox
+        tone={state.partial ? 'warn' : 'ok'}
+        text={
+          state.partial
+            ? t('pageDesign.publishedPartially')
+            : state.handle === null
+              ? t('pageDesign.publishSuccess')
+              : t('pageDesign.publishedAt', { handle: state.handle })
+        }
+      />
     </Animated.View>
   );
 }

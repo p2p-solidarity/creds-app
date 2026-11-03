@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { router } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
@@ -14,6 +14,8 @@ import { Colors } from '@/constants/Colors';
 import { useThemeColors } from '@/constants/useThemeColors';
 import { useTranslation } from '@/i18n';
 import { haptic } from '@/feedback/haptics';
+import { confirmDialog } from '@/feedback/confirmDialog';
+import { isHttpsLinkUrl, normalizeLinkUrl } from '@/profile/linkUrl';
 import {
   PAGE_BLOCK_CATALOG,
   MAX_PAGE_BLOCK_TITLE_LENGTH,
@@ -38,6 +40,7 @@ import { CardSizePicker } from './CardSizePicker';
 import { PHONE_SCREEN_RADIUS, PageBlockPreview, PageLivePreview, type PreviewBlockEditing } from './PageLivePreview';
 import { PageCollapsibleHeader } from './PageCollapsibleHeader';
 import { PublishChangesCard, type PublishCardState } from './PublishChangesCard';
+import { pagePublishProblem } from './publishProblem';
 import {
   isBiometricCancellation,
   isNostrPublishOutcomePartiallyAccepted,
@@ -85,7 +88,8 @@ export function ProfileSectionsList({
   // after a successful local sign (`unpublished`, `relayError`) keeps the
   // card up even though the signed record already matches the editor.
   const [publishResult, setPublishResult] = useState<PublishResult>('idle');
-  const [open, setOpen] = useState(false);
+  // Open by default: a folded preview read as "the section I just added is gone".
+  const [open, setOpen] = useState(true);
   const publishedDesign = record?.page ?? toPublicPageDesign(createInitialPageDesign());
   const pageHasChanges = status === 'ready' && record !== null && !publicPageDesignEquals(
     toPublicPageDesign(design),
@@ -95,6 +99,10 @@ export function ProfileSectionsList({
   // or a publish that failed): visitors still get the older Page.
   const pageNotLive = record !== null && published !== null && nostrPublishedJws !== published.jws;
   const needsPublish = pageHasChanges || pageNotLive;
+  const publishProblem = useMemo(
+    () => (pageHasChanges && record !== null ? pagePublishProblem(toPublicPageDesign(design), record.links, t) : null),
+    [pageHasChanges, record, design, t],
+  );
   const movableBlocks = blocks.filter((block) => block.type !== 'links');
 
   // A section added from ＋ 新增 unfolds this group, so its placeholder shows
@@ -133,7 +141,7 @@ export function ProfileSectionsList({
   // Sign locally (only when the design moved), then publish to Nostr — the
   // card says "live" only once relays have actually taken the new record.
   const publishPageChanges = (): void => {
-    if (publishing || !record || status !== 'ready') return;
+    if (publishing || !record || status !== 'ready' || publishProblem !== null) return;
     setPublishing(true);
     void signAndPublishPage(pageHasChanges ? toPublicPageDesign(design) : null)
       .then((result) => {
@@ -206,7 +214,9 @@ export function ProfileSectionsList({
       {/* Outside the fold: unpublished changes always show, folded or not. */}
       {status === 'ready' && (needsPublish || publishResult !== 'idle') ? (
         <PublishChangesCard
-          state={publishCardState(publishing, pageHasChanges, needsPublish, publishResult, previewHandle)}
+          state={publishProblem !== null && !publishing
+            ? { kind: 'blocked', problem: publishProblem }
+            : publishCardState(publishing, pageHasChanges, needsPublish, publishResult, previewHandle)}
           onPublish={publishPageChanges}
           onDismiss={() => { setPublishResult('idle'); }}
         />
@@ -280,33 +290,92 @@ function PageBlockEditorContent({ block, onClose }: { readonly block: PageBlock;
   const [size, setSize] = useState(cardSizeOf(block));
   const setBlockSize = usePageDesignStore((state) => state.setBlockSize);
   const [items, setItems] = useState<readonly PageBlockItem[]>(block.items);
+  // A text section is just text: one box, each line one signed item (the
+  // schema caps a line at 160 characters and a block at 24 items).
+  const isText = block.type === 'text';
+  const [text, setText] = useState(() => block.items.map((item) => item.title).join('\n'));
+  const textLines = text.split('\n').map((line) => line.trim()).filter((line) => line.length > 0);
+  const textError = textLines.length > MAX_PAGE_ITEMS_PER_BLOCK || textLines.some((line) => line.length > MAX_PAGE_ITEM_TITLE_LENGTH)
+    ? t('pageDesign.textTooLong', { lines: MAX_PAGE_ITEMS_PER_BLOCK, chars: MAX_PAGE_ITEM_TITLE_LENGTH })
+    : null;
   const catalog = PAGE_BLOCK_CATALOG.find((entry) => entry.type === block.type);
   if (!catalog) return null;
-  const cleanedItems = items
+  // A bare `instagram.com/x` becomes https:// like the link sheet does; what
+  // still isn't an https address is flagged on its field instead of being
+  // signed into a Page the schema would refuse at publish time.
+  const addressOf = (value: string | undefined): string | undefined => {
+    const trimmed = value?.trim() ?? '';
+    return trimmed.length > 0 ? normalizeLinkUrl(trimmed) : undefined;
+  };
+  const addressError = (value: string | undefined): string | null => {
+    const address = addressOf(value);
+    return address === undefined || (isHttpsLinkUrl(address) && isRenderableLinkUrl(address)) ? null : t('pageDesign.itemAddressInvalid');
+  };
+  const titleError = (item: PageBlockItem): string | null =>
+    item.title.trim().length === 0 && [item.url, item.media, item.price].some((value) => (value?.trim() ?? '').length > 0)
+      ? t('pageDesign.itemTitleRequired')
+      : null;
+  const itemsValid = isText ? textError === null : items.every((item) => titleError(item) === null && addressError(item.url) === null && addressError(item.media) === null);
+  const cleanedItems = isText
+    ? textLines.map((line, index) => ({ id: block.items[index]?.id ?? `${block.id}-t${String(index)}`, title: line }))
+    : items
     .filter((item) => item.title.trim().length > 0)
-    .map((item) => ({
-      ...item,
-      title: item.title.trim(),
-      ...(item.url?.trim() ? { url: item.url.trim() } : { url: undefined }),
-      ...(item.price?.trim() ? { price: item.price.trim() } : { price: undefined }),
-      // Only an https image the Page can render is kept, same as the web editor.
-      ...(item.media?.trim() && isRenderableLinkUrl(item.media.trim()) ? { media: item.media.trim() } : { media: undefined }),
-    }));
+    .map((item) => {
+      const url = addressError(item.url) === null ? addressOf(item.url) : undefined;
+      const media = addressError(item.media) === null ? addressOf(item.media) : undefined;
+      return {
+        ...item,
+        title: item.title.trim(),
+        url,
+        ...(item.price?.trim() ? { price: item.price.trim() } : { price: undefined }),
+        media,
+      };
+    });
   // The card at the top is this draft painted exactly as the Page will.
   const draft: PageBlock = { ...block, title: title.trim() || block.title, style, size, items: cleanedItems };
-  const canSave = title.trim().length > 0;
+  const canSave = title.trim().length > 0 && itemsValid;
+  const dirty = title !== block.title || style !== block.style || size !== cardSizeOf(block)
+    || (isText
+      ? text !== block.items.map((item) => item.title).join('\n')
+      : JSON.stringify(items) !== JSON.stringify(block.items));
   const save = () => {
     if (!canSave) return;
     updateBlock(block.id, { title, style, items: cleanedItems });
     setBlockSize(block.id, size);
     onClose();
   };
+  const cancel = () => {
+    if (!dirty) {
+      onClose();
+      return;
+    }
+    void confirmDialog({
+      title: t('meEdit.discardTitle'),
+      message: t('meEdit.discardMessage'),
+      confirmLabel: t('meEdit.discardAction'),
+      cancelLabel: t('meEdit.keepEditing'),
+      destructive: true,
+    }).then((discard) => { if (discard) onClose(); });
+  };
+  const remove = () => {
+    void confirmDialog({
+      title: t('pageDesign.removeSectionConfirmTitle', { title: block.title }),
+      message: t('pageDesign.removeSectionConfirmBody'),
+      confirmLabel: t('pageDesign.removeShort'),
+      destructive: true,
+    }).then((ok) => {
+      if (!ok) return;
+      removeBlock(block.id);
+      haptic('success');
+      onClose();
+    });
+  };
   return (
-    <ModalSheet visible onRequestClose={onClose}>
+    <ModalSheet visible onRequestClose={cancel}>
       <View className="flex-1 bg-pageBg" style={{ paddingTop: sheetTopInset(insets.top) }}>
         {/* Cancel / title / Save, like iOS edit sheets: no stack of buttons. */}
         <View className="min-h-14 flex-row items-center justify-between border-b border-divider px-2">
-          <SheetTextButton label={t('common.cancel')} onPress={onClose} />
+          <SheetTextButton label={t('common.cancel')} onPress={cancel} />
           <ThemedText variant="titleMedium">{t('pageDesign.editSectionTitle')}</ThemedText>
           <SheetTextButton label={t('common.save')} strong disabled={!canSave} onPress={save} />
         </View>
@@ -321,7 +390,7 @@ function PageBlockEditorContent({ block, onClose }: { readonly block: PageBlock;
                   block={draft}
                   record={record}
                   appearance={appearance}
-                  emptyHint={t('pageDesign.previewEmptyHint')}
+                  emptyHint={isText ? undefined : t('pageDesign.previewEmptyHint')}
                 />
               </View>
             </View>
@@ -353,11 +422,11 @@ function PageBlockEditorContent({ block, onClose }: { readonly block: PageBlock;
               color={Colors.destructive}
               label={t('pageDesign.removeShort')}
               accessibilityLabel={t('pageDesign.removeSectionNamed', { title: block.title })}
-              onPress={() => { removeBlock(block.id); onClose(); }}
+              onPress={remove}
             />
           </ThemedSurface>
 
-          {catalog.styles.length > 1 ? (
+          {catalog.styles.length > 1 && !isText ? (
             <View className="gap-2">
               <ThemedText variant="label" tone="tertiary">{t('pageDesign.style')}</ThemedText>
               <View className="flex-row flex-wrap gap-2">
@@ -381,6 +450,16 @@ function PageBlockEditorContent({ block, onClose }: { readonly block: PageBlock;
             showClear
           />
 
+          {isText ? (
+            <ThemedTextInput
+              label={t('pageDesign.textBody')}
+              value={text}
+              onChangeText={setText}
+              placeholder={t('pageDesign.textPlaceholder')}
+              error={textError}
+              multiline
+            />
+          ) : (
           <View className="gap-2">
             <ThemedText variant="label" tone="tertiary">
               {`${t('pageDesign.items')} ${items.length}/${MAX_PAGE_ITEMS_PER_BLOCK}`}
@@ -393,6 +472,7 @@ function PageBlockEditorContent({ block, onClose }: { readonly block: PageBlock;
                       label={t('pageDesign.itemTitle')}
                       value={item.title}
                       maxLength={MAX_PAGE_ITEM_TITLE_LENGTH}
+                      error={titleError(item)}
                       onChangeText={(nextTitle) => {
                         setItems((current) => current.map((candidate) => candidate.id === item.id ? { ...candidate, title: nextTitle } : candidate));
                       }}
@@ -412,6 +492,7 @@ function PageBlockEditorContent({ block, onClose }: { readonly block: PageBlock;
                   kind="url"
                   label={t('pageDesign.itemUrl')}
                   value={item.url ?? ''}
+                  error={addressError(item.url)}
                   onChangeText={(url) => {
                     setItems((current) => current.map((candidate) => candidate.id === item.id ? { ...candidate, url } : candidate));
                   }}
@@ -422,6 +503,7 @@ function PageBlockEditorContent({ block, onClose }: { readonly block: PageBlock;
                     kind="url"
                     label={t('pageDesign.itemMedia')}
                     value={item.media ?? ''}
+                    error={addressError(item.media)}
                     onChangeText={(media) => {
                       setItems((current) => current.map((candidate) => candidate.id === item.id ? { ...candidate, media } : candidate));
                     }}
@@ -450,6 +532,7 @@ function PageBlockEditorContent({ block, onClose }: { readonly block: PageBlock;
               />
             ) : null}
           </View>
+          )}
         </KeyboardAwareScrollView>
       </View>
     </ModalSheet>
