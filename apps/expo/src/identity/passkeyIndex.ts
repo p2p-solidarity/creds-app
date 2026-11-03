@@ -74,9 +74,9 @@ export function createPasskeyIndexClient(
     if (signature === null) return { ok: false, error: { kind: 'notProvisioned' } };
     return mutation(path, { ...init, method, headers: { ...(init.headers as Record<string, string>), 'x-creds-signature': signature } });
   };
-  const withMeta = (secret: Uint8Array, meta: string): RequestInit => ({
+  const withMeta = (secret: Uint8Array, meta: string, credentialId?: string): RequestInit => ({
     headers: { ...auth(secret), 'content-type': 'application/json' },
-    body: JSON.stringify({ meta }),
+    body: JSON.stringify(credentialId === undefined ? { meta } : { meta, credentialId }),
   });
   return {
     list: async (secret: Uint8Array): Promise<Result<OwnedRow[], PasskeyIndexError>> => {
@@ -94,8 +94,9 @@ export function createPasskeyIndexClient(
     },
     rename: (locator: string, meta: string, secret: Uint8Array) =>
       mutation(`/vault/root/${locator}/meta`, { method: 'PATCH', ...withMeta(secret, meta) }),
-    claim: (locator: string, meta: string, secret: Uint8Array) =>
-      signed('PUT', `/vault/root/${locator}/owner`, withMeta(secret, meta)),
+    /** `credentialId` proves this device holds the passkey: the service checks it hashes to `locator`. */
+    claim: (locator: string, meta: string, secret: Uint8Array, credentialId: string) =>
+      signed('PUT', `/vault/root/${locator}/owner`, withMeta(secret, meta, credentialId)),
     remove: (locator: string, secret: Uint8Array) =>
       signed('DELETE', `/vault/root/${locator}`, { headers: auth(secret) }),
   };
@@ -134,7 +135,7 @@ export async function listIndexedPasskeys(input: {
     for (const row of unclaimed) {
       const meta = metaFromRow(row);
       const sealed = meta ? sealRootVaultMeta(meta, row.locator, input.access.metaKey) : null;
-      if (sealed?.ok) await input.client.claim(row.locator, sealed.value, input.access.ownerSecret);
+      if (sealed?.ok) await input.client.claim(row.locator, sealed.value, input.access.ownerSecret, row.credentialId);
     }
     listed = await input.client.list(input.access.ownerSecret);
     if (!listed.ok) return listed;
