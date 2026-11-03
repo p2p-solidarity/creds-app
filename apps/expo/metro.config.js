@@ -28,6 +28,26 @@ config.resolver.nodeModulesPaths = [
 // Leave `disableHierarchicalLookup` at its default (false) so Metro can
 // resolve peer deps through bun's .bun/<pkg>/ layout.
 
+// F-Droid build (EXPO_PUBLIC_CREDS_DISTRIBUTION=fdroid, docs/ref/13-plan-fdroid.md):
+// the native modules plugins/withFdroidFlavor.js leaves out of autolinking are
+// left out of the bundle too. Their JS looks the native module up on import,
+// which would crash at launch; the stub fails only if a hidden feature is
+// somehow called (screens hide them via src/platform/distribution.ts).
+if (process.env.EXPO_PUBLIC_CREDS_DISTRIBUTION === 'fdroid') {
+  const { FDROID_EXCLUDED_MODULES } = require('./plugins/withFdroidFlavor');
+  const unavailableModule = path.resolve(projectRoot, 'plugins/fdroidUnavailableModule.js');
+  const resolveRequest = config.resolver.resolveRequest;
+  config.resolver.resolveRequest = (context, moduleName, platform) => {
+    if (
+      platform === 'android' &&
+      FDROID_EXCLUDED_MODULES.some((name) => moduleName === name || moduleName.startsWith(`${name}/`))
+    ) {
+      return { type: 'sourceFile', filePath: unavailableModule };
+    }
+    return (resolveRequest ?? context.resolveRequest)(context, moduleName, platform);
+  };
+}
+
 // rem = 16, the same as creds.id (airmeishi-web theme.css). NativeWind's
 // default is 14, which shipped every Tailwind spacing / radius at ×0.875 of
 // the design value (p-4 = 14, rounded-xl = 10.5) — see creds-design handoff.

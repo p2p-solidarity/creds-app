@@ -209,6 +209,7 @@
       "./plugins/withNfcReader.js",
       "./plugins/withIosBuildNumber.js",
       "./plugins/withAndroidReleaseSigning.js",
+      "./plugins/withFdroidFlavor.js",
       ["./plugins/withAndroidDisplayName.js", { "name": "creds.id" }],
       ["./plugins/withAndroidAssetStatements.js", { "sites": ["creds.id"] }],
       "expo-sqlite",
