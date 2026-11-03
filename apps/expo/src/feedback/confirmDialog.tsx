@@ -31,6 +31,7 @@ import { create } from 'zustand';
 
 import { WindowOverlay } from '@/components/common/WindowOverlay';
 import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
+import { translate } from '@/i18n';
 
 interface ConfirmRequest {
   readonly id: number;
@@ -81,8 +82,8 @@ export function confirmDialog(opts: ConfirmOptions): Promise<boolean> {
     useConfirmStore.getState().push({
       title: opts.title,
       message: opts.message,
-      confirmLabel: opts.confirmLabel ?? 'Confirm',
-      cancelLabel: opts.cancelLabel ?? 'Cancel',
+      confirmLabel: opts.confirmLabel ?? translate('common.confirm', 'Confirm'),
+      cancelLabel: opts.cancelLabel ?? translate('common.cancel', 'Cancel'),
       destructive: opts.destructive ?? false,
       resolve,
     });

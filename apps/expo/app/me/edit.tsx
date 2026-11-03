@@ -52,6 +52,7 @@ import {
   provisionFromRootMnemonic,
 } from '@/nostr/userKey';
 import { detectLinkFromUrl, linkPresetForEditableUrl, normalizeLinkUrl } from '@/profile/linkUrl';
+import { linkDisplay } from '@/profile/linkPresentation';
 import { PublishPreviewSheet } from '@/components/me/PublishPreviewSheet';
 import {
   summarizeVisibility,
@@ -169,8 +170,18 @@ export default function MeEditScreen() {
     setLinkSheetTarget(null);
   };
   const removeLink = (id: string) => {
-    setHasDraftEdits(true);
-    setLinks((prev) => prev.filter((l) => l.id !== id));
+    const link = links.find((l) => l.id === id);
+    if (link === undefined) return;
+    void confirmDialog({
+      title: t('meEdit.removeLinkTitle', { link: linkDisplay(link.label, link.url).text }),
+      message: t('meEdit.removeLinkMessage'),
+      confirmLabel: t('meEdit.removeLink'),
+      destructive: true,
+    }).then((ok) => {
+      if (!ok) return;
+      setHasDraftEdits(true);
+      setLinks((prev) => prev.filter((l) => l.id !== id));
+    });
   };
   const reorderLink = (sourceIndex: number, destinationIndex: number) => {
     setHasDraftEdits(true);

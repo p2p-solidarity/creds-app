@@ -453,10 +453,16 @@ export default function CredentialDetailScreen() {
     // `loadDetail(id)` resolves, so we never show "not found" until we
     // also have no manifest hit.
     return (
-      <View className="flex-1 items-center justify-center bg-pageBg">
-        <ThemedText variant="bodyMedium" tone="secondary">
-          {manifestEntry ? t('credentialDetail.loading') : t('credentialDetail.notFound')}
-        </ThemedText>
+      <View className="flex-1 bg-pageBg">
+        <DetailNavBar />
+        <View className="flex-1 items-center justify-center gap-4 px-8">
+          <ThemedText variant="bodyMedium" tone="secondary" style={{ textAlign: 'center' }}>
+            {manifestEntry ? t('credentialDetail.loading') : t('credentialDetail.notFound')}
+          </ThemedText>
+          {manifestEntry ? null : (
+            <ThemedButton variant="secondary" label={t('credentialDetail.back')} onPress={() => { safeBack(); }} />
+          )}
+        </View>
       </View>
     );
   }
@@ -526,25 +532,7 @@ export default function CredentialDetailScreen() {
 
   return (
     <View className="flex-1 bg-pageBg">
-      {/* Navigation bar */}
-      <View style={{ paddingTop: insets.top }} className="bg-pageBg">
-        <View className="h-11 flex-row items-center px-4">
-          <PressableScale
-            onPress={() => {
-              safeBack();
-            }}
-            accessibilityRole="button"
-            accessibilityLabel={t('credentialDetail.back')}
-            className="-ml-1 flex-row items-center gap-1"
-            style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
-            <SfIcon name="chevron.left" size={16} weight="semibold" color={Colors.text1} />
-          </PressableScale>
-          <View className="flex-1 items-center">
-            <ThemedText variant="titleMedium">{t('credentialDetail.title')}</ThemedText>
-          </View>
-          <View style={{ width: 24 }} />
-        </View>
-      </View>
+      <DetailNavBar />
 
       <ScrollView className="flex-1">
         <View className="gap-8 pb-6 pt-3">
@@ -637,7 +625,7 @@ export default function CredentialDetailScreen() {
               <ThemedButton
                 label={t('credentialDetail.passportRescanAction')}
                 fullWidth
-                onPress={() => { router.push('/passport'); }}
+                onPress={() => { router.replace('/passport'); }}
               />
             </ThemedSurface>
           ) : null}
@@ -693,11 +681,7 @@ export default function CredentialDetailScreen() {
               </View>
             ) : (
               <View className="px-4" style={{ gap: 16 }}>
-                {isPassportCredential ? (
-                  <ThemedText variant="bodySmall" tone="tertiary">
-                    {t('credentialDetail.passportOnPage')}
-                  </ThemedText>
-                ) : (
+                {isPassportCredential ? null : (
                   <PresentationProofQr
                     selectedClaims={selectedClaimsForPresentation}
                     pages={presentation.pages}
@@ -755,6 +739,31 @@ export default function CredentialDetailScreen() {
         }}
         productMode={isProductContext}
       />
+    </View>
+  );
+}
+
+function DetailNavBar(): ReactNode {
+  const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={{ paddingTop: insets.top }} className="bg-pageBg">
+      <View className="h-11 flex-row items-center px-4">
+        <PressableScale
+          onPress={() => {
+            safeBack();
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={t('credentialDetail.back')}
+          className="-ml-1 flex-row items-center gap-1"
+          style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+          <SfIcon name="chevron.left" size={16} weight="semibold" color={Colors.text1} />
+        </PressableScale>
+        <View className="flex-1 items-center">
+          <ThemedText variant="titleMedium">{t('credentialDetail.title')}</ThemedText>
+        </View>
+        <View style={{ width: 24 }} />
+      </View>
     </View>
   );
 }
