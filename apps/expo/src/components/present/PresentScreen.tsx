@@ -20,6 +20,7 @@ import { Radius } from '@/constants/radius';
 import { useThemeColors } from '@/constants/useThemeColors';
 import { fadeUpIn } from '@/feedback/motion';
 import { useTranslation } from '@/i18n';
+import { capabilities } from '@/platform/distribution';
 import { presentPublicLinks, type PresentPublicLink } from '@/present/presentModel';
 import { linkDisplay, linkSecondaryLabel } from '@/profile/linkPresentation';
 import { useProfileStore } from '@/profile/store';
@@ -87,13 +88,15 @@ function PresentHeader({ onScan }: { readonly onScan: () => void }): ReactNode {
       >
         {t('present.title')}
       </ThemedText>
-      <View style={{ position: 'absolute', right: 16 }}>
-        <PageHeaderAction
-          icon="qrcode.viewfinder"
-          label={t('present.scanSomeone')}
-          onPress={onScan}
-        />
-      </View>
+      {capabilities.qrScanner ? (
+        <View style={{ position: 'absolute', right: 16 }}>
+          <PageHeaderAction
+            icon="qrcode.viewfinder"
+            label={t('present.scanSomeone')}
+            onPress={onScan}
+          />
+        </View>
+      ) : null}
     </View>
   );
 }

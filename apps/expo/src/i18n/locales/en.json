@@ -275,6 +275,7 @@
   "ob.passkey.title": "Edit on your computer",
   "ob.passkey.btn": "Connect Passkey",
   "ob.passkey.later": "Not Now",
+  "ob.passkey.create": "Create My Keys",
   "ob.passkey.working": "Setting up…",
   "ob.passkey.setupFailed": "Couldn't finish setting up your identity",
   "ob.passkey.connectLater": "Your identity is unaffected. Connect later in Settings → Public Page → Edit on your computer.",

@@ -13,6 +13,7 @@ import { Radius } from '@/constants/radius';
 import { credsNameLink } from '@/deeplink/credsName';
 import { handleDeepLink } from '@/deeplink/router';
 import { useTranslation } from '@/i18n';
+import { capabilities } from '@/platform/distribution';
 
 export interface ContactsAddSheetProps {
   readonly visible: boolean;
@@ -115,11 +116,13 @@ export function ContactsAddSheet({
             </View>
 
             <ThemedSurface variant="card">
-              <ContactsActionRow
-                icon="qrcode.viewfinder"
-                label={t('peopleList.scanTheirQr')}
-                onPress={() => { choose(onScan); }}
-              />
+              {capabilities.qrScanner ? (
+                <ContactsActionRow
+                  icon="qrcode.viewfinder"
+                  label={t('peopleList.scanTheirQr')}
+                  onPress={() => { choose(onScan); }}
+                />
+              ) : null}
               <ContactsActionRow
                 icon="square.and.pencil"
                 label={t('peopleList.enterByHand')}

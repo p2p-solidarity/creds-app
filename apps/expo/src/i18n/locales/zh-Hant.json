@@ -275,6 +275,7 @@
   "ob.passkey.title": "在電腦上編輯",
   "ob.passkey.btn": "連接 Passkey",
   "ob.passkey.later": "稍後再說",
+  "ob.passkey.create": "建立我的金鑰",
   "ob.passkey.working": "正在設定…",
   "ob.passkey.setupFailed": "無法完成身分設定",
   "ob.passkey.connectLater": "你的身分不受影響，之後可從「設定 → 公開頁面 → 在電腦上編輯」連接。",

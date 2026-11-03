@@ -50,6 +50,7 @@ export function PassportMrzStep({
   developerMode,
   patch,
   onContinue,
+  canScan,
   onScanPressed,
 }: {
   readonly showManualInput: boolean;
@@ -58,6 +59,8 @@ export function PassportMrzStep({
   readonly developerMode: boolean;
   readonly patch: (p: Partial<PassportMRZDraft>) => void;
   readonly onContinue: () => void;
+  /** MRZ text recognition exists in this build (not in F-Droid). */
+  readonly canScan: boolean;
   readonly onScanPressed: () => void;
 }) {
   const { t } = useTranslation();
@@ -161,14 +164,16 @@ export function PassportMrzStep({
           onPress={onContinue}
         />
       </View>
-      <PressableScale
-        haptic="tap"
-        onPress={() => { setShowManualInput(false); }}
-        accessibilityRole="button"
-        containerStyle={{ alignSelf: 'center' }}
-      >
-        <Text className="text-text2 text-[12px]">{t('passportSetup.details.backToScan')}</Text>
-      </PressableScale>
+      {canScan ? (
+        <PressableScale
+          haptic="tap"
+          onPress={() => { setShowManualInput(false); }}
+          accessibilityRole="button"
+          containerStyle={{ alignSelf: 'center' }}
+        >
+          <Text className="text-text2 text-[12px]">{t('passportSetup.details.backToScan')}</Text>
+        </PressableScale>
+      ) : null}
     </View>
   );
 }

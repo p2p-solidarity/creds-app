@@ -25,6 +25,7 @@ import { appAlert, showError } from '@/feedback/appAlert';
 import { confirmDialog } from '@/feedback/confirmDialog';
 import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
+import { capabilities } from '@/platform/distribution';
 import { requireSensitiveAction } from '@/keychain';
 import { safeBack } from '@/navigation/safeBack';
 import { usePreferences } from '@/settings/preferences';
@@ -141,12 +142,14 @@ export default function DeveloperSettings() {
               subtitle={t('developer.present.verificationToolsSubtitle')}
               onPress={() => { router.push('/settings/developer/verification'); }}
             />
-            <SettingsBlockRow
-              icon="qrcode.viewfinder"
-              title={t('developer.present.scanRequest')}
-              subtitle={t('developer.receive.scanOfferSubtitle')}
-              onPress={() => { router.push('/scan'); }}
-            />
+            {capabilities.qrScanner ? (
+              <SettingsBlockRow
+                icon="qrcode.viewfinder"
+                title={t('developer.present.scanRequest')}
+                subtitle={t('developer.receive.scanOfferSubtitle')}
+                onPress={() => { router.push('/scan'); }}
+              />
+            ) : null}
           </SettingsBlockSection>
 
           <SettingsBlockSection title={t('developer.checkEngine.header')}>

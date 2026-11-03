@@ -15,7 +15,7 @@
  *   - unrecognised payloads resume scanning with a concise error; their raw
  *     diagnostic view is available only in Developer Mode.
  */
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import type { TFunction } from 'i18next';
 import { safeBack } from '@/navigation/safeBack';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -54,6 +54,7 @@ import { presentWebSignEntry } from '@/websign/pendingRequest';
 import { classifyWebSignScan } from '@/websign/transport';
 import { verifyVpToken } from '@/oidc';
 import { useTranslation } from '@/i18n';
+import { capabilities } from '@/platform/distribution';
 import { usePreferences } from '@/settings/preferences';
 import { isDeveloperOnlyScanPayload } from '@/scan/technicalFlowGate';
 import { MONO } from '@/constants/fonts';
@@ -65,7 +66,13 @@ type ScanRoute =
   | { kind: 'verifier'; result: VerifierResult; developerOnly?: boolean }
   | { kind: 'raw'; payload: string };
 
-export default function ScanScreen() {
+/** No in-app QR scanner in this build (F-Droid): its decoder is ML Kit. */
+export default function ScanEntry() {
+  if (!capabilities.qrScanner) return <Redirect href="/" />;
+  return <ScanScreen />;
+}
+
+function ScanScreen() {
   const { t } = useTranslation();
   const developerMode = usePreferences((state) => state.developerMode);
   const insets = useSafeAreaInsets();

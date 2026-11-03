@@ -1,5 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, Platform, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,6 +17,7 @@ import { Radius } from '@/constants/radius';
 import { haptic } from '@/feedback/haptics';
 import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
+import { capabilities } from '@/platform/distribution';
 import { safeBack } from '@/navigation/safeBack';
 import { useProEntitlementStore, useProStatus } from '@/pro/entitlementStore';
 import {
@@ -55,7 +56,13 @@ const PRO_FEATURE_KEYS = [
   'pro.feature.footer',
 ] as const;
 
+/** No store to buy from in this build (F-Droid): there is no plan to show. */
 export default function ProSettingsScreen() {
+  if (!capabilities.proPurchase) return <Redirect href="/settings" />;
+  return <ProPaywall />;
+}
+
+function ProPaywall() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const status = useProStatus();

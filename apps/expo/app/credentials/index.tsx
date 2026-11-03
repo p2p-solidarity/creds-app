@@ -45,6 +45,7 @@ import {
 import { appAlert, showError } from '@/feedback/appAlert';
 import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
+import { capabilities } from '@/platform/distribution';
 import { requireSensitiveAction } from '@/keychain';
 import { usePreferences } from '@/settings/preferences';
 
@@ -318,12 +319,14 @@ function VCManagementScreen() {
                 void onCreateDidKey();
               }}
             />
-            <ActionRow
-              icon="qrcode"
-              title={t('vcManage.receiveCard')}
-              disabled={busy}
-              onPress={onReceiveOidc}
-            />
+            {capabilities.qrScanner ? (
+              <ActionRow
+                icon="qrcode"
+                title={t('vcManage.receiveCard')}
+                disabled={busy}
+                onPress={onReceiveOidc}
+              />
+            ) : null}
             <ActionRow
               icon="square.and.arrow.up"
               title={t('vcManage.exportVcs')}

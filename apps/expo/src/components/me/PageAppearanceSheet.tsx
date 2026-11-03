@@ -346,7 +346,7 @@ function HeaderControls({
 
 function WallpaperControls(): ReactNode {
   const { t } = useTranslation();
-  const { isPro, openUpgrade } = useProGate();
+  const { designUnlocked, openUpgrade } = useProGate();
   const appearance = usePageDesignStore((state) => state.design.appearance);
   const setAppearance = usePageDesignStore((state) => state.setAppearance);
   return (
@@ -363,7 +363,7 @@ function WallpaperControls(): ReactNode {
       </View>
       <CustomColorInput
         appearance={appearance}
-        locked={!isPro}
+        locked={!designUnlocked}
         onOpenPro={openUpgrade}
         onChange={(customBackground) => { setAppearance({ customBackground }); }}
       />
@@ -373,7 +373,7 @@ function WallpaperControls(): ReactNode {
 
 function TextControls(): ReactNode {
   const { t } = useTranslation();
-  const { isPro, openUpgrade } = useProGate();
+  const { designUnlocked, openUpgrade } = useProGate();
   const appearance = usePageDesignStore((state) => state.design.appearance);
   const setAppearance = usePageDesignStore((state) => state.setAppearance);
   return (
@@ -383,9 +383,9 @@ function TextControls(): ReactNode {
           key={font}
           label={t(`pageDesign.font.${font}`)}
           selected={appearance.font === font}
-          pro={index > 1 && !isPro}
+          pro={index > 1 && !designUnlocked}
           onPress={() => {
-            if (index > 1 && !isPro) {
+            if (index > 1 && !designUnlocked) {
               openUpgrade();
               return;
             }
@@ -399,7 +399,7 @@ function TextControls(): ReactNode {
 
 function FooterControls(): ReactNode {
   const { t } = useTranslation();
-  const { isPro, openUpgrade } = useProGate();
+  const { designUnlocked, openUpgrade } = useProGate();
   const appearance = usePageDesignStore((state) => state.design.appearance);
   const setAppearance = usePageDesignStore((state) => state.setAppearance);
   return (
@@ -409,8 +409,8 @@ function FooterControls(): ReactNode {
         <Switch
           style={{ alignSelf: 'center' }}
           value={appearance.showBrand}
-          onValueChange={isPro ? (showBrand) => { setAppearance({ showBrand }); } : openUpgrade}
-          accessibilityHint={isPro ? undefined : t('pageDesign.proControl')}
+          onValueChange={designUnlocked ? (showBrand) => { setAppearance({ showBrand }); } : openUpgrade}
+          accessibilityHint={designUnlocked ? undefined : t('pageDesign.proControl')}
           trackColor={{ true: Colors.primaryBlue }}
         />
       </View>
@@ -419,7 +419,7 @@ function FooterControls(): ReactNode {
         value={appearance.footerText}
         maxLength={40}
         hint={t('pageDesign.proControl')}
-        locked={!isPro}
+        locked={!designUnlocked}
         onOpenPro={openUpgrade}
         onChangeText={(footerText) => { setAppearance({ footerText }); }}
       />

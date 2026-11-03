@@ -10,6 +10,7 @@ import { useThemeColors } from '@/constants/useThemeColors';
 import { fadeUpIn } from '@/feedback/motion';
 import { useTranslation } from '@/i18n';
 import { useDisplayClaims, useIdentityData } from '@/identity';
+import { capabilities } from '@/platform/distribution';
 import type { LinkVisibility } from '@/profile/projection';
 import type { ProfileRecord } from '@solidarity/shared';
 import type { PublicPageShareSource } from './meProfileModel';
@@ -159,19 +160,21 @@ export function MeProfilePage({
         />
       </Animated.View>
 
-      <Animated.View entering={entrance(4)} className="px-4">
-        <PressableScale
-          onPress={() => { router.push('/settings/passkeys'); }}
-          accessibilityRole="button"
-          accessibilityLabel={t('webEditing.title')}
-          style={blockRowStyle(colors)}>
-          <SfIcon name="desktopcomputer" size={18} color={colors.text2} />
-          <ThemedText variant="bodyMedium" style={{ flex: 1 }}>
-            {t('webEditing.title')}
-          </ThemedText>
-          <SfIcon name="chevron.right" size={13} color={colors.text3} />
-        </PressableScale>
-      </Animated.View>
+      {capabilities.passkeys ? (
+        <Animated.View entering={entrance(4)} className="px-4">
+          <PressableScale
+            onPress={() => { router.push('/settings/passkeys'); }}
+            accessibilityRole="button"
+            accessibilityLabel={t('webEditing.title')}
+            style={blockRowStyle(colors)}>
+            <SfIcon name="desktopcomputer" size={18} color={colors.text2} />
+            <ThemedText variant="bodyMedium" style={{ flex: 1 }}>
+              {t('webEditing.title')}
+            </ThemedText>
+            <SfIcon name="chevron.right" size={13} color={colors.text3} />
+          </PressableScale>
+        </Animated.View>
+      ) : null}
 
       <PageAddSheet
         visible={addOpen}

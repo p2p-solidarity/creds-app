@@ -71,6 +71,7 @@ import { maybeRefreshVerifiedContacts } from '@/people/contactAutoRefresh';
 import { hydrateProfileSnapshots } from '@/people/profileSnapshots';
 import { prepareProEntitlement } from '@/pro/entitlementStore';
 import { initProPurchases } from '@/pro/purchases';
+import { capabilities } from '@/platform/distribution';
 import { hydrateProfile } from '@/profile/store';
 import { pushToast } from '@/feedback/toast';
 import { translate } from '@/i18n';
@@ -226,7 +227,7 @@ export default function RootLayout() {
         // the cached record above is already authoritative enough to paint. A
         // renewal, refund, or purchase made on another device lands whenever
         // this resolves.
-        void initProPurchases();
+        if (capabilities.proPurchase) void initProPurchases();
         logBoot('preferences:done');
 
         // First-boot migration: if any manifest is missing, block splash

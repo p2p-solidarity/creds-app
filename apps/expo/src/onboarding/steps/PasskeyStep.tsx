@@ -8,6 +8,7 @@ import { Radius } from '@/constants/radius';
 import { showError } from '@/feedback/appAlert';
 import { haptic } from '@/feedback/haptics';
 import { useTranslation } from '@/i18n';
+import { capabilities } from '@/platform/distribution';
 import { provisionFromFreshRootMnemonic } from '@/nostr/userKey';
 import {
   createFromFreshMnemonic,
@@ -129,6 +130,39 @@ export function PasskeyStep({
       setWorking(false);
     }
   };
+
+  // No passkeys in this build (F-Droid): the step only sets up the identity
+  // on this phone; the recovery phrase in Settings is the backup.
+  if (!capabilities.passkeys) {
+    return (
+      <V2OnboardingScaffold
+        stepIndex={2}
+        title={t('ob.done.passkey')}
+        onBack={onBack}
+        footer={
+          <ThemedButton
+            label={working ? t('ob.passkey.working') : t('ob.passkey.create')}
+            variant="primary"
+            fullWidth
+            loading={working}
+            onPress={() => {
+              void completeIdentitySetup('skip');
+            }}
+          />
+        }>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 24 }}>
+          <ThemedSurface
+            variant="elevated"
+            className="h-28 w-28 items-center justify-center rounded-pill">
+            <SfIcon name="key.fill" size={44} color={Colors.primaryMauve} />
+          </ThemedSurface>
+          <ThemedText variant="caption" tone="tertiary" style={{ textAlign: 'center' }}>
+            {t('ob.passkey.backup.device')}
+          </ThemedText>
+        </View>
+      </V2OnboardingScaffold>
+    );
+  }
 
   return (
     <V2OnboardingScaffold

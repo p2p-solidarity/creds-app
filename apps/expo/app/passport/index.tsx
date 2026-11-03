@@ -40,6 +40,7 @@ import { SolidarityPlaceholderCard } from '@/components/passport/SolidarityPlace
 import { appAlert, showError } from '@/feedback/appAlert';
 import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
+import { capabilities } from '@/platform/distribution';
 import {
   MRZCameraStep,
   type PassportMRZDraft as MrzScannedDraft,
@@ -120,7 +121,7 @@ export default function PassportSetup() {
   const { t } = useTranslation();
   const activeDid = useActiveDid();
   const [state, dispatch] = useReducer(passportPipelineReducer, initialPassportPipelineState);
-  const [showManualInput, setShowManualInput] = useState(params.manual === '1');
+  const [showManualInput, setShowManualInput] = useState(params.manual === '1' || !capabilities.passportScan);
   const [showCamera, setShowCamera] = useState(false);
 
   const meta = PASSPORT_STEP_META[state.step];
@@ -479,6 +480,7 @@ export default function PassportSetup() {
             developerMode={developerMode}
             patch={(patch) => { dispatch({ type: 'patchDraft', patch }); }}
             onContinue={onValidateMrz}
+            canScan={capabilities.passportScan}
             onScanPressed={() => { setShowCamera(true); }}
           />
         ) : null}

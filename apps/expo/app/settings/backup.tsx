@@ -13,6 +13,7 @@
  * lives. Sync conflicts still surface, but only while there are any.
  */
 import { chooseSyncConflict, readSyncConflicts, useCloudSyncStatus } from '@/backup/cloudSync';
+import { Redirect } from 'expo-router';
 import { safeBack } from '@/navigation/safeBack';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, View } from 'react-native';
@@ -44,9 +45,16 @@ import { appAlert, showError } from '@/feedback/appAlert';
 import { confirmDialog } from '@/feedback/confirmDialog';
 import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
+import { capabilities } from '@/platform/distribution';
 import { usePreferences } from '@/settings/preferences';
 
-export default function BackupSettings() {
+/** No cloud to back up to in this build (F-Droid): the recovery phrase is the backup. */
+export default function BackupRoute() {
+  if (!capabilities.cloudBackup) return <Redirect href="/settings" />;
+  return <BackupSettings />;
+}
+
+function BackupSettings() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const provider = usePreferences((s) => s.backupProvider);

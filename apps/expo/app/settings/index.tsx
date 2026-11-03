@@ -30,6 +30,7 @@ import { readPasskeyCount } from '@/identity/passkeyRegistry';
 import { haptic } from '@/feedback/haptics';
 import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
+import { capabilities } from '@/platform/distribution';
 import { publicPagePath } from '@/onboarding/publicPageUsername';
 import { stopLaneManager } from '@/pear/laneManager';
 import { advanceDeveloperUnlock } from '@/settings/developerUnlock';
@@ -117,24 +118,28 @@ export default function SettingsHub() {
 
           {/* Account */}
           <SettingsBlockSection index={1} title={t('settingsHub.accountIdentity')}>
-            <SettingsBlockRow
-              icon="key.fill"
-              title={t('settingsHub.passkeys')}
-              trailingText={passkeyCount === null ? t('settingsHub.passkeysLoading') : passkeyCount.ok
-                ? t('settingsHub.passkeysCount', { count: passkeyCount.value }) : t('settingsHub.passkeysUnavailable')}
-              onPress={() => { router.push('/settings/passkeys'); }}
-            />
+            {capabilities.passkeys ? (
+              <SettingsBlockRow
+                icon="key.fill"
+                title={t('settingsHub.passkeys')}
+                trailingText={passkeyCount === null ? t('settingsHub.passkeysLoading') : passkeyCount.ok
+                  ? t('settingsHub.passkeysCount', { count: passkeyCount.value }) : t('settingsHub.passkeysUnavailable')}
+                onPress={() => { router.push('/settings/passkeys'); }}
+              />
+            ) : null}
             <SettingsBlockRow
               icon="lock.shield"
               title={t('settingsHub.accountProtection')}
               onPress={() => { router.push('/settings/security'); }}
             />
-            <SettingsBlockRow
-              icon="icloud"
-              title={t('settingsHub.identityExport')}
-              trailingText={backupEnabled ? t('common.on') : t('common.off')}
-              onPress={() => { router.push('/settings/backup'); }}
-            />
+            {capabilities.cloudBackup ? (
+              <SettingsBlockRow
+                icon="icloud"
+                title={t('settingsHub.identityExport')}
+                trailingText={backupEnabled ? t('common.on') : t('common.off')}
+                onPress={() => { router.push('/settings/backup'); }}
+              />
+            ) : null}
             <SettingsBlockRow
               icon="key.horizontal"
               title={t('settingsHub.recoveryPhrase')}
@@ -142,14 +147,16 @@ export default function SettingsHub() {
             />
           </SettingsBlockSection>
 
-          <SettingsBlockSection index={2} title={t('settingsHub.plan')}>
-            <SettingsBlockRow
-              icon="sparkles"
-              leading={<CredsMark size={16} />}
-              title={t('settingsHub.plan')}
-              onPress={() => { router.push('/settings/pro'); }}
-            />
-          </SettingsBlockSection>
+          {capabilities.proPurchase ? (
+            <SettingsBlockSection index={2} title={t('settingsHub.plan')}>
+              <SettingsBlockRow
+                icon="sparkles"
+                leading={<CredsMark size={16} />}
+                title={t('settingsHub.plan')}
+                onPress={() => { router.push('/settings/pro'); }}
+              />
+            </SettingsBlockSection>
+          ) : null}
 
           <SettingsBlockSection index={3} title={t('settingsHub.preferences')}>
             <SettingsBlockSegmentRow
