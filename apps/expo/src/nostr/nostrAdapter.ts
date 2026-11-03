@@ -168,6 +168,32 @@ export interface SubscriptionHandle {
 }
 
 /**
+ * Does this event actually answer the REQ we sent?
+ *
+ * A relay is untrusted input: a valid signature proves an event was signed by
+ * the key it names, not that it is the record we asked for — so
+ * `subscribeEvents` drops anything that fails this, for every caller.
+ * Without the tag check a relay can answer a `#d=solidarity.profile` request with the SAME
+ * author's newer kind-30078 event from a different parameterized slot, and it
+ * would be taken as the profile pointer — signature validity does not rule out
+ * substitution across an author's own records.
+ */
+export function eventMatchesFilter(event: NostrEvent, filter: NostrFilter): boolean {
+  if (filter.kinds !== undefined && !filter.kinds.includes(event.kind)) return false;
+  if (filter.authors !== undefined && !filter.authors.includes(event.pubkey)) return false;
+  if (filter.since !== undefined && event.created_at < filter.since) return false;
+  for (const [key, wanted] of Object.entries(filter)) {
+    if (!key.startsWith('#') || !Array.isArray(wanted)) continue;
+    const tagName = key.slice(1);
+    const present = event.tags.some(
+      (tag) => tag[0] === tagName && tag[1] !== undefined && wanted.includes(tag[1])
+    );
+    if (!present) return false;
+  }
+  return true;
+}
+
+/**
  * Subscribe to a relay with a single filter. The relay streams matching
  * events via EVENT frames and signals end-of-stored-events with EOSE.
  * onEvent fires for each received event; onEose for the EOSE.
@@ -209,7 +235,8 @@ export function subscribeEvents(
           typeof candidate.content === 'string' &&
           typeof candidate.sig === 'string' &&
           Array.isArray(candidate.tags) &&
-          verifyNostrEvent(candidate as NostrEvent)
+          verifyNostrEvent(candidate as NostrEvent) &&
+          eventMatchesFilter(candidate as NostrEvent, filter)
         ) {
           onEvent(candidate as NostrEvent);
         }

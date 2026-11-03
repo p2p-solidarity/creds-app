@@ -55,6 +55,7 @@
  *      different lookup shapes (array-of-strings vs. tag array indexing).
  */
 import {
+  eventMatchesFilter,
   publishEvent,
   subscribeEvents,
   type NostrEvent,
@@ -103,6 +104,8 @@ export type PublishEventFn = typeof publishEvent;
  * callbacks; `fetchLatestEvent` still rechecks cheap kind/author constraints.
  */
 export type SubscribeEventsFn = typeof subscribeEvents;
+
+export { eventMatchesFilter };
 
 /** One relay's outcome for a publish attempt. */
 export interface RelayPublishResult {
@@ -309,30 +312,6 @@ export interface FetchLatestOptions {
   readonly graceMs?: number;
   /** Each strictly newer matching event, as it arrives, before the fetch settles. */
   readonly onEvent?: (event: NostrEvent) => void;
-}
-
-/**
- * Does this event actually answer the REQ we sent?
- *
- * A relay is untrusted input: `subscribeEvents` proves an event was signed by
- * the key it names, not that it is the record we asked for. Without the tag
- * check a relay can answer a `#d=solidarity.profile` request with the SAME
- * author's newer kind-30078 event from a different parameterized slot, and it
- * would be taken as the profile pointer — signature validity does not rule out
- * substitution across an author's own records.
- */
-export function eventMatchesFilter(event: NostrEvent, filter: NostrFilter): boolean {
-  if (filter.kinds !== undefined && !filter.kinds.includes(event.kind)) return false;
-  if (filter.authors !== undefined && !filter.authors.includes(event.pubkey)) return false;
-  for (const [key, wanted] of Object.entries(filter)) {
-    if (!key.startsWith('#') || !Array.isArray(wanted)) continue;
-    const tagName = key.slice(1);
-    const present = event.tags.some(
-      (tag) => tag[0] === tagName && tag[1] !== undefined && wanted.includes(tag[1])
-    );
-    if (!present) return false;
-  }
-  return true;
 }
 
 /**
