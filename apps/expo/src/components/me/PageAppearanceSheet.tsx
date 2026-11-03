@@ -13,7 +13,7 @@
 import type { SFSymbol } from 'expo-symbols';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRef, useState, type ReactNode } from 'react';
-import { Platform, ScrollView, Switch, View } from 'react-native';
+import { Platform, ScrollView, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown, useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,8 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ModalSheet, sheetTopInset } from '@/components/common/ModalSheet';
 import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
-import { ThemedButton, ThemedChoiceChip, ThemedText, ThemedTextInput } from '@/components/themed';
-import { Colors } from '@/constants/Colors';
+import { ThemedButton, ThemedChoiceChip, ThemedSwitch, ThemedText, ThemedTextInput } from '@/components/themed';
 import { Radius, shadow } from '@/constants/radius';
 import { useThemeColors } from '@/constants/useThemeColors';
 import { haptic } from '@/feedback/haptics';
@@ -406,12 +405,10 @@ function FooterControls(): ReactNode {
     <>
       <View className="flex-row items-center justify-between">
         <ThemedText variant="bodyMedium">{t('pageDesign.showBrand')}</ThemedText>
-        <Switch
-          style={{ alignSelf: 'center' }}
+        <ThemedSwitch
           value={appearance.showBrand}
           onValueChange={designUnlocked ? (showBrand) => { setAppearance({ showBrand }); } : openUpgrade}
           accessibilityHint={designUnlocked ? undefined : t('pageDesign.proControl')}
-          trackColor={{ true: Colors.primaryBlue }}
         />
       </View>
       <ProTextField

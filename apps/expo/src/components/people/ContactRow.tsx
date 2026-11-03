@@ -29,7 +29,9 @@ export function ContactRow({
   onLongPress,
 }: ContactRowProps): ReactNode {
   const { t } = useTranslation();
-  const source = contactSourceDescription(contact, t);
+  // A hand-added contact is the plain row; "手動加入" under every one was
+  // noise (Pages are told apart by their tinted row instead).
+  const source = contact.source === 'Manual' ? undefined : contactSourceDescription(contact, t);
 
   return (
     <PressableScale

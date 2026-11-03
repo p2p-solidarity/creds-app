@@ -23,6 +23,7 @@ export function LinkIcon({
   size,
   glyph,
   surface,
+  brandOnly = false,
 }: {
   readonly label: string;
   readonly url: string;
@@ -31,8 +32,11 @@ export function LinkIcon({
   /** Brand glyph size inside the tile. */
   readonly glyph: number;
   readonly surface: string;
+  /** The rounded-square brand tile the published Page draws — for rows that
+   *  stand for a Page link, so the editor and the Page show one icon set. */
+  readonly brandOnly?: boolean;
 }): ReactNode {
-  const preview = useLinkPreview(url);
+  const preview = useLinkPreview(brandOnly ? null : url);
   const [failed, setFailed] = useState<string | null>(null);
   const [loaded, setLoaded] = useState<string | null>(null);
   const picture =
@@ -44,7 +48,7 @@ export function LinkIcon({
       style={{
         width: size,
         height: size,
-        borderRadius: Radius.pill,
+        borderRadius: brandOnly ? Radius.field : Radius.pill,
         overflow: 'hidden',
         alignItems: 'center',
         justifyContent: 'center',

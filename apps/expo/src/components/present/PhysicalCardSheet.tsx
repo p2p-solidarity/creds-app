@@ -1,13 +1,13 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import type { ReactNode } from 'react';
-import { ScrollView, Switch, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { ModalSheet, sheetTopInset } from '@/components/common/ModalSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { SheetHeader } from '@/components/me/AddLinkSheet';
-import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
+import { ThemedButton, ThemedSurface, ThemedSwitch, ThemedText } from '@/components/themed';
 import { CardMetalColors, Colors } from '@/constants/Colors';
 import { useThemeColors } from '@/constants/useThemeColors';
 import { Radius } from '@/constants/radius';
@@ -264,7 +264,6 @@ function EngravingToggle({
   readonly value: boolean;
   readonly onValueChange: (value: boolean) => void;
 }): ReactNode {
-  const colors = useThemeColors();
   return (
     <View className="flex-row items-center" style={{ minHeight: 52, gap: 12 }}>
       <ThemedText variant="bodyMedium" style={{ flex: 1 }}>
@@ -272,14 +271,7 @@ function EngravingToggle({
       </ThemedText>
       {/* RN's iOS Switch defaults to alignSelf 'flex-start', which beats the
           row's items-center and pins it to the top of a 52-pt row. */}
-      <Switch
-        style={{ alignSelf: 'center' }}
-        accessibilityLabel={label}
-        value={value}
-        onValueChange={onValueChange}
-        trackColor={{ false: colors.divider, true: colors.primaryMauve }}
-        thumbColor={colors.cardBg}
-      />
+      <ThemedSwitch accessibilityLabel={label} value={value} onValueChange={onValueChange} />
     </View>
   );
 }

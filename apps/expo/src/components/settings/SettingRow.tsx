@@ -4,10 +4,10 @@
  * `PressableScale` (crisp scale + haptic); a read-only row is a plain View.
  */
 import type { ReactNode } from 'react';
-import { Switch, View } from 'react-native';
+import { View } from 'react-native';
 
 import { PressableScale } from '@/components/common/PressableScale';
-import { ThemedText } from '@/components/themed';
+import { ThemedSwitch, ThemedText } from '@/components/themed';
 
 export interface SettingRowProps {
   readonly label: string;
@@ -74,5 +74,5 @@ export interface ToggleRowProps {
 }
 
 export function ToggleRow({ label, value, onChange }: ToggleRowProps): ReactNode {
-  return <SettingRow label={label} trailing={<Switch value={value} onValueChange={onChange} style={{ alignSelf: 'center' }} />} />;
+  return <SettingRow label={label} trailing={<ThemedSwitch value={value} onValueChange={onChange} accessibilityLabel={label} />} />;
 }

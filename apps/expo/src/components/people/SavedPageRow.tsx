@@ -18,6 +18,7 @@ import { snapshotDisplayName } from '@/components/people/ContactsList';
 import { PageAvatar } from '@/components/people/PageAvatar';
 import { ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
+import { Radius } from '@/constants/radius';
 import { haptic } from '@/feedback/haptics';
 import { useTranslation } from '@/i18n';
 import type {
@@ -82,10 +83,7 @@ function VerifiedPageRow({
       accessibilityRole="button"
       accessibilityLabel={snapshot.record.displayName}
       className="flex-row items-center gap-3 py-3"
-      style={{
-        borderBottomWidth: 0.5,
-        borderBottomColor: Colors.divider,
-      }}
+      style={pageRowStyle()}
     >
       {selecting ? <SelectionCheck selected={selection.selected} /> : null}
       <PageAvatar avatar={snapshot.record.avatar} displayName={snapshot.record.displayName} size={38} />
@@ -94,7 +92,6 @@ function VerifiedPageRow({
           {snapshot.record.displayName}
         </ThemedText>
         <View className="flex-row items-center" style={{ gap: 6 }}>
-          <PageKindLabel />
           <ThemedText variant="caption" tone="tertiary" numberOfLines={1} style={{ flexShrink: 1 }}>
             {relativeAtLabel(snapshot.verifiedAt, t)}
           </ThemedText>
@@ -126,10 +123,7 @@ function DeclaredPageRow({
       accessibilityRole="button"
       accessibilityLabel={displayTitle}
       className="flex-row items-center gap-3 py-3"
-      style={{
-        borderBottomWidth: 0.5,
-        borderBottomColor: Colors.divider,
-      }}
+      style={pageRowStyle()}
     >
       {selecting ? <SelectionCheck selected={selection.selected} /> : null}
       <View
@@ -143,7 +137,6 @@ function DeclaredPageRow({
           {displayTitle}
         </ThemedText>
         <View className="flex-row items-center" style={{ gap: 6 }}>
-          <PageKindLabel />
           <ThemedText variant="caption" tone="tertiary" numberOfLines={1} style={{ flexShrink: 1 }}>
             {`${linkDisplay('', snapshot.sourceUrl).text} · ${relativeAtLabel(snapshot.importedAt, t)}`}
           </ThemedText>
@@ -165,15 +158,18 @@ function DeclaredPageRow({
 }
 
 /** Marks a row as a saved Page, so it reads apart from a contact's source line. */
-function PageKindLabel(): ReactNode {
-  const { t } = useTranslation();
-  return (
-    <View className="rounded bg-searchBg px-1.5">
-      <ThemedText variant="caption" tone="secondary">
-        {t('peopleList.pageLabel')}
-      </ThemedText>
-    </View>
-  );
+/** A Page (someone's signed or imported link page) sits on a faint mauve
+ *  ground instead of carrying a 「頁面」 label: same list, told apart at a
+ *  glance without spending a line of text on it. */
+function pageRowStyle() {
+  return {
+    marginHorizontal: -8,
+    marginVertical: 2,
+    paddingHorizontal: 8,
+    borderRadius: Radius.card,
+    // Read per render: `Colors` resolves light/dark at access time.
+    backgroundColor: Colors.chipSurface,
+  } as const;
 }
 
 /** Shared by both row kinds — `verifiedAt` for a verified row, `importedAt`

@@ -49,9 +49,14 @@ export function VerifiedProfileView({ record, handleBinding }: VerifiedProfileVi
       <ThemedSurface variant="card" style={{ overflow: 'hidden' }}>
         <View className="flex-row flex-wrap items-center gap-2 px-4 py-3">
           <SfIcon name="checkmark.seal.fill" size={18} color={Colors.terminalGreen} />
-          <ThemedText variant="bodyMedium" style={{ flex: 1 }}>
-            {t('verifiedPage.signatureValid')}
-          </ThemedText>
+          {/* Say WHAT the signature covers and whose key made it — a bare
+              "signature valid" left people guessing which signature. */}
+          <View style={{ flex: 1, gap: 2 }}>
+            <ThemedText variant="bodyMedium">{t('verifiedPage.signatureValid')}</ThemedText>
+            <ThemedText variant="caption" tone="tertiary" numberOfLines={2}>
+              {t('verifiedPage.signatureValidDetail', { key: `…${record.did.slice(-6)}` })}
+            </ThemedText>
+          </View>
           {handleBinding ? <HandleBindingBadge binding={handleBinding} /> : null}
         </View>
         <WitnessSection record={record} />

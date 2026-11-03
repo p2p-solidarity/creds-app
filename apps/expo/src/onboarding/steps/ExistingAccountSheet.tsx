@@ -4,9 +4,9 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { probeLatestBackup, restoreFromBackup } from '@/backup';
-import { ModalSheet } from '@/components/common/ModalSheet';
+import { ModalSheet, sheetTopInset } from '@/components/common/ModalSheet';
 import { SfIcon } from '@/components/icons/SfIcon';
-import { ThemedButton, ThemedSurface, ThemedText, ThemedTextInput } from '@/components/themed';
+import { ThemedButton, ThemedText, ThemedTextInput } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { showError } from '@/feedback/appAlert';
 import { haptic } from '@/feedback/haptics';
@@ -98,7 +98,7 @@ export function ExistingAccountSheet({
           bottomOffset={16}
           contentContainerStyle={{
             flexGrow: 1,
-            paddingTop: insets.top + 16,
+            paddingTop: sheetTopInset(insets.top) + 16,
             paddingBottom: insets.bottom + 16,
           }}>
           <View className="flex-1 gap-5 px-4">
@@ -190,20 +190,17 @@ function RecoveryOption({
   readonly disabled: boolean;
   readonly onPress: () => void;
 }): ReactNode {
+  // Three plain choices; what each one does is the screen reader's hint, not
+  // a paragraph under every button.
   return (
-    <ThemedSurface variant="outlined" className="p-1">
-      <ThemedButton
-        label={title}
-        variant="secondary"
-        fullWidth
-        disabled={disabled}
-        accessibilityHint={subtitle}
-        leadingIcon={<SfIcon name={icon} size={18} color={Colors.primaryMauve} />}
-        onPress={onPress}
-      />
-      <ThemedText variant="caption" tone="secondary" className="px-4 pb-3">
-        {subtitle}
-      </ThemedText>
-    </ThemedSurface>
+    <ThemedButton
+      label={title}
+      variant="secondary"
+      fullWidth
+      disabled={disabled}
+      accessibilityHint={subtitle}
+      leadingIcon={<SfIcon name={icon} size={18} color={Colors.primaryMauve} />}
+      onPress={onPress}
+    />
   );
 }
