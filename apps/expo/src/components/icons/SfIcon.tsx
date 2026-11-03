@@ -209,6 +209,11 @@ const SF_TO_MATERIAL: Partial<Record<SFSymbol, AndroidSymbol>> = {
   viewfinder: 'crop_free',
   'wallet.pass': 'wallet',
   'wave.3.forward': 'wifi_tethering',
+  // The card's tap-to-exchange mark — contactless, not Wi-Fi.
+  'wave.3.right': 'contactless',
+  'wifi.slash': 'wifi_off',
+  'xmark.seal.fill': 'gpp_bad',
+  'questionmark.circle': 'help_outline',
   xmark: 'close',
   'xmark.bin': 'delete',
   'xmark.circle': 'cancel',

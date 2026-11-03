@@ -126,6 +126,21 @@
             {
               "scheme": "https",
               "host": "creds.id"
+            },
+            {
+              "path": "/"
+            },
+            {
+              "pathPrefix": "/@"
+            },
+            {
+              "pathPrefix": "/c/"
+            },
+            {
+              "pathPrefix": "/pear/"
+            },
+            {
+              "path": "/websign"
             }
           ],
           "category": [
