@@ -626,6 +626,7 @@
   "passportSetup.details.expiryDate": "到期日期（YYYY/MM/DD）",
   "passportSetup.details.continue": "繼續",
   "passportSetup.details.backToScan": "返回掃描",
+  "passportSetup.details.noScanInBuild": "F-Droid 版沒有包含相機掃描（它需要 Google 的 ML Kit）。請照護照資料頁輸入以下資料。",
   "passportSetup.camera.align": "將護照對準這裡",
   "passportSetup.camera.photoPage": "讓有照片的頁面朝向相機",
   "passportSetup.camera.reading": "正在讀取護照，請保持不動",

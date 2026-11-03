@@ -40,7 +40,16 @@ Links are affected.
 Implementation choice (not a product decision, reversible): instead of hiding
 the whole passport flow, `fdroid` hides only the MRZ camera scan — the manual
 MRZ entry and the NFC chip read (jmrtd, free) need no ML Kit, and the passport
-is the only distinct-person proof.
+is the only distinct-person proof. The manual form says the camera scan is not
+in this build (`passportSetup.details.noScanInBuild`).
+
+MRZ OCR without ML Kit (Kidney, 2026-11-03): **no replacement — typing it is
+the trade-off.** BAC needs only document number, birth date and expiry. Free
+engines were weighed and rejected: Tesseract (OCR-B traineddata) is far slower
+than ML Kit per frame; PaddleOCR/ONNX adds a runtime and models for one form;
+a custom MRZ-only recogniser is a research project. The TD3 parser and check
+digits in `src/mlkit/.../HybridMrzOcr.kt` are engine-independent if this is
+ever revisited.
 
 ## How it works
 

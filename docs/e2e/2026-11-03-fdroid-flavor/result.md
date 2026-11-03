@@ -24,8 +24,9 @@
 | C10 護照直接手動輸入 | 直接顯示資料表單，沒有 Scan 鈕、沒有 "back to scan" | 如預期（ReadyStep 的 "Get Your First Check" 進入） | PASS | `c10-passport.png` |
 | C11 隱藏路由導回 | `credsid://settings/{pro,passkeys,backup}` 落在設定頁 | 從 Page 頁發送 `settings/pro` → 設定頁；passkeys／backup 在重啟後發送也都落在設定頁 | PASS | `c11-pro-before.png`、`c11-pro.png`、`c11-passkeys.png`、`c11-backup.png` |
 | C12 play 建置 | 不設變數 `assembleRelease` 成功，輸出在無 flavor 路徑 | BUILD SUCCESSFUL；`apk/release/app-release.apk`（無 flavor 路徑）；dex 14665 個 class，含 billingclient 244、gms 26、mlkit 10、firebase 15、expo-camera 20、google-signin 3 個 → Play 依賴沒被動到。沒有安裝到裝置 | PASS | `build-play.txt`（本機） |
+| C13 護照表單說明沒包掃描（22:00 重建的 APK） | 手動輸入表單頂端說明 F-Droid 版沒有相機掃描 | 顯示「Camera scanning isn't included in the F-Droid build — it needs Google's ML Kit…」；整段 logcat 0 個 `FATAL EXCEPTION` | PASS | `c13-passport-no-scan-note.png` |
 
-整體：**PASS**（C1–C12 全部 PASS）。範圍外未驗證的項目列在下方。
+整體：**PASS**（C1–C13 全部 PASS）。範圍外未驗證的項目列在下方。
 
 Repo verify（建置完成後跑一次）：`bun run typecheck && bun run lint && bun run test` → typecheck 0 error、lint 0 error（178 warnings）、unit 1501 pass／0 fail、parity 73 pass／0 fail。
 

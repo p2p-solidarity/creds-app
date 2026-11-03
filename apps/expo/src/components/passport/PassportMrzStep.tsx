@@ -122,6 +122,12 @@ export function PassportMrzStep({
 
   return (
     <View className="bg-mutedSurface gap-2.5 rounded-group p-3.5">
+      {/* F-Droid ships without ML Kit: say so instead of silently dropping the scan. */}
+      {canScan ? null : (
+        <Text className="text-text2 text-[13px]" style={{ lineHeight: 19 }}>
+          {t('passportSetup.details.noScanInBuild')}
+        </Text>
+      )}
       <Field
         label={t('passportSetup.details.passportNumber')}
         value={draft.passportNumber}

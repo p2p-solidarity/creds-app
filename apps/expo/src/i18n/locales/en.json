@@ -626,6 +626,7 @@
   "passportSetup.details.expiryDate": "Expiry date (YYYY/MM/DD)",
   "passportSetup.details.continue": "Continue",
   "passportSetup.details.backToScan": "Back to scan",
+  "passportSetup.details.noScanInBuild": "Camera scanning isn't included in the F-Droid build — it needs Google's ML Kit. Type the details from your passport's photo page.",
   "passportSetup.camera.align": "Align your passport here",
   "passportSetup.camera.photoPage": "Keep the photo page facing the camera",
   "passportSetup.camera.reading": "Reading your passport — hold steady",
