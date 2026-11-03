@@ -62,7 +62,15 @@ export type PublicPageUsernameValidation =
   | { readonly kind: 'valid' };
 
 export function normalizePublicPageUsernameInput(value: string): string {
-  return value.trim().toLowerCase().replace(/[^a-z0-9]/gu, '');
+  // `@alice`, `creds.id/@alice` or a full link all mean `alice`; strip the
+  // address first or `creds.id/@alice` collapses to `credsidalice`.
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//u, '')
+    .replace(/^(www\.)?creds\.id\/?/u, '')
+    .replace(/^@/u, '')
+    .replace(/[^a-z0-9]/gu, '');
 }
 
 export function validatePublicPageUsername(

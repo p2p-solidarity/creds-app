@@ -304,17 +304,18 @@ function ClaimRow({
 }: {
   readonly claim: ProvableClaimEntity;
   readonly selected: boolean;
-  readonly onToggle: () => void;
+  /** Absent when nothing can be presented from here (passport): a plain row, no checkbox. */
+  readonly onToggle?: () => void;
 }) {
-  return (
-    <PressableScale onPress={onToggle} accessibilityRole="button" accessibilityState={{ selected }}>
-      <ThemedSurface variant="inset" className="flex-row items-center gap-2 px-3 py-3">
-        <View style={{ width: 18, height: 18, alignItems: 'center', justifyContent: 'center' }}>
-          <SfIcon name={claimIcon(claim.claimType)} size={14} color={Colors.terminalGreen} />
-        </View>
-        <ThemedText variant="bodyMedium" style={{ flex: 1 }}>
-          {claim.title}
-        </ThemedText>
+  const row = (
+    <ThemedSurface variant="inset" className="flex-row items-center gap-2 px-3 py-3">
+      <View style={{ width: 18, height: 18, alignItems: 'center', justifyContent: 'center' }}>
+        <SfIcon name={claimIcon(claim.claimType)} size={14} color={Colors.terminalGreen} />
+      </View>
+      <ThemedText variant="bodyMedium" style={{ flex: 1 }}>
+        {claim.title}
+      </ThemedText>
+      {onToggle ? (
         <View
           style={{
             width: 18,
@@ -328,7 +329,13 @@ function ClaimRow({
           }}>
           {selected ? <SfIcon name="checkmark" size={11} weight="bold" color={ON_DARK} /> : null}
         </View>
-      </ThemedSurface>
+      ) : null}
+    </ThemedSurface>
+  );
+  if (!onToggle) return row;
+  return (
+    <PressableScale onPress={onToggle} accessibilityRole="checkbox" accessibilityState={{ checked: selected }}>
+      {row}
     </PressableScale>
   );
 }
@@ -704,7 +711,7 @@ export default function CredentialDetailScreen() {
                       key={c.id}
                       claim={c}
                       selected={selectedClaimIdsForPresentation.has(c.id)}
-                      onToggle={() => {
+                      onToggle={isPassportCredential ? undefined : () => {
                         toggleClaim(c.id);
                       }}
                     />

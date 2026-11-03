@@ -26,12 +26,13 @@
 import { useLocalSearchParams } from 'expo-router';
 import { safeBack } from '@/navigation/safeBack';
 import type { ReactNode } from 'react';
-import { ScrollView, View } from 'react-native';
+import { ScrollView, Share, View } from 'react-native';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
+import { buildProfileShareModel } from '@/components/me/meProfileModel';
 import { CardExchangeSection } from '@/components/people/CardExchangeSection';
 import { PageLocalDetailsSection } from '@/components/people/PageLocalDetails';
 import { PearConnectSection } from '@/components/people/PearConnectSection';
@@ -39,7 +40,9 @@ import { VerifiedProfileView } from '@/components/scan/VerifiedProfileView';
 import { ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { isValidPearDid } from '@/deeplink/parser';
+import { haptic } from '@/feedback/haptics';
 import { fadeUpIn } from '@/feedback/motion';
+import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
 import { useProfileSnapshot } from '@/people/profileSnapshots';
 
@@ -49,6 +52,18 @@ export default function VerifiedProfileDetailScreen(): ReactNode {
   const snapshot = useProfileSnapshot(did);
   const insets = useSafeAreaInsets();
   const reduceMotion = useReducedMotion();
+
+  // The Page's own signed link: its short `#nostr:` pointer when it has one,
+  // otherwise the self-contained fragment — either verifies for whoever opens it.
+  const onShare = (): void => {
+    if (!snapshot) return;
+    const model = buildProfileShareModel(snapshot.record, snapshot.jws);
+    const url = model.shortUrl ?? model.offlineUrl;
+    void Share.share({ title: snapshot.record.displayName, message: url, url }).catch(() => {
+      haptic('error');
+      pushToast(t('personDetail.shareFailed'), 'error');
+    });
+  };
 
   // Same chrome and section cascade as the contact detail
   // (`app/people/[id].tsx`): 56pt top bar, 16pt gutters, each section
@@ -65,6 +80,17 @@ export default function VerifiedProfileDetailScreen(): ReactNode {
         >
           <SfIcon name="chevron.left" size={24} color={Colors.text1} />
         </PressableScale>
+        <View style={{ flex: 1 }} />
+        {snapshot ? (
+          <PressableScale
+            onPress={onShare}
+            accessibilityRole="button"
+            accessibilityLabel={t('personDetail.share')}
+            style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
+          >
+            <SfIcon name="square.and.arrow.up" size={20} color={Colors.text1} />
+          </PressableScale>
+        ) : null}
       </View>
 
       {snapshot ? (

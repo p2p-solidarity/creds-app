@@ -14,6 +14,7 @@ import {
   publishWithNostrAutoSetup,
 } from '@/nostr/connectWizard';
 import { DEFAULT_RELAYS } from '@/nostr/publish';
+import { linkDisplay } from '@/profile/linkPresentation';
 import { hasNostrKey, provisionFromRootMnemonic } from '@/nostr/userKey';
 import {
   useProfileStore,
@@ -41,6 +42,17 @@ export function publishFailureDetail(outcome: NostrPublishOutcome, t: TFn): stri
   });
 }
 
+/**
+ * The schema names a bad link only by index (`links.3.url: …`); turn that
+ * into the link the owner sees, so the error says which one to fix or remove.
+ */
+export function failureSummary(error: string, links: ProfileEditableFields['links'], fallback: string, t: TFn): string {
+  const index = /\blinks\.(\d+)\b/u.exec(error)?.[1];
+  const link = index === undefined ? undefined : links[Number(index)];
+  if (link === undefined) return fallback;
+  return t('meEdit.invalidLink', { link: linkDisplay(link.label, link.url).text });
+}
+
 export async function saveAndPublishProfile(
   fields: ProfileEditableFields,
   saveOptions: ProfileSaveOptions,
@@ -54,7 +66,7 @@ export async function saveAndPublishProfile(
     haptic('error');
     showError({
       context: 'Me › Edit',
-      summary: t('meEdit.saveFailed'),
+      summary: failureSummary(saved.error, fields.links, t('meEdit.saveFailed'), t),
       error: new Error(saved.error),
     });
     return 'saveFailed';
@@ -74,7 +86,7 @@ export async function saveAndPublishProfile(
     haptic('error');
     showError({
       context: 'Me › Edit › Publish',
-      summary: t('meEdit.publishFailed'),
+      summary: failureSummary(published.error, fields.links, t('meEdit.publishFailed'), t),
       error: new Error(published.error),
     });
     return 'publishFailed';

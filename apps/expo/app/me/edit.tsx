@@ -16,9 +16,9 @@
  * An explicit Save may derive the separate Nostr key when auto-publish is on;
  * mount and first paint never provision it.
  */
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, usePreventRemove } from 'expo-router';
 import { safeBack } from '@/navigation/safeBack';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -39,6 +39,7 @@ import {
 import { SettingsScreenTitle } from '@/components/settings/SettingsBlocks';
 import { ThemedButton, ThemedText, ThemedTextInput } from '@/components/themed';
 import { showError } from '@/feedback/appAlert';
+import { confirmDialog } from '@/feedback/confirmDialog';
 import { haptic } from '@/feedback/haptics';
 import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
@@ -127,6 +128,26 @@ export default function MeEditScreen() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [focusedMode, setFocusedMode] = useState(() => focusedEditorMode({ add, avatar }));
   const [hasDraftEdits, setHasDraftEdits] = useState(false);
+  /** Set once a save lands (or the owner chose to discard), so leaving is no longer guarded. */
+  const allowLeave = useRef(false);
+  const disableLeaveGuard = usePreventRemove(hasDraftEdits, ({ repeat }) => {
+    const leave = (): void => {
+      allowLeave.current = true;
+      disableLeaveGuard();
+      repeat();
+    };
+    if (allowLeave.current) {
+      leave();
+      return;
+    }
+    void confirmDialog({
+      title: t('meEdit.discardTitle'),
+      message: t('meEdit.discardMessage'),
+      confirmLabel: t('meEdit.discardAction'),
+      cancelLabel: t('meEdit.keepEditing'),
+      destructive: true,
+    }).then((discard) => { if (discard) leave(); });
+  });
   const [linkSheetTarget, setLinkSheetTarget] = useState<LinkSheetTarget>(() =>
     focusedMode === 'add' ? { kind: 'add' } : null
   );
@@ -291,6 +312,7 @@ export default function MeEditScreen() {
         ),
         'success'
       );
+      allowLeave.current = true;
       safeBack();
     } finally {
       setSaving(false);

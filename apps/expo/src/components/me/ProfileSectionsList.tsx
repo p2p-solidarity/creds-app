@@ -29,6 +29,7 @@ import {
   toPublicPageDesign,
   type PageBlock,
   type PageBlockItem,
+  type PageBlockType,
 } from '@/page/pageDesign';
 import { preparePageDesign, usePageDesignStore } from '@/page/pageDesignStore';
 import { useProGate } from '@/pro/useProGate';
@@ -46,7 +47,10 @@ import {
 import { DEFAULT_RELAYS } from '@/nostr/publish';
 import { hasNostrKey, provisionFromRootMnemonic } from '@/nostr/userKey';
 import { useProfileStore } from '@/profile/store';
-import { uuid, type ProfileRecord, type PublicPageDesign } from '@solidarity/shared';
+import { isRenderableLinkUrl, uuid, type ProfileRecord, type PublicPageDesign } from '@solidarity/shared';
+
+/** Blocks whose items show an image (`MediaTile` / thumbnails) — matches web `MEDIA_BLOCK_TYPES`. */
+const MEDIA_BLOCK_TYPES: ReadonlySet<PageBlockType> = new Set(['portfolio', 'featured', 'video', 'shop']);
 
 export interface ProfileSectionsListProps {
   /** Opens the add sheet scoped to sections (the header's ＋). */
@@ -285,6 +289,8 @@ function PageBlockEditorContent({ block, onClose }: { readonly block: PageBlock;
       title: item.title.trim(),
       ...(item.url?.trim() ? { url: item.url.trim() } : { url: undefined }),
       ...(item.price?.trim() ? { price: item.price.trim() } : { price: undefined }),
+      // Only an https image the Page can render is kept, same as the web editor.
+      ...(item.media?.trim() && isRenderableLinkUrl(item.media.trim()) ? { media: item.media.trim() } : { media: undefined }),
     }));
   // The card at the top is this draft painted exactly as the Page will.
   const draft: PageBlock = { ...block, title: title.trim() || block.title, style, size, items: cleanedItems };
@@ -411,6 +417,17 @@ function PageBlockEditorContent({ block, onClose }: { readonly block: PageBlock;
                   }}
                   showClear
                 />
+                {MEDIA_BLOCK_TYPES.has(block.type) ? (
+                  <ThemedTextInput
+                    kind="url"
+                    label={t('pageDesign.itemMedia')}
+                    value={item.media ?? ''}
+                    onChangeText={(media) => {
+                      setItems((current) => current.map((candidate) => candidate.id === item.id ? { ...candidate, media } : candidate));
+                    }}
+                    showClear
+                  />
+                ) : null}
                 {block.type === 'shop' ? (
                   <ThemedTextInput
                     label={t('pageDesign.itemPrice')}

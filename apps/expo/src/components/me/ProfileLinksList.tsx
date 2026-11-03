@@ -375,6 +375,17 @@ function LinkRowsSection({
                       />
                     ) : null}
                   </PressableScale>
+                  {verifyTarget !== null && !showBanner ? (
+                    // A dismissed banner keeps a visible way back in.
+                    <PressableScale
+                      haptic="tap"
+                      onPress={() => { void startLinkCheck(verifyTarget); }}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('zktls.verifyLink')}
+                      style={{ minHeight: 44, justifyContent: 'center' }}>
+                      <SealPill state="declared" label={t('zktls.verifyLink')} />
+                    </PressableScale>
+                  ) : null}
                   <PressableScale
                     haptic="tap"
                     onPress={openMenu}
