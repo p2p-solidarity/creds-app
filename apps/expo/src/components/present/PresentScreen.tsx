@@ -24,6 +24,7 @@ import { capabilities } from '@/platform/distribution';
 import { presentPublicLinks, type PresentPublicLink } from '@/present/presentModel';
 import { linkDisplay, linkSecondaryLabel } from '@/profile/linkPresentation';
 import { useProfileStore } from '@/profile/store';
+import { usePreferences } from '@/settings/preferences';
 
 export function PresentScreen(): ReactNode {
   const insets = useSafeAreaInsets();
@@ -39,7 +40,10 @@ export function PresentScreen(): ReactNode {
   const publicPage: PublicPageShareSource | null = published
     ? { record: published.record, jws: published.jws }
     : null;
-  const nostrShortUrlReady = published !== null && nostrPublishedJws === published.jws;
+  // Online is the address, not the latest edit: once relays took this Page,
+  // creds.id keeps serving it while newer edits wait to be published.
+  const publishedOnce = usePreferences((state) => state.nostrPagePublishedOnce);
+  const nostrShortUrlReady = published !== null && (publishedOnce || nostrPublishedJws === published.jws);
   const ownerName = record?.displayName.trim() ?? '';
 
   return (
@@ -148,7 +152,7 @@ function PublicLinkGroup({
             borderTopColor: colors.divider,
           }}
         >
-          <LinkIcon label={link.label} url={link.url} size={26} glyph={15} surface={colors.chipSurface} />
+          <LinkIcon label={link.label} url={link.url} size={26} glyph={15} surface={colors.chipSurface} brandOnly />
           <View style={{ flex: 1, gap: 1 }}>
             <ThemedText variant="bodyMedium" numberOfLines={1} ellipsizeMode="middle">
               {linkDisplay(link.label, link.url).text}

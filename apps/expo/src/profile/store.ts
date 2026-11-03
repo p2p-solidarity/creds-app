@@ -48,6 +48,7 @@ import { getRootDid, getRootSigner, type RootKeyError } from '@/identity/rootKey
 import { publishProfile, updateKind0AlsoKnownAs, type PublishReport } from '@/nostr/publish';
 import { getNostrPubkey, npubEncode } from '@/nostr/userKey';
 import { canCommitLocalData, captureLocalDataEpoch } from '@/settings/localDataWipeBarrier';
+import { usePreferences } from '@/settings/preferences';
 import { getMmkv } from '@/storage/mmkv';
 import {
   PROFILE_VERSION,
@@ -730,6 +731,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
       return err('publishToNostr: cancelled by local wipe');
     }
     set({ nostrPublishedJws });
+    if (nostrPublishedJws !== null) usePreferences.getState().set('nostrPagePublishedOnce', true);
 
     return ok({ profile: profileReport.value, kind0: kind0Report.value });
   },

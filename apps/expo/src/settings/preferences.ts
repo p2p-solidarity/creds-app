@@ -117,6 +117,9 @@ export interface Preferences {
   readonly language: string;
   /** Re-publish later profile edits after the user has explicitly published once. */
   readonly nostrAutoRepublish: boolean;
+  /** Relays confirmed this Page at least once, so its online address
+   *  resolves even while newer local edits wait to be published. */
+  readonly nostrPagePublishedOnce: boolean;
   /** Allow user-initiated, on-demand Pear peer exchange in production UI. */
   readonly pearExchangeEnabled: boolean;
   /**
@@ -179,6 +182,7 @@ const DEFAULTS: Preferences = {
   // overrides the device locale on relaunch.
   language: '',
   nostrAutoRepublish: false,
+  nostrPagePublishedOnce: false,
   pearExchangeEnabled: true,
   rootKeySyncChoice: 'undecided',
 };

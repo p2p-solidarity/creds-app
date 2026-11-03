@@ -29,7 +29,8 @@ export default function MeTab() {
   const nostrPublishedJws = useProfileStore((state) => state.nostrPublishedJws);
   const shareRecord = shared?.record ?? record;
   const shareJws = shared?.jws ?? jws;
-  const nostrShortUrlReady = published !== null && nostrPublishedJws === published.jws;
+  const publishedOnce = usePreferences((state) => state.nostrPagePublishedOnce);
+  const nostrShortUrlReady = published !== null && (publishedOnce || nostrPublishedJws === published.jws);
   const addProofRequested = params.addProof === '1';
   const { t } = useTranslation();
   const autoRepublish = usePreferences((state) => state.nostrAutoRepublish);

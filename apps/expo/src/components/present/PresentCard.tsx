@@ -12,6 +12,7 @@
  * resolve yet.
  */
 import { Image } from 'expo-image';
+import { router } from 'expo-router';
 import { useEffect, useState, type ReactNode } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
@@ -121,6 +122,19 @@ export function PresentCard({
         <QrModeControl mode={mode} onlineAvailable={online !== null} onChange={setChosen} />
         <QrPlate key={mode} candidate={active} mode={mode} onlineMissing={online === null} />
       </ThemedSurface>
+      {online !== null && online.kind !== 'username' ? (
+        <ThemedSurface variant="inset" padded className="flex-row items-center gap-3">
+          <ThemedText variant="bodySmall" tone="secondary" style={{ flex: 1 }}>
+            {t('present.claimNameHint')}
+          </ThemedText>
+          <ThemedButton
+            variant="secondary"
+            size="sm"
+            label={t('zktls.claimName')}
+            onPress={() => { router.push('/settings/username'); }}
+          />
+        </ThemedSurface>
+      ) : null}
       <View style={{ alignSelf: 'center' }}>
         <ThemedButton
           variant="secondary"
