@@ -11,6 +11,7 @@
     "./crypto": "./src/crypto/index.ts",
     "./deviceproof": "./src/deviceproof/index.ts",
     "./handles": "./src/handles/index.ts",
+    "./credsPath": "./src/handles/credsPath.ts",
     "./identity": "./src/identity/index.ts",
     "./qr": "./src/qr/index.ts",
     "./nostr": "./src/nostr/index.ts",

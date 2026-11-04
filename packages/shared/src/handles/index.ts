@@ -13,6 +13,7 @@ import type {
 
 export * from './types';
 export * from './atproto';
+export * from './credsPath';
 export * from './didPointer';
 export * from './dns';
 export * from './ens';

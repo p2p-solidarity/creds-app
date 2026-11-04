@@ -41,7 +41,7 @@ import {
   type ProfileRecord,
 } from '@solidarity/shared';
 
-import { isProductHost } from '../deeplink/domainVerification';
+import { handleFromProductUrl } from '../deeplink/pageUrl';
 
 export type VerifiedPageErrorReason =
   | 'decodeFailed'
@@ -240,23 +240,7 @@ function extractHandleCandidate(payload: string, devProductHosts: boolean): stri
   if (isSupportedHandle(trimmed)) return trimmed;
 
   try {
-    const url = new URL(trimmed);
-    if (
-      url.protocol !== 'https:' ||
-      !isProductHost(url.host, devProductHosts) ||
-      url.hash.length > 0
-    ) {
-      return null;
-    }
-    const segments = url.pathname.replace(/^\//u, '').split('/');
-    if (segments.length !== 1 || !segments[0]?.startsWith('@')) return null;
-    let handle: string;
-    try {
-      handle = decodeURIComponent(segments[0].slice(1));
-    } catch {
-      return null;
-    }
-    return isSupportedHandle(handle) ? handle : null;
+    return handleFromProductUrl(new URL(trimmed), devProductHosts);
   } catch {
     return isSupportedHandle(trimmed) ? trimmed : null;
   }

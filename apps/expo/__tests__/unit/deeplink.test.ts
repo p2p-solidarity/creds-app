@@ -225,3 +225,31 @@ describe('creds.id production product host (05-spec §8-B, switched 2026-08-30)'
     ).toBe('unknown');
   });
 });
+
+// docs/ref/15 P1: a bare creds.id name reads as the same Page as `/@name`, on
+// creds.id only; site words and other shapes stay web pages (`unknown`).
+describe('bare creds.id names', () => {
+  it.each([
+    ['https://creds.id/gimmy', 'gimmy'],
+    ['https://creds.id/Gimmy', 'gimmy'],
+    ['https://creds.id/gimmy?ref=x', 'gimmy'],
+  ])('%s → %s', (url, handle) => {
+    expect(parseDeepLink(url)).toEqual({ kind: 'verifiedHandle', handle });
+  });
+
+  it.each([
+    'https://creds.id/edit',
+    'https://creds.id/admin',
+    'https://creds.id/gimmy/',
+    'https://creds.id/gi',
+    'https://creds.id/%E0%A4%A',
+    'https://www.creds.id/gimmy',
+    'https://solidarity.gg/gimmy',
+  ])('%s → unknown', (url) => {
+    expect(parseDeepLink(url).kind).toBe('unknown');
+  });
+
+  it('keeps an offline Page link on its fragment', () => {
+    expect(parseDeepLink('https://creds.id/gimmy#abc123').kind).toBe('verifiedProfile');
+  });
+});

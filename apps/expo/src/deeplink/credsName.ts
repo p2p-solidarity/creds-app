@@ -1,3 +1,5 @@
+import { CREDS_NAME_RE } from '@solidarity/shared';
+
 import { parseDeepLink } from './parser';
 
 /** `@alice`, `creds.id/@alice` or a full link → the Page link the scanner and
@@ -9,7 +11,7 @@ export function credsNameLink(input: string): string | null {
     .replace(/^(www\.)?creds\.id\//iu, '')
     .replace(/^@/u, '')
     .toLowerCase();
-  if (!/^[a-z0-9]{3,30}$/u.test(name)) return null;
+  if (!CREDS_NAME_RE.test(name)) return null;
   const link = `https://creds.id/@${name}`;
   return parseDeepLink(link).kind === 'verifiedHandle' ? link : null;
 }

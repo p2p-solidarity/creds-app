@@ -81,18 +81,23 @@ export function isAllowedWebsiteHost(host: string): boolean {
   return !host.endsWith('.localhost') && !host.endsWith('.local') && !host.endsWith('.internal');
 }
 
-const MARKER_DOMAIN = 'creds.id/@';
+const MARKER_HOST = 'creds.id/';
+const NAME_CHAR = /[a-z0-9_-]/iu;
 
-/** True when `text` names `creds.id/@<name>` exactly (not `@namex`, not `notcreds.id`). */
+/** The name ends at `i`: no name character follows, nor `.` or `/` plus one (`alice.eth`, `alice/foo`). */
+function nameEndsAt(text: string, i: number): boolean {
+  const next = text.charAt(i);
+  if (NAME_CHAR.test(next)) return false;
+  return !((next === '.' || next === '/') && NAME_CHAR.test(text.charAt(i + 1)));
+}
+
+/** True when `text` names `creds.id/<name>` or `creds.id/@<name>` exactly (not `namex`, `name.eth`, `notcreds.id`). */
 export function bioCarriesMarker(text: string, name: string): boolean {
-  const needle = `${MARKER_DOMAIN}${name}`;
-  let from = 0;
-  for (;;) {
-    const at = text.indexOf(needle, from);
-    if (at < 0) return false;
-    const before = at === 0 ? '' : text.charAt(at - 1);
-    const after = text.charAt(at + needle.length);
-    if (!/[a-z0-9.-]/iu.test(before) && !/[a-z0-9_]/iu.test(after)) return true;
-    from = at + 1;
-  }
+  return [`${MARKER_HOST}@${name}`, `${MARKER_HOST}${name}`].some((needle) => {
+    for (let at = text.indexOf(needle); at >= 0; at = text.indexOf(needle, at + 1)) {
+      const before = at === 0 ? '' : text.charAt(at - 1);
+      if (!/[a-z0-9.-]/iu.test(before) && nameEndsAt(text, at + needle.length)) return true;
+    }
+    return false;
+  });
 }
