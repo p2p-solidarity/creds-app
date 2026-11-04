@@ -127,6 +127,7 @@
 | 3 | §2 `legacyWipe`（先問 §2 的決定） | 舊資料的模擬器：先確認有 groups／vault 的 key → 跑清除所有資料 → 確認 key 和 alias 都不在，App 回到 onboarding |
 | 4 | §4 改名＋小項目 | 社群驗證面板開得起來，i18n 沒有 raw key |
 | 5 | §3 註解精簡（最後做，避免和前面的刪除互相衝突） | diff 只有註解；跑 verify |
+| 4b | §8 移除 Pear／bare-kit | 見 §8 的 E2E |
 | 收尾 | Android 冷啟動＋`/code-review`（安全路徑） | 寫 `docs/e2e/<date>-code-cleanup/result.md` |
 
 ## 6. 工具
@@ -147,8 +148,43 @@ cd apps/expo && bunx knip@5 --config <scratchpad>/knip.json --production --no-ex
 
 `--production` 只從 `!` 標記的進入點出發（不算測試），所以「只有測試在用」也會被列出來。knip 對 `import()` 動態載入和 barrel 檔的判斷要人工再確認（例如 `envelopeHandler` 動態載入 `zk/`）。
 
+## 8. 移除 Pear／bare-kit（Kidney 2026-11-04 拍板）
+
+決定：Pear 整套移除，推翻 06 Q1。未來的私密交換改走 Nostr NIP-17（見 10 §9）。理由：
+- Pear 的「請求完整卡」和「交換名片」送的就是已經公開在 Nostr 上的同一份 Page JWS（`useCardExchange.ts` 的 `getCardJws: () => useProfileStore.getState().jws`）。
+- 網頁端接不上 Pear；雙方必須同時在線，而且畫面要開著。
+- 只在開發者模式出現，沒有實際用戶。
+- 卻是 App 體積最大的一塊：`libbare-kit.so` 每個 Android ABI 約 65 MB，iOS `BareKit.framework` 約 33 MB。
+
+要移除的東西：
+- `apps/expo/src/pear/`（全部），以及 `apps/expo/pear/worklet/`、`scripts/pack-pear-worklet.mjs`、`package.json` 的 `pear:pack` script
+- 依賴：`react-native-bare-kit`、`hyperswarm`、`b4a`（先確認沒有別人在用）。root `package.json` 如果有對應的 pin，要一起改
+- UI：
+  - `components/people/CardExchangeSection.tsx`、`PearConnectSection.tsx`
+  - `app/people/profile/[did].tsx` 裡這兩個區塊。沒存過的 DID 原本走 `PearConnectSection`，要改成現有的 not-found 分支
+  - `app/_layout.tsx` 的 `PearConsentOverlay`、`PearPresentConsentOverlay`
+  - 設定頁「允許私密名片交換」開關和 `stopLaneManager`
+- 偏好：`settings/preferences.ts` 的 `pearExchangeEnabled`。持久化資料裡留著的舊欄位直接忽略，不要寫 migration
+- deep link：
+  - `deeplink/parser.ts` 的 `kind: 'pear'`、`isValidPearDid`，以及 `router.ts`、`app/+native-intent.tsx` 的 pear 路由
+  - `app.json` associated domains 的 `"/pear/"` pathPrefix
+- 安全路徑：
+  - `keychain/sensitiveActionPolicy.ts` 裡 Pear `cardRelease` 相關的 action 和註解，`faceidPrompts.ledger.test` 與 `sensitiveActionPolicy.test` 跟著改
+  - root CLAUDE.md 的「Pear `cardRelease` still always prompts」那句一起刪
+- shared：`challenge.ts` 的 `ChallengePurpose` 裡的 `'pear.card' | 'pear.present'`，以及 `vectors/challenge.json`、`test/challenge.test.ts`。改 shared 要升版號；web 是 vendor 進去的，先 grep `../airmeishi-web` 確認它沒在用
+- 其他提到 Pear 的地方：`productionWipe.ts`、`snapshotMergeCopy.ts`、`profileSnapshots.ts`、`contactAutoRefresh.ts`、`oidc/*` 的註解、i18n 的 `pearExchange.*` 和 `pearConnect.*`、`globals.d.ts`、`eslint.config.mjs`、`scripts/export-licenses.ts`（Pear worklet bundle 那段）、`apps/expo/CLAUDE.md` 的 bare-kit／Expo Go 段落
+- 測試：`pear*.test.ts` 共 11 支，以及其他測試裡的 Pear 案例（`deeplink`、`biometricGate`、`presenterSelectiveDisclosure` 等）
+- 刪完後重產 `licenses.json`（流程見 `scripts/export-licenses.ts` 檔頭）
+
+**保持不動，報告裡寫一句就好**：
+- Android `minSdkVersion` 29：當初是因為 bare-kit 才拉高，但已經上架了，不要往下降
+- `expo-build-properties` 的 `useLegacyPackaging: true`：當初是為了修 bare-kit 的 libnativehelper 啟動崩潰。拿掉 bare-kit 後是否改回 false 另外決定，這次不改
+
+另一個 repo：`../airmeishi-web` 的 Page 如果有 `/pear/<did>` 連結或按鈕，只回報給 Kidney，不要從這裡改。
+
+E2E：Android release 量 arm64 下載大小，跟 68.3 MB 比；iOS archive 量 `.app` 大小，跟 128 MB 比。兩邊都要冷啟動，並且從 People 打開一個已存的 Page，確認詳細頁正常。
+
 ## 7. 不在範圍
 
 - `packages/parity-fixtures/`（凍結）
 - 改產品行為：唯一的例外是 §2 的選項 b，而且要 Kidney 先拍板
-- Pear／bare-kit 的去留（App 體積最大的一塊，是另一個產品決定）

@@ -128,7 +128,6 @@
 
 ---
 
-> **批次層決策**（北極星、批次規則 airmeishi＞creds-design、Q1–Q6、舊功能去留、執行計畫）在 **`06-plan-convergence-2.0.0.md`**——本文件是其中 QR/交換的 wire 細節。
 
 ---
 

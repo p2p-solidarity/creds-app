@@ -1,8 +1,7 @@
 # 10 — 精簡與社群驗證（zkTLS）plan
 
 > 2026-10-29 · 狀態（2026-10-30 更新）：**社群驗證以 §3.11 為準**（裝置證明＋p2p 見證，phase 1–7 程式完成、實機未驗）；zkTLS／TLSNotary／notary 證據（D1–D5、D8、§2 的 notary 部分、§3.1–§3.10、§8 Q1/Q2/Q5）已退役，只留作歷史。**§4（P4 一張卡）與 §5（P5 隱性化）尚未動 code**，由 UI rebrand 工作接手。
-> 本文件是 06 之後的批次 plan：把 App 收斂成 5 條 user story，並把「社群驗證」做成差異化核心。
-> 與 06 的關係：06 的 Q1（Pear 留）、Q3（不做透明日誌）、Q5（NIP-44 延後）不變；**Q2（card-key↔root 長效綁定）作廢**（名片改由 root 簽，見 §4）；Q6（憑證皮夾留在二層）不變，但不進主線 story。
+> 決策帳與 grill 決議都是當時的建議，不是定律；新事實與它衝突時，提出修改並附建議即可。
 
 ---
 
@@ -164,7 +163,7 @@
 
 ## 4. 一個身分、一張卡、一種 QR
 
-- 對外的所有內容都由 root `did:key` 簽。硬體鑰只留給護照做裝置綁定，不再露出。刪 `settings/dids`。06 的 Q2 作廢。
+- 對外的所有內容都由 root `did:key` 簽。硬體鑰只留給護照做裝置綁定，不再露出。刪 `settings/dids`。
 - QR 卡就是 Page 紀錄的投影：online 版是 `creds.id/@name`，離線版是片段 URL（只放名字、連結、did；不放 Page 外觀和 zkTLS 徽章）。
 - 刪 `/cards/edit`（Swift 移植的名片表單）、名片 wire、Present 的 Attestations 分頁。
 - 掃描端只認 Page URL 與片段。舊 wire 給一個版本的過渡期後移除。
@@ -223,5 +222,21 @@
 | Q3 | 移除標記與舊綠勾 | 推翻 D5：標記留在 bio，30 天背景續驗，90 天沒續上降灰 | D5 |
 
 ### 仍待確認
-- 06 Q3 裁了「透明日誌」；本 plan 的撤銷清單只是 root 簽的一份清單，不是日誌，不衝突——但若之後想讓外洩可被第三方偵測，需要重開這題。
 - **已知問題（P1 發現，2026-10-29，延後處理）**：onboarding Passkey「稍後再說」偶發卡在「正在設定…」（6 次 1 次）：keychain 讀完後沒寫入、CPU 閒置，卡在建立 root key 前後某個不會 resolve 的 await。疑似 dev 才有的 Metro 延遲載入 `expo-secure-store`，未證實；identity 路徑沒有逾時保護。細節見 `docs/e2e/2026-10-29-p1-maestro/result.md`。
+
+## 9. 私密交換：未來走 NIP-17（2026-11-04 決定）
+
+Pear／bare-kit 已經移除（14 §8）。以後如果要做私密交換，例如遠端請求證明、私下給電話或 email，改用 Nostr **NIP-17**（gift-wrapped 私訊，用 NIP-44 加密）：
+- App 和網頁都能用，雙方不必同時在線。
+- 每則訊息本來就由 npub 簽章，DID↔npub 綁定已經寫在 Page 上，所以不需要 Pear 那套雙向 challenge。
+- 面對面維持 QR。
+
+可以從 `da96ae9c`（Pear 移除前）取回再改寫的、跟傳輸無關的部分：
+- `apps/expo/src/pear/consent.tsx`：同意畫面
+- `presentRelease.ts`：固定「先問同意 → Face ID → 才送出」的順序
+- `presentBuilder.ts`：選擇性揭露 VP 的組裝
+- `cardRelease.ts`、`presentRequestState.ts`、`cardRequestState.ts`：狀態機
+- 對應的測試 `pearPresentRelease.test.ts`、`pearPresentBuilder.test.ts`、`pearCardRelease.test.ts`
+
+傳輸層（`lane`、`laneManager`、`lifecycle`、`frames`、`handshake`、`protocol`）不要再拿回來。
+
