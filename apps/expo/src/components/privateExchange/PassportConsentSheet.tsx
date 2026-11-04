@@ -43,6 +43,8 @@ function ConsentBody({ request, onClose }: { readonly request: IncomingPassportR
   const { stored, available } = useMemo(() => passportClaimsFor(request), [request]);
   const [chosen, setChosen] = useState<readonly PassportRequestClaim[]>(available);
   const [sending, setSending] = useState(false);
+  // Inline, not a toast: the toast overlay renders under this native sheet.
+  const [failure, setFailure] = useState<string | null>(null);
   const inPeople = getProfileSnapshot(request.senderDid) !== undefined;
   const attestable = deviceAttestSupported();
 
@@ -52,13 +54,14 @@ function ConsentBody({ request, onClose }: { readonly request: IncomingPassportR
 
   const onShare = (): void => {
     setSending(true);
+    setFailure(null);
     void answerPassportRequest(request, chosen)
       .then((result) => {
         if (result.ok) {
           pushToast(t(result.value.deviceAttested ? 'privateExchange.consent.sent' : 'privateExchange.consent.sentUnattested'), 'success');
           onClose();
         } else {
-          pushToast(t(`privateExchange.error.${result.error}`), 'error');
+          setFailure(t(`privateExchange.error.${result.error}`));
         }
       })
       .finally(() => { setSending(false); });
@@ -124,6 +127,9 @@ function ConsentBody({ request, onClose }: { readonly request: IncomingPassportR
         <ThemedText variant="bodySmall" tone="tertiary">{t('privateExchange.privacyNote')}</ThemedText>
 
         <View style={{ gap: 10 }}>
+          {failure === null ? null : (
+            <ThemedText variant="bodySmall" tone="error" accessibilityLiveRegion="polite">{failure}</ThemedText>
+          )}
           <ThemedButton
             fullWidth
             icon="faceid"

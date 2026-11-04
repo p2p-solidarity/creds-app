@@ -112,16 +112,19 @@ function RequestForm({ record, onClose }: { readonly record: ProfileRecord; read
   const insets = useSafeAreaInsets();
   const [chosen, setChosen] = useState<readonly PassportRequestClaim[]>(['passport.name']);
   const [sending, setSending] = useState(false);
+  // Inline, not a toast: the toast overlay renders under this native sheet.
+  const [failure, setFailure] = useState<string | null>(null);
 
   const onSend = (): void => {
     setSending(true);
+    setFailure(null);
     void sendPassportRequest(record, chosen)
       .then((result) => {
         if (result.ok) {
           pushToast(t('privateExchange.request.sent'), 'success');
           onClose();
         } else {
-          pushToast(t(`privateExchange.error.${result.error}`), 'error');
+          setFailure(t(`privateExchange.error.${result.error}`));
         }
       })
       .finally(() => { setSending(false); });
@@ -153,6 +156,9 @@ function RequestForm({ record, onClose }: { readonly record: ProfileRecord; read
         ))}
       </ThemedSurface>
       <ThemedText variant="bodySmall" tone="tertiary">{t('privateExchange.privacyNote')}</ThemedText>
+      {failure === null ? null : (
+        <ThemedText variant="bodySmall" tone="error" accessibilityLiveRegion="polite">{failure}</ThemedText>
+      )}
       <ThemedButton
         fullWidth
         label={t('privateExchange.request.send')}
