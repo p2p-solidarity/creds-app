@@ -1,60 +1,20 @@
 /**
- * `ProofGenerationManager` — TS port of
- * solidarity/Services/ZK/ProofGenerationManager.swift
- * + ProofGenerationManager+Verification.swift (generate + verify paths).
+ * Verify-only selective-disclosure proof check for old-format zkProof QR
+ * envelopes (removed together with those wires, 10 §4).
  *
- * Scope: selective-disclosure proofs only. Attribute proofs and range proofs
- * (Swift's `generateAttributeProof` / `generateRangeProof`) are out of scope
- * — the zkProof QR envelope only attaches `sdProof`.
- *
- * Commitment format (must match Swift v2):
- *   `0x02 || SHA256("solidarity.fieldCommit.v2" || "<field>:<value>" || (recipient ?? "") || masterKey)`
- *
- * Canonical signing data (must match Swift):
- *   `businessCardId|<sorted-field-list>|<recipient ?? "">|<unix-seconds>` (UTF-8)
- *
- * Signature: raw P-256 ECDSA `r||s` (64 bytes). On iOS Swift this is the
- * direct CryptoKit `rawRepresentation`. On Expo we route through SpruceID
- * (hardware-backed Secure Enclave / StrongBox key) which wraps the signing
- * input as a JWS envelope; see `signRawEs256` in `signingKey.ts` for the
- * exact wrapping rule and the cross-platform implication captured in the
- * `verifySelectiveDisclosureProof` reason string.
+ * Canonical signing data: `businessCardId|<sorted-field-list>|<recipient ?? "">|<unix-seconds>`
+ * (UTF-8). Signature: raw P-256 ECDSA `r||s` (64 bytes).
  */
 import {
   base64Decode,
-  base64Encode,
   utf8ToBytes,
-  uuid,
-  type BusinessCard,
   type BusinessCardField,
 } from '@solidarity/shared';
 import { p256 } from '@noble/curves/nist.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 
-import { signRawEs256, wrapRawSigningInputForSpruce } from '@/keychain/signingKey';
-import { getMasterKey } from '@/storage/secureMasterKey';
+import { wrapRawSigningInputForSpruce } from '@/keychain/signingKey';
 
-import { formatSwiftIso8601 } from '@/cards/solidarityQrPayload';
-
-/**
- * v2 commitment domain separator. Swift uses the same constant string
- * (ProofGenerationManager.swift:225). Bumping this version invalidates all
- * existing v2 commitments on both platforms.
- */
-const COMMITMENT_DOMAIN_SEPARATOR = 'solidarity.fieldCommit.v2';
-const COMMITMENT_VERSION_V2 = 0x02;
-
-/**
- * Canonical iteration order for BusinessCardField commitments. Mirrors
- * Swift `BusinessCardField.allCases` (the synthesised CaseIterable order
- * matches the declaration order in solidarity/Models/BusinessCard.swift,
- * which in turn matches @solidarity/shared's `businessCardFieldSchema`).
- *
- * If this list ever diverges from Swift, cross-platform verification of
- * unselected-field commitments breaks silently. The selected-field
- * signature still verifies (canonical signing data sorts alphabetically),
- * but the recipient cannot recompute the hidden-field commitments.
- */
 const ALL_FIELDS: readonly BusinessCardField[] = [
   'name',
   'title',
@@ -97,85 +57,6 @@ export interface ProofVerificationResult {
   readonly reason?: string;
 }
 
-interface GenerateArgs {
-  readonly businessCard: BusinessCard;
-  readonly selectedFields: ReadonlySet<BusinessCardField>;
-  readonly recipientId?: string;
-  /** Override for tests; defaults to `new Date()`. */
-  readonly now?: Date;
-}
-
-/**
- * Mirror Swift `ProofGenerationManager.getFieldValue(from:field:)`
- * (ProofGenerationManager.swift:98-110). The exact stringification for
- * `socialNetworks` and `skills` matches Swift byte-for-byte so commitments
- * recompute identically on the verifier side.
- */
-function getFieldValue(card: BusinessCard, field: BusinessCardField): string {
-  switch (field) {
-    case 'name':
-      return card.name;
-    case 'title':
-      return card.title ?? '';
-    case 'company':
-      return card.company ?? '';
-    case 'email':
-      return card.email ?? '';
-    case 'phone':
-      return card.phone ?? '';
-    case 'profileImage':
-      return card.profileImage ?? '';
-    case 'socialNetworks':
-      return card.socialNetworks
-        .map((p) => `${p.platform}: ${p.username}`)
-        .join(', ');
-    case 'skills':
-      return card.skills.map((s) => s.name).join(',');
-  }
-}
-
-/**
- * v2 digest (32 bytes) — the SHA256 hash without the version byte. Exposed
- * so verifiers can recompute and compare deterministically. Matches Swift
- * `ProofGenerationManager.computeV2Digest(field:value:masterKey:recipientId:)`.
- */
-export function computeV2Digest(args: {
-  readonly field: BusinessCardField;
-  readonly value: string;
-  readonly masterKey: Uint8Array;
-  readonly recipientId?: string;
-}): Uint8Array {
-  const domain = utf8ToBytes(COMMITMENT_DOMAIN_SEPARATOR);
-  const fieldData = utf8ToBytes(`${args.field}:${args.value}`);
-  const recipientData = utf8ToBytes(args.recipientId ?? '');
-  const input = new Uint8Array(
-    domain.length + fieldData.length + recipientData.length + args.masterKey.length
-  );
-  let offset = 0;
-  input.set(domain, offset);
-  offset += domain.length;
-  input.set(fieldData, offset);
-  offset += fieldData.length;
-  input.set(recipientData, offset);
-  offset += recipientData.length;
-  input.set(args.masterKey, offset);
-  return sha256(input);
-}
-
-/** v2 commitment (33 bytes): `0x02 || digest`. */
-function v2Commitment(args: {
-  readonly field: BusinessCardField;
-  readonly value: string;
-  readonly masterKey: Uint8Array;
-  readonly recipientId?: string;
-}): Uint8Array {
-  const digest = computeV2Digest(args);
-  const out = new Uint8Array(1 + digest.length);
-  out[0] = COMMITMENT_VERSION_V2;
-  out.set(digest, 1);
-  return out;
-}
-
 /**
  * Canonical signing payload — `businessCardId|<sorted-fields>|<recipient>|<unix-secs>`.
  * Matches Swift `canonicalProofSigningData(businessCardId:selectedFields:recipientId:timestamp:)`
@@ -197,61 +78,6 @@ function canonicalSigningBytes(args: {
     ts,
   ].join('|');
   return utf8ToBytes(canonical);
-}
-
-/**
- * Generate a selective-disclosure proof for `businessCard`. Selected fields
- * are revealed verbatim; unselected fields are hidden behind a v2 commitment
- * so the recipient can later "open" them out-of-band by re-presenting the
- * value + shared salts.
- *
- * Returns a proof shaped EXACTLY like Swift's `SelectiveDisclosureProof`
- * (ProofModels.swift:10-26) — Data fields are base64-encoded so the JSON
- * Codable wire format matches Swift's default `Data` strategy.
- */
-export async function generateSelectiveDisclosureProof(
-  args: GenerateArgs
-): Promise<SelectiveDisclosureProof> {
-  const { businessCard, selectedFields, recipientId } = args;
-  const now = args.now ?? new Date();
-  const masterKey = await getMasterKey();
-
-  const disclosedFields: Partial<Record<BusinessCardField, string>> = {};
-  const fieldCommitments: Partial<Record<BusinessCardField, string>> = {};
-
-  for (const field of ALL_FIELDS) {
-    const value = getFieldValue(businessCard, field);
-    if (selectedFields.has(field)) {
-      disclosedFields[field] = value;
-    } else {
-      const commitment = v2Commitment({ field, value, masterKey, recipientId });
-      fieldCommitments[field] = base64Encode(commitment);
-    }
-  }
-
-  const canonical = canonicalSigningBytes({
-    businessCardId: businessCard.id,
-    selectedFields,
-    recipientId,
-    timestamp: now,
-  });
-
-  const { signature, publicKeyRaw } = await signRawEs256(canonical);
-
-  const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-
-  return {
-    proofId: uuid(),
-    businessCardId: businessCard.id,
-    disclosedFields,
-    fieldCommitments,
-    recipientId,
-    signature: base64Encode(signature),
-    signerPublicKey: base64Encode(publicKeyRaw),
-    createdAt: formatSwiftIso8601(now),
-    expiresAt: formatSwiftIso8601(expiresAt),
-    format: 'expo-v2',
-  };
 }
 
 /**
@@ -366,12 +192,5 @@ function parseIsoDate(value: string): Date | null {
   return d;
 }
 
-// Re-export for tests that need to inspect the canonical wire format.
-/** @internal — exposed for parity tests. */
-export const _internal = {
-  canonicalSigningBytes,
-  computeV2Digest,
-  v2Commitment,
-  getFieldValue,
-  ALL_FIELDS,
-} as const;
+/** @internal — exposed so tests can pin the canonical signing bytes. */
+export const _internal = { canonicalSigningBytes } as const;

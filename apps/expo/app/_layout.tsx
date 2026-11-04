@@ -60,7 +60,6 @@ import { ConfirmDialogOverlay } from '@/feedback/confirmDialog';
 import { ToastOverlay } from '@/feedback/toast';
 import { prepareLeaveCards } from '@/contacts/leaveCardInbox';
 import { prepareRecentUpdates } from '@/contacts/recentUpdates';
-import { useGroupStore } from '@/groups/store';
 import { useIdentityData } from '@/identity';
 import { installI18n } from '@/i18n';
 import { hydrateSensitiveActionPolicy } from '@/keychain';
@@ -81,6 +80,7 @@ import { dropRetiredPassportZkData } from '@/passport/retiredZkData';
 import { DEFAULT_RELAYS } from '@/nostr/publish';
 import { hydrateZktlsProofs } from '@/zktls/store';
 import { hydratePreferences, usePreferences } from '@/settings/preferences';
+import { runLegacyWipeOnce } from '@/settings/legacyWipe';
 import { initMmkv, ManifestStorage } from '@/storage';
 import { PRIMARY_TAB_HREFS } from '@/navigation/primaryTabs';
 import { themeRefreshLayout } from '@/navigation/themeRefresh';
@@ -89,7 +89,6 @@ import { CARDS_MANIFEST_SCOPE } from '@/cards/cardManifest';
 import { CONTACTS_MANIFEST_SCOPE } from '@/contacts/contactManifest';
 import { CREDENTIALS_MANIFEST_SCOPE } from '@/credentials/credentialManifest';
 import { ISSUERS_MANIFEST_SCOPE } from '@/credentials/issuerManifest';
-import { GROUPS_MANIFEST_SCOPE } from '@/groups/groupManifest';
 
 // App-wide JS error boundary (wraps <Stack> below so it gets the React
 // component stack of any render throw) + global uncaught-JS handler (installed
@@ -110,7 +109,6 @@ import { AppErrorBoundary } from '@/feedback/RootErrorBoundary';
 const MIGRATION_SCOPES = [
   CARDS_MANIFEST_SCOPE,
   CONTACTS_MANIFEST_SCOPE,
-  GROUPS_MANIFEST_SCOPE,
   CREDENTIALS_MANIFEST_SCOPE,
   ISSUERS_MANIFEST_SCOPE,
 ] as const;
@@ -178,7 +176,6 @@ export default function RootLayout() {
     const hydrateDetailsInBackground = () => {
       void useCardStore.getState().hydrate();
       void useContactStore.getState().hydrate();
-      void useGroupStore.getState().hydrate();
       void useCredentialStore.getState().hydrate();
       void useIssuerMetadataStore.getState().hydrate();
       void useIdentityData.getState().hydrate();
@@ -208,7 +205,6 @@ export default function RootLayout() {
         // can render on the next frame without any decryption.
         useCardStore.getState().seedFromManifest();
         useContactStore.getState().seedFromManifest();
-        useGroupStore.getState().seedFromManifest();
         useCredentialStore.getState().seedFromManifest();
         useIssuerMetadataStore.getState().seedFromManifest();
         logBoot('manifest-seed:done');
@@ -241,7 +237,6 @@ export default function RootLayout() {
           await Promise.all([
             useCardStore.getState().hydrate(),
             useContactStore.getState().hydrate(),
-            useGroupStore.getState().hydrate(),
             useCredentialStore.getState().hydrate(),
             useIssuerMetadataStore.getState().hydrate(),
           ]);
@@ -249,6 +244,7 @@ export default function RootLayout() {
         } else {
           logBoot('migration:skip');
         }
+        void runLegacyWipeOnce();
 
         logBoot('i18n:start');
         // Pass the persisted language choice so the user's explicit selection

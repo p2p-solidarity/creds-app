@@ -23,7 +23,6 @@ import { useIdentityData } from '@/identity';
 import { requireSensitiveAction } from '@/keychain';
 import { resetAppDataKeepingKeys } from '@/settings/productionWipe';
 import { getMmkv } from '@/storage/mmkv';
-import { clearAll as clearPassportAnchors } from '@/zk/passportAnchorStore';
 
 export function SettingsResetSection({ index }: { readonly index: number }) {
   const { t } = useTranslation();
@@ -61,7 +60,6 @@ export function SettingsResetSection({ index }: { readonly index: number }) {
     setBusy(true);
     try {
       await removePassportCredentials();
-      clearPassportAnchors();
       const mmkv = getMmkv();
       for (const k of mmkv.getAllKeys()) {
         if (k.startsWith('passport:')) mmkv.remove(k);
