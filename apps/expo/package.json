@@ -25,7 +25,6 @@
     "pear:pack": "node scripts/pack-pear-worklet.mjs"
   },
   "dependencies": {
-    "@gorhom/bottom-sheet": "^5.2.14",
     "@noble/ciphers": "^2.4.0",
     "@noble/curves": "^2.4.0",
     "@noble/hashes": "^2.4.0",
@@ -37,9 +36,8 @@
     "@solidarity/shared": "workspace:*",
     "b4a": "^1.9.0",
     "expo": "^58.0.21",
+    "expo-application": "~58.1.2",
     "expo-asset": "~58.0.19",
-    "expo-auth-session": "~58.0.16",
-    "expo-blur": "~58.0.5",
     "expo-build-properties": "~58.0.11",
     "expo-camera": "~58.0.14",
     "expo-clipboard": "~58.0.4",
@@ -56,9 +54,7 @@
     "expo-linking": "~58.0.15",
     "expo-local-authentication": "~58.0.2",
     "expo-localization": "~58.0.5",
-    "expo-notifications": "~58.1.7",
     "expo-router": "~58.0.28",
-    "expo-screen-orientation": "~58.0.3",
     "expo-secure-store": "~58.0.2",
     "expo-sharing": "~58.0.21",
     "expo-splash-screen": "~58.0.12",
@@ -87,9 +83,7 @@
     "react-native-screens": "~4.30.1",
     "react-native-svg": "15.16.0",
     "react-native-vision-camera": "^5.2.4",
-    "react-native-vision-camera-resizer": "^5.2.4",
     "react-native-vision-camera-worklets": "^5.2.4",
-    "react-native-webrtc": "^124.0.8",
     "react-native-worklets": "0.13.0",
     "zod": "^4.6.7",
     "zustand": "^5.0.16"

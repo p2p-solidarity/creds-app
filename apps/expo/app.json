@@ -161,13 +161,6 @@
         }
       ],
       [
-        "expo-notifications",
-        {
-          "enableRemoteNotifications": false,
-          "enableBackgroundRemoteNotifications": false
-        }
-      ],
-      [
         "expo-camera",
         {
           "cameraPermission": "creds.id uses the camera to scan QR codes and passport MRZ.",
@@ -215,7 +208,6 @@
         }
       ],
       "./plugins/withXcodeCloudScripts.js",
-      "./plugins/withPrecompiledVisionCameraResizerMetal.js",
       "./plugins/withExpoModulesJsiPatches.js",
       "./plugins/withSemaphoreBindingsPod.js",
       "./plugins/withRustXcframeworkSearchPath.js",

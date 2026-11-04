@@ -166,11 +166,7 @@ iOS releases ship via **Xcode Cloud** (Apple Developer 25 h/month free,
 auto cert mgmt). The `withXcodeCloudScripts` config plugin
 (`apps/expo/plugins/`) re-creates `ios/ci_scripts/ci_post_clone.sh`
 after every `expo prebuild --clean` from the persistent source at
-`ci-scripts/ci_post_clone.sh`. `withPrecompiledVisionCameraResizerMetal`
-stages a pinned `default.metallib` so Archive never depends on Xcode Cloud's
-unreliable optional Metal Toolchain; regenerate it with
-`scripts/build-vision-camera-resizer-metallib.sh` after shader updates.
-`withExpoModulesJsiPatches` rewrites `scripts/build-xcframework.sh` of the
+`ci-scripts/ci_post_clone.sh`. `withExpoModulesJsiPatches` rewrites `scripts/build-xcframework.sh` of the
 installed `expo-modules-jsi` (58.0.21) at prebuild so Xcode 27 can archive it:
 it wraps the nested `xcodebuild -quiet` whose spurious "error: … exited with
 code 0" line otherwise fails the phase with "Command PhaseScriptExecution

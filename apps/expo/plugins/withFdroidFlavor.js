@@ -27,7 +27,6 @@ const MARKER = '// [withFdroidFlavor]';
 const FDROID_EXCLUDED_MODULES = [
   'expo-iap',
   'expo-camera',
-  'expo-notifications',
   '@react-native-google-signin/google-signin',
 ];
 
