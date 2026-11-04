@@ -1,6 +1,6 @@
 # 16 — 私密交換走 Nostr NIP-17 plan
 
-> 2026-11-05 · 狀態：**草案，已自我 grill（§10），等 Kidney 回 §9 的 Q1–Q5**，還沒動 code。安全路徑（identity、keychain、crypto），size **L**。
+> 2026-11-05 · 狀態：**Kidney 已回覆（§9）：先做護照私密出示（§11），其餘照建議**。P1 實作中。安全路徑（identity、keychain、crypto），size **L**。
 > 取代 10 §9 的方向說明；Pear／bare-kit 已在 14 §8 移除。決策都是當日的建議，新事實與它衝突時提出修改即可。
 > 程式碼基準：`b1e6df9e`（branch `claude/nip17-private-exchange-c25c08`）。
 
@@ -20,12 +20,12 @@
 
 | 階段 | 內容 | 結尾 E2E |
 |---|---|---|
-| **P1 傳輸＋私下給聯絡方式** | `packages/shared` 的 NIP-59 wrap／unwrap 與訊息解析（tdd）；App 的收件匣訂閱、kind 10050、寄件；People 個人頁「私下分享我的聯絡方式」→ 對方個人頁出現「對方私下分享」區塊。 | iPhone 18 Pro 模擬器（A）與共用 AVD（B）輪流開機：A 分享 → 關 A、開 B → B 收到並看到內容（截圖＋result.md） |
-| **P2 遠端請求證明（錢包憑證）** | 從 `da96ae9c` 取回 consent／presentRelease／presentBuilder／狀態機，搬到 `src/privateExchange/`；拿回 cardKeyBinding；請求者在對方個人頁選 claim 送出請求，持有人在收件匣看同意畫面 → Face ID → 選 claim → 回加密 VP；請求者驗 VP（簽章、aud、nonce、持有人綁定、cardKeyBinding）。 | 同上兩台輪流；持有人錢包先放一張測試用 SD-JWT（來源見 §8 風險 R3） |
-| **P3 護照的私密 claim（姓名、國籍）** | 回覆時由裝置金鑰（App Attest／Key Attestation）簽一份帶 aud＋nonce 的私密護照 statement，驗證規則與公開 statement 相同。 | **只能在實機**（模擬器沒有 App Attest）；模擬器只能驗到「被拒」那一側 |
+| **P1 傳輸＋護照私密出示**（Kidney 2026-11-05 指定優先） | `packages/shared` 的 NIP-59 wrap／unwrap、訊息解析、護照出示 statement 驗證（tdd）；App 的 kind 10050、收件匣、寄件；People 個人頁「請求護照資料」→ 持有人同意 → Face ID → 裝置金鑰簽出示 statement → 加密回覆 → 請求者驗證並顯示。設計見 §11。 | iPhone 18 Pro 模擬器（A）與第二個身分輪流：A 請求 → B 同意並回覆 → A 驗過顯示。模擬器沒有 App Attest、沒有 NFC，只能跑到「開發模式護照、未經真機檢查（L1）」；L3 那一段要 TestFlight 實機 |
+| **P2 私下給聯絡方式** | `contact.share`：People 個人頁「私下分享我的聯絡方式」→ 對方個人頁出現「對方私下分享」區塊。 | 同上兩個身分輪流 |
+| **P3 錢包憑證的證明請求** | 從 `da96ae9c` 取回 presentBuilder 與狀態機；拿回 `a54b6d65^` 的 cardKeyBinding；JWT-VC／SD-JWT 組成 VP 回覆。 | 同上；持有人錢包先放一張測試用 SD-JWT（§8 R3） |
 | **P4 網頁加入**（依 Q4） | 網頁 session 已經解鎖 npub scalar（`airmeishi-web/src/identity/session.ts`），wire 全在 shared，網頁可以當請求者或收聯絡方式。 | 網頁 ↔ App |
 
-每階段結尾：一次真實 E2E → `bun run typecheck && bun run lint && bun run test` → `/code-review`。P1 先做，因為它在模擬器上就能完整證明傳輸，而 P2／P3 都建在它上面。
+每階段結尾：一次真實 E2E → `bun run typecheck && bun run lint && bun run test` → `/code-review`。
 
 ## 2. Wire
 
@@ -47,17 +47,18 @@ gift wrap  kind 1059  pubkey=一次性隨機金鑰  tags=[["p", 收件人]]  cre
 所有訊息都帶 `page`：寄件人的 **public 投影 Page JWS**（root DID 簽，`alsoKnownAs` 裡有 `nostr:<npub>`）。收件人不用連網就能驗「這個 npub 是哪個 DID」。JWS 超過 24 KB 就不帶，收件人改用 `resolveProfileByNpub` 上網查。
 
 ```jsonc
-// 私下給聯絡方式（P1）
+// 私下給聯絡方式（P2）
 { "v": 1, "type": "contact.share", "page": "<jws>",
   "phone": "…"?, "email": "…"?, "note": "…"? }   // 至少一個；不帶 full 投影（§10 G1）
-// 請求證明（P2）
+// 請求證明（P1 只有 passport.name／passport.nationality）
 { "v": 1, "type": "proof.request", "page": "<jws>",
   "claims": ["…"],          // 1–8 個，只收已知 claim type
   "purpose": "…"?,          // ≤ 140 字，同意畫面照原文顯示並標明「對方寫的」
   "nonce": "<32 bytes hex>", "exp": 1730000000 }   // exp ≤ 7 天後
-// 回覆證明（P2）——rumor 帶 ["e", 請求的 rumor id]
+// 回覆證明——rumor 帶 ["e", 請求的 rumor id]
 { "v": 1, "type": "proof.response", "page": "<jws>",
-  "vp": "<vp+jwt>", "binding": "<cardKeyBinding JWS>" }
+  "passport": { "statement": "…", "device": {…} | null } }   // P1，§11
+// P3 再加 "vp": "<vp+jwt>", "binding": "<cardKeyBinding JWS>"
 ```
 
 拒絕不回任何訊息：「不給」和「沒看到」對請求者分不出來（沿用 Pear 的政策），請求在 `exp` 後顯示「已過期，沒有回覆」，不說「被拒」。
@@ -163,6 +164,8 @@ UI、訂閱迴圈、寄出流程不寫單元測試，由 E2E 涵蓋。`presentRe
 
 ## 9. 給 Kidney 的產品決策（每題附建議；「照你的」＝全部採用）
 
+**2026-11-05 Kidney：「先優先把護照 vp 實現吧，然後剩下照你的」**——Q1 改成先做護照私密出示（§11）；Q2–Q5 採用建議。
+
 | # | 問題 | 建議 | 其他選項 |
 |---|---|---|---|
 | Q1 | 階段順序 | **P1 先做傳輸＋私下給聯絡方式**，模擬器上能完整證明；P2 錢包憑證的證明請求接著做；P3 護照姓名／國籍要實機，排在最後。 | 先做證明請求（但模擬器上沒有可出示的護照，只能先用錢包憑證） |
@@ -187,3 +190,44 @@ UI、訂閱迴圈、寄出流程不寫單元測試，由 E2E 涵蓋。`presentRe
 | G8 | 同一個身分在兩支手機（passkey 同步，npub 相同）：兩支都收得到回覆，只有發請求那支有寄件匣。 | 另一支找不到對應請求就忽略（§2.1）。 |
 | G9 | 磁碟只剩 38 GB。 | §8 R5：開發期用 bun 腳本當第二身分，最後才 build Android。 |
 | G10 | P2 請求者不知道對方有哪些 claimType。 | §8 R6：P2 開始時定固定清單。 |
+
+## 11. 護照私密出示（P1，Kidney 指定優先）
+
+### 11.1 為什麼不是 SD-JWT VP
+護照憑證沒有任何發證者簽過的 JWT（§0 第 1 點）；L3 的信任來源是**裝置證明**（11 §6.1：「真的 creds App 在真手機上讀到通過 passive auth 的晶片」）。所以出示沿用同一個信任模型：**持有人同意後，裝置金鑰當場簽一份只含所選 claim、綁定請求者與 nonce 的 statement**。不需要 salt／digest、不用存一份簽好的憑證、不用每 30 天重簽，也不用 cardKeyBinding（持有人就是 npub，npub 經 Page 綁到 DID）。
+
+### 11.2 statement（`creds.passport.present.v1`，`packages/shared/src/deviceproof/passportPresentation.ts`）
+```jsonc
+{ "v": 1, "typ": "creds.passport.present.v1",
+  "holder": "npub1…",          // 持有人＝回覆的寄件人
+  "aud": "npub1…",             // 請求者
+  "nonce": "<64 hex>",         // 請求帶來的
+  "claims": { "name": "…"?, "nationality": "JPN"? },   // 至少一個，只能是請求過的
+  "chip": "passiveAuth" | "simulated" | "unverified",
+  "readAt": 1730000000, "signedAt": 1730000000 }
+```
+回覆 payload：`{ "passport": { "statement": "<上面的 JSON 字串>", "device": DeviceProof | null } }`。裝置證明簽的就是這串 bytes（與公開 statement 相同做法）。
+
+### 11.3 請求者的驗證（tdd）
+1. statement 用 zod strict 解析；`holder`＝回覆寄件人、`aud`＝我、`nonce`＝我發出的請求的 nonce。
+2. `claims` 非空、每個 key 都在請求裡、格式對（國籍 `^[A-Z]{3}$`，姓名 1–80 字）。
+3. `signedAt` 在現在 ±5 分鐘內（當場簽的）、`readAt ≤ signedAt`。
+4. `device`：
+   - 有 → `verifyDeviceProof`（釘選 Apple／Google 根、我們的 App、正式環境）；`notary` 一律拒；驗不過**整則拒絕**，不降級。
+   - 沒有 → 照樣接受，但等級是 L1。
+5. 等級：裝置證明有效**且** `chip = passiveAuth` → **L3**「由 creds App 在真機上讀取一本有效護照的晶片資料」；其他一律 **L1**「未經真機檢查」（`simulated` 另外標「開發模式護照」）。永遠不把 L1 畫成 L3。
+
+### 11.4 持有人端
+- 掃描護照時（`app/passport/index.tsx`）多存一份 `passport/privateClaims.ts`（MMKV，與 `statementStore` 同層）：`{ credentialId, name?, nationality, chip, readAt }`。姓名從 DG1 第一行（第 6–44 字，`<<` 分姓與名）解析，不用 OCR 結果；模擬的晶片沒有姓名就不存姓名（Rule 8）。刪除護照時一起刪。
+- 舊的護照紀錄沒有這份資料：同意畫面說「請重新掃描護照才能私下出示」，不假裝能給。
+- 收到請求：只列「請求了、而且我真的有」的 claim → 同意（逐項勾選）→ Face ID（紅線 `sendPrivate`）→ `signWithDeviceKey(npub, statement)` → 寄出。裝置簽不了（模擬器、不支援的手機）時，同意畫面事先講明「對方會看到『未經真機檢查』」，由持有人決定要不要照樣送。
+- 請求能選的 claim：`passport.name`、`passport.nationality`（依 Q5 不提供 over 18）。
+
+### 11.5 失敗模式（tdd 清單，接 §6）
+20. statement 不是 JSON、多欄位、版本錯 → 拒
+21. holder ≠ 寄件人、aud ≠ 我、nonce ≠ 請求 → 拒
+22. claims 空、含未請求的 key、國籍格式錯、姓名空白或超長 → 拒
+23. signedAt 太舊或在未來、readAt > signedAt → 拒
+24. device 是 notary、device 驗不過（換 bytes、換 npub）→ 拒
+25. device 為 null → L1；device 有效但 chip ≠ passiveAuth → L1；device 有效且 passiveAuth → L3
+26. DG1 姓名解析：標準 TD3、只有姓、名字中間有 `<`、長度不足 88、全是填充字元 → 正確或「沒有姓名」
