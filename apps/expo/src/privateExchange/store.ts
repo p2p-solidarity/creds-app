@@ -10,6 +10,7 @@
 import type { PassportChipState, PassportClaimValues, PassportRequestClaim } from '@solidarity/shared';
 import { create } from 'zustand';
 
+import { getProfileSnapshot } from '@/people/profileSnapshots';
 import { canCommitLocalData, type LocalDataEpoch } from '@/settings/localDataWipeBarrier';
 import { getMmkv } from '@/storage/mmkv';
 
@@ -79,7 +80,7 @@ interface Persisted {
   readonly incoming: Readonly<Record<string, IncomingPassportRequest>>;
   /** sender DID → their latest share. */
   readonly contacts: Readonly<Record<string, ReceivedContactShare>>;
-  /** What I last shared, prefilled next time. */
+  /** Phone and email I last shared, prefilled next time (a note is per person, never prefilled). */
   readonly contactDraft: ContactShareDraft | null;
   /** recipient DID → unix s I last shared my details with them. */
   readonly contactsSent: Readonly<Record<string, number>>;
@@ -145,9 +146,11 @@ function pick(state: Persisted): Persisted {
   };
 }
 
+/** Over the cap, shares from people not in my People go first, oldest first. */
 function capContacts(contacts: Record<string, ReceivedContactShare>): Record<string, ReceivedContactShare> {
+  const saved = (c: ReceivedContactShare): number => (getProfileSnapshot(c.senderDid) === undefined ? 0 : 1);
   const kept = Object.values(contacts)
-    .sort((a, b) => b.sharedAt - a.sharedAt)
+    .sort((a, b) => saved(b) - saved(a) || b.sharedAt - a.sharedAt)
     .slice(0, MAX_CONTACT_SHARES);
   return Object.fromEntries(kept.map((c) => [c.senderDid, c]));
 }
@@ -226,7 +229,10 @@ export const usePrivateExchangeStore = create<PrivateExchangeState>((set, get) =
     },
     recordContactSent: (recipientDid, draft, at, epoch) => {
       const s = current();
-      return commit({ ...s, contactDraft: draft, contactsSent: { ...s.contactsSent, [recipientDid]: at } }, epoch);
+      return commit(
+        { ...s, contactDraft: { ...draft, note: '' }, contactsSent: { ...s.contactsSent, [recipientDid]: at } },
+        epoch
+      );
     },
     markSeen: (wrapIds, cursor, epoch) => {
       const s = current();

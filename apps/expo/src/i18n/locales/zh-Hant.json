@@ -1567,7 +1567,7 @@
   "privateExchange.contact.replaceBody": "你在這個人頁面上記的電話、Email 或備註跟對方分享的不同，存進去會改成對方分享的。",
   "privateExchange.contact.replaceConfirm": "取代",
   "privateExchange.contact.title": "私下分享給 {{name}}",
-  "privateExchange.contact.body": "只有對方的 App 打得開。填過的會留在這台手機，下次預先填好。",
+  "privateExchange.contact.body": "只有對方的 App 打得開。電話和 Email 會留在這台手機，下次預先填好；備註每次重寫。",
   "privateExchange.contact.saveToPeople": "存到 People",
   "privateExchange.contact.savedToPeople": "已把 {{name}} 存到 People",
   "privateExchange.contact.saveFailed": "現在找不到對方的 Page，稍後再試。",

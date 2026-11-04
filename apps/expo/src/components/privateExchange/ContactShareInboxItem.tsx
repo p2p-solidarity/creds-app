@@ -34,6 +34,7 @@ export function ContactShareInboxItem({ share }: { readonly share: ReceivedConta
       return;
     }
     mergeVerified(resolved.record, resolved.jws);
+    setSave('idle');
     pushToast(t('privateExchange.contact.savedToPeople', { name: resolved.record.displayName }), 'success');
   };
 

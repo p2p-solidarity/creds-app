@@ -105,7 +105,8 @@ function onContactShare(parsed: ParsedPrivateMessage, message: ContactShareMessa
       ...(message.phone === undefined ? {} : { phone: message.phone }),
       ...(message.email === undefined ? {} : { email: message.email }),
       ...(message.note === undefined ? {} : { note: message.note }),
-      sharedAt: parsed.createdAt,
+      // Author-stated; never later than now, so a fast clock can't block updates.
+      sharedAt: Math.min(parsed.createdAt, Math.floor(Date.now() / 1000)),
     },
     epoch
   );

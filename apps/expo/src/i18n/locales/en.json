@@ -1567,7 +1567,7 @@
   "privateExchange.contact.replaceBody": "The phone, email or note you saved for this person differs from what they shared. Saving replaces it with theirs.",
   "privateExchange.contact.replaceConfirm": "Replace",
   "privateExchange.contact.title": "Share privately with {{name}}",
-  "privateExchange.contact.body": "Only their app can open it. What you fill in stays on this phone and is prefilled next time.",
+  "privateExchange.contact.body": "Only their app can open it. Phone and email stay on this phone and are prefilled next time; the note starts blank each time.",
   "privateExchange.contact.saveToPeople": "Save to People",
   "privateExchange.contact.savedToPeople": "Saved {{name}} to People",
   "privateExchange.contact.saveFailed": "Can't find their Page right now. Try again later.",

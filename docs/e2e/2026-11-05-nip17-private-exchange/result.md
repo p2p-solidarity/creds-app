@@ -36,6 +36,8 @@
 | D5 | B 回分享（要 Face ID） | 只填 Email → Face ID 提示 →「已加密寄出」；p-tag A 的 1059：2→3 | PASS | `D5-b-share-form.png`、`D5-b-faceid-prompt.png`、`D5-b-sent.png`、relay 腳本 |
 | D6 | A 看到、預填 | B 個人頁「E2E Holder 私下分享給你 · holder@example.com」；再開分享 sheet，D1 的三個值預填 | PASS | `D6-a-received.png`、`D6-a-prefilled.png` |
 
+P2 code review 後（`/code-review`，跑完 E2E 之後才改，未重跑 E2E）：備註不再預填（只預填電話、Email，D6 截圖是改之前的樣子）；超過 200 則時先丟不在 People 的人的分享；分享時間不晚於現在；「存到 People」被擋時不會一直轉圈。已知未修：把人從 People 移除後，對方的分享會回到收件匣。
+
 P2 沒跑：「取代」確認框（本機備註已有不同值時）、刪除收件匣的分享、對方 Page 查不到時「存到 People」的錯誤訊息。
 P2 執行偏差：expiry 修正的 session 在 02:2x 也用了同一台 iPhone 18 Pro（我給它的 brief 指定了這台），中途把 App 換成它的 bundle；它關機後我重裝本分支 bundle（`cmp` 一致）才繼續，D1 起全部在本分支 bundle 上跑。
 
