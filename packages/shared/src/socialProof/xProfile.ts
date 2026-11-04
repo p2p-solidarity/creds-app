@@ -64,8 +64,8 @@ export function parseXProfile(revealed: string, handle: string): Result<readonly
   return ok([...expandedUrls(entities?.['description']), ...expandedUrls(entities?.['url'])]);
 }
 
-/** `https://creds.id/@<name>` exactly, as X expands a link (http or https, optional www and `/`). */
+/** `https://creds.id/<name>` or `…/@<name>` exactly, as X expands a link (http or https, optional www and `/`). */
 export function isMarkerUrl(url: string, name: string): boolean {
-  const m = /^https?:\/\/(?:www\.)?creds\.id\/@([a-z0-9]{3,30})\/?$/u.exec(url);
+  const m = /^https?:\/\/(?:www\.)?creds\.id\/@?([a-z0-9]{3,30})\/?$/u.exec(url);
   return m?.[1] === name;
 }
