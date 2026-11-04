@@ -88,12 +88,25 @@ const LEGACY_WIPE_DONE_KEY = 'legacyWipe:v1:done';
  * the marker lives in MMKV, so a full local wipe re-arms it (harmless: the
  * targets are already gone and deleting a missing item is a no-op).
  */
-export async function runLegacyWipeOnce(): Promise<void> {
-  try {
-    if (getMmkv().getString(LEGACY_WIPE_DONE_KEY) === '1') return;
-    const result = await legacyWipe();
-    if (result.ok) getMmkv().set(LEGACY_WIPE_DONE_KEY, '1');
-  } catch {
-    // MMKV not ready — the next launch retries.
-  }
+export function runLegacyWipeOnce(): Promise<void> {
+  bootRun ??= (async () => {
+    try {
+      if (getMmkv().getString(LEGACY_WIPE_DONE_KEY) === '1') return;
+      const result = await legacyWipe();
+      if (result.ok) getMmkv().set(LEGACY_WIPE_DONE_KEY, '1');
+    } catch {
+      // MMKV not ready — the next launch retries.
+    }
+  })();
+  return bootRun;
+}
+
+let bootRun: Promise<void> | null = null;
+
+/**
+ * A local wipe awaits the boot run first: its marker write landing after the
+ * wipe emptied MMKV would make `rekeyEmptyMmkv` refuse the store.
+ */
+export function quiesceLegacyWipe(): Promise<void> {
+  return bootRun ?? Promise.resolve();
 }

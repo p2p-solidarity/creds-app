@@ -49,7 +49,7 @@ import { useWebSignPending } from '@/websign/pendingRequest';
 import { useSocialProofs } from '@/socialProof/store';
 
 import { usePreferences } from './preferences';
-import { legacyWipe } from './legacyWipe';
+import { legacyWipe, quiesceLegacyWipe } from './legacyWipe';
 import { clearProductionAppData } from './productionAppData';
 import { deleteProductionFiles } from './productionFiles';
 import {
@@ -136,6 +136,7 @@ async function quiesceBackgroundWork(): Promise<LocalDeletionResult> {
       quiesceSigningKeyOperations(),
       quiescePairwiseSeedOperations(),
       quiesceLocalDataOperations(),
+      quiesceLegacyWipe(),
     ]);
     return deletionSucceeded();
   } catch {
