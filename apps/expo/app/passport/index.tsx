@@ -72,6 +72,7 @@ import type { PassportReadResult } from '@solidarity/nitro-attest';
 import { uuid } from '@solidarity/shared';
 import { loadPassportNitroModules } from '@/passport/nitroModules';
 import { issuePassportStatement, preloadPassportStatement } from '@/passport/npubBinding';
+import { recordPassportPrivateClaims } from '@/passport/privateClaims';
 import { DEFAULT_RELAYS } from '@/nostr/publish';
 import { hasNostrKeySync } from '@/nostr/userKey';
 import { deviceAttestSupported } from '@/witness/deviceKey';
@@ -421,6 +422,7 @@ export default function PassportSetup() {
       for (const c of claims) {
         await useIdentityData.getState().upsertProvableClaim(c);
       }
+      recordPassportPrivateClaims({ credentialId: cardId, chip, draft, chipVerified, now });
 
       pushToast(
         developerMode && chip.isSimulated
