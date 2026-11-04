@@ -1,5 +1,5 @@
 /**
- * SharingPreferences — mirrors solidarity/Models/BusinessCard.swift.
+ * SharingPreferences.
  *
  * Migration path: legacy Swift Codable instances may lack `sharingFormat`.
  * In Swift it defaults to `.zkProof` via a custom init(from decoder:).

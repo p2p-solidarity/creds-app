@@ -1,5 +1,5 @@
 /**
- * Credentials store — mirrors Swift VCLibrary + IdentityCardEntity.
+ * Credentials store.
  *
  * Boot model (Path A — manifest + lazy details):
  *

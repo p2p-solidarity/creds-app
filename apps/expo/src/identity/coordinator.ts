@@ -1,8 +1,6 @@
 /**
- * IdentityCoordinator — slim TS port of
- * solidarity/Services/Identity/IdentityCoordinator.swift, scoped to the
- * profile/DID surface the React layer needs. ZK pieces stay in
- * `apps/expo/src/zk/coordinator.ts`; this store only exposes the active
+ * IdentityCoordinator — the profile/DID surface the React layer needs;
+ * this store only exposes the active
  * `did:key` derived from the SpruceID-managed signing key.
  *
  * Hydration order mirrors Swift `loadIdentity`:

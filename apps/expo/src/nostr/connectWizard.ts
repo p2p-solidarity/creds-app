@@ -64,7 +64,7 @@ export function isNostrPublishOutcomeSuccessful(outcome: NostrPublishOutcome): b
 }
 
 /**
- * Partial acceptance (user decision 2026-07-17, 04-plan S8f): the page is
+ * Partial acceptance (user decision 2026-07-17): the page is
  * genuinely live once at least one relay holds EACH copy — a verifier only
  * needs to find one relay carrying both the pointer and the kind-0 binding.
  * Both-copies is the floor, not either: a page copy with zero verification

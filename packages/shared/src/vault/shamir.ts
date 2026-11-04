@@ -1,8 +1,5 @@
 /**
- * Shamir Secret Sharing over GF(256) — mirrors Swift
- * solidarity/Services/Vault/ShamirSecretSharing.swift.
- *
- * Splits a secret (Uint8Array) into N shares such that any T are sufficient
+ * Shamir Secret Sharing over GF(256) — splits a secret (Uint8Array) into N shares such that any T are sufficient
  * to reconstruct the original. Polynomial coefficients are random; the
  * field is GF(2^8) using the AES Rijndael irreducible polynomial 0x11b.
  *

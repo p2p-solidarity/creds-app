@@ -1,8 +1,5 @@
 /**
- * FloatingTabBar — 1:1 port of CustomFloatingTabBar from
- * solidarity/Views/Common/TabBarComponents.swift.
- *
- * Flat (not pill — name is preserved from Swift) bottom tab bar with:
+ * FloatingTabBar — flat (not pill, despite the name) bottom tab bar with:
  *   • 0.5pt top divider in `divider`
  *   • `pageBg` background
  *   • 3 evenly spaced icon + label columns

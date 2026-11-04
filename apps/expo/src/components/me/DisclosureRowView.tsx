@@ -1,5 +1,5 @@
 /**
- * DisclosureRowView — Figma 724:22770. Swift parity:
+ * DisclosureRowView — Figma 724:22770.
  *   • 14pt terminalGreen leading icon (18pt frame)
  *   • 15pt title + 11pt tertiary source line (e.g. "Src:Profile")
  *   • Show button: 13pt medium, text1 fill, pageBg label, corner 2,

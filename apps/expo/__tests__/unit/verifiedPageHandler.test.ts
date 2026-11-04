@@ -1,5 +1,5 @@
 /**
- * Verified Page payload router (1.3.3 Task A2.3, US-11) —
+ * Verified Page payload router —
  * `src/scan/verifiedPageHandler.ts`. Pure logic, no RN imports, so this
  * suite drives it directly with no `mock.module` isolation needed.
  *

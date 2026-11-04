@@ -1,5 +1,5 @@
 /**
- * MRZCameraStep — 1:1 visual port of Swift MRZCameraView.swift.
+ * MRZCameraStep.
  *
  * Layout (top → bottom):
  *   1. Live camera feed (fullscreen, black backdrop) — same on iOS + Android.

@@ -1,5 +1,5 @@
 /**
- * OIDC auth-request parser — mirrors Swift OIDCService.parseAuthRequest.
+ * OIDC auth-request parser.
  *
  * Accepts:
  *   - openid4vp:// URLs              (direct queryparams)

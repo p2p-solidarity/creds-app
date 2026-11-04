@@ -1,8 +1,5 @@
 /**
- * Receive Credential — port of
- * solidarity/Views/ScanViews/CredentialImportFlowSheet.swift.
- *
- * Mirrors the OID4VCI inbound flow with the same six-step state machine:
+ * Receive Credential — the OID4VCI inbound flow with the same six-step state machine:
  *   loading → review(offer) → pinEntry(offer) → fetching →
  *   success(message) | error(message)
  *

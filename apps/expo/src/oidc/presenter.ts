@@ -1,6 +1,5 @@
 /**
- * OID4VP Presenter — TS port of
- * solidarity/Services/Identity/OID4VPPresentationService.swift (`wrapCredentialsAsVP`).
+ * OID4VP Presenter.
  *
  * Builds the holder side of an OID4VP exchange:
  *   1. Collect VC JWTs from the selected provable claims (or, when the

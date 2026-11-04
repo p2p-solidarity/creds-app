@@ -1,7 +1,5 @@
 /**
- * CredentialIssuanceService — TS port of the OID4VCI orchestrator in
- * solidarity/Services/OIDC/CredentialIssuanceService.swift and the
- * proof builder in `+Proof.swift`.
+ * CredentialIssuanceService — the OID4VCI orchestrator and proof builder.
  *
  * Public surface mirrors the Swift contract:
  *   - `parseCredentialOffer(url)`        → Swift `parseOffer`

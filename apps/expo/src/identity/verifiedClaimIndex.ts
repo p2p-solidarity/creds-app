@@ -1,8 +1,5 @@
 /**
- * VerifiedClaimIndex — TS port of
- * solidarity/Services/Identity/VerifiedClaimIndex.swift.
- *
- * Pure functions that walk identity cards + provable claims for a holder
+ * VerifiedClaimIndex — pure functions that walk identity cards + provable claims for a holder
  * DID and return the set of `BusinessCardField` values backed by a signed
  * source credential. The hook `useVerifiedFields` wires the same logic to
  * reactive store selectors.

@@ -4,9 +4,7 @@
  *
  * Before this, every screen hand-rolled a raw <TextInput> with inline
  * styles that drifted (14 vs 15px, border-or-not, no focus state, sub-44pt
- * touch targets). Route inputs through this instead — every future
- * platform-binding wizard (S/A/B/C, docs/ref/03 §5) gets a correct field
- * for free instead of re-hand-rolling and re-drifting.
+ * touch targets). Route inputs through this instead.
  *
  * Bakes in the mobile text-input UX baseline the raw fields were missing:
  *  - visible FOCUS state (accent/mauve border) and ERROR state (destructive

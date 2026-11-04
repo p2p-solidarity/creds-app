@@ -1,5 +1,5 @@
 /**
- * Onboarding gate — mirrors Swift ContentView.swift's AppStorage condition.
+ * Onboarding gate.
  * Uses the MMKV-backed preferences store so the gate paints synchronously
  * on warm starts (aniseekr-expo CLAUDE.md rule 10 — no skeleton flash).
  */

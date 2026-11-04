@@ -12,7 +12,7 @@
  *
  * 2. **An unreachable authority extends, never revokes.** If the store or the
  *    license bridge cannot be reached, a previously verified entitlement stays
- *    live through `PRO_OFFLINE_GRACE_MS`. This is `docs/ref/06`'s
+ *    live through `PRO_OFFLINE_GRACE_MS`. This is the
  *    company-dies-still-works north star applied to billing: our outage is
  *    never the user's problem. The grace is capped so it degrades eventually
  *    rather than becoming a permanent free tier.

@@ -1,5 +1,5 @@
 /**
- * atproto OAuth client identity — 1.3.3 Phase A6 task A6.1.
+ * atproto OAuth client identity.
  *
  * atproto's OAuth profile (https://atproto.com/specs/oauth) requires
  * `client_id` to be a fully-qualified `https://` URL that serves a public

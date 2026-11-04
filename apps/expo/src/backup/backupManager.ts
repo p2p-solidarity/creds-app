@@ -2,7 +2,7 @@ import { withCloudDataLock } from './cloudDataLock';
 import { getMmkv } from '../storage/mmkv';
 import { captureLocalDataEpoch, canCommitLocalData, trackLocalDataOperation } from '../settings/localDataWipeBarrier';
 /**
- * BackupManager — mirrors Swift Services/Backup/BackupManager.swift.
+ * BackupManager.
  *
  * Bundles every locally-persisted record into a single encrypted, SOLB-framed
  * blob and writes it as a `backup_<ts>.solbk` file via the active cloud

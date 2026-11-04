@@ -230,10 +230,8 @@ class InMemorySpruceDidDriver implements SpruceDid {
     return JSON.stringify(publicKeyToJwk(entry.publicKey));
   }
 
-  // didKeyFromAlias / didDocumentJson / verifyJws / signCredentialJwt /
-  // verifyCredentialJwt were removed from the SpruceDid spec in 1.3.3 S7a
-  // (zero production callers — DID derivation + verification are pure TS in
-  // packages/shared), so the driver no longer implements them.
+  // DID derivation and verification are pure TS in packages/shared; the
+  // SpruceDid spec only signs.
 
   async signJws(alias: string, payload: ArrayBuffer): Promise<string> {
     const entry = this.keys.get(alias);

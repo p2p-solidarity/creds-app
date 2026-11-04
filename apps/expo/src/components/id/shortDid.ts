@@ -1,6 +1,5 @@
 /**
- * shortDid / shortCommitment — port of `shortDid(_:)` from
- * solidarity/Views/IDViews/IDViewHelpers.swift. Returns "prefix…suffix"
+ * shortDid / shortCommitment — returns "prefix…suffix"
  * when the input is longer than 20 characters, otherwise returns it as-is.
  *
  * Two flavours so the call sites don't have to guess truncation lengths.

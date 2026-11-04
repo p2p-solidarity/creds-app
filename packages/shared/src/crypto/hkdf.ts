@@ -1,5 +1,5 @@
 /**
- * HKDF-SHA256 — mirrors KeyManager.swift's `derive(from:salt:info:length:)`.
+ * HKDF-SHA256.
  * Wire-compatible with Apple CryptoKit's `HKDF<SHA256>.deriveKey(...)`.
  */
 import { hkdf } from '@noble/hashes/hkdf.js';

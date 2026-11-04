@@ -3,7 +3,7 @@
  * is the account's shareable address. Protocol inspectors and credential tools
  * remain behind the five-tap Developer Options unlock.
  *
- * Two levels at most (docs/ref/notes-settings-ia-2026-10.md): a setting with
+ * Two levels at most: a setting with
  * one or two controls (colour mode, language, Recent Updates, Pear exchange,
  * the two resets) lives here as an inline row instead of its own sub-page.
  */

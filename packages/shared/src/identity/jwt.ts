@@ -1,6 +1,5 @@
 /**
- * JWS ES256 sign + verify — mirrors VCService.swift's JWT issue/parse + the
- * Swift JOSE helpers in OIDCService+Helpers.swift.
+ * JWS ES256 sign + verify.
  *
  * Format (RFC 7515 compact JWS): `<header>.<payload>.<signature>`
  *   - header / payload: base64url(JSON.stringify(obj))

@@ -1,7 +1,6 @@
 /**
  * Root identity — seed-derived did:key (BIP-39 mnemonic -> HKDF -> P-256
- * scalar), the App<->Web portable identity from packages/shared/derive.ts
- * (04-plan Phase A1 task A1.4).
+ * scalar), the App<->Web portable identity from packages/shared/derive.ts.
  *
  * TS port under test:
  *   apps/expo/src/identity/rootKey.ts

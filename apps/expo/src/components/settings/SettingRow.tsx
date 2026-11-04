@@ -1,6 +1,6 @@
 /**
  * SettingRow — single row with label, optional value, optional control.
- * Mirrors the Swift SettingsBlockRow pattern. A tappable row presses through
+ * A tappable row presses through
  * `PressableScale` (crisp scale + haptic); a read-only row is a plain View.
  */
 import type { ReactNode } from 'react';

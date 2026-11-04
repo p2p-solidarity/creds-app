@@ -1,8 +1,8 @@
 /**
- * Verified Page payload router — 1.3.3 Task A2.3 (US-11): recognises a
+ * Verified Page payload router: recognises a
  * scanned/deep-linked Verified Page fragment (`https://creds.id/#<frag>`,
  * a bare `#<frag>` fragment, or the bare `<frag>` blob itself) and runs the
- * FULL local verification pipeline described in 01-spec §4.3/§8:
+ * FULL local verification pipeline:
  *
  *   decodeFragment(frag) -> JWS string
  *     -> read payload.did UNVERIFIED (just to know which key to check against)
@@ -11,8 +11,7 @@
  *                                       did proves control of that identity)
  *     -> parseProfile(verified payload)
  *
- * Every step is local — no network call, works in airplane mode (S-level
- * verification per 01-spec §6/§8).
+ * Every step is local — no network call, works in airplane mode.
  *
  * `parseVerifiedPagePayload` returns `null` when `payload` isn't recognised
  * as a Verified Page form at all (OIDC URLs, `solidarity://` deep links,

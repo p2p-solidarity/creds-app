@@ -1,8 +1,5 @@
 /**
- * IssuerTrustAnchorStore — TS port of
- * solidarity/Services/Identity/IssuerTrustAnchorStore.swift.
- *
- * Holds the user's trusted issuer DIDs. Used by parseAuthRequest /
+ * IssuerTrustAnchorStore — holds the user's trusted issuer DIDs. Used by parseAuthRequest /
  * verifyVcJwt to decide whether a Request-Object signature or VC issuer is
  * acceptable. Persistence is encrypted MMKV under the `trust-anchor:`
  * prefix, matching the AES-GCM blob format the credential store already

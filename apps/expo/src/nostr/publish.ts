@@ -1,6 +1,6 @@
 /**
  * publish.ts — Nostr profile publish (NIP-78, kind 30078) + kind-0
- * `alsoKnownAs` did:key binding. 04-plan Phase A4 task A4.2.
+ * `alsoKnownAs` did:key binding.
  *
  * Reuses `dag/nostrAdapter.ts`'s raw WS client verbatim (`publishEvent` /
  * `subscribeEvents`) — no new WebSocket code here, only DI seams
@@ -11,7 +11,7 @@
  * publish action itself is the user's consent, so nothing here may be
  * invoked from a background task).
  *
- * ── The two directions of the bidirectional binding (01-spec §5/§6) ─────
+ * ── The two directions of the bidirectional binding ─────
  *
  * `profile.alsoKnownAs` (packages/shared/src/profile.ts) gets a
  * `nostr:npub1…` entry — that's direction 1, built by the caller
@@ -44,10 +44,9 @@
  *      a private convention anyway, with none of NIP-39's actual
  *      interop benefit (no existing NIP-39-aware client would render or
  *      verify a `did:key` claim type).
- *   2. 01-spec-verified-page.md §5's badge table literally names the
- *      convention "kind-0 `alsoKnownAs`" (not "kind-0 `i` tag") — this
- *      is the documented, already-agreed-on shape; using a tag instead
- *      would silently diverge from the spec another task (A4.3) reads.
+ *   2. The badge verifier and the web viewer read kind-0 `alsoKnownAs`
+ *      (not a kind-0 `i` tag); using a tag instead would silently diverge
+ *      from them.
  *   3. A JSON content field is symmetric with `ProfileRecord.
  *      alsoKnownAs` — the verifier and any future debugging/reading code
  *      reuses one field name and one "is this DID in the array" check
@@ -73,7 +72,7 @@ import {
 
 import { getNostrPubkey, signNostrEvent, type UnsignedNostrEvent } from './userKey';
 
-/** NIP-78 `d` tag identifying the profile-pointer event (01-spec §4). */
+/** NIP-78 `d` tag identifying the profile-pointer event. */
 export const PROFILE_D_TAG = 'solidarity.profile';
 /** NIP-78 parameterized-replaceable-event kind used for the profile pointer. */
 export const KIND_PROFILE_POINTER = 30078;
@@ -287,8 +286,8 @@ export function parseKind0Content(raw: string): Record<string, unknown> {
  *     this as "no existing content" — doing so overwrites (wipes) whatever
  *     kind-0 the user actually has. See `updateKind0AlsoKnownAs`.
  * (The badge verifier only needs `event` today; `confirmed` is also the
- * hook to later separate `stale` from `declared` — 04-plan A4.3 honesty
- * table — but that's not wired here yet.)
+ * hook to later separate `stale` from `declared`, but that's not wired
+ * here yet.)
  * ponytail: `confirmed` exists solely to gate the clobber-guard below.
  */
 export interface Kind0FetchResult {

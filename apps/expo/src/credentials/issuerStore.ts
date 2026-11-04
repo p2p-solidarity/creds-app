@@ -1,8 +1,6 @@
 /**
- * IssuerMetadataStore — TS port of the issuer-display surface fetched
- * during OID4VCI in `solidarity/Services/Identity/OIDCService+Helpers.swift`
- * and rendered by `solidarity/Views/IDViews/PersonalIdentityView.swift` +
- * `solidarity/Views/MeViews/CredentialDetailView.swift`.
+ * IssuerMetadataStore — the issuer-display surface fetched during OID4VCI
+ * and rendered on the credential screens.
  *
  * What it holds:
  *   - One `IssuerMetadata` per issuer DID/URL key

@@ -1,5 +1,5 @@
 /**
- * MeSectionHeader — section title row. Swift parity: 14pt text, foreground
+ * MeSectionHeader — section title row. 14pt text, foreground
  * `Color.Theme.textPrimary`, padded horizontal 16, left-aligned.
  * Source: solidarity/Views/MeViews/MeTabComponents.swift (MeSectionHeader).
  */

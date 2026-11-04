@@ -1,8 +1,5 @@
 /**
- * CardError — mirrors solidarity/Models/CardError.swift (19 variants).
- *
- * Swift uses an enum with associated string payloads; we model it as a
- * discriminated union so callers can `switch` on `type` exhaustively.
+ * CardError — 19 variants, a discriminated union so callers can `switch` on `type` exhaustively.
  *
  * `withContext` mirrors Swift's `.withContext(...)`, attaching audit data
  * without losing the original variant. `severity` /

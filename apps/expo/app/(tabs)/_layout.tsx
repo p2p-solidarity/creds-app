@@ -1,12 +1,9 @@
 /**
- * Tabs layout — originally a 1:1 port of Swift MainTabView +
- * CustomFloatingTabBar; converted for 1.3.3 (Task A0.2) to the Verified
- * Page IA. v2 keeps the existing route folders for compatibility while the
- * product-facing order becomes Page / Present / Contacts.
+ * Tabs layout — Page / Present / Contacts. The route folders keep their
+ * older names for compatibility.
  *
  * Renders the three primary tabs and delegates the bottom bar to
- * `FloatingTabBar`, which mirrors Swift `CustomFloatingTabBar` (flat
- * divider + pageBg + tap haptic).
+ * `FloatingTabBar` (flat divider + pageBg + tap haptic).
  */
 import { Tabs } from 'expo-router';
 

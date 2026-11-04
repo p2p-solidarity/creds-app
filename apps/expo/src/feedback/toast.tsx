@@ -1,5 +1,5 @@
 /**
- * Toast manager — mirrors Swift ToastManager + ToastView.
+ * Toast manager.
  *
  * Zustand-backed queue; toasts stack at the top of the screen and slide
  * down on enter / up on exit. Each toast auto-dismisses after `ms`
@@ -13,7 +13,7 @@
  * stacking a second copy. Prevents the "press a stub button twice and
  * suddenly two toasts look like text inputs" UX bug.
  *
- * Visual parity with Swift v1.3.1 ToastView:
+ * Visual:
  *   • cardBg surface, 16-pt corner radius, soft elevation shadow
  *   • leading tone-coloured circle icon (success: terminalGreen ✓,
  *     error: destructive ✕, warning: warning ⚠, info: text2 i)

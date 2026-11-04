@@ -1,6 +1,5 @@
 /**
- * PublicKeyJWK — mirrors BusinessCardCredential.swift's nested PublicKeyJWK
- * struct. Wire format is RFC 7517 JWK: kty, crv, alg, x, y all base64url.
+ * PublicKeyJWK — wire format is RFC 7517 JWK: kty, crv, alg, x, y all base64url.
  *
  * Only P-256 (`crv: "P-256"`, `alg: "ES256"`) is used in Solidarity today;
  * the schema rejects everything else so we fail fast on issuer typos

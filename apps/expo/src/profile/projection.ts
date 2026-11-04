@@ -1,6 +1,5 @@
 /**
- * projection.ts — three-tier link privacy → signed Profile Record projections
- * (T7, `notes-1.3.3-publishing-pairing-research.md` §3 / grill G4).
+ * projection.ts — three-tier link privacy → signed Profile Record projections.
  *
  * Per-item `visibility` is LOCAL only: each link carries a
  * `'public' | 'link-only' | 'private'` tier stored in the profile store's MMKV

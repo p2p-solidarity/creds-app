@@ -1,6 +1,5 @@
 /**
- * QR envelope wire format — TS port of Swift
- * `QRCodeGenerationService.encodeEnvelopeToImage` (L74-100) plus the inverse
+ * QR envelope wire format (the one the old Swift app produced) plus the
  * recogniser the scanner uses to route a scanned string into a typed envelope.
  *
  * Consumers:

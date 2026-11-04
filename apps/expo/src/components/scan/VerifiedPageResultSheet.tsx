@@ -1,6 +1,6 @@
 /**
- * VerifiedPageResultSheet — the scan-result sheet for a Verified Page QR
- * (1.3.3 Task A2.3, US-11). Reads `useVerifiedPageResult` directly (no
+ * VerifiedPageResultSheet — the scan-result sheet for a Verified Page QR.
+ * Reads `useVerifiedPageResult` directly (no
  * props needed) so it mounts once in `app/_layout.tsx` alongside
  * `ReceivedCardSheet` and reacts to a payload from EITHER the in-app
  * scanner (`app/scan/index.tsx`) or a universal/deep link handled while

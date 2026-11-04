@@ -4,8 +4,8 @@
  * derives the identical scalar; distinct info labels (HKDF_INFO_ROOT vs
  * HKDF_INFO_NOSTR) derive unrelated keys from the same mnemonic. Plus
  * consumption of the frozen conformance vectors in ../vectors/derive.json
- * — the App<->Web mnemonic-portability conformance basis (04-plan Phase
- * A1 amendment; the web viewer's W1 replays this same file).
+ * — the App<->Web mnemonic-portability conformance basis (the web viewer
+ * replays this same file).
  */
 import { describe, expect, test } from 'bun:test';
 import { schnorr } from '@noble/curves/secp256k1.js';

@@ -1,6 +1,6 @@
 /**
  * rootKey.ts — seed-derived root identity (BIP-39 mnemonic -> HKDF ->
- * P-256 scalar -> did:key), per 04-plan Phase A1 task A1.4. The mnemonic
+ * P-256 scalar -> did:key). The mnemonic
  * derivation itself lives in `@solidarity/shared/derive.ts` (`HKDF_INFO_ROOT`
  * = 'solidarity-root-v1'); this module owns App-side storage, the Face-ID
  * gate, and the `Signer` contract from `@solidarity/shared/jws.ts`.
@@ -25,7 +25,7 @@
  * SpruceID key structurally cannot offer. Task A1.4 does not migrate any
  * existing screen onto this root key — that convergence (if any) is a
  * decision for a later phase once the Verify-tab / profile-record surfaces
- * that actually consume `getRootDid()` exist (04-plan Phase A2+). Until
+ * that actually consume `getRootDid()` exist. Until
  * then both identities coexist; nothing here reads or writes
  * `solidarity.master.v2`.
  *
@@ -507,9 +507,7 @@ export async function getRootSigner(): Promise<Result<Signer, RootKeyError>> {
     }
     // `{ prehash: false }` — `digest` is already the single-SHA-256 RFC 7515
     // signing-input digest computed by `signCompact`; @noble/curves'
-    // default (`prehash: true`) would hash it a second time (the exact bug
-    // tracked for `identity/jwt.ts` under 04-plan task A10.4 — this signer
-    // must not repeat it).
+    // default (`prehash: true`) would hash it a second time.
     return p256.sign(digest, scalar, { prehash: false });
   };
   return ok(signer);
@@ -706,7 +704,7 @@ export type RootKeyRecovery =
  * - **Malformed synced phrase is an ERROR, never a fresh mint.** A synced
  *   value that fails BIP-39 checksum returns `err({kind:'invalidMnemonic'})`;
  *   it must never fall through to `createFromFreshMnemonic`. "Absence/badness
- *   of a cloud key is not proof the user is new" (04-plan security invariant).
+ *   of a cloud key is not proof the user is new".
  * - **Not-found is a clean signal, not an error** — `{kind:'notFound'}` so the
  *   caller can offer Retry / Enter Phrase / explicit Start Fresh.
  *

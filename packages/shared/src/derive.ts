@@ -1,6 +1,5 @@
 /**
- * Unified mnemonic derivation — the App/Web portability primitive (04-plan
- * Phase A1 amendment): the same BIP-39 mnemonic must derive the same
+ * Unified mnemonic derivation — the App/Web portability primitive: the same BIP-39 mnemonic must derive the same
  * did:key on the Expo app and the future web viewer, so a user's identity
  * is carried by the mnemonic rather than being device-bound.
  *

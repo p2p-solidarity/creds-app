@@ -1,5 +1,5 @@
 /**
- * Scan screen — 1:1 port of Swift ScanTabView. Full-screen camera preview
+ * Scan screen. Full-screen camera preview
  * with a dimmed-mask ScanWindowOverlay (centred square cut-out + four
  * green corner brackets), nav bar "Scan" inline, and concise human-facing
  * scan guidance.
@@ -145,7 +145,7 @@ function ScanScreen() {
       return;
     }
 
-    // Verified Page fragment QR (1.3.3 Task A2.3, US-11) — tried first as a
+    // Verified Page fragment QR — tried first as a
     // cheap, self-contained format sniff. Returns `null` for anything that
     // isn't a verified-page payload at all (old exchange-QR wire formats,
     // OIDC URLs, ...), so every existing format below is completely

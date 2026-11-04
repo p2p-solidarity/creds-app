@@ -1,5 +1,5 @@
 /**
- * Avatar animal — mirrors solidarity/Models/AnimalCharacter.swift.
+ * Avatar animal.
  *
  * Wire format: lowercase string. `defaultAnimalForId` uses a deterministic
  * UTF-8 byte-sum modulo 5 so the same identity always gets the same avatar

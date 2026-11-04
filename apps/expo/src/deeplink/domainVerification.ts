@@ -1,6 +1,5 @@
 /**
- * Domain verification — TS port of
- * solidarity/Services/Utils/DomainVerificationManager.swift.
+ * Domain verification.
  *
  * The Swift manager has a much wider surface (cryptographic email/domain
  * commitments, DNS lookups, anonymous group membership proofs), but the

@@ -1,7 +1,7 @@
 /**
- * Credential detail — port of solidarity/Views/MeViews/CredentialDetailView.swift.
+ * Credential detail.
  *
- * Layout (Swift parity, Figma 724:22805 / 22828 / 22844):
+ * Layout (Figma 724:22805 / 22828 / 22844):
  *   • Hero: 56pt heroSky disc with type icon, 24pt medium title, level tag
  *     (uppercased), Verified + proof-system chips. Background is a sky
  *     gradient.
@@ -14,7 +14,7 @@
  *     "Regenerate Credential" secondary text button.
  *
  * Selective Disclosures are sourced from `useIdentityData.provableClaims`
- * filtered by this credential's id — mirrors Swift `associatedClaims`.
+ * filtered by this credential's id.
  */
 import { router, useLocalSearchParams } from 'expo-router';
 import { safeBack } from '@/navigation/safeBack';
@@ -56,7 +56,7 @@ import { useIdentityData, type ProvableClaimEntity } from '@/identity';
 import { requireSensitiveAction } from '@/keychain/biometricGatekeeper';
 import { usePreferences } from '@/settings/preferences';
 
-// MARK: - Helpers (Swift parity)
+// MARK: - Helpers
 
 function shortDid(did: string): string {
   if (did.length <= 22) return did;

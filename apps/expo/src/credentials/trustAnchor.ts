@@ -1,7 +1,5 @@
 /**
- * TrustAnchor (credentials) — mirrors Swift
- * `solidarity/Services/Identity/IssuerTrustAnchorStore.swift`'s
- * `TrustedIssuerAnchor` struct, layered on top of the runtime store at
+ * TrustAnchor (credentials) — the trusted-issuer anchor shape, layered on top of the runtime store at
  * `src/identity/issuerTrustAnchor.ts`.
  *
  * Why this exists alongside the identity store:
@@ -18,7 +16,7 @@
  *                     metadata after user-initiated VCI flow
  *   3. `preloaded`  — shipped with the binary (see preloadedTrustAnchors.ts)
  *
- * Per Swift parity:
+ * Matching:
  *   - DIDs are normalised via lowercase + whitespace-strip before compare
  *   - keyId is optional; when omitted the first matching DID wins
  *   - `suffix` matching: a keyId like `did:web:foo#1` matches a stored

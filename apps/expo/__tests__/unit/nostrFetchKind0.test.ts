@@ -1,5 +1,5 @@
 /**
- * fetchKind0FromRelays / makeKind0Fetcher — 04-plan Phase A4 task A4.4.
+ * fetchKind0FromRelays / makeKind0Fetcher.
  *
  * TS module under test: apps/expo/src/nostr/fetchKind0.ts
  *

@@ -1,5 +1,5 @@
 /**
- * Contact importer — mirrors Swift ContactImportService.
+ * Contact importer.
  *
  * Entry points:
  *   - importFromVcf(text)         — parse a .vcf paste / file pick.

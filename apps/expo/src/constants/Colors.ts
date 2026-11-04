@@ -1,8 +1,6 @@
 /**
  * Solidarity brand palette — single source of truth for hex literals.
- * Mirrors Swift `Color.Theme.*` (ThemeManager.swift L200-330) so the same
- * name renders the same colour across the SwiftUI legacy build and the
- * Expo port.
+ * Token names are historical (some predate the creds.id palette).
  *
  * Dark-mode awareness lives at this layer so every consumer of
  * `Colors.text1`, `Colors.pageBg`, etc. *automatically* picks up the dark
@@ -157,7 +155,7 @@ const RAW = {
   /** Feature accent purple. */
   featureAccent: '#5856D6',
 
-  /** v1.3.0 per-animal card gradient accents. */
+  /** Per-animal card gradient accents. */
   cardDog: '#FFD54F',
   cardHorse: '#5C6BC0',
   cardPig: '#F06292',

@@ -1,7 +1,6 @@
 /**
  * Profile store — local Profile Record persistence + append-only save flow
- * (1.3.3 Task A2.2, apps/expo/src/profile/store.ts) + Nostr publish wiring
- * (1.3.3 Task A4.2's `publishToNostr`).
+ * (apps/expo/src/profile/store.ts) + Nostr publish wiring (`publishToNostr`).
  *
  * What this suite pins:
  *   1. `saveProfile` constructs a record that `verifyCompact` accepts as

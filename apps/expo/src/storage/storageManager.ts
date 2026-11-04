@@ -1,6 +1,5 @@
 /**
- * Typed encrypted storage — mirrors solidarity/Services/Utils/
- * StorageManager.swift's save/load business cards / contacts / preferences.
+ * Typed encrypted storage for business cards / contacts / preferences.
  *
  * Backing store: MMKV (sync, native, memory-mapped) with at-rest AES
  * derived from our master key. Values are JSON-serialised then sealed

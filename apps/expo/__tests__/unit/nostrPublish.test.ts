@@ -1,6 +1,6 @@
 /**
  * Nostr profile publish (NIP-78 kind 30078) + kind-0 `alsoKnownAs`
- * did:key binding — 04-plan Phase A4 task A4.2.
+ * did:key binding.
  *
  * TS module under test: apps/expo/src/nostr/publish.ts
  *

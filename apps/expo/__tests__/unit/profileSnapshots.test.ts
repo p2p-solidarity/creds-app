@@ -1,7 +1,7 @@
 /**
  * Profile snapshots — People-side persistence for a scanned/verified
- * Verified Page AND a declared (unverified) link-page import (1.3.3 Tasks
- * A2.3 + A2.4, apps/expo/src/people/profileSnapshots.ts).
+ * Verified Page AND a declared (unverified) link-page import
+ * (apps/expo/src/people/profileSnapshots.ts).
  *
  * What this suite pins:
  *   1. `upsert` persists to MMKV and is readable back through `hydrate`

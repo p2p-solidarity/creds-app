@@ -1,7 +1,6 @@
 /**
- * SettingsBlock primitives — direct port of
- * solidarity/Views/Common/SettingsBlockComponents.swift so all six settings
- * screens look identical to Swift.
+ * SettingsBlock primitives — shared by every settings screen so they look
+ * the same.
  *
  * Settings are a square, continuous list: card background, 0.5pt hairlines,
  * and no floating cards. That keeps the low-frequency routes visually aligned

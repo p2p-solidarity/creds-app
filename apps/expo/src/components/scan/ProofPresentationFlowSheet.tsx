@@ -1,8 +1,5 @@
 /**
- * ProofPresentationFlowSheet — 1:1 port of
- * solidarity/Views/ScanViews/ProofPresentationFlowSheet.swift.
- *
- * Multi-step modal driven by the OID4VP request scanned from a verifier
+ * ProofPresentationFlowSheet — multi-step modal driven by the OID4VP request scanned from a verifier
  * QR. Steps: parse → review (verifier + requested claims) → sign → done.
  *
  * Wired to the real signing pipeline: the submit step runs the

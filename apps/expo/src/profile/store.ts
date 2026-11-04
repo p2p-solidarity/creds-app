@@ -1,8 +1,7 @@
 /**
  * Profile store — local source of truth for the user's signed Profile
- * Record (01-spec §3), the payload published via QR / URL fragment
- * (`packages/shared`'s `encodeFragment`) once `app/me/edit.tsx` saves it
- * (1.3.3 Task A2.2).
+ * Record, the payload published via QR / URL fragment
+ * (`packages/shared`'s `encodeFragment`) once `app/me/edit.tsx` saves it.
  *
  * Persisted at MMKV key `profile:v1` as `{ record, jws }` — mirrors
  * `settings/preferences.ts`'s DEFAULTS-in-memory + `hydrateX()`-from-MMKV
@@ -12,7 +11,7 @@
  * after `initMmkv()` resolves — see `app/_layout.tsx`) swaps in the
  * persisted pair synchronously.
  *
- * Append-only semantics (01-spec §3; Pear day-0 constraint 2): `saveProfile`
+ * Append-only semantics: `saveProfile`
  * NEVER mutates the currently-stored record in place. Every call builds a
  * BRAND NEW record object — fresh `updatedAt`, the root did resolved fresh
  * via `getRootDid()`, the editable fields (`displayName`/`bio`/`links`) from

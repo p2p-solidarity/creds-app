@@ -1,8 +1,6 @@
 /**
  * nostrBadgeDisplay.ts — pure mapping from `verifyNostrBinding`'s result
- * (`@solidarity/shared`) to a display-ready view model (04-plan Phase A4
- * task A4.4, "wire the badge row to real verification — the first real
- * green check").
+ * (`@solidarity/shared`) to a display-ready view model.
  *
  * PURE — no React, no `react-native`, no `@/constants/Colors` (that module
  * pulls in `react-native`'s `Appearance`, which bun's test parser can't
@@ -11,7 +9,7 @@
  * instead of the `@/identity` barrel). `ProfileBadgeChips.tsx` is the
  * only consumer and owns the icon/color/copy choices for each `visual`.
  *
- * ── The honesty contract this module enforces (01-spec §7 / 03-spec §3)──
+ * ── The honesty contract this module enforces──
  *
  * `declared` and `stale` must NEVER map to `'verified'` — including the
  * `revoked` `BadgeState`, which `verifyNostrBinding` cannot currently

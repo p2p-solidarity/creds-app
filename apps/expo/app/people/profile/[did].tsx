@@ -1,5 +1,5 @@
 /**
- * Verified Page person detail — 1.3.3 Task A2.3 (US-11). Landing screen
+ * Verified Page person detail. Landing screen
  * after 「存入 People」 in `VerifiedPageResultSheet`, and the target for
  * re-opening a previously-saved snapshot. Deliberately separate from
  * `app/people/[id].tsx` (the Contact/BusinessCard detail screen) — a
@@ -11,7 +11,7 @@
  * in the route itself, matching CLAUDE.md rule 10's "route params carry
  * chrome" only where it doesn't leak sensitive fields.
  *
- * Task A5.4 (US-20) extended this screen to also be the `solidarity://
+ * This screen is also the `solidarity://
  * pear/<did>` deep-link landing target: a `did` with no saved snapshot yet
  * renders `PearConnectSection`'s honest "connect privately" flow instead of
  * a dead-end not-found state — see that component's doc for why it's safe

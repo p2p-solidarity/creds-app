@@ -1,6 +1,6 @@
 /**
  * VerifiedProfileView — the shared "here's the Verified Page we locally
- * verified" presentation (1.3.3 Task A2.3, US-11). Used by both
+ * verified" presentation. Used by both
  * `VerifiedPageResultSheet` (fresh scan result) and the People detail
  * screen (`app/people/profile/[did].tsx`, a persisted snapshot) so the two
  * never drift — both show the person's Page itself (`PageLivePreview`).

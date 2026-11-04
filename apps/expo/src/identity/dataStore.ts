@@ -1,10 +1,7 @@
 // Migration choice (a): on hydrate, mirror `useCredentialStore.items` into
 // `idcard:` storage so existing data survives without a one-shot copy.
 /**
- * IdentityDataStore — TS port of
- * solidarity/Services/Cache/IdentityDataStore.swift.
- *
- * Holds identity cards + provable claims (Swift SwiftData rows). Contacts
+ * IdentityDataStore — holds identity cards + provable claims. Contacts
  * live in `apps/expo/src/contacts/repository.ts` — that store already
  * mirrors Swift's `ContactEntity` so we do not duplicate it here.
  *

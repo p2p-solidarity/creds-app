@@ -1,5 +1,5 @@
 /**
- * did:key (P-256) — mirrors DIDService.swift / DIDKeyResolver.swift.
+ * did:key (P-256).
  *
  * Wire format (W3C did:key spec, P-256 variant):
  *   did:key:z<base58btc( 0x80 0x24 || compressed_pubkey_33_bytes )>

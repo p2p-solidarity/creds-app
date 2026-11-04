@@ -2,7 +2,7 @@
  * jws.ts — compact JWS (ES256, did:key) sign + verify. Covers the
  * signCompact/verifyCompact contract directly, plus consumption of the
  * frozen conformance vectors in ../vectors/jws.json — the same vectors the
- * web viewer will later replay against its own implementation (03-spec §3).
+ * web viewer will later replay against its own implementation.
  */
 import { describe, expect, test } from 'bun:test';
 import { p256 } from '@noble/curves/nist.js';

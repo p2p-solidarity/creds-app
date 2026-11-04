@@ -1,8 +1,5 @@
 /**
- * PresentationChunkPlaybackControls — port of
- * solidarity/Views/MeViews/PresentationChunkPlaybackControls.swift.
- *
- * Shown beneath the chunked QR when a presentation payload needs more than
+ * PresentationChunkPlaybackControls — shown beneath the chunked QR when a presentation payload needs more than
  * one frame. Caller owns the auto-advance timer + chunk index; this view is
  * pure UI. Used inside the same parent that owns `buildPresentationQrPages`
  * output (see `src/me/presentationQrPages.ts`).

@@ -1,6 +1,5 @@
 /**
- * SolidarityPlaceholderCard — 1:1 port of Swift Views/Common/
- * SolidarityScreenPlaceholders.swift's section header card. Shows
+ * SolidarityPlaceholderCard — section header card. Shows
  * "Screen <ID>" label + title + subtitle in mutedSurface.
  *
  * Used as the persistent header for the Passport Setup multi-step flow,

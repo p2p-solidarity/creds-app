@@ -1,8 +1,5 @@
 /**
- * ManualContactEntrySheet — 1:1 port of
- * solidarity/Views/PeopleViews/ManualContactEntrySheet.swift.
- *
- * Lightweight form for typing a contact directly into the People list
+ * ManualContactEntrySheet — lightweight form for typing a contact directly into the People list
  * without bouncing through the system Contacts picker. Saved contacts are
  * marked source = 'Manual' and remain Unverified — they don't carry a
  * cryptographic signature, just user-entered fields.

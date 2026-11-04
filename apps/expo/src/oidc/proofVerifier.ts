@@ -1,5 +1,5 @@
 /**
- * Proof verifier — mirrors Swift ProofVerifierService.swift.
+ * Proof verifier.
  *
  * Steps:
  *   1. Decode the VC JWT header → extract `kid` (DID URL fragment).

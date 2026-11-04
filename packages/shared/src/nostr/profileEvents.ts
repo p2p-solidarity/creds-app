@@ -1,5 +1,5 @@
 /**
- * The two Nostr events a Verified Page publishes (01-spec §4/§5), as pure
+ * The two Nostr events a Verified Page publishes, as pure
  * builders so the app and the web builder emit the same wire:
  *
  *   - kind 30078 (NIP-78 parameterised replaceable), `d = solidarity.profile`,
@@ -15,7 +15,7 @@ import { NIP05_DOMAIN } from '../handles/nip05';
 
 import type { UnsignedNostrEvent } from './event';
 
-/** NIP-78 `d` tag identifying the profile-pointer event (01-spec §4). */
+/** NIP-78 `d` tag identifying the profile-pointer event. */
 export const PROFILE_D_TAG = 'solidarity.profile';
 /** NIP-78 parameterised-replaceable-event kind used for the profile pointer. */
 export const KIND_PROFILE_POINTER = 30078;

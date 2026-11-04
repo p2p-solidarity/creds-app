@@ -1,6 +1,6 @@
 /**
- * Identity module — port of the Swift IdentityDataStore / VerifiedClaimIndex
- * / IdentityCoordinator trio. Consumers should import from this barrel
+ * Identity module — IdentityDataStore / VerifiedClaimIndex /
+ * IdentityCoordinator. Consumers should import from this barrel
  * rather than reaching into individual files.
  */
 export type {

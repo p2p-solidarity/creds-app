@@ -1,5 +1,5 @@
 /**
- * Decorative nested ellipses — mirrors solidarity/Views/Common/DecorativeBlobs.swift.
+ * Decorative nested ellipses.
  *
  * Three concentric circles (Ø286 / Ø217 / Ø136) with radial gradient fills
  * blending blobCenter → dustyMauve, plus a thin dustyMauve outline. Used

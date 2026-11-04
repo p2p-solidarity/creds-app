@@ -1,6 +1,5 @@
 /**
- * Linktree import parser — 1.3.3 Task A2.4 (US-19),
- * `apps/expo/src/profile/linktreeImport.ts`.
+ * Linktree import parser — `apps/expo/src/profile/linktreeImport.ts`.
  *
  * Pure(ish) — `fetchLinkPage` takes an injectable `fetchImpl` so this suite
  * never touches the network. Every fixture lives under

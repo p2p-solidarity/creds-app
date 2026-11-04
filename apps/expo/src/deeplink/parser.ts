@@ -104,8 +104,7 @@ function parseWebSignDomainRoute(hash: string): DeepLinkRoute | null {
 /**
  * `https://<verified-domain>/...` routes only — split out of `parseDeepLink`
  * to keep that function's cyclomatic complexity under budget as this branch
- * grows (card link, and now the Verified Page fragment link, 1.3.3 Task
- * A2.3 US-11). `null` means "recognised host, but no known route" — falls
+ * grows (card link, Verified Page fragment link). `null` means "recognised host, but no known route" — falls
  * through to `unknown` at the call site.
  */
 function parseVerifiedDomainRoute(url: URL, devProductHosts: boolean): DeepLinkRoute | null {
@@ -123,7 +122,7 @@ function parseVerifiedDomainRoute(url: URL, devProductHosts: boolean): DeepLinkR
   if (productHost && segments[0] === 'c' && segments[1] && UUID_RE.test(segments[1])) {
     return { kind: 'card', cardId: segments[1] };
   }
-  // Pear deep link universal-link equivalent (1.3.3 Task A5.4, US-20):
+  // Pear deep link universal-link equivalent:
   // `https://solidarity.gg/pear/<did>` — same route as `solidarity://pear/
   // <did>` below, for the case a recipient opens the public web viewer's
   // "Request private view" link before the app scheme is registered.
@@ -141,7 +140,7 @@ function parseVerifiedDomainRoute(url: URL, devProductHosts: boolean): DeepLinkR
   }
   // `https://<product-host>/websign#req=<X>` (research §4) — the fragment form
   // of the App↔Web signing request, so `req` never leaves the device over the
-  // network (01-spec §1/§8). Checked BEFORE the generic `#<fragment>` branch
+  // network. Checked BEFORE the generic `#<fragment>` branch
   // below (which would otherwise swallow `#req=…` as a Verified Page blob) and
   // distinguished from it by the `/websign` path segment. Returns a sentinel
   // for "recognised /websign path" so a missing `req` fails to `unknown`
@@ -151,8 +150,8 @@ function parseVerifiedDomainRoute(url: URL, devProductHosts: boolean): DeepLinkR
   }
   const handleRoute = parseVerifiedHandleRoute(productHost, segments, url.hash);
   if (handleRoute !== null) return handleRoute;
-  // Verified Page link (1.3.3 Task A2.3, US-11): `https://creds.id/#<fragment>`
-  // — the fragment never leaves the device over the network (01-spec §1/§8),
+  // Verified Page link: `https://creds.id/#<fragment>`
+  // — the fragment never leaves the device over the network,
   // so this is just recognising the shape and handing the raw fragment blob
   // to the same local-only verify pipeline the scanner uses
   // (`src/scan/verifiedPageHandler.ts`'s `verifyFragment`).

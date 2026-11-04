@@ -2,8 +2,7 @@
  * Biometric gate policy — three named modes, plus a red line no mode disarms.
  *
  * History: this was a per-action store (7 independent `enabled` flags, each
- * with its own `biometricOnly` / `biometricOrPasscode` mode), a 1:1 port of
- * Swift's `SensitiveActionPolicyStore`. That surfaced 16 controls on the
+ * with its own `biometricOnly` / `biometricOrPasscode` mode). That surfaced 16 controls on the
  * Security screen for a decision users have no basis to make. It collapsed to
  * one boolean, and then (2026-09-08) to three modes — because the boolean's
  * "on" was hiding a five-minute grace window the user could neither see nor

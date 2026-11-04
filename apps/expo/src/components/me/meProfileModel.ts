@@ -126,8 +126,7 @@ export function displayProfileShareUrl(candidate: ProfileShareUrlCandidate): str
 }
 
 /**
- * `@handle` share alias (`notes-1.3.3-publishing-pairing-research.md` §2,
- * grill decision 2026-07-19) — the shortest of the three share forms
+ * `@handle` share alias — the shortest of the three share forms
  * (~40 chars vs. ~96 for the Nostr pointer / ~700 for the offline
  * fragment), built ONLY from a scheme whose OWN bidirectional binding is
  * currently verified. `nip05` is excluded: no share-alias UI exists for it.

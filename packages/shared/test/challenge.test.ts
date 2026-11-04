@@ -5,7 +5,7 @@
  * strict field equality + bounded clock skew). Plus consumption of the
  * frozen conformance vectors in ../vectors/challenge.json — the same
  * vectors the web viewer will later replay against its own
- * implementation (03-spec §3).
+ * implementation.
  */
 import { describe, expect, test } from 'bun:test';
 import { p256 } from '@noble/curves/nist.js';

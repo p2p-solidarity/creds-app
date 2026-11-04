@@ -1,7 +1,5 @@
 /**
- * Envelope handler — TS port of Swift `QRCodeScanService+Handlers.swift`
- * (decodeEnvelope + handleEnvelope + handleEncryptedPayload +
- * evaluateSharingPayload + handleDidSignedPayload). Routes a scanned QR
+ * Envelope handler — routes a scanned QR
  * payload into one of:
  *   - `card`        → a rebuilt BusinessCard the receive sheet can present
  *   - `oidc-request` / `oidc-response` / `vp-token` → existing OIDC routes

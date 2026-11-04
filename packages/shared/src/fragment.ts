@@ -1,9 +1,9 @@
 /**
  * URL-fragment codec — the offline/QR publication surface for a signed
- * Profile Record (01-spec §4.3): `deflate(profileJws) -> base64url`,
+ * Profile Record: `deflate(profileJws) -> base64url`,
  * embedded after `#` in `https://creds.id/#<fragment>`. A URL
  * fragment is never sent over the network (no server, no CDN log ever
- * sees it — 01-spec §1/§8), so this module only ever runs client-side.
+ * sees it), so this module only ever runs client-side.
  *
  * fflate's plain `deflateSync`/`inflateSync` (no gzip/zlib wrapper) are
  * *raw* DEFLATE — the smallest wire form, appropriate for a size-budgeted
@@ -13,8 +13,7 @@
  * budget is a QR-density/UX concern (a bigger payload just makes for a
  * denser, harder-to-scan code), not a correctness one, so oversize input
  * still gets a valid `fragment` back with `oversize: true` for the caller
- * to warn on (06-plan W2.3: ">2KB 顯示尺寸警告"). `decodeFragment` never
- * throws — malformed base64url, a corrupt/non-DEFLATE byte stream, or an
+ * to warn on. `decodeFragment` never throws — malformed base64url, a corrupt/non-DEFLATE byte stream, or an
  * empty string all fail closed via `Result`, since `frag` is
  * attacker-controlled (scanned from an arbitrary QR code, or carried in a
  * deep link with no size limit of its own).

@@ -3,7 +3,7 @@
  * existing, Swift-parity-verified implementation (untouched by this task).
  * These tests pin it against ../vectors/didkey.json so a future regression
  * fails loudly, and so the web viewer can replay the exact same fixed
- * vectors later (03-spec §3 conformance).
+ * vectors later.
  */
 import { describe, expect, test } from 'bun:test';
 

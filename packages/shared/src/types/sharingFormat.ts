@@ -1,7 +1,6 @@
 /**
- * Sharing format & level — mirrors solidarity/Models/SharingFormat.swift
- * and BusinessCard.swift (BusinessCardField / SharingLevel / FieldVerificationStatus /
- * NameType).
+ * Sharing format & level (BusinessCardField / SharingLevel /
+ * FieldVerificationStatus / NameType).
  *
  * Wire format: Swift uses lowercase rawValues for SharingFormat, lowercase
  * for SharingLevel + BusinessCardField, snake_case for

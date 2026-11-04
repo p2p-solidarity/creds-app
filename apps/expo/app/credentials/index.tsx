@@ -1,7 +1,7 @@
 /**
- * VC Management — port of solidarity/Views/SettingsViews/VCSettingsView.swift.
+ * VC Management.
  *
- * Layout (Swift parity):
+ * Layout:
  *   • Navigation title "VC Management" (inline)
  *   • Section "About" with footer "Manage your Verifiable Credentials (VCs) for did:key."
  *   • Section "Actions" with 4 rows: Create did:key VC, Receive Card (OIDC),
@@ -282,7 +282,7 @@ function VCManagementScreen() {
 
   return (
     <View className="flex-1 bg-pageBg">
-      {/* Navigation bar — chevron.left + inline title (Swift parity) */}
+      {/* Navigation bar — chevron.left + inline title */}
       <View style={{ paddingTop: insets.top }} className="bg-pageBg">
         <View className="h-11 flex-row items-center px-4">
           <PressableScale

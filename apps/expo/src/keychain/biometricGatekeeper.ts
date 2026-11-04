@@ -1,5 +1,5 @@
 /**
- * Biometric gatekeeper — 1:1 port of `BiometricGatekeeper.swift`.
+ * Biometric gatekeeper.
  *
  * Wraps the low-level `biometric.ts` `requireBiometric` helper with the
  * per-action policy lookup from `sensitiveActionPolicy.ts`, returning a

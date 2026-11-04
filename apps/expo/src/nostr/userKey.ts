@@ -1,7 +1,6 @@
 /**
- * userKey.ts — production Nostr identity (secp256k1), 04-plan Phase A4
- * task A4.1. Publishes/signs the profile-record projection onto Nostr
- * relays (A4.2+); completely separate from the sandbox dev-key
+ * userKey.ts — production Nostr identity (secp256k1). Publishes/signs the
+ * profile-record projection onto Nostr relays; completely separate from the sandbox dev-key
  * (`src/dag/devKey.ts`, MMKV `dev:secp256k1:v1`, never linked to any
  * production identity) — different storage, different namespace, never
  * cross-read.
@@ -44,7 +43,7 @@
  *
  * `getNostrPubkey()` deliberately does NOT lazily provision on a miss —
  * it returns `err('notProvisioned')` so the UI can show an explicit
- * consent step (04-plan task A4.4's binding wizard) before either
+ * consent step before either
  * provisioning path runs. `provisionFromRootMnemonic()` / `importNsec()`
  * are the only two ways a key gets written, and both are meant to be
  * invoked from a screen the user has already consented on.

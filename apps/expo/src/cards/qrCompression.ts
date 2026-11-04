@@ -1,9 +1,8 @@
 /**
- * `sce1:` zlib QR compression — TS port of Swift
- * `QRCodeGenerationService.compressForQR` / `decompressQR`
- * (solidarity/Services/Card/QRCodeGenerationService.swift L120-186).
+ * `sce1:` zlib QR compression — compatible with QR codes the old Swift app
+ * produced.
  *
- * Wire format (Swift parity, must round-trip bit-for-bit):
+ * Wire format (must round-trip bit-for-bit):
  *   `sce1:` + base64url( DEFLATE(data) )
  *
  * Apple's `COMPRESSION_ZLIB` is **raw DEFLATE (RFC 1951)** — i.e. no zlib
@@ -12,7 +11,7 @@
  * wrapper"). So we use those — NOT `zlibSync` / `unzlibSync`, which would
  * prepend the 2-byte zlib header + 4-byte adler32 and break Swift decode.
  *
- * Caps (Swift parity):
+ * Caps:
  *   - `MAX_QR_REASSEMBLED_BYTES` = 256 KiB
  *     (`QRCodeChunkingService.maxReassembledPayloadBytes` in Swift)
  *   - Both compressed input and decompressed output are bounded by this cap
@@ -31,7 +30,7 @@ import { deflateSync, inflateSync } from 'fflate';
 import { base64UrlDecode, base64UrlEncode, utf8ToBytes } from '@solidarity/shared';
 
 /**
- * 256 KiB — mirrors Swift `QRCodeChunkingService.maxReassembledPayloadBytes`.
+ * 256 KiB.
  * Used as both the compressed-input cap and the decompressed-output cap.
  */
 export const MAX_QR_REASSEMBLED_BYTES = 256 * 1024;

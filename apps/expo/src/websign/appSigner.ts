@@ -1,6 +1,5 @@
 /**
- * webSign — APP side of the App↔Web per-action remote-signing flow (research
- * notes-1.3.3 §4, grill decisions G3/G4). The shared primitives
+ * webSign — APP side of the App↔Web per-action remote-signing flow. The shared primitives
  * (`@solidarity/shared`'s `webSign.ts`) own the wire envelopes + the
  * fail-closed verify boundary; this module is the seam the app screen drives:
  *

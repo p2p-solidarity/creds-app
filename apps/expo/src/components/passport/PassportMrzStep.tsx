@@ -2,7 +2,7 @@
  * PassportMrzStep — extracted from app/passport/index.tsx so the page-level
  * orchestrator stays under the lint budget.
  *
- * Mirrors Swift PassportOnboardingFlowView.mrzForm — toggles between a
+ * Toggles between a
  * "Scan Passport / Manual Input" entry card and the manual-input field
  * stack pre-filled by the MRZ camera modal.
  *

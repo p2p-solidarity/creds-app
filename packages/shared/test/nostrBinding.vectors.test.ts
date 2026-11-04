@@ -1,6 +1,6 @@
 /**
  * verifyNostrBinding conformance suite — replays
- * ../vectors/nostr-binding.json (04-plan Phase A4 task A4.3). Every
+ * ../vectors/nostr-binding.json. Every
  * profile in the vector file is also validated through `parseProfile`
  * first (sanity: the vectors themselves must be schema-valid
  * ProfileRecords, not just shaped-for-this-test objects), then each

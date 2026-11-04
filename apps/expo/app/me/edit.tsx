@@ -1,5 +1,5 @@
 /**
- * Me › Edit — the Profile Record (01-spec §3) editor (1.3.3 Task A2.2).
+ * Me › Edit — the Profile Record editor.
  * Edits `displayName` / `bio` / `links` plus the page photo. Library photos
  * stay device-only; a selected Bluesky photo is signed and published.
  *

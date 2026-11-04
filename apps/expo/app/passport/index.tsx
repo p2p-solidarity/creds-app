@@ -1,6 +1,5 @@
 /**
- * Passport Setup — 1:1 port of Swift PassportOnboardingFlowView.swift +
- * PassportOnboardingFlowView+Steps.swift.
+ * Passport Setup.
  *
  * Multi-step orchestration (state machine in @/passport/pipeline):
  *   mrz   → Scan Passport / Manual Input toggle. Tap Scan → MRZCameraStep

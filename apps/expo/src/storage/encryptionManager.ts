@@ -1,7 +1,5 @@
 /**
- * High-level JSON encrypt/decrypt bound to the **Device Storage Key** —
- * mirrors solidarity/Services/Utils/EncryptionManager.swift's `encrypt<T>` /
- * `decrypt<T>` API.
+ * High-level JSON encrypt/decrypt bound to the **Device Storage Key**.
  *
  * Output byte layout matches Swift CryptoKit `AES.GCM.seal(...).combined`:
  *   nonce(12) || ciphertext || tag(16)

@@ -1,7 +1,7 @@
 /**
  * DID-challenge — the day-0 challenge/response format shared by the
  * Verify QR-scan flow and the Pear proximity channel (card exchange /
- * presentation), see docs/ref 04-plan Phase A1 amendment. A challenge is
+ * presentation). A challenge is
  * plain data (not itself signed); `respondChallenge` signs the whole
  * object as a compact JWS via `signCompact` (jws.ts), and
  * `verifyChallengeResponse` checks three things in order: the JWS was

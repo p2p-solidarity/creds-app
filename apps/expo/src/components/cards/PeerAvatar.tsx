@@ -1,8 +1,6 @@
 /**
  * PeerAvatar — circular animal avatar used by every matching component.
- * Mirrors Swift `ImageProvider.animalImage(for:)`:
- *   `Image .resizable .scaledToFill .frame(size) .clipShape(Circle())`
- * plus a 1pt status-colour ring (and optional 2pt pulsing outer ring).
+ * Scaled-to-fill circle plus a 1pt status-colour ring (and optional 2pt pulsing outer ring).
  */
 import type { ReactNode } from 'react';
 import { Image, View } from 'react-native';

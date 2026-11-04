@@ -1,6 +1,5 @@
 /**
- * atproto OAuth client — 1.3.3 Phase A6 task A6.1 (US-02, Bluesky/atproto
- * account binding). PAR + PKCE + DPoP, hand-rolled per `dpop.ts`'s module
+ * atproto OAuth client (Bluesky/atproto account binding). PAR + PKCE + DPoP, hand-rolled per `dpop.ts`'s module
  * doc (the maintained JS libs are browser/Node-only or pull an unvetted
  * pre-1.0 native module with a conflicting `react-native-mmkv` major
  * version — see that file for the full investigation). Interactive

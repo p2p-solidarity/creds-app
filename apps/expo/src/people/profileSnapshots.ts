@@ -2,10 +2,10 @@
  * Profile snapshots — local record of pages the user has scanned/verified
  * or imported and saved to People.
  *
- * Two kinds, one store (1.3.3 Task A2.4, US-19 fast-follow to A2.3):
+ * Two kinds, one store:
  *   - `kind: 'verified'` — a Verified Page the device cryptographically
  *     checked itself (record + jws + `verifiedAt`), scanned via the Verify
- *     tab (Task A2.3, commit 1afb4a2). Keyed by `did`, its one stable
+ *     tab. Keyed by `did`, its one stable
  *     identity — the natural de-dupe key for "I already have this person".
  *   - `kind: 'declared'` — a plaintext link page (Linktree or similar) the
  *     user pasted a URL for (`src/profile/linktreeImport.ts`). There is NO
@@ -20,7 +20,7 @@
  * pinned by `profileSnapshots.test.ts`'s "legacy shape" describe block.
  *
  * Deliberately a PARALLEL store, not folded into `src/contacts/repository.ts`:
- * a Profile Record (`displayName`/`bio`/`links`/`badges`, 01-spec §3) is a
+ * a Profile Record (`displayName`/`bio`/`links`/`badges`) is a
  * structurally different shape from `Contact`'s BusinessCard-derived model
  * (`name`/`title`/`company`/`email`/`phone`/`sharingPreferences`/exchange
  * signatures/...). Mapping a scanned Profile Record into a `Contact` would
