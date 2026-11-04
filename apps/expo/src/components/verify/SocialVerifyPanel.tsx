@@ -35,7 +35,7 @@ import { proveSocialTarget, type ProofFailure } from '@/zktls/engine';
 import { confirmSocialClaim } from '@/zktls/flow';
 import { bioEditUrl, publicProfileUrl } from '@/zktls/links';
 import type { NostrEvent } from '@/nostr/nostrAdapter';
-import { ZKTLS_PLATFORMS, type SocialTarget, type ZktlsSocialPlatform } from '@solidarity/shared';
+import type { SocialTarget, ZktlsSocialPlatform } from '@solidarity/shared';
 
 type Screen =
   | { readonly kind: 'intro' }
@@ -49,13 +49,6 @@ type Screen =
 /** Platforms serve a just-saved bio after a short delay; retry the marker this often. */
 const MARKER_RETRIES = 3;
 const MARKER_RETRY_DELAY_MS = 4000;
-
-export function parseSocialTarget(platform: unknown, handle: unknown): SocialTarget | null {
-  if (typeof platform !== 'string' || typeof handle !== 'string') return null;
-  if (!['x', 'telegram', 'github', 'website'].includes(platform)) return null;
-  const p = platform as ZktlsSocialPlatform;
-  return ZKTLS_PLATFORMS[p].handlePattern.test(handle) ? { platform: p, handle } : null;
-}
 
 export function SocialVerifyPanel({
   target,

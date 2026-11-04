@@ -29,8 +29,6 @@ import { isAppSchemeProtocol } from '../deeplink/appScheme';
 export const WEBSIGN_DEEPLINK_HOST = 'websign';
 /** Query/fragment parameter carrying the request payload. */
 export const WEBSIGN_REQUEST_PARAM = 'req';
-/** Query/fragment parameter carrying the response payload (offline callback). */
-export const WEBSIGN_RESPONSE_PARAM = 'res';
 
 /**
  * Decode a `req` param into the raw request compact JWS. A compact JWS is

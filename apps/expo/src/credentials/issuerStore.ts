@@ -239,11 +239,6 @@ export const useIssuerMetadataStore = create<IssuerMetadataState>((set, get) => 
   },
 }));
 
-/** Sync selector: a single issuer (Object.is-stable slice). */
-export function getIssuer(id: string): IssuerMetadata | undefined {
-  return useIssuerMetadataStore.getState().entries[normalizeId(id)];
-}
-
 async function fetchLogoBytes(
   logoUri: string,
   fetchImpl: typeof fetch

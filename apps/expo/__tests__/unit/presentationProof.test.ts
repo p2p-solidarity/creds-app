@@ -17,7 +17,6 @@ import {
   buildPresentationProofQrPages,
   disclosureErrorI18nKey,
   initialPresentationClaimIds,
-  isPresentationDisabled,
   type PresentationCredential,
   selectPresentationClaims,
 } from '../../src/credentials/presentationProof';
@@ -145,7 +144,6 @@ describe('presentation proof helpers', () => {
     const selected = initialPresentationClaimIds(claims);
 
     expect([...selected]).toEqual(['claim-age', 'claim-human']);
-    expect(isPresentationDisabled(selected)).toBe(false);
     expect(selectPresentationClaims(claims, selected).map((c) => c.id)).toEqual([
       'claim-age',
       'claim-human',
@@ -156,7 +154,6 @@ describe('presentation proof helpers', () => {
     const selected = initialPresentationClaimIds(claims, 'claim-human');
 
     expect([...selected]).toEqual(['claim-human']);
-    expect(isPresentationDisabled(selected)).toBe(false);
     expect(selectPresentationClaims(claims, selected).map((c) => c.claimType)).toEqual([
       'is_human',
     ]);
@@ -166,14 +163,12 @@ describe('presentation proof helpers', () => {
     const selected = initialPresentationClaimIds(claims, 'claim-not-available');
 
     expect([...selected]).toEqual([]);
-    expect(isPresentationDisabled(selected)).toBe(true);
     expect(selectPresentationClaims(claims, selected)).toEqual([]);
   });
 
   it('treats an empty selection as no proof instead of silently falling back to all claims', () => {
     const selected = new Set<string>();
 
-    expect(isPresentationDisabled(selected)).toBe(true);
     expect(selectPresentationClaims(claims, selected)).toEqual([]);
   });
 

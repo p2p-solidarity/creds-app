@@ -9,7 +9,6 @@ import { fadeUpIn } from '@/feedback/motion';
 import type { SFSymbol } from 'expo-symbols';
 import type { ReactNode } from 'react';
 import { Linking, View, type StyleProp, type ViewStyle } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
 
 import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
@@ -264,47 +263,6 @@ function isHttpUrl(raw: string): boolean {
   } catch {
     return false;
   }
-}
-
-export type BubbleCorner = 'outgoing' | 'incoming';
-
-export function PersonDetailBubble({
-  width,
-  height,
-  fillColor,
-  corners,
-}: {
-  readonly width: number;
-  readonly height: number;
-  readonly fillColor: string;
-  readonly corners: BubbleCorner;
-}): ReactNode {
-  const radius = 4;
-  const squared = 0;
-  const topLeft = radius;
-  const topRight = radius;
-  const bottomRight = corners === 'outgoing' ? squared : radius;
-  const bottomLeft = corners === 'outgoing' ? radius : squared;
-  const d =
-    `M ${String(topLeft)} 0` +
-    ` H ${String(width - topRight)}` +
-    ` A ${String(topRight)} ${String(topRight)} 0 0 1 ${String(width)} ${String(topRight)}` +
-    ` V ${String(height - bottomRight)}` +
-    (bottomRight > 0
-      ? ` A ${String(bottomRight)} ${String(bottomRight)} 0 0 1 ${String(width - bottomRight)} ${String(height)}`
-      : ` L ${String(width)} ${String(height)}`) +
-    ` H ${String(bottomLeft)}` +
-    (bottomLeft > 0
-      ? ` A ${String(bottomLeft)} ${String(bottomLeft)} 0 0 1 0 ${String(height - bottomLeft)}`
-      : ` L 0 ${String(height)}`) +
-    ` V ${String(topLeft)}` +
-    ` A ${String(topLeft)} ${String(topLeft)} 0 0 1 ${String(topLeft)} 0` +
-    ' Z';
-  return (
-    <Svg width={width} height={height} style={{ position: 'absolute' }} pointerEvents="none">
-      <Path d={d} fill={fillColor} />
-    </Svg>
-  );
 }
 
 export function formatIsoDate(d: Date): string {

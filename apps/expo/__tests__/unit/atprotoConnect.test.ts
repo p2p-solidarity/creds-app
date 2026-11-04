@@ -9,9 +9,7 @@ import { describe, expect, it } from 'bun:test';
 
 import {
   connectAtproto,
-  disconnectAtproto,
   type AtprotoConnectDependencies,
-  type AtprotoDisconnectDependencies,
 } from '@/atproto/connect';
 import type { AtprotoSession } from '@/atproto/session';
 import { ok, type ProfileRecord } from '@solidarity/shared';
@@ -48,7 +46,7 @@ function profile(alsoKnownAs: readonly string[] = []): ProfileRecord {
 function makeDependencies(
   currentProfile: ProfileRecord,
   events: string[]
-): AtprotoConnectDependencies & AtprotoDisconnectDependencies {
+): AtprotoConnectDependencies {
   return {
     resolveIdentity: (handle) => {
       events.push(`resolve:${handle}`);
@@ -81,10 +79,6 @@ function makeDependencies(
     },
     putProfileRecord: (_session, jws) => {
       events.push(`put:${jws}`);
-      return Promise.resolve(ok(undefined));
-    },
-    clearSession: () => {
-      events.push('clearSession');
       return Promise.resolve(ok(undefined));
     },
   };
@@ -216,19 +210,5 @@ describe('connectAtproto', () => {
       error: 'sessionIdentityMismatch',
     });
     expect(events).toEqual([]);
-  });
-});
-
-describe('disconnectAtproto', () => {
-  it('clears only OAuth session state and never reads or mutates the profile', async () => {
-    const events: string[] = [];
-    const currentProfile = profile([`at://${HANDLE}`]);
-    const dependencies = makeDependencies(currentProfile, events);
-
-    const result = await disconnectAtproto(dependencies);
-
-    expect(result).toEqual({ ok: true, value: undefined });
-    expect(events).toEqual(['clearSession']);
-    expect(currentProfile.alsoKnownAs).toEqual([`at://${HANDLE}`]);
   });
 });

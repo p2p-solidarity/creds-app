@@ -17,15 +17,12 @@ export {
   saveBusinessCard,
   loadBusinessCard,
   loadAllBusinessCards,
-  hasAnyBusinessCard,
   deleteBusinessCard,
   saveContact,
   loadContact,
   loadAllContacts,
-  hasAnyContact,
   deleteContact,
   clearAllData,
-  getStorageSize,
 } from './storageManager';
 export { ManifestStorage } from './manifestStorage';
 export type { ManifestScope } from './manifestStorage';

@@ -14,12 +14,10 @@ import {
   type SelectiveDisclosureProof,
   type SolidarityQrPayloadOptions,
 } from '@/cards/solidarityQrTypes';
-import { buildDidSignedJwt } from '@/cards/didSignedCredentialPayload';
 
 export {
   enabledFieldsFromSharePreferences,
   formatSwiftIso8601,
-  shareFieldPreferencesFromFields,
   stableStringify,
   type QRCodeEnvelopePayload,
   type QRDidSignedPayload,
@@ -70,21 +68,6 @@ export function buildSolidarityQrPayload(
     },
   };
   return stableStringify(envelope);
-}
-
-export async function buildSolidarityQrPayloadAsync(
-  card: BusinessCard,
-  options: SolidarityQrPayloadOptions = {}
-): Promise<string> {
-  if (card.sharingPreferences.sharingFormat === 'didSigned' && options.signer) {
-    try {
-      const signed = await buildDidSignedJwt(card, options);
-      return signed.jwt;
-    } catch {
-      return buildSolidarityQrPayload(card, options);
-    }
-  }
-  return buildSolidarityQrPayload(card, options);
 }
 
 /**

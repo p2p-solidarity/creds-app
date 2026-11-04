@@ -351,23 +351,3 @@ export function useDisplayClaims(): readonly ProvableClaimEntity[] {
   const provableClaims = useIdentityData((s) => s.provableClaims);
   return useMemo(() => displayClaims(provableClaims), [provableClaims]);
 }
-
-/**
- * Hook: `true` when the holder owns at least one presentable claim of
- * `claimType`. When `holderDid` is omitted, scans the full claim set —
- * useful before the active DID is resolved. Drives the proofs section in
- * Share Settings.
- */
-export function useHasClaim(claimType: string, holderDid?: string): boolean {
-  return useIdentityData((s) => {
-    if (holderDid === undefined) {
-      return s.provableClaims.some((c) => c.isPresentable && c.claimType === claimType);
-    }
-    const holderCardIds = new Set(
-      s.identityCards.filter((c) => c.holderDid === holderDid).map((c) => c.id)
-    );
-    return s.provableClaims.some(
-      (c) => c.isPresentable && c.claimType === claimType && holderCardIds.has(c.identityCardId)
-    );
-  });
-}

@@ -142,11 +142,6 @@ export const useIssuerTrustAnchorStore = create<IssuerTrustAnchorState>((set, ge
   },
 }));
 
-/** Hook selector: list of trusted anchors (paint-stable, no per-render compute). */
-export function useTrustAnchors(): readonly TrustAnchor[] {
-  return useIssuerTrustAnchorStore((s) => s.trusted);
-}
-
 /** Test-only — wipe in-memory state. */
 export function __resetIssuerTrustAnchorStoreForTesting(): void {
   useIssuerTrustAnchorStore.setState({ trusted: [], hydrated: false });

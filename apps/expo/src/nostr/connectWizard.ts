@@ -99,29 +99,6 @@ export type NostrRejectionCopyKey =
   | 'publishOutcome.copy.page'
   | 'publishOutcome.copy.verification';
 
-/**
- * The single structured reading of ONE Nostr publish attempt that every
- * surface shares (audit R5#3 / R4). `full` and `partial` are BOTH live —
- * store semantics (04-plan S8f) are the decided truth: ≥1 relay holding each
- * copy = live; `full` additionally means both quorums passed. `none` = a copy
- * reached zero relays (never live). `cancelled` / `failed` cover the Result
- * error paths before any outcome exists (biometric cancel vs. a real error).
- */
-export type NostrPublishClassification =
-  | { readonly kind: 'full'; readonly outcome: NostrPublishOutcome }
-  | {
-      readonly kind: 'partial';
-      readonly outcome: NostrPublishOutcome;
-      readonly rejections: readonly NostrRelayRejection[];
-    }
-  | {
-      readonly kind: 'none';
-      readonly outcome: NostrPublishOutcome;
-      readonly rejections: readonly NostrRelayRejection[];
-    }
-  | { readonly kind: 'cancelled' }
-  | { readonly kind: 'failed'; readonly message: string };
-
 /** i18n-coded per-relay rejections for both copies of a publish outcome. */
 export function relayRejections(outcome: NostrPublishOutcome): readonly NostrRelayRejection[] {
   const forCopy = (copyKey: NostrRejectionCopyKey, report: PublishReport): NostrRelayRejection[] =>
@@ -137,41 +114,6 @@ export function relayRejections(outcome: NostrPublishOutcome): readonly NostrRel
     ...forCopy('publishOutcome.copy.page', outcome.profile),
     ...forCopy('publishOutcome.copy.verification', outcome.kind0),
   ];
-}
-
-/**
- * Classify one publish attempt into the shared outcome union. This is the ONE
- * place the full/partial/none decision and the biometric-cancel-vs-error split
- * live; every surface adapts THIS rather than re-deriving quorum rules. Built
- * on the existing predicates so the store's marker
- * (`isNostrPublishOutcomePartiallyAccepted`) and the "published" success bar
- * (`isNostrPublishOutcomeSuccessful`) stay the single sources of the thresholds.
- */
-export function classifyNostrPublishOutcome(
-  result: Result<NostrPublishOutcome, string>
-): NostrPublishClassification {
-  if (!result.ok) {
-    return isBiometricCancellation(result.error)
-      ? { kind: 'cancelled' }
-      : { kind: 'failed', message: result.error };
-  }
-  const outcome = result.value;
-  if (isNostrPublishOutcomeSuccessful(outcome)) return { kind: 'full', outcome };
-  const rejections = relayRejections(outcome);
-  return isNostrPublishOutcomePartiallyAccepted(outcome)
-    ? { kind: 'partial', outcome, rejections }
-    : { kind: 'none', outcome, rejections };
-}
-
-/**
- * The shared "accept as published" test: the page is genuinely live on ≥1 relay
- * per copy. `bluesky` refresh and `websign` MUST use this (not full quorum) so
- * a partial publish reads as live exactly like the store marks it.
- */
-export function isNostrPublishClassificationLive(
-  classification: NostrPublishClassification
-): classification is Extract<NostrPublishClassification, { kind: 'full' | 'partial' }> {
-  return classification.kind === 'full' || classification.kind === 'partial';
 }
 
 /** Format one i18n-coded rejection into a display line via the caller's `t`. */

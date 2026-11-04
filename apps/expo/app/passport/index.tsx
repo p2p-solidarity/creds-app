@@ -45,7 +45,6 @@ import {
   MRZCameraStep,
   type PassportMRZDraft as MrzScannedDraft,
 } from '@/onboarding/steps/MRZCameraStep';
-import { notifyPassportOnboardingCompleted } from '@/onboarding/passportHandoff';
 import {
   chipFromNitro,
   derivePassportPublicSignals,
@@ -115,8 +114,7 @@ async function findSavedPassport(fingerprint: string) {
 }
 
 export default function PassportSetup() {
-  const params = useLocalSearchParams<{ manual?: string; from?: string }>();
-  const fromOnboarding = params.from === 'onboarding';
+  const params = useLocalSearchParams<{ manual?: string }>();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const activeDid = useActiveDid();
@@ -435,9 +433,6 @@ export default function PassportSetup() {
               : t('passportSetup.savedLocalOnly'),
         chipVerified ? 'success' : 'warning',
       );
-      // When this flow was launched from onboarding, signal completion so the
-      // wizard advances to the `complete` step before router.back() reveals it.
-      if (fromOnboarding) notifyPassportOnboardingCompleted();
       safeBack();
     } catch (err) {
       const technicalSummary = (err instanceof Error ? err.message : String(err)).split('\n')[0];

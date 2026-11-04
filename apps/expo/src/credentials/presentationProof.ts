@@ -55,19 +55,6 @@ export function selectPresentationClaims(
   return claims.filter((claim) => selectedClaimIds.has(claim.id));
 }
 
-export function isPresentationDisabled(
-  selectedClaimIds: ReadonlySet<string>,
-): boolean {
-  return selectedClaimIds.size === 0;
-}
-
-export function presentedClaimIds(
-  claims: readonly ProvableClaimEntity[],
-  selectedClaimIds: ReadonlySet<string>,
-): readonly string[] {
-  return selectPresentationClaims(claims, selectedClaimIds).map((claim) => claim.id);
-}
-
 export function resolvedProofTypeTag(
   metadataTags: readonly string[],
 ): 'mopro-noir' | 'semaphore-zk' | 'sd-jwt-fallback' {

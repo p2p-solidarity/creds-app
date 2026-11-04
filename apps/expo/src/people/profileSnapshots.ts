@@ -661,13 +661,6 @@ export function getProfileSnapshot(did: string): VerifiedSnapshot | undefined {
 export const useProfileSnapshot = (did: string | undefined): VerifiedSnapshot | undefined =>
   useProfileSnapshotStore((s) => (did ? bestVerifiedForDid(s.snapshots, did) : undefined));
 
-/** Declared-only lookup by `stableDeclaredId(sourceUrl)` — used by
- * `/people/declared/[id]`. */
-export function getDeclaredSnapshot(id: string): DeclaredSnapshot | undefined {
-  const found = useProfileSnapshotStore.getState().snapshots.get(id);
-  return found?.kind === 'declared' ? found : undefined;
-}
-
 export const useDeclaredSnapshot = (id: string | undefined): DeclaredSnapshot | undefined =>
   useProfileSnapshotStore((s) => {
     if (!id) return undefined;
@@ -707,8 +700,6 @@ export function sortedProfileSnapshots(
 
 /** `useShallow` is required: this selector derives a fresh array every
  * call, and Zustand v5's `useSyncExternalStore` snapshot caching would
- * otherwise treat that new reference as a state change on every render —
- * see the equivalent note on `useContactListDetail` in
- * `contacts/repository.ts`. */
+ * otherwise treat that new reference as a state change on every render. */
 export const useSortedProfileSnapshots = (): readonly ProfileSnapshot[] =>
   useProfileSnapshotStore(useShallow((s) => sortedProfileSnapshots(s.snapshots)));

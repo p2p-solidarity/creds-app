@@ -230,36 +230,6 @@ export async function importFromDevice(): Promise<{
 }
 
 /**
- * Single-contact picker — mirrors the iOS CNContactPickerViewController flow
- * used by Swift v1.3.1. The user picks ONE contact at a time; tapping the
- * import button again opens the picker again. Privacy-first: we never see
- * the full address book on either platform.
- *
- * Returns the inserted count (0 if cancelled, 1 on pick).
- */
-export async function importFromDevicePicker(): Promise<{
-  readonly granted: boolean;
-  readonly cancelled: boolean;
-  readonly count: number;
-}> {
-  const { status } = await Contacts.requestPermissionsAsync();
-  const granted = status === Contacts.PermissionStatus.GRANTED;
-  if (!granted) return { granted: false, cancelled: false, count: 0 };
-
-  // v56 class API: `Contact.presentPicker()` returns the selected contact's
-  // detail bag (or null when the user cancels). The older
-  // `presentContactPickerAsync` throws at runtime in v56.
-  const picked = (await Contacts.Contact.presentPicker()) as DeviceContactDetails | null;
-  if (!picked) return { granted: true, cancelled: true, count: 0 };
-
-  const c = deviceContactToContact(picked);
-  if (!c) return { granted: true, cancelled: false, count: 0 };
-
-  await useContactStore.getState().upsert(c);
-  return { granted: true, cancelled: false, count: 1 };
-}
-
-/**
  * In-app multi-select picker payload — what the picker UI lists. Mirrors the
  * fields we render in the row + the raw bag we need to re-map at import time
  * so the picker doesn't fetch the address book twice.

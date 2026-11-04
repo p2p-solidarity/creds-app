@@ -61,30 +61,6 @@ export function verifiedFieldsForHolder(
   return fields;
 }
 
-export function isFieldVerifiedForHolder(
-  field: BusinessCardField,
-  holderDid: string,
-  identityCards: readonly IdentityCardEntity[],
-  provableClaims: readonly ProvableClaimEntity[]
-): boolean {
-  return verifiedFieldsForHolder(holderDid, identityCards, provableClaims).has(field);
-}
-
-export function verifiedFieldsFromCredentials(
-  credentialIds: readonly string[],
-  identityCards: readonly IdentityCardEntity[],
-  provableClaims: readonly ProvableClaimEntity[]
-): ReadonlySet<BusinessCardField> {
-  const idSet = new Set(credentialIds);
-  const fields = new Set<BusinessCardField>();
-  for (const claim of presentableClaims(identityCards, provableClaims)) {
-    if (!idSet.has(claim.identityCardId)) continue;
-    const field = asField(claim.sourceField);
-    if (field) fields.add(field);
-  }
-  return fields;
-}
-
 /** React hook — reactive set of verified BusinessCardFields for the holder. */
 export function useVerifiedFields(
   holderDid: string | null | undefined

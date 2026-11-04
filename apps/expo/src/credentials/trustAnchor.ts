@@ -110,10 +110,3 @@ export function lookupAnchor(
   );
   return fromPreloaded(suffixMatch ?? first);
 }
-
-/** Returns the full set of trust anchors known across all sources. */
-export function allTrustAnchors(): readonly TrustAnchor[] {
-  const runtime = useIssuerTrustAnchorStore.getState().trusted.map(fromIdentity);
-  const preloaded = PRELOADED_TRUST_ANCHORS.map(fromPreloaded);
-  return [...runtime, ...preloaded];
-}

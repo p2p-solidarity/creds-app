@@ -1,5 +1,4 @@
 import { linkDisplay, middleEllipsis } from '@/profile/linkPresentation';
-import { shortDid } from '@/components/id/shortDid';
 import {
   DEFAULT_HANDLE_RESOLVERS,
   encodeFragment,
@@ -17,11 +16,6 @@ import { validatePublicPageUsername } from '@/onboarding/publicPageUsername';
 const PROFILE_PAGE_ORIGIN = 'https://creds.id';
 const PROFILE_PAGE_URL = `${PROFILE_PAGE_ORIGIN}/#`;
 
-export interface ProfileIdentityLine {
-  readonly kind: 'handle' | 'did';
-  readonly label: string;
-}
-
 export function atprotoHandleClaim(record: ProfileRecord): string | null {
   const claim = record.alsoKnownAs.find((value) => value.startsWith('at://'));
   if (claim === undefined) return null;
@@ -29,13 +23,6 @@ export function atprotoHandleClaim(record: ProfileRecord): string | null {
   if (!isValidAtprotoHandle(rawHandle)) return null;
   const normalized = rawHandle.trim().toLowerCase();
   return normalized.startsWith('@') ? normalized.slice(1) : normalized;
-}
-
-export function profileIdentityLine(record: ProfileRecord): ProfileIdentityLine {
-  const handle = atprotoHandleClaim(record);
-  return handle
-    ? { kind: 'handle', label: `@${handle}` }
-    : { kind: 'did', label: shortDid(record.did) };
 }
 
 export interface ProfileShareModel {
@@ -80,10 +67,6 @@ export function buildProfileShareModel(
     shortUrl: nostrClaim ? `${PROFILE_PAGE_URL}${nostrClaim}` : null,
     oversize: fragment.oversize,
   };
-}
-
-export function selectProfileShareUrl(model: ProfileShareModel, preferShort: boolean): string {
-  return preferShort && model.shortUrl ? model.shortUrl : model.offlineUrl;
 }
 
 export type ProfileShareUrlCandidate =

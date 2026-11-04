@@ -51,11 +51,9 @@
  *
  * ── NIP-01 signing — no duplicated serialization ────────────────────────
  *
- * `signNostrEvent` computes the event id via `dag/node.ts`'s
- * `computeNip01EventId` — the SAME implementation `dag/nostrAdapter.ts`'s
- * `verifyNostrEvent`/`buildHeadPointerEvent` use, so an event this module
- * signs is bit-for-bit verifiable by `verifyNostrEvent` (pinned by this
- * task's TDD suite).
+ * `signNostrEvent` computes the event id via `nostr/nip01.ts`'s
+ * `computeNip01EventId` — the SAME implementation `verifyNostrEvent` uses,
+ * so an event this module signs is bit-for-bit verifiable by it.
  */
 import { bech32 } from '@scure/base';
 import { schnorr } from '@noble/curves/secp256k1.js';
@@ -65,7 +63,7 @@ import { schnorr } from '@noble/curves/secp256k1.js';
 // reasoning as `identity/rootKey.ts`.
 import type * as SecureStoreNS from 'expo-secure-store';
 
-import { computeNip01EventId, hexDecode, hexEncode, type Nip01UnsignedEvent } from '@/nostr/dagNode';
+import { computeNip01EventId, hexDecode, hexEncode, type Nip01UnsignedEvent } from '@/nostr/nip01';
 import type { NostrEvent } from '@/nostr/nostrAdapter';
 // Type-only, same reasoning as SecureStoreNS above — `react-native-mmkv`
 // also pulls in React Native's Flow-syntax entry point. See

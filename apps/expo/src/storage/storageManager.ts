@@ -85,11 +85,6 @@ export function loadAllBusinessCards(): Promise<readonly BusinessCard[]> {
   return loadAllEncrypted(CARDS_PREFIX, (r) => businessCardSchema.parse(r));
 }
 
-/** True if any encrypted card record exists. Used by manifest migration. */
-export function hasAnyBusinessCard(): boolean {
-  return listKeys(CARDS_PREFIX).length > 0;
-}
-
 export function deleteBusinessCard(id: string): void {
   getMmkv().remove(`${CARDS_PREFIX}${id}`);
 }
@@ -108,11 +103,6 @@ export function loadAllContacts(): Promise<readonly Contact[]> {
   return loadAllEncrypted(CONTACTS_PREFIX, (r) => contactSchema.parse(r));
 }
 
-/** True if any encrypted contact record exists. Used by manifest migration. */
-export function hasAnyContact(): boolean {
-  return listKeys(CONTACTS_PREFIX).length > 0;
-}
-
 export function deleteContact(id: string): void {
   getMmkv().remove(`${CONTACTS_PREFIX}${id}`);
 }
@@ -122,13 +112,4 @@ export function deleteContact(id: string): void {
 /** Wipe ALL keys. Mirrors Swift StorageManager.clearAllData(). */
 export function clearAllData(): void {
   getMmkv().clearAll();
-}
-
-/** Approx total bytes used (sum of value sizes). */
-export function getStorageSize(): number {
-  let total = 0;
-  for (const key of getMmkv().getAllKeys()) {
-    total += getMmkv().getString(key)?.length ?? 0;
-  }
-  return total;
 }

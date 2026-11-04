@@ -10,10 +10,7 @@
  * Drive access (the app only sees its own files) and backups remain
  * end-to-end encrypted, so the cloud provider only ever sees ciphertext.
  */
-import {
-  GoogleSignin,
-  statusCodes,
-} from '@react-native-google-signin/google-signin';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 const DRIVE_FILE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 
@@ -91,5 +88,3 @@ export async function signOut(): Promise<void> {
   ensureConfigured();
   await GoogleSignin.signOut();
 }
-
-export { statusCodes as googleStatusCodes };

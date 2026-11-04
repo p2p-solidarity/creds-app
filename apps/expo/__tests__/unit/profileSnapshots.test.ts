@@ -83,7 +83,6 @@ interface ProfileSnapshotModuleSurface {
   };
   readonly hydrateProfileSnapshots: () => void;
   readonly getProfileSnapshot: (did: string) => VerifiedSnapshotShape | undefined;
-  readonly getDeclaredSnapshot: (id: string) => DeclaredSnapshotShape | undefined;
   readonly stableDeclaredId: (sourceUrl: string) => string;
   readonly mergeVerifiedSnapshot: (
     existing: VerifiedSnapshotShape | undefined,
@@ -96,6 +95,11 @@ interface ProfileSnapshotModuleSurface {
 
 const kv = new Map<string, string>();
 let mod: ProfileSnapshotModuleSurface;
+
+function declaredSnapshot(id: string): DeclaredSnapshotShape | undefined {
+  const found = mod.useProfileSnapshotStore.getState().snapshots.get(id);
+  return found?.kind === 'declared' ? found : undefined;
+}
 
 function record(overrides: Partial<ProfileRecord> = {}): ProfileRecord {
   return {
@@ -263,13 +267,13 @@ describe('upsertDeclared — persists and round-trips through MMKV, same shape a
     const saved = mod.useProfileSnapshotStore.getState().upsertDeclared('https://linktr.ee/alice', 'Alice', LINKS);
     expect(saved.kind).toBe('declared');
     expect(saved.did).toBeNull();
-    expect(mod.getDeclaredSnapshot(saved.id)).toBeDefined();
+    expect(declaredSnapshot(saved.id)).toBeDefined();
 
     mod.useProfileSnapshotStore.setState({ snapshots: new Map() });
-    expect(mod.getDeclaredSnapshot(saved.id)).toBeUndefined();
+    expect(declaredSnapshot(saved.id)).toBeUndefined();
 
     mod.hydrateProfileSnapshots();
-    const restored = mod.getDeclaredSnapshot(saved.id);
+    const restored = declaredSnapshot(saved.id);
     expect(restored).toBeDefined();
     expect(restored?.sourceUrl).toBe('https://linktr.ee/alice');
     expect(restored?.title).toBe('Alice');
@@ -282,7 +286,7 @@ describe('upsertDeclared — persists and round-trips through MMKV, same shape a
 
     expect(mod.useProfileSnapshotStore.getState().snapshots.size).toBe(1);
     const id = mod.stableDeclaredId('https://linktr.ee/alice');
-    const restored = mod.getDeclaredSnapshot(id);
+    const restored = declaredSnapshot(id);
     expect(restored?.title).toBe('Alice V2');
     expect(restored?.links).toEqual([PORTFOLIO_LINK]);
   });
@@ -322,7 +326,7 @@ describe('upsertDeclared — persists and round-trips through MMKV, same shape a
     const saved = mod.useProfileSnapshotStore.getState().upsertDeclared('https://bare.example/', null, LINKS);
     mod.useProfileSnapshotStore.setState({ snapshots: new Map() });
     mod.hydrateProfileSnapshots();
-    expect(mod.getDeclaredSnapshot(saved.id)?.title).toBeNull();
+    expect(declaredSnapshot(saved.id)?.title).toBeNull();
   });
 
   it('a declared entry with schema-invalid links is dropped on hydrate without corrupting the rest', () => {
@@ -346,8 +350,8 @@ describe('upsertDeclared — persists and round-trips through MMKV, same shape a
       })
     );
     expect(() => { mod.hydrateProfileSnapshots(); }).not.toThrow();
-    expect(mod.getDeclaredSnapshot('goodDeclared')).toBeDefined();
-    expect(mod.getDeclaredSnapshot('badDeclared')).toBeUndefined();
+    expect(declaredSnapshot('goodDeclared')).toBeDefined();
+    expect(declaredSnapshot('badDeclared')).toBeUndefined();
   });
 });
 

@@ -246,13 +246,4 @@ export const useCredentialById = (
 ): StoredCredential | undefined =>
   useCredentialStore((s) => (id ? s.details.get(id) : undefined));
 
-/**
- * Selector: manifest entry by id — frame-1 safe (no decrypt). Use this
- * when the row only needs id/title/trustLevel/type.
- */
-export const useCredentialManifestById = (
-  id: string | undefined,
-): CredentialManifestEntry | undefined =>
-  useCredentialStore((s) => (id ? s.manifest.find((m) => m.id === id) : undefined));
-
 export type { CredentialManifestEntry } from './credentialManifest';

@@ -1,33 +1,11 @@
 /**
- * Nostr bridge adapter — projects DAG nodes into Nostr-event envelopes
- * and back, plus a minimal raw-WebSocket publish/subscribe client.
- *
- * Spec: docs/ref/notes-dev-sandbox-identity-graph.md §3.4 + §6.2 + §13.2.
- *
- * Why no `nostr-tools` dependency: our DAG node already follows NIP-01
- * canonical serialization exactly (src/dag/node.ts), so the id + sig
- * are bit-identical to a Nostr-tools event for the same inputs. The
- * Nostr protocol itself is "WebSocket + four JSON message shapes", so
- * importing a full client library to send `["EVENT", e]` and read
- * `["EVENT", subId, e]` is overkill for a sandbox bridge.
- *
- * Privacy: per §13.2, no default relay list is shipped. Callers must
- * pass a URL the developer explicitly entered in the Lab. Last-used
- * relay is intentionally NOT persisted across app restarts.
+ * Minimal raw-WebSocket Nostr publish/subscribe client. The protocol is
+ * "WebSocket + four JSON message shapes", so a full client library is not
+ * worth the dependency.
  */
 import { schnorr } from '@noble/curves/secp256k1.js';
 
-import {
-  KIND_DAG_HEAD,
-  type DagNode,
-  computeNip01EventId,
-  hexDecode,
-  hexEncode,
-  nostrTagsFor,
-  stableJSON,
-} from './dagNode';
-
-export const NIP78_D_TAG = 'solidarity-dag-v1';
+import { computeNip01EventId, hexDecode } from './nip01';
 
 export interface NostrEvent {
   readonly id: string;
@@ -37,41 +15,6 @@ export interface NostrEvent {
   readonly tags: readonly (readonly string[])[];
   readonly content: string;
   readonly sig: string;
-}
-
-/** A DagNode IS a valid Nostr event once you read its fields through the right names. */
-export function dagNodeToNostrEvent(node: DagNode): NostrEvent {
-  return {
-    id: node.id,
-    pubkey: node.author,
-    created_at: node.created_at,
-    kind: node.kind,
-    tags: nostrTagsFor(node),
-    content: stableJSON(node.payload),
-    sig: node.sig,
-  };
-}
-
-/**
- * Build a NIP-78 replaceable HEAD-pointer event (kind 30078). One event
- * per `(pubkey, d-tag)` replaces older ones at the relay — exactly the
- * "this is my latest state" semantics we want.
- */
-export function buildHeadPointerEvent(
-  privkey: Uint8Array,
-  pubkeyHex: string,
-  heads: readonly string[],
-  createdAt: number = Math.floor(Date.now() / 1000)
-): NostrEvent {
-  const kind = KIND_DAG_HEAD;
-  const tags: readonly (readonly string[])[] = [
-    ['d', NIP78_D_TAG],
-    ...heads.map((h) => ['e', h] as const),
-  ];
-  const content = stableJSON({ v: 1, head_count: heads.length });
-  const id = computeNip01EventId({ pubkey: pubkeyHex, created_at: createdAt, kind, tags, content });
-  const sig = hexEncode(schnorr.sign(hexDecode(id), privkey));
-  return { id, pubkey: pubkeyHex, created_at: createdAt, kind, tags, content, sig };
 }
 
 export interface PublishResult {

@@ -19,7 +19,6 @@ import type {
 import type { LinkVisibility } from '@/profile/projection';
 
 import { resolveAtprotoIdentity, type AtprotoIdentity } from './discovery';
-import { signOutAtproto } from './oauth';
 import { putProfileRecord, type PdsWriteError } from './pds';
 import type { AtprotoSession } from './session';
 
@@ -71,10 +70,6 @@ export interface AtprotoConnectDependencies {
   ) => Promise<Result<void, PdsWriteError>>;
 }
 
-export interface AtprotoDisconnectDependencies {
-  readonly clearSession: () => Promise<Result<void, string>>;
-}
-
 const DEFAULT_DEPENDENCIES: AtprotoConnectDependencies = {
   resolveIdentity: resolveAtprotoIdentity,
   readProfile: async () => {
@@ -94,10 +89,6 @@ const DEFAULT_DEPENDENCIES: AtprotoConnectDependencies = {
       : ok({ ...saved.value, published });
   },
   putProfileRecord,
-};
-
-const DEFAULT_DISCONNECT_DEPENDENCIES: AtprotoDisconnectDependencies = {
-  clearSession: signOutAtproto,
 };
 
 function atprotoHandle(alias: string): string | null {
@@ -201,17 +192,5 @@ export async function connectAtproto(
     });
   } catch {
     return err('recordWriteFailed');
-  }
-}
-
-/** Local disconnect only; the signed profile and public PDS record remain. */
-export async function disconnectAtproto(
-  dependencies: AtprotoDisconnectDependencies = DEFAULT_DISCONNECT_DEPENDENCIES
-): Promise<Result<void, 'sessionClearFailed'>> {
-  try {
-    const result = await dependencies.clearSession();
-    return result.ok ? ok(undefined) : err('sessionClearFailed');
-  } catch {
-    return err('sessionClearFailed');
   }
 }

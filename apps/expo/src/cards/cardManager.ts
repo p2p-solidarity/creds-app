@@ -195,10 +195,6 @@ export const useCardStore = create<CardStoreState>((set, get) => ({
   },
 }));
 
-/** Selector for "my own card" — the first manifest entry. Frame-1 safe. */
-export const useMyCard = (): CardManifestEntry | undefined =>
-  useCardStore((s) => s.manifest[0]);
-
 /**
  * Full record for "my own card". Returns `undefined` until `hydrate()`
  * has run or the consumer calls `loadDetail()`. Use this when you need

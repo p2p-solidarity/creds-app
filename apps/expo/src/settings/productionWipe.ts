@@ -8,7 +8,6 @@ import {
 } from '@/badges/badgeStatusCache';
 import { useCardStore } from '@/cards/cardManager';
 import { useReceivedCard } from '@/cards/receivedCard';
-import { clearImageMemoryCache } from '@/components/common/imageProvider';
 import { useLeaveCardStore } from '@/contacts/leaveCardInbox';
 import { useRecentUpdatesStore } from '@/contacts/recentUpdates';
 import { useContactStore } from '@/contacts/repository';
@@ -118,7 +117,6 @@ function clearMemoryCaches(): void {
   useReceivedCard.getState().dismiss();
   useVerifiedPageResult.getState().dismiss();
   useWebSignPending.getState().clear();
-  clearImageMemoryCache();
   invalidateCachedNostrResult();
   invalidateCachedAtprotoResult();
 }

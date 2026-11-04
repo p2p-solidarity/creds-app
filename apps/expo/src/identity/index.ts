@@ -12,15 +12,12 @@ export { sourceCredentialId } from './entities';
 export {
   displayClaims,
   useDisplayClaims,
-  useHasClaim,
   useIdentityData,
 } from './dataStore';
 export {
   claimsForHolder,
-  isFieldVerifiedForHolder,
   useVerifiedFields,
   verifiedFieldsForHolder,
-  verifiedFieldsFromCredentials,
 } from './verifiedClaimIndex';
 export {
   __resetIdentityCoordinatorForTesting,
@@ -31,7 +28,6 @@ export type { DIDDescriptor, UnifiedProfile } from './coordinator';
 export {
   __resetIssuerTrustAnchorStoreForTesting,
   useIssuerTrustAnchorStore,
-  useTrustAnchors,
   type TrustAnchor,
   type TrustAnchorSource,
 } from './issuerTrustAnchor';

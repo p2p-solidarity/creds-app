@@ -54,12 +54,10 @@ export {
 } from './bindingIo';
 export {
   connectAtproto,
-  disconnectAtproto,
   type AtprotoConnectDependencies,
   type AtprotoConnectError,
   type AtprotoConnectOptions,
   type AtprotoConnectOutcome,
-  type AtprotoDisconnectDependencies,
 } from './connect';
 export {
   beginBlueskyConnect,
