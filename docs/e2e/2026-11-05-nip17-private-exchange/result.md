@@ -22,10 +22,14 @@
 | C8 | B 同意並回覆 | Face ID 通過 → toast「已寄出；對方會看到「未經真機檢查」」，收件匣清空；p-tag A 的 1059：nos.lol 0→1、primal 0→1，外層 pubkey ≠ B | PASS | `C8-b-sent-toast.png`、relay 腳本 |
 | C9 | A 驗證並照實顯示等級 | 「E2E Holder 私下出示了 · 護照上的國籍 TWN · 開發模式護照，未經真機檢查 · 這支手機在 2026/11/05 1:52:52 驗過」；沒有姓名（沒給就沒有） | PASS | `C9-a-verified-answer.png` |
 
-整體：**PASS**（C7 第一次 FAIL，修正後在含修正的 bundle 上重跑 PASS）。
+| R1 | 晚讀的回覆照收（code review 修正後） | A 02:01 再請求（只要國籍）→ B 約 02:05:30 Face ID 送出 → 兩台都關、等 5 分半 → A 02:12:37 驗過並顯示「E2E Holder 私下出示了 · 國籍 TWN · 開發模式護照，未經真機檢查」。修正前這種「簽完超過 5 分鐘才讀」會被當 notCurrent 默默丟掉 | PASS | `R1-a-second-request.png`、`R1-a-late-answer-verified.png` |
+
+整體：**PASS**（C7 第一次 FAIL，修正後在含修正的 bundle 上重跑 PASS；R1 在含 code review 修正的 bundle 上跑）。
 
 ## 失敗與修正
 - **C7 第一次 FAIL**：`PassportConsentSheet` 失敗時用 `pushToast`，但 toast overlay 在 root layout，畫在原生 formSheet **下面** → 持有人按了送出、Face ID 失敗後畫面只是回到原狀，不知道有沒有送出。修正：兩個 sheet（同意、請求表單）的失敗訊息改成 sheet 內的 inline 文字（成功仍是先關 sheet 再 toast，看得到）。
+
+- **Code review（`/code-review high`）**：出示驗證原本要求 `signedAt` 在「現在」±5 分鐘，但 NIP-17 是非同步的，請求者晚開 App 就收不到回覆——改成「簽在請求開著的期間」（tdd，`packages/shared/test/passportPresentation.test.ts`），並由 R1 實測。同一輪也修了：轉不到 DID 的暫時失敗不再標成已讀、relay 回滿 500 筆時不推進游標、自己的 10050 快取依 npub、刪帳號時 10050 盲讀就停、能做裝置證明的手機簽不出時不送（不默默降成 L1）。
 
 ## 執行時的偏差
 - Face ID 故意失敗兩次後，模擬器的 Face ID 進入鎖定，之後每次都直接跳密碼畫面；用 `BiometricKit.enrollmentChanged` 0→1 重設後才通過。屬模擬器狀態，不是 App 行為；重設後 B 的金鑰與簽名都正常（C8 成功送出）。
