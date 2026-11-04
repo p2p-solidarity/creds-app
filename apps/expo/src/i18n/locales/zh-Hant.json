@@ -1562,7 +1562,6 @@
   "deleteAccount.step.name": "名稱",
   "deleteAccount.step.vault": "線上備份",
   "deleteAccount.step.pro": "Pro 連結",
-  "deleteAccount.step.inbox": "舊版收件匣",
   "deleteAccount.step.local": "這支手機",
   "deleteAccount.status.done": "已刪除",
   "deleteAccount.status.nothing": "沒有資料",

@@ -1562,7 +1562,6 @@
   "deleteAccount.step.name": "Name",
   "deleteAccount.step.vault": "Online backups",
   "deleteAccount.step.pro": "Pro link",
-  "deleteAccount.step.inbox": "Old inbox",
   "deleteAccount.step.local": "This phone",
   "deleteAccount.status.done": "Deleted",
   "deleteAccount.status.nothing": "Nothing to delete",

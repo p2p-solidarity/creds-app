@@ -285,7 +285,6 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
                     "unlink every creds.id name your key held and delete its directory operation logs;",
                     "delete every encrypted root-vault record in your owner index, including passkeys added on the website;",
                     "delete the link between your creds Pro purchase and your identity;",
-                    "delete any messages still held for you by the retired Shoutouts inbox;",
                     "finally, erase identity keys, cards, contacts, credentials and settings on the phone."
                   ]
                 },
@@ -767,7 +766,6 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
                     "解除你的金鑰持有過的所有 creds.id 名稱連結，並刪除其目錄操作記錄；",
                     "刪除 owner index 中所有加密 root vault 紀錄，包括在網站上新增的 passkey；",
                     "刪除 creds Pro 購買與你身分之間的連結；",
-                    "刪除已停用的 Shoutouts 收件匣中仍為你保留的訊息；",
                     "最後清除手機上的身分金鑰、名片、聯絡人、憑證與設定。"
                   ]
                 },

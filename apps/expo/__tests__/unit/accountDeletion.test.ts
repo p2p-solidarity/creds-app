@@ -8,7 +8,7 @@ const ok = (): Promise<StepRunResult> => Promise.resolve({ kind: 'done' });
 
 function deps(overrides: Partial<AccountDeletionDeps>, localCalls: { n: number }): AccountDeletionDeps {
   return {
-    nostr: ok, name: ok, vault: ok, pro: ok, inbox: ok,
+    nostr: ok, name: ok, vault: ok, pro: ok,
     local: () => { localCalls.n += 1; return ok(); },
     ...overrides,
   };
@@ -30,7 +30,7 @@ describe('runAccountDeletion', () => {
 
   test('is deleted only after every server step and the local wipe went through', async () => {
     const local = { n: 0 };
-    const result = await runAccountDeletion(deps({ inbox: () => Promise.resolve({ kind: 'nothing' }) }, local));
+    const result = await runAccountDeletion(deps({ pro: () => Promise.resolve({ kind: 'nothing' }) }, local));
     expect(result.kind).toBe('deleted');
     expect(local.n).toBe(1);
     const failedWipe = await runAccountDeletion(deps({ local: () => Promise.resolve({ kind: 'failed' }) }, local));
