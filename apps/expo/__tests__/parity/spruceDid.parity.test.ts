@@ -537,7 +537,7 @@ describe('SpruceID DID Nitro module — JS-side wiring', () => {
     ).toBe(true);
   });
 
-  it('signJwt splices custom typ/kid headers without breaking the signature', async () => {
+  it('signJwt signs custom typ/kid headers (the signature covers the header)', async () => {
     const jwk = await publicJwk();
     const jwt = await signJwt(
       { alg: 'ES256', typ: 'vc+jwt', kid: 'did:key:zTest#keys-1' },
@@ -553,12 +553,9 @@ describe('SpruceID DID Nitro module — JS-side wiring', () => {
     expect(header.alg).toBe('ES256');
     expect(header.typ).toBe('vc+jwt');
     expect(header.kid).toBe('did:key:zTest#keys-1');
-    // Signature still verifies because the test driver re-signs with the
-    // default header during signJws; the JS layer then overwrites the
-    // header segment. In the *native* path the SDK signs the user-supplied
-    // header — that's covered by deeper end-to-end tests that exercise
-    // the real Nitro module (TODO when we have a device farm).
-    expect(parts[2]?.length ?? 0).toBeGreaterThan(0);
+    // Regression (2026-11-05 E2E): the header was swapped in after signing,
+    // so every VP failed verification on the receiving phone.
+    expect(verifyJwtEs256(jwt, jwk).header.kid).toBe('did:key:zTest#keys-1');
   });
 
   it('legacy migration: rotates DID when gg.solidarity.signing.v2 is present', async () => {
