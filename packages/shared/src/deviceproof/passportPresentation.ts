@@ -19,8 +19,8 @@ import { err, ok, type Result } from '../types/result';
 import { verifyDeviceProof, type DeviceProofTrust } from './witness';
 
 export const PASSPORT_PRESENTATION_TYP = 'creds.passport.present.v1';
-/** Signed when the holder answers, so it must be fresh. */
-const FRESH_SECONDS = 300;
+/** Clock skew allowed between the two phones. */
+const SKEW_SECONDS = 300;
 
 const claimsSchema = z
   .object({
@@ -107,6 +107,9 @@ export interface PassportPresentationContext {
   /** The nonce of the request this answers. */
   readonly nonce: string;
   readonly requested: readonly PassportRequestClaim[];
+  /** When the request was sent, and when it expires (unix s). */
+  readonly requestSentAt: number;
+  readonly requestExp: number;
   readonly nowSeconds: number;
 }
 
@@ -146,7 +149,13 @@ export function verifyPassportPresentationWith(verifyDevice: DeviceVerifier) {
     for (const field of Object.keys(presentation.claims) as (keyof PassportClaimValues)[]) {
       if (!allowed.has(field)) return err('notRequested');
     }
-    if (Math.abs(ctx.nowSeconds - presentation.signedAt) > FRESH_SECONDS) return err('notCurrent');
+    // Signed while the request was open. Not "close to now": the answer waits
+    // on relays until the requester next opens the app. Replay is stopped by
+    // the nonce and by one answer per request.
+    const latest = Math.min(ctx.requestExp, ctx.nowSeconds) + SKEW_SECONDS;
+    if (presentation.signedAt < ctx.requestSentAt - SKEW_SECONDS || presentation.signedAt > latest) {
+      return err('notCurrent');
+    }
 
     let deviceVerified = false;
     if (wire.device !== null) {

@@ -73,6 +73,8 @@ const ctx = {
   myHex: ME_HEX,
   nonce: NONCE,
   requested: ['passport.name', 'passport.nationality'] as const,
+  requestSentAt: NOW - 2 * 86_400,
+  requestExp: NOW + 5 * 86_400,
   nowSeconds: NOW,
 };
 
@@ -152,8 +154,20 @@ describe('verifyPassportPresentation — claims', () => {
 });
 
 describe('verifyPassportPresentation — time', () => {
-  it('rejects stale, future and read-after-sign statements', () => {
-    expect(reason(json(presentation({ signedAt: NOW - 3600 })))).toBe('notCurrent');
+  it('accepts an answer read long after it was signed (the inbox is asynchronous)', () => {
+    expect(reason(json(presentation({ readAt: NOW - 3 * 86_400, signedAt: NOW - 86_400 })))).toBe('ok:L1');
+  });
+
+  it('rejects a statement signed before the request existed', () => {
+    expect(reason(json(presentation({ readAt: NOW - 4 * 86_400, signedAt: NOW - 3 * 86_400 })))).toBe('notCurrent');
+  });
+
+  it('rejects a statement signed after the request expired', () => {
+    const expired = { ...ctx, requestExp: NOW - 86_400 };
+    expect(reason(json(presentation({ readAt: NOW - 3 * 86_400, signedAt: NOW - 3600 })), null, deviceOk, expired)).toBe('notCurrent');
+  });
+
+  it('rejects future and read-after-sign statements', () => {
     expect(reason(json(presentation({ signedAt: NOW + 3600 })))).toBe('notCurrent');
     expect(reason(json(presentation({ readAt: NOW })))).toBe('malformed');
   });

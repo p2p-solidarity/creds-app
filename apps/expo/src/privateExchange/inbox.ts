@@ -29,6 +29,8 @@ import { collectEvents, ensureOwnDmRelays } from './relays';
 import { getPrivateExchangeSnapshot, usePrivateExchangeStore } from './store';
 
 const MAX_OPEN_PER_SYNC = 200;
+/** Per-relay REQ limit; a relay that returns this many may have cut older wraps. */
+const FETCH_LIMIT = 500;
 /** Seal and wrap times are pushed up to two days into the past (NIP-59). */
 const WRAP_BACKDATE_SECONDS = 2 * 86_400 + 600;
 const FIRST_SYNC_LOOKBACK_SECONDS = 9 * 86_400;
@@ -53,20 +55,24 @@ function savedPageFor(senderHex: string): ProfileRecord | null {
   return null;
 }
 
-/** npub → DID: the embedded Page, else a saved Page, else the network (§3 step 5). */
-async function bindSender(parsed: ParsedPrivateMessage): Promise<BoundSender | null> {
+/**
+ * npub → DID: the embedded Page, else a saved Page, else the network (§3 step 5).
+ * 'retry' = no relay answered; the wrap is opened again next sync.
+ */
+async function bindSender(parsed: ParsedPrivateMessage): Promise<BoundSender | 'unbound' | 'retry'> {
   const page = parsed.message.page;
   if (page !== undefined) {
     const verified = verifyProfileJws(page);
-    if (verified.kind !== 'verified' || !pageBindsSender(verified.record, parsed.senderHex)) return null;
+    if (verified.kind !== 'verified' || !pageBindsSender(verified.record, parsed.senderHex)) return 'unbound';
     return { did: verified.record.did, record: verified.record };
   }
   const saved = savedPageFor(parsed.senderHex);
   if (saved !== null) return { did: saved.did, record: saved };
   const npub = hexToNpub(parsed.senderHex);
-  if (!npub.ok) return null;
+  if (!npub.ok) return 'unbound';
   const resolved = await resolveProfileByNpub(npub.value);
-  return resolved.kind === 'verified' ? { did: resolved.record.did, record: resolved.record } : null;
+  if (resolved.kind === 'verified') return { did: resolved.record.did, record: resolved.record };
+  return resolved.reason === 'unreachable' ? 'retry' : 'unbound';
 }
 
 function onRequest(parsed: ParsedPrivateMessage, message: ProofRequestMessage, sender: BoundSender, epoch: LocalDataEpoch): void {
@@ -98,12 +104,19 @@ function onResponse(
   if (request === undefined) { drop('noMatchingRequest'); return; }
   if (request.answer !== null) { drop('alreadyAnswered'); return; }
   const now = Math.floor(Date.now() / 1000);
-  if (request.exp < now) { drop('requestExpired'); return; }
   if (request.recipientHex !== parsed.senderHex || request.recipientDid !== sender.did) { drop('wrongResponder'); return; }
 
   const verified = verifyPassportPresentation(
     message.passport,
-    { senderHex: parsed.senderHex, myHex, nonce: request.nonce, requested: request.claims, nowSeconds: now },
+    {
+      senderHex: parsed.senderHex,
+      myHex,
+      nonce: request.nonce,
+      requested: request.claims,
+      requestSentAt: request.sentAt,
+      requestExp: request.exp,
+      nowSeconds: now,
+    },
     CREDS_DEVICE_TRUST
   );
   if (!verified.ok) { drop(verified.error); return; }
@@ -133,9 +146,11 @@ async function runSync(): Promise<InboxSyncResult> {
   const state = getPrivateExchangeSnapshot();
   const since = state.cursor === null ? startedAt - FIRST_SYNC_LOOKBACK_SECONDS : state.cursor - WRAP_BACKDATE_SECONDS;
 
-  const { events, confirmed } = await collectEvents(relays, { kinds: [1059], '#p': [me.value], since, limit: 500 });
-  const unseen = events.filter((e) => state.seen[e.id] === undefined).slice(0, MAX_OPEN_PER_SYNC);
-  const capped = unseen.length < events.filter((e) => state.seen[e.id] === undefined).length;
+  const { events, confirmed } = await collectEvents(relays, { kinds: [1059], '#p': [me.value], since, limit: FETCH_LIMIT });
+  const allUnseen = events.filter((e) => state.seen[e.id] === undefined);
+  const unseen = allUnseen.slice(0, MAX_OPEN_PER_SYNC);
+  const capped = unseen.length < allUnseen.length || events.length >= FETCH_LIMIT;
+  const retry = new Set<string>();
 
   const opened = await unwrapForMe(unseen);
   if (!opened.ok) return { kind: 'noKey' };
@@ -152,7 +167,12 @@ async function runSync(): Promise<InboxSyncResult> {
       continue;
     }
     const sender = await bindSender(parsed.value);
-    if (sender === null) {
+    if (sender === 'retry') {
+      retry.add(result.value.wrapId);
+      drop('senderUnresolved');
+      continue;
+    }
+    if (sender === 'unbound') {
       drop('senderNotBound');
       continue;
     }
@@ -168,8 +188,8 @@ async function runSync(): Promise<InboxSyncResult> {
   usePrivateExchangeStore
     .getState()
     .markSeen(
-      unseen.map((e) => e.id),
-      confirmed && !capped ? startedAt : null,
+      unseen.filter((e) => !retry.has(e.id)).map((e) => e.id),
+      confirmed && !capped && retry.size === 0 ? startedAt : null,
       epoch
     );
   return { kind: 'synced', opened: unseen.length, confirmed };

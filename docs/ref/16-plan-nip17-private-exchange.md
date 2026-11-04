@@ -212,7 +212,7 @@ UI、訂閱迴圈、寄出流程不寫單元測試，由 E2E 涵蓋。`presentRe
 ### 11.3 請求者的驗證（tdd）
 1. statement 用 zod strict 解析；`holder`＝回覆寄件人、`aud`＝我、`nonce`＝我發出的請求的 nonce。
 2. `claims` 非空、每個 key 都在請求裡、格式對（國籍 `^[A-Z]{3}$`，姓名 1–80 字）。
-3. `signedAt` 在現在 ±5 分鐘內（當場簽的）、`readAt ≤ signedAt`。
+3. `signedAt` 落在請求開著的期間（請求送出 −5 分鐘 到 min(請求到期, 現在) +5 分鐘）、`readAt < signedAt`。不是「離現在 5 分鐘內」：回覆會在中繼站上等到請求者下次打開 App（2026-11-05 code review 改）。防重放靠 nonce＋一個請求只收一次回覆。
 4. `device`：
    - 有 → `verifyDeviceProof`（釘選 Apple／Google 根、我們的 App、正式環境）；`notary` 一律拒；驗不過**整則拒絕**，不降級。
    - 沒有 → 照樣接受，但等級是 L1。
@@ -228,7 +228,7 @@ UI、訂閱迴圈、寄出流程不寫單元測試，由 E2E 涵蓋。`presentRe
 20. statement 不是 JSON、多欄位、版本錯 → 拒
 21. holder ≠ 寄件人、aud ≠ 我、nonce ≠ 請求 → 拒
 22. claims 空、含未請求的 key、國籍格式錯、姓名空白或超長 → 拒
-23. signedAt 太舊或在未來、readAt > signedAt → 拒
+23. signedAt 早於請求送出、晚於請求到期或在未來、readAt ≥ signedAt → 拒；隔天才讀到的回覆照收
 24. device 是 notary、device 驗不過（換 bytes、換 npub）→ 拒
 25. device 為 null → L1；device 有效但 chip ≠ passiveAuth → L1；device 有效且 passiveAuth → L3
 26. DG1 姓名解析：標準 TD3、只有姓、名字中間有 `<`、長度不足 88、全是填充字元 → 正確或「沒有姓名」
