@@ -8,12 +8,15 @@
  * cold launch); only unrecognised URLs (dev-client links, plain screen paths
  * like `credsid://settings/backup`) route as before.
  *
- * A web-only page on our own host (`creds.id/edit`, `/privacy`, …) can still
- * arrive here while a device holds an older, catch-all apple-app-site-
- * association. It is a web page, not an app screen, so it opens in the
- * in-app browser (which never hands a universal link back to the app).
+ * A web-only page on our own host (`creds.id/edit`, `/privacy`, …) still
+ * arrives here: an older catch-all apple-app-site-association on iOS, and on
+ * Android the creds.id filter claims every name-shaped path. It is a web page,
+ * not an app screen, so it opens in the in-app browser. On Android that
+ * browser must be named: an unpackaged Custom Tab intent resolves like any
+ * link, back to this app, and loops (2026-11-05 AVD run).
  */
 import * as WebBrowser from 'expo-web-browser';
+import { Platform } from 'react-native';
 import { isProductHost } from '@/deeplink/domainVerification';
 import { parseDeepLink } from '@/deeplink/parser';
 
@@ -26,10 +29,21 @@ function webOnlyProductUrl(path: string): string | null {
   }
 }
 
+async function openInBrowser(url: string): Promise<void> {
+  if (Platform.OS !== 'android') {
+    await WebBrowser.openBrowserAsync(url);
+    return;
+  }
+  const browsers = await WebBrowser.getCustomTabsSupportingBrowsersAsync();
+  const browserPackage =
+    browsers.preferredBrowserPackage ?? browsers.defaultBrowserPackage ?? browsers.browserPackages[0];
+  if (browserPackage !== undefined) await WebBrowser.openBrowserAsync(url, { browserPackage });
+}
+
 export function redirectSystemPath({ path, initial }: { path: string; initial: boolean }): string | null {
   if (parseDeepLink(path).kind !== 'unknown') return initial ? '/' : null;
   const webUrl = webOnlyProductUrl(path);
   if (webUrl === null) return path;
-  void WebBrowser.openBrowserAsync(webUrl).catch(() => undefined);
+  void openInBrowser(webUrl).catch(() => undefined);
   return initial ? '/' : null;
 }
