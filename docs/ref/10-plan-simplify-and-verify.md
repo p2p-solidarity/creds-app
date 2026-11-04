@@ -225,3 +225,20 @@
 ### 仍待確認
 - 06 Q3 裁了「透明日誌」；本 plan 的撤銷清單只是 root 簽的一份清單，不是日誌，不衝突——但若之後想讓外洩可被第三方偵測，需要重開這題。
 - **已知問題（P1 發現，2026-10-29，延後處理）**：onboarding Passkey「稍後再說」偶發卡在「正在設定…」（6 次 1 次）：keychain 讀完後沒寫入、CPU 閒置，卡在建立 root key 前後某個不會 resolve 的 await。疑似 dev 才有的 Metro 延遲載入 `expo-secure-store`，未證實；identity 路徑沒有逾時保護。細節見 `docs/e2e/2026-10-29-p1-maestro/result.md`。
+
+## 9. 私密交換：未來走 NIP-17（2026-11-04 決定）
+
+Pear／bare-kit 已經移除（14 §8）。以後如果要做私密交換，例如遠端請求證明、私下給電話或 email，改用 Nostr **NIP-17**（gift-wrapped 私訊，用 NIP-44 加密）：
+- App 和網頁都能用，雙方不必同時在線。
+- 每則訊息本來就由 npub 簽章，DID↔npub 綁定已經寫在 Page 上，所以不需要 Pear 那套雙向 challenge。
+- 面對面維持 QR。
+
+可以從 `da96ae9c`（Pear 移除前）取回再改寫的、跟傳輸無關的部分：
+- `apps/expo/src/pear/consent.tsx`：同意畫面
+- `presentRelease.ts`：固定「先問同意 → Face ID → 才送出」的順序
+- `presentBuilder.ts`：選擇性揭露 VP 的組裝
+- `cardRelease.ts`、`presentRequestState.ts`、`cardRequestState.ts`：狀態機
+- 對應的測試 `pearPresentRelease.test.ts`、`pearPresentBuilder.test.ts`、`pearCardRelease.test.ts`
+
+傳輸層（`lane`、`laneManager`、`lifecycle`、`frames`、`handshake`、`protocol`）不要再拿回來。
+
