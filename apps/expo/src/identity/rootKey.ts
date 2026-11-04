@@ -493,7 +493,7 @@ export async function getRootSigner(): Promise<Result<Signer, RootKeyError>> {
   }
 
   // One user intent = one `getRootSigner()` call (a Page save signs three
-  // projections; a Pear connection signs its handshake). The signer authorizes
+  // projections). The signer authorizes
   // once and reuses that for its own next signatures for at most
   // ROOT_SIGNER_INTENT_MS, so "ask every time" means every action, not every
   // signature (Kidney, 2026-10-30). Scoped to this instance — another call

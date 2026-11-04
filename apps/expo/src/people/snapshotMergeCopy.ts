@@ -2,8 +2,7 @@
  * UI copy mapping for a `SnapshotMergeOutcome` (T5) — the ONE honest place
  * that turns "what the freshness/conflict merge actually did" into a toast
  * message + tone. Shared by every surface that saves a verified page
- * (`VerifiedPageResultSheet`, `PearConnectSection`, `CardExchangeSection`)
- * so none of them can drift into always claiming "Saved" when the merge in
+ * (`VerifiedPageResultSheet`) so no surface can drift into always claiming "Saved" when the merge in
  * fact kept a newer local copy or flagged a conflict (CLAUDE.md rule 8).
  *
  * Pure: takes the outcome kind, returns an i18n key + `ToastTone`. The caller

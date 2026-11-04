@@ -1,7 +1,7 @@
 /**
  * Compact JWS — the single signing primitive for did:key-authenticated
- * payloads (profile signing, DID challenge-response, and the Pear channel
- * handshake all route through this; see docs/ref 04-06 plans). RFC 7515
+ * payloads (profile signing and DID challenge-response route through
+ * this). RFC 7515
  * compact serialization: `<headerB64>.<payloadB64>.<signatureB64>`.
  *
  * The protected header is always `{ alg: 'ES256', kid: '<did>#0' }` — a

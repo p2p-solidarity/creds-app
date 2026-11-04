@@ -399,8 +399,8 @@ export default function CredentialDetailScreen() {
   }, [allClaims, credential]);
 
   // A passport is shown in person through its L3 badge on the Page (10 §4);
-  // the multi-frame proof QR that used to present it here is gone, and the
-  // Pear hand-over that replaces it is not built yet — so no present CTA.
+  // the multi-frame proof QR that used to present it here is gone — so no
+  // present CTA.
   const isPassportCredential = credential?.type === 'passport';
   const presentationClaimRows = associatedClaims;
 

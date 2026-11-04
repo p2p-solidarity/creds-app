@@ -5,8 +5,7 @@
  * in by hand:
  *
  *   JavaScript  packages in the Metro bundle (source-map `node_modules` paths of
- *               an `expo export`) + the Pear worklet bundle + every autolinked
- *               native package; text = the package's LICENSE / NOTICE files.
+ *               an `expo export`) + every autolinked native package; text = the package's LICENSE / NOTICE files.
  *   iOS         pods in `ios/Podfile.lock` that no npm package provides; text =
  *               CocoaPods' acknowledgements, else the pod's own LICENSE file.
  *   Android     the release runtime classpath (`gradlew :app:dependencies`);
@@ -131,8 +130,6 @@ function findPackageDir(name: string, fromDir: string): string | undefined {
 }
 
 const jsNames = packageNamesInSourceMaps(exportDir);
-const workletBundle = readFileSync(join(APP, 'pear/worklet/dist/index.bundle.js'), 'utf8');
-for (const m of workletBundle.matchAll(/"\/node_modules\/((?:@[^/"]+\/)?[^/"]+)\//g)) jsNames.add(m[1]);
 const appPkg = JSON.parse(readFileSync(join(APP, 'package.json'), 'utf8')) as { dependencies: Record<string, string> };
 const nativeDirs: string[] = [];
 for (const name of Object.keys(appPkg.dependencies)) {
@@ -148,7 +145,7 @@ const jsItems: Item[] = [];
 const jsSeen = new Set<string>();
 for (const name of [...jsNames].sort()) {
   if (name.startsWith('@solidarity/')) continue; // this repo
-  const dir = findPackageDir(name, APP) ?? findPackageDir(name, join(APP, 'pear/worklet'));
+  const dir = findPackageDir(name, APP);
   if (dir === undefined) {
     console.warn(`js: ${name} is bundled but not installed — skipped`);
     continue;

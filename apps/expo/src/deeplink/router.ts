@@ -68,15 +68,6 @@ export function handleDeepLink(raw: string): DeepLinkRoute {
       void resolveProfileByHandle(route.handle, { onInterim: present }).then(present);
       break;
     }
-    case 'pear':
-      // Task A5.4 (US-20) — reuse the Verified Page detail route: it already
-      // renders the full card-exchange surface for a did with a saved
-      // `VerifiedSnapshot`, and now also renders `PearConnectSection`'s
-      // honest "connect privately" landing for a did with none (see that
-      // screen's doc). Same route either way — the screen itself decides
-      // which to show based on whether it already knows this did.
-      router.push({ pathname: '/people/profile/[did]', params: { did: route.did } });
-      break;
     case 'webSign':
       // App↔Web per-action signing (research §4, G3). Stage the request (or an
       // honest decode error) and open the consent review screen. The review

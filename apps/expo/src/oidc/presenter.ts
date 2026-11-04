@@ -89,7 +89,8 @@ export interface PresentationBuilderInput {
   /** Provable-claim ids OR credential ids (we look in both stores). */
   readonly selectedClaimIds: readonly string[];
   readonly holderDid: string;
-  /** Pear-only: root key authorization that anchors the card-signing DID. */
+  /** Optional root key authorization that anchors the card-signing DID. No
+   *  caller supplies it since the Pear channel was removed. */
   readonly cardKeyBinding?: {
     readonly rootDid: string;
     readonly sign: Signer;
@@ -297,7 +298,7 @@ function buildPresentationSubmission(
   };
 }
 
-/** Sign the Pear root→card binding when the caller supplies one; a plain
+/** Sign the root→card binding when the caller supplies one; a plain
  *  OID4VP flow has no binding and returns `undefined`. Fail-closed on signer
  *  errors. */
 async function signCardKeyBinding(

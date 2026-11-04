@@ -175,20 +175,16 @@ function ScanScreen() {
     }
 
     // Our OWN deep links, printed as QR (05-spec §8-D ruling, 2026-08-25):
-    // a scanned `solidarity://card|group|pear/…` or
-    // `https://<product-host>/c|pear/…` must route exactly like tapping it —
-    // not die as 「無法讀取」. `parseDeepLink` is pure; ONLY the three kinds
+    // a scanned `solidarity://card|group/…` or
+    // `https://<product-host>/c/…` must route exactly like tapping it —
+    // not die as 「無法讀取」. `parseDeepLink` is pure; ONLY the two kinds
     // that were previously dead in the scanner are handed to the deeplink
     // router (webSign / offers / OID4VP keep their dedicated scan ceremonies
     // above and below — routing `oidc` here would bypass the dev verifier
     // sheet). Placed AFTER the Verified Page classifier so fragment/pointer/
     // handle URLs keep their existing scan presentation.
     const deepLinkRoute = parseDeepLink(payload, { devProductHosts: developerMode });
-    if (
-      deepLinkRoute.kind === 'card' ||
-      deepLinkRoute.kind === 'groupInvite' ||
-      deepLinkRoute.kind === 'pear'
-    ) {
+    if (deepLinkRoute.kind === 'card' || deepLinkRoute.kind === 'groupInvite') {
       handleDeepLink(payload);
       safeBack();
       return;

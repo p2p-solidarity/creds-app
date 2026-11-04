@@ -109,8 +109,6 @@ export interface Preferences {
   /** Relays confirmed this Page at least once, so its online address
    *  resolves even while newer local edits wait to be published. */
   readonly nostrPagePublishedOnce: boolean;
-  /** Allow user-initiated, on-demand Pear peer exchange in production UI. */
-  readonly pearExchangeEnabled: boolean;
   /**
    * Root-key (seed-derived did:key, `src/identity/rootKey.ts`) backup
    * consent — recorded at the onboarding `backup.tsx` step. `'icloud'` is
@@ -172,7 +170,6 @@ const DEFAULTS: Preferences = {
   language: '',
   nostrAutoRepublish: false,
   nostrPagePublishedOnce: false,
-  pearExchangeEnabled: true,
   rootKeySyncChoice: 'undecided',
 };
 

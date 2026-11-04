@@ -279,8 +279,8 @@ describe('getRootSigner — Phase A1 conformance contract', () => {
 
 describe('getRootSigner — one authorization per user intent (2026-10-30)', () => {
   // Failure modes: (a) a three-projection Page save asks three times; (b) the
-  // reuse leaks to ANOTHER intent's signer; (c) a long-lived signer (Pear
-  // connection) keeps signing silently forever; (d) a denied first call is
+  // reuse leaks to ANOTHER intent's signer; (c) a long-lived signer keeps
+  // signing silently forever; (d) a denied first call is
   // remembered as authorized.
   async function signer(): Promise<Signer> {
     const r = await mod.getRootSigner();

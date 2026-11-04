@@ -65,7 +65,6 @@ import { installI18n } from '@/i18n';
 import { hydrateSensitiveActionPolicy } from '@/keychain';
 import { warmBadgeStatusCache } from '@/badges/badgeStatusCache';
 import { warmNostrKeyMirror } from '@/nostr/userKey';
-import { PearConsentOverlay, PearPresentConsentOverlay } from '@/pear/consent';
 import { maybeRefreshVerifiedContacts } from '@/people/contactAutoRefresh';
 import { hydrateProfileSnapshots } from '@/people/profileSnapshots';
 import { prepareProEntitlement } from '@/pro/entitlementStore';
@@ -372,8 +371,6 @@ export default function RootLayout() {
               <ToastOverlay />
               <ConfirmDialogOverlay />
               <AppAlertOverlay />
-              <PearConsentOverlay />
-              <PearPresentConsentOverlay />
               <ReceivedCardSheet
                 visible={receivedCard !== null}
                 card={receivedCard}

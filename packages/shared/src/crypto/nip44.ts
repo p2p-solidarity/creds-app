@@ -1,8 +1,7 @@
 /**
  * NIP-44 v2 — versioned encryption to a Nostr pubkey (the "可選 lane" from
- * docs/ref/05-spec-qr-exchange.md §3, ruling 2026-08-25: Pear stays the
- * private-exchange channel; NIP-44 is the optional relay-mediated lane for
- * card-restricted fields once per-recipient publishing lands).
+ * docs/ref/05-spec-qr-exchange.md §3): the relay-mediated lane for
+ * card-restricted fields once per-recipient publishing lands (10 §9).
  *
  * Implemented from the NIP-44 spec, pinned by the OFFICIAL test vectors
  * (packages/shared/vectors/nip44.json, curated from paulmillr/nip44):

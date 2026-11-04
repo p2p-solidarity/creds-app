@@ -205,10 +205,10 @@ export type PublicPageDesign = z.infer<typeof publicPageDesignSchema>;
  * what DOES travel is which of three PROJECTIONS this signed record is:
  *   - `public` → published to Nostr/PDS: only `public`-tier items.
  *   - `shared` → direct QR / URL-fragment share: `public` + `link-only` items.
- *   - `full`   → Pear private exchange / local source of truth: all items.
+ *   - `full`   → local source of truth: all items.
  * All three are signed by the SAME root did:key — they are projections, not
  * different identities. The field is OPTIONAL and back-compat: an absent
- * `scope` means `full` (every record written before T7, and every Pear/full
+ * `scope` means `full` (every record written before T7, and every full
  * record, omits it). The People-side snapshot store keys verified snapshots by
  * `(did, scope)` so a `public` projection and a `full` card for one did coexist
  * instead of being flagged a conflict (see `profileSnapshots.ts`).
@@ -243,7 +243,7 @@ export const profileRecordSchema = z
     /**
      * Which projection this signed record is (T7 — see `profileScopeSchema`).
      * OPTIONAL; absent = `full`. Kept strict-accepting: a record with no
-     * `scope` (every pre-T7 record, every Pear/full card) still parses, and a
+     * `scope` (every pre-T7 record, every full card) still parses, and a
      * record with an unknown `scope` value fails closed.
      */
     scope: profileScopeSchema.optional(),

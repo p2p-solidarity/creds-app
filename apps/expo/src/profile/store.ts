@@ -391,8 +391,7 @@ export interface NostrPublishOutcome {
 
 interface ProfileState {
   /** The FULL source-of-truth record — every field, ALL links (`scope`
-   *  absent = full). This is the user's own view and the Pear/full exchange
-   *  card; the QR/Nostr share paths use the projections below instead. */
+   *  absent = full). This is the user's own view; the QR/Nostr share paths use the projections below instead. */
   readonly record: ProfileRecord | null;
   readonly jws: string | null;
   readonly status: ProfileStatus;
@@ -480,7 +479,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     if (!signerResult.ok) return err(rootKeyErrorMessage('profile save failed', signerResult.error));
 
     // The FULL record: source of truth, all links, `scope` left absent (= full)
-    // for back-compat with pre-T7 persisted blobs / vectors and the Pear card.
+    // for back-compat with pre-T7 persisted blobs / vectors.
     let jws: string;
     try {
       jws = await signCompact(validated.value, validated.value.did, signerResult.value);

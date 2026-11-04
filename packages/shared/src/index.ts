@@ -14,8 +14,8 @@
  *   canonical.ts  Deterministic JSON (recursive key sort) — shared by DAG
  *                 node ids (apps/expo/src/dag/node.ts) and JWS payloads
  *   jws.ts        The one compact-JWS sign/verify primitive for did:key
- *                 authenticated payloads (profile / challenge / Pear)
- *   challenge.ts  DID-challenge/response (Verify scan + Pear channel)
+ *                 authenticated payloads (profile / challenge)
+ *   challenge.ts  DID-challenge/response (Verify scan)
  *   derive.ts     Unified BIP-39 mnemonic -> P-256/secp256k1 scalar
  *                 derivation (App<->Web portability)
  *   profile.ts    Profile Record schema + Result-returning

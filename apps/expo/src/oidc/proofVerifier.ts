@@ -34,7 +34,8 @@ export interface VerifiedVc {
 export interface VerifyOptions {
   /** RFC 7519 `aud` value the caller expects to find. */
   readonly expectedAud?: string;
-  /** Pear-only: root DID authenticated by the channel handshake. */
+  /** Optional root DID the card key must be bound to. No caller passes it
+   *  since the Pear channel was removed. */
   readonly expectedRootDid?: string;
   /** Optional clock override (test-only). */
   readonly now?: number;
@@ -214,8 +215,7 @@ export async function verifyVpToken(
     // holder binding exists to prevent; it is self-contained (no
     // caller-supplied `expectedHolder` needed) so it protects every
     // caller of `verifyVpToken` — the QR-scan verify path
-    // (`app/scan/index.tsx`) and A5.3's Pear-channel verify alike — not
-    // just one call site. A VC with no holder claim at all
+    // (`app/scan/index.tsx`) included — not just one call site. A VC with no holder claim at all
     // (`holderDid === null`) also fails this (never strictly equals a
     // real did string), which is correct: an unbound credential proves
     // nothing about who may present it.

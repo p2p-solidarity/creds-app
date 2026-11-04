@@ -396,22 +396,6 @@ const STORIES: readonly Story[] = [
     ],
   },
   {
-    id: '4',
-    label: '收人：Pear 交換（握手 root 簽章 + 放卡）',
-    setup: freshIdentity,
-    intents: [
-      {
-        name: 'Pear exchange: handshake sign + card release',
-        run: async () => {
-          const signer = await rootKey.getRootSigner();
-          if (!signer.ok) throw new Error('signer');
-          await signer.value(sha256Bytes(new TextEncoder().encode('hello')));
-          await bio.requireBiometric('cardRelease');
-        },
-      },
-    ],
-  },
-  {
     id: '5',
     label: '護照（存→公開揭露）→ 下一個動作；P2 後裝置聲明用裝置金鑰，不問 Face ID',
     setup: async () => {

@@ -71,9 +71,9 @@ const KEY = 'profileSnapshots:v1';
 
 /**
  * The projection scope a signed record represents (T7). An absent `record.
- * scope` means `full` — every pre-T7 record and every Pear/full card omits it.
+ * scope` means `full` — every pre-T7 record and every full card omits it.
  * Verified snapshots are keyed by `(did, scope)` so a `public` projection
- * (fetched from Nostr) and a `full` card (Pear-exchanged) for the SAME did
+ * (fetched from Nostr) and a `full` card for the SAME did
  * COEXIST instead of being flagged a `conflict`; the equal-`updatedAt`-
  * different-content conflict rule only ever fires WITHIN one scope.
  */
@@ -225,9 +225,8 @@ export function stableDeclaredId(sourceUrl: string): string {
  *     stored primary is kept and the incoming version is recorded as a
  *     `VerifiedConflict` marker; NEVER a silent overwrite.
  *
- * Used by BOTH the Verify-tab revisit-revalidate path and the T5 Pear mutual
- * card import, so the exact same freshness/conflict semantics apply however a
- * signed page arrives.
+ * Used by the Verify-tab revisit-revalidate path, so the same
+ * freshness/conflict semantics apply however a signed page arrives.
  */
 export type SnapshotMergeOutcome =
   | { readonly kind: 'saved'; readonly snapshot: VerifiedSnapshot }
@@ -504,8 +503,7 @@ interface ProfileSnapshotState {
    * (`mergeVerifiedSnapshot`) instead of the old unconditional overwrite.
    * Returns the tagged `SnapshotMergeOutcome` so a caller can HONESTLY report
    * what happened (saved / already current / kept newer / conflict) — the
-   * distinction the Pear mutual-import receipt and the scan-result toast both
-   * depend on. Preserves any device note across updates.
+   * distinction the scan-result toast depends on. Preserves any device note across updates.
    */
   readonly mergeVerified: (record: ProfileRecord, jws: string) => SnapshotMergeOutcome;
   /** Set (or clear, with `null`/blank) the device-owned note for a saved

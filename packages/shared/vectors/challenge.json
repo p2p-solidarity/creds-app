@@ -83,14 +83,14 @@
         "typ": "solidarity/challenge",
         "requester": "did:key:zDnaeaQHQpDWivip1SugnEwZaF5JUCmSyPrYewToLKYmv8CyV",
         "subject": "did:key:zDnaeVuZeVRqvscGkiEoR9PFFra2xZUMp97ZPuGFK1VLU7iYN",
-        "purpose": "pear.card",
+        "purpose": "other.purpose",
         "nonce": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
         "ts": 1751000000
       },
       "jws": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImRpZDprZXk6ekRuYWVWdVplVlJxdnNjR2tpRW9SOVBGRnJhMnhaVU1wOTdaUHVHRksxVkxVN2lZTiMwIn0.eyJub25jZSI6IkFBRUNBd1FGQmdjSUNRb0xEQTBPRHhBUkVoTVVGUllYR0JrYUd4d2RIaDgiLCJwdXJwb3NlIjoidmVyaWZ5LnNjYW4iLCJyZXF1ZXN0ZXIiOiJkaWQ6a2V5OnpEbmFlYVFIUXBEV2l2aXAxU3VnbkV3WmFGNUpVQ21TeVByWWV3VG9MS1ltdjhDeVYiLCJzdWJqZWN0IjoiZGlkOmtleTp6RG5hZVZ1WmVWUnF2c2NHa2lFb1I5UEZGcmEyeFpVTXA5N1pQdUdGSzFWTFU3aVlOIiwidHMiOjE3NTEwMDAwMDAsInR5cCI6InNvbGlkYXJpdHkvY2hhbGxlbmdlIiwidiI6MX0.Hp5DLzxmfr8i7aTxECkK8_bHh76jF_Ygm4m8GmKDU9lQwGWB5IdXqaRDCIyFa_FKD5_lAqCJ4OtaMqvwaZ3eYQ",
       "opts": { "nowMs": 1751000000000 },
       "errorContains": "does not match",
-      "reason": "jws is validly signed over purpose='verify.scan', but `expected` asks for purpose='pear.card' — a verify-scan response must not be replayable as proof against a Pear card-exchange challenge"
+      "reason": "jws is validly signed over purpose='verify.scan', but `expected` asks for purpose='other.purpose' — a verify-scan response must not be replayable as proof against a challenge for any other purpose"
     }
   ]
 }

@@ -29,19 +29,8 @@
  * fresh reference per read would retrigger the React 19 `useSyncExternalStore`
  * max-update-depth loop this repo has already been bitten by.
  *
- * DELIBERATE NON-MIGRATIONS — the only gates a mode does not govern:
- *   1. Pear card release (`src/pear/useCardExchange.ts`) stays on
- *      `requireBiometric('cardRelease')`. It hands a signed credential to a
- *      REMOTE peer, so it is a per-peer consent decision, not a device-mode
- *      one: it always prompts and never arms the grace bucket. Routing it
- *      through an optional action would let `redLineOnly` release a card to a
- *      peer with no Face ID at all — the exact regression round 2 of the
- *      2026-06-13 grace fix was written to prevent. By the same
- *      irreversibility rule used for RED_LINE_ACTIONS it IS a red line;
- *      `biometric.ts` already implements precisely that, so it stays there.
- *   2. Nothing else. Every other `requireBiometric` call site was migrated on
- *      2026-09-08 — if you add a new one, migrate it or the Security screen's
- *      copy becomes a lie.
+ * Every `requireBiometric` call site is governed by the mode — if you add a
+ * new one, migrate it or the Security screen's copy becomes a lie.
  *
  * Storage:
  *   - MMKV `gg.solidarity.biometric.gate.v3` = `{"mode":"balanced"}`.

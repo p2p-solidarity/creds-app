@@ -21,8 +21,7 @@
     "typecheck": "tsc --noEmit",
     "test": "bun run test:unit && bun run test:parity",
     "test:unit": "SKIP_INTEGRATION=1 bun test --preload ./test-setup.ts --max-concurrency=1 __tests__/unit",
-    "test:parity": "bun test --preload ./test-setup.ts --max-concurrency=1 __tests__/parity",
-    "pear:pack": "node scripts/pack-pear-worklet.mjs"
+    "test:parity": "bun test --preload ./test-setup.ts --max-concurrency=1 __tests__/parity"
   },
   "dependencies": {
     "@noble/ciphers": "^2.4.0",
@@ -34,7 +33,6 @@
     "@solidarity/nitro-attest": "workspace:*",
     "@solidarity/nitro-keystone": "workspace:*",
     "@solidarity/shared": "workspace:*",
-    "b4a": "^1.9.0",
     "expo": "^58.0.21",
     "expo-application": "~58.1.2",
     "expo-asset": "~58.0.19",
@@ -63,14 +61,12 @@
     "expo-symbols": "~58.0.4",
     "expo-web-browser": "~58.0.7",
     "fflate": "^0.8.3",
-    "hyperswarm": "^4.17.2",
     "i18next": "^26.5.11",
     "mrz": "5.0.2",
     "nativewind": "^4.2.7",
     "react": "19.3.0",
     "react-i18next": "^17.1.9",
     "react-native": "0.88.1",
-    "react-native-bare-kit": "^0.15.6",
     "react-native-gesture-handler": "~3.3.0",
     "react-native-get-random-values": "^2.1.0",
     "react-native-keyboard-controller": "1.22.9",
@@ -91,7 +87,6 @@
   "devDependencies": {
     "@babel/core": "^7.29.7",
     "@expo/config-plugins": "~58.0.11",
-    "@types/b4a": "^1.9.0",
     "@types/bun": "^1.4.4",
     "@types/react": "~19.3.0",
     "@types/streamx": "^2.9.5",

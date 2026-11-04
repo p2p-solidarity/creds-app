@@ -30,7 +30,6 @@ import {
   deleteNostrKey,
   quiesceNostrKeyOperations,
 } from '@/nostr/userKey';
-import { stopLaneManager } from '@/pear/laneManager';
 import { preparePageDesign, usePageDesignStore } from '@/page/pageDesignStore';
 import { useProEntitlementStore } from '@/pro/entitlementStore';
 import { useProfileSnapshotStore } from '@/people/profileSnapshots';
@@ -128,7 +127,6 @@ function deleteProductionAppData(): Promise<LocalDeletionResult> {
 
 async function quiesceBackgroundWork(): Promise<LocalDeletionResult> {
   beginLocalDataWipe();
-  stopLaneManager();
   try {
     await Promise.all([
       quiesceNostrKeyOperations(),

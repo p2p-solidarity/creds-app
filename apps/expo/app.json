@@ -137,9 +137,6 @@
               "pathPrefix": "/c/"
             },
             {
-              "pathPrefix": "/pear/"
-            },
-            {
               "path": "/websign"
             }
           ],

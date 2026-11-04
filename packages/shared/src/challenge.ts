@@ -1,7 +1,6 @@
 /**
- * DID-challenge — the day-0 challenge/response format shared by the
- * Verify QR-scan flow and the Pear proximity channel (card exchange /
- * presentation). A challenge is
+ * DID-challenge — the challenge/response format of the Verify QR-scan
+ * flow. A challenge is
  * plain data (not itself signed); `respondChallenge` signs the whole
  * object as a compact JWS via `signCompact` (jws.ts), and
  * `verifyChallengeResponse` checks three things in order: the JWS was
@@ -27,12 +26,12 @@ const NONCE_BYTE_LENGTH = 32;
 /** Default replay window: a signed response is valid for ±120s of `ts`. */
 const DEFAULT_MAX_SKEW_SEC = 120;
 
-export type ChallengePurpose = 'verify.scan' | 'pear.card' | 'pear.present';
+export type ChallengePurpose = 'verify.scan';
 
 export interface Challenge {
   readonly v: 1;
   readonly typ: 'solidarity/challenge';
-  /** DID of the party asking for proof (scanner / Pear initiator). */
+  /** DID of the party asking for proof (the scanner). */
   readonly requester: string;
   /** DID being asked to prove control of its key — the expected signer. */
   readonly subject: string;

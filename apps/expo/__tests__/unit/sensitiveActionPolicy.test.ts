@@ -345,7 +345,7 @@ describe('everyTime disables the shared grace window', () => {
 
   it('the policy-blind requireBiometric gate also stops arming the bucket', async () => {
     // The bucket is shared, so everyTime has to reach `requireBiometric` too —
-    // otherwise "ask every time" would be a lie on the Pear card-release path.
+    // otherwise "ask every time" would be a lie on the passport and signing paths.
     // Asserted via the bucket rather than the auth-call count: `mock.module` is
     // process-global in bun, so a sibling test file can re-register the
     // expo-local-authentication mock and steal `authCalls` from under us.

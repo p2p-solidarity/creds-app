@@ -6,23 +6,12 @@
  *
  * TS port under test: apps/expo/src/keychain/biometric.ts
  *
- * Policy (2026-06-13, owner-approved AGGRESSIVE tiering — see
- * docs/superpowers/plans/2026-06-13-faceid-single-gate-phase4.md; amended
- * for the Pear connection-scoping security fix, task A5.2, across two
- * rounds):
+ * Policy (2026-06-13, owner-approved AGGRESSIVE tiering):
  *   - ONE shared 5-minute grace bucket covers the same-device,
  *     same-session family (sign / export / present / passportSave /
  *     exchange): a single successful authorization silences the whole
  *     family for the window.
- *   - 'delete' and 'cardRelease' ALWAYS prompt and never arm the bucket.
- *     'cardRelease' releases a signed credential to a REMOTE peer over
- *     Pear — riding a grace window armed by an unrelated `sign` would let a
- *     `card.request` release the card with no live Face ID at all.
- *   - Round 1 mistakenly moved the existing 'exchange' reason into
- *     ALWAYS_PROMPT, which also stripped grace from `vault/secretsKeychain.ts`'s
- *     unrelated local root-secret unwrap (same reason string, different
- *     call site). Round 2 introduces the dedicated 'cardRelease' reason for
- *     the Pear path and returns 'exchange' to the graced family.
+ *   - 'delete' ALWAYS prompts and never arms the bucket.
  *   - `armBiometricGrace()` / `hasBiometricGrace()` expose the bucket so
  *     `biometricGatekeeper.requireSensitiveAction` shares it.
  *
@@ -89,7 +78,6 @@ describe('requireBiometric: invokes expo-local-authentication with a prompt', ()
     'delete',
     'exchange',
     'passportSave',
-    'cardRelease',
   ];
 
   for (const reason of reasons) {
@@ -160,23 +148,9 @@ describe('requireBiometric: session grace', () => {
     expect(authCalls.length).toBe(1);
   });
 
-  it('cardRelease still prompts every time, even inside an armed window (card-release fresh-prompt fix)', async () => {
-    await bio.requireBiometric('sign'); // opens the grace window (e.g. the handshake challenge-response)
-    authCalls.length = 0;
-    expect(await bio.requireBiometric('cardRelease')).toBe(true);
-    // Releasing a card to a remote peer must always re-auth, even though a
-    // 'sign' moments earlier (the mutual handshake) armed the shared grace
-    // bucket — see the module-doc policy note above.
-    expect(authCalls.length).toBe(1);
-  });
-
-  it('a second exchange within the grace window does NOT re-prompt (vault unlock keeps its grace)', async () => {
+  it('a second exchange within the grace window does NOT re-prompt', async () => {
     await bio.requireBiometric('sign'); // opens the grace window
     authCalls.length = 0;
-    // 'exchange' rejoined the graced family in round 2 of the A5.2 fix —
-    // vault root-secret unwrap (`vault/secretsKeychain.ts`) must not
-    // live-prompt on every unlock just because an unrelated Pear card
-    // release also used to share this reason string.
     expect(await bio.requireBiometric('exchange')).toBe(true);
     expect(authCalls.length).toBe(0);
   });
@@ -214,14 +188,6 @@ describe('requireBiometric: shared grace bucket (aggressive policy)', () => {
     expect(authCalls.length).toBe(1);
   });
 
-  it('a successful sign does NOT silence cardRelease — card release always re-prompts', async () => {
-    nextAuthResult = { success: true };
-    expect(await bio.requireBiometric('sign')).toBe(true);
-    expect(authCalls.length).toBe(1);
-    expect(await bio.requireBiometric('cardRelease')).toBe(true);
-    expect(authCalls.length).toBe(2);
-  });
-
   it('a successful export arms the bucket for a later sign', async () => {
     nextAuthResult = { success: true };
     await bio.requireBiometric('export');
@@ -238,15 +204,7 @@ describe('requireBiometric: shared grace bucket (aggressive policy)', () => {
     expect(authCalls.length).toBe(1);
   });
 
-  it('cardRelease success does NOT arm the bucket', async () => {
-    nextAuthResult = { success: true };
-    await bio.requireBiometric('cardRelease');
-    authCalls.length = 0;
-    await bio.requireBiometric('sign');
-    expect(authCalls.length).toBe(1);
-  });
-
-  it('exchange success DOES arm the bucket (rejoined the graced family)', async () => {
+  it('exchange success DOES arm the bucket', async () => {
     nextAuthResult = { success: true };
     await bio.requireBiometric('exchange');
     authCalls.length = 0;

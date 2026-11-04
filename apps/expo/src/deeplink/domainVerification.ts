@@ -49,10 +49,9 @@ export function isVerifiedDomain(host: string): boolean {
  * identity providers (apple.com, google.com, microsoft.com, github.com,
  * linkedin.com) trusted for a DIFFERENT purpose (OIDC/domain
  * verification) — those hosts must NOT be able to trigger an in-app
- * routing side effect (Pear connect, card connect) just because a path
- * happens to match `/pear/<did>` or `/c/<uuid>`. `parseVerifiedDomainRoute`
- * (`./parser.ts`) gates those two routes on `isProductHost`, not
- * `isVerifiedDomain`. See Task A5.4 code-review Finding 1.
+ * routing side effect (card connect) just because a path happens to match
+ * `/c/<uuid>`. `parseVerifiedDomainRoute` (`./parser.ts`) gates that route
+ * on `isProductHost`, not `isVerifiedDomain`.
  */
 const PRODUCT_HOSTS: ReadonlySet<string> = new Set<string>([
   // `creds.id` is the product domain and default share origin (2026-08-30,

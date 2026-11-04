@@ -6,8 +6,7 @@
  *   - ordinary JWT VC + full    → embed verbatim.
  *   - real SD-JWT   + subset    → embed a REDACTED SD-JWT (selected only).
  *   - `unverified`-tagged cred  → refuse.
- * Fully dependency-injected — no store / keychain / native load (same seam
- * `pearPresentRoundTrip.test.ts` uses).
+ * Fully dependency-injected — no store / keychain / native load.
  */
 import { describe, expect, it } from 'bun:test';
 
@@ -24,8 +23,8 @@ import {
 
 import type { StoredCredential } from '../../src/credentials/store';
 import type { ProvableClaimEntity } from '../../src/identity/entities';
+import type { ParsedOidcRequest } from '../../src/oidc/parseAuthRequest';
 import { buildVpToken, type PresentationBuilderDeps } from '../../src/oidc/presenter';
-import { buildSyntheticPresentRequest } from '../../src/pear/presentBuilder';
 import { verifyVpToken } from '../../src/oidc/proofVerifier';
 
 const HOLDER_PRIV = new Uint8Array(32).fill(0).map((_, i) => (i * 3 + 1) & 0xff);
@@ -113,7 +112,24 @@ function deps(
   };
 }
 
-const request = buildSyntheticPresentRequest(['name', 'email'], AUD, 'nonce-1');
+function presentRequest(claimTypes: readonly string[], audience: string, nonce: string): ParsedOidcRequest {
+  return {
+    request: {
+      client_id: audience,
+      nonce,
+      scope: [],
+      response_type: 'vp_token id_token',
+      response_mode: 'direct_post',
+      presentation_definition: {
+        id: 'present',
+        input_descriptors: claimTypes.map((claimType) => ({ id: claimType })),
+      },
+    },
+    source: 'queryparams',
+  };
+}
+
+const request = presentRequest(['name', 'email'], AUD, 'nonce-1');
 
 describe('buildVpToken — selective disclosure honesty', () => {
   it('FAILS CLOSED when only a subset of an ordinary JWT credential is selected', async () => {
@@ -161,7 +177,7 @@ describe('buildVpToken — selective disclosure honesty', () => {
     const creds = new Map([['sd', credential('sd', combined, ['sd-jwt-fallback'])]]);
 
     const built = await buildVpToken({
-      request: buildSyntheticPresentRequest(['age_over_18'], AUD, 'nonce-sd'),
+      request: presentRequest(['age_over_18'], AUD, 'nonce-sd'),
       selectedClaimIds: ['c-age'], // subset → redact
       holderDid: HOLDER_DID,
       deps: deps(claims, creds),

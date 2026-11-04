@@ -4,7 +4,7 @@
  * remain behind the five-tap Developer Options unlock.
  *
  * Two levels at most: a setting with
- * one or two controls (colour mode, language, Recent Updates, Pear exchange,
+ * one or two controls (colour mode, language, Recent Updates,
  * the two resets) lives here as an inline row instead of its own sub-page.
  */
 import Constants from 'expo-constants';
@@ -32,7 +32,6 @@ import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
 import { capabilities } from '@/platform/distribution';
 import { publicPagePath } from '@/onboarding/publicPageUsername';
-import { stopLaneManager } from '@/pear/laneManager';
 import { advanceDeveloperUnlock } from '@/settings/developerUnlock';
 import { type AppColorScheme, usePreferences } from '@/settings/preferences';
 
@@ -58,7 +57,6 @@ export default function SettingsHub() {
   const colorScheme = usePreferences((s) => s.appColorScheme);
   // '' = follow the device; the live i18n language still marks a segment.
   const language = usePreferences((s) => s.language) || i18n.language;
-  const pearEnabled = usePreferences((s) => s.pearExchangeEnabled);
   const recentUpdatesEnabled = useRecentUpdatesStore((s) => s.enabled);
   const setRecentUpdatesEnabled = useRecentUpdatesStore((s) => s.setEnabled);
   const setPref = usePreferences((s) => s.set);
@@ -182,16 +180,6 @@ export default function SettingsHub() {
               subtitle={t('notifications.contactUpdates.subtitle')}
               value={recentUpdatesEnabled}
               onValueChange={setRecentUpdatesEnabled}
-            />
-            <SettingsBlockToggleRow
-              icon="person.2"
-              title={t('settingsHub.pearExchange')}
-              subtitle={t('settingsHub.pearExchangeSubtitle')}
-              value={pearEnabled}
-              onValueChange={(next) => {
-                if (!next) stopLaneManager();
-                setPref('pearExchangeEnabled', next);
-              }}
             />
           </SettingsBlockSection>
 

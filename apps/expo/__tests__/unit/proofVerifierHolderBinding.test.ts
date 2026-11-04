@@ -1,7 +1,6 @@
 /**
  * `src/oidc/proofVerifier.ts` — `verifyVpToken` holder-binding hardening
- * (A5.3). Investigated while wiring SD-JWT presentation over the Pear
- * channel: the pre-existing implementation verified the OUTER VP signature
+ * hardening: the pre-existing implementation verified the OUTER VP signature
  * (self-certifying against its own `iss`/`kid` did:key) and verified EACH
  * embedded VC's own issuer signature independently, but never checked that
  * an embedded VC's holder (`sub`/`credentialSubject.id`) actually matches
@@ -178,7 +177,7 @@ describe('verifyVpToken — holder binding', () => {
     expect(result.holderDid).toBe(HOLDER_DID);
   });
 
-  it('expectedRootDid rejects a Pear VP with no root-to-card binding', async () => {
+  it('expectedRootDid rejects a VP with no root-to-card binding', async () => {
     const vc = signVc(HOLDER_DID, HOLDER_PRIV);
     const vp = signVp(HOLDER_DID, HOLDER_PRIV, [vc], {
       aud: 'did:key:zMe',
@@ -194,7 +193,7 @@ describe('verifyVpToken — holder binding', () => {
     );
   });
 
-  it('expectedRootDid rejects a Pear VP whose card key is bound to a different root DID', async () => {
+  it('expectedRootDid rejects a VP whose card key is bound to a different root DID', async () => {
     const vc = signVc(HOLDER_DID, HOLDER_PRIV);
     const binding = await signCardKeyBinding({
       rootDid: ROOT_DID,

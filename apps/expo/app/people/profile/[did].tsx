@@ -11,17 +11,7 @@
  * in the route itself, matching CLAUDE.md rule 10's "route params carry
  * chrome" only where it doesn't leak sensitive fields.
  *
- * This screen is also the `solidarity://
- * pear/<did>` deep-link landing target: a `did` with no saved snapshot yet
- * renders `PearConnectSection`'s honest "connect privately" flow instead of
- * a dead-end not-found state — see that component's doc for why it's safe
- * to offer a Pear dial for ANY structurally valid did:key reaching this
- * screen (deep link or otherwise), not just ones that arrived via the deep
- * link specifically. A `did` that isn't even a well-formed did:key
- * (`isValidPearDid`, `@/deeplink/parser`) still falls back to the honest
- * not-found state — the deep-link parser already rejects those before
- * routing here, so this is only a fallback for a stale/mistyped snapshot
- * route.
+ * A `did` with no saved snapshot renders the honest not-found state.
  */
 import { useLocalSearchParams } from 'expo-router';
 import { safeBack } from '@/navigation/safeBack';
@@ -33,13 +23,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { buildProfileShareModel } from '@/components/me/meProfileModel';
-import { CardExchangeSection } from '@/components/people/CardExchangeSection';
 import { PageLocalDetailsSection } from '@/components/people/PageLocalDetails';
-import { PearConnectSection } from '@/components/people/PearConnectSection';
 import { VerifiedProfileView } from '@/components/scan/VerifiedProfileView';
 import { ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
-import { isValidPearDid } from '@/deeplink/parser';
 import { haptic } from '@/feedback/haptics';
 import { fadeUpIn } from '@/feedback/motion';
 import { pushToast } from '@/feedback/toast';
@@ -100,15 +87,6 @@ export default function VerifiedProfileDetailScreen(): ReactNode {
           </Animated.View>
           <Animated.View entering={fadeUpIn(1, reduceMotion)}>
             <PageLocalDetailsSection snapshot={snapshot} />
-          </Animated.View>
-          <Animated.View entering={fadeUpIn(2, reduceMotion)}>
-            <CardExchangeSection did={snapshot.did} verifiedDisplayName={snapshot.record.displayName} />
-          </Animated.View>
-        </ScrollView>
-      ) : did && isValidPearDid(did) ? (
-        <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 32, gap: 16 }}>
-          <Animated.View entering={fadeUpIn(0, reduceMotion)}>
-            <PearConnectSection did={did} />
           </Animated.View>
         </ScrollView>
       ) : (
