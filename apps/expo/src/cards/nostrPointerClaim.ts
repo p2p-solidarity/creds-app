@@ -13,8 +13,7 @@
  *
  * Receive trust rule (see people/cardSubscriptionBootstrap.ts): the claim
  * proves only "the card SIGNER attests this npub". Nothing binds the card
- * signing key to the page's root did today (the A5b cardKeyBinding JWS is
- * session-scoped: 300 s + aud + nonce — unusable in a static QR), so the
+ * signing key to the page's root did today, so the
  * pointer bootstraps a SILENT refresh only for a did the user has already
  * saved; it never creates a new person. The v2 design (a long-lived
  * root-signed card-key attestation) is specced in 05 §3 before silent

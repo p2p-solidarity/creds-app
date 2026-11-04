@@ -20,7 +20,6 @@ import {
   parseSdJwt,
   reconstructSdJwtClaims,
 } from '@/credentials/selectiveDisclosure';
-import { verifyCardKeyBindingJws } from './cardKeyBinding';
 
 export type TrustLevel = 'L1' | 'L2' | 'L3' | 'L3+';
 
@@ -34,9 +33,6 @@ export interface VerifiedVc {
 export interface VerifyOptions {
   /** RFC 7519 `aud` value the caller expects to find. */
   readonly expectedAud?: string;
-  /** Optional root DID the card key must be bound to. No caller passes it
-   *  since the Pear channel was removed. */
-  readonly expectedRootDid?: string;
   /** Optional clock override (test-only). */
   readonly now?: number;
 }
@@ -145,7 +141,6 @@ interface VpClaims {
   readonly nbf?: number;
   readonly exp?: number;
   readonly vp?: { readonly verifiableCredential?: readonly string[] | string };
-  readonly solidarity?: { readonly cardKeyBinding?: string };
 }
 
 export interface VerifiedVp {
@@ -180,20 +175,6 @@ export async function verifyVpToken(
   const now = opts.now ?? Math.floor(Date.now() / 1000);
   checkTime(payload, now);
   checkAud(payload, opts.expectedAud);
-
-  if (opts.expectedRootDid) {
-    const bindingJws = payload.solidarity?.cardKeyBinding;
-    if (typeof bindingJws !== 'string' || bindingJws.length === 0) {
-      throw new Error('VP missing card-key binding for expected root DID');
-    }
-    verifyCardKeyBindingJws(bindingJws, {
-      expectedRootDid: opts.expectedRootDid,
-      expectedCardDid: holder,
-      expectedAud: opts.expectedAud,
-      expectedNonce: payload.nonce,
-      now,
-    });
-  }
 
   const raw = payload.vp?.verifiableCredential;
   const vcJwts = raw === undefined ? [] : Array.isArray(raw) ? raw : [raw];

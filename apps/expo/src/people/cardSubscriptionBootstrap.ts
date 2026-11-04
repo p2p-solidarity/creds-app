@@ -5,8 +5,7 @@
  *
  * v1 trust boundary (hardened 2026-08-25 after review): the pointer only
  * proves "the card SIGNER attests this npub". Nothing binds the card signing
- * key to any page's root did yet (the A5b cardKeyBinding JWS is session-
- * scoped: 300 s + aud + nonce, unusable in a static QR), so an attacker's
+ * key to any page's root did yet, so an attacker's
  * self-signed card can attest a THIRD PARTY's real npub. Two consequences
  * shaped this design:
  *
