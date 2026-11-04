@@ -41,6 +41,28 @@ P2 code review 後（`/code-review`，跑完 E2E 之後才改，未重跑 E2E）
 P2 沒跑：「取代」確認框（本機備註已有不同值時）、刪除收件匣的分享、對方 Page 查不到時「存到 People」的錯誤訊息。
 P2 執行偏差：expiry 修正的 session 在 02:2x 也用了同一台 iPhone 18 Pro（我給它的 brief 指定了這台），中途把 App 換成它的 bundle；它關機後我重裝本分支 bundle（`cmp` 一致）才繼續，D1 起全部在本分支 bundle 上跑。
 
+## P3 私下出示錢包憑證（未 commit 的工作樹，bundle 以 `expo export:embed` 換進 Release .app，兩台 `cmp` 一致）
+前置：03:02 xcode-cleanup 把兩台關機中的模擬器整台抹掉（> 3 GB），身分全失；用拋棄式助記詞在兩台重新還原，以 deep link 跳過選使用者名稱（沒有註冊 NIP-05），重填名字、重開開發者模式、重新發布 Page。之後每次關機前先 `trim.sh`（1.3–1.6 GB）。
+
+| 案例 | 預期 | 實際 | 判定 | 證據 |
+|---|---|---|---|---|
+| E1 | B 建 did:key 憑證，沒名片時用 Page 名字 | 「已建立 Business Card」，已儲存憑證多一張 Business Card（did:key 簽發者） | PASS | `p3-E1-before.png`、`p3-E1-after.png` |
+| E2 | A 請求，等待中；p-tag B 的 1059 +1 | 「已加密寄出」、「等待對方出示憑證 · 2026/11/12 過期」；兩個 relay 都有 | PASS | `p3-E2-*.png`、`relay-P3-afterE2.txt` |
+| E3 | B 同意畫面誠實；挑一張；Face ID；送出 | 「E2E Asker 想看你的一張憑證」、short DID「不在你的 People」、「對方寫的用途 E2E check」、Business Card「你自己簽的：對方會看到『不證明任何事』」；沒選時送出鈕不能按；Face ID →「已加密寄出」；p-tag A 的 1059 3→4 | PASS | `p3-E3-*.png`、`relay-P3-afterE3.txt` |
+| E3b | Face ID 沒過什麼都不送 | 取消密碼畫面 → sheet 內「沒有通過 Face ID，什麼都沒送出。」；p-tag A 的 1059 仍是 3 | PASS | `p3-E3-denied.png`、`relay-P3-afterDenied.txt` |
+| E4（第一次） | A 驗過並照實顯示 | 一直停在「等待對方出示憑證」——答覆被丟掉 | **FAIL** | `p3-E4-try1.png` |
+| E2–E4（修正後重跑） | 同上 | A 重設 App 資料（保留金鑰）後重新請求「E2E rerun」→ B 同意 → A 個人頁「E2E Holder 私下出示了」、BusinessCardCredential、「對方自己簽給自己的，不證明任何事」、欄位、「這支手機在 2026/11/05 3:59:44 驗過」；兩邊 1059 各 +1 | PASS | `p3-R-*.png`、`relay-P3-final.txt` |
+
+**E4 FAIL 的根因**（離線用 A 的拋棄式金鑰解開那包 gift wrap，跑 App 自己的 `verifyCredentialAnswer`）：nonce、aud、時間窗都對，但 `verifyVpToken` 報「JWT signature verification failed」。兩個疊在一起的 bug，都在這條路之前就存在：
+1. `signJwt`（`apps/expo/src/keychain/signingKey.ts`）：原生 `signJws` 只簽它自己的 `{"alg":"ES256","typ":"JWT"}` header，JS 在**簽完之後**才把呼叫者的 `typ`/`kid` header 換上去——JWS 簽章涵蓋 header，所以每一個帶自訂 header 的 JWT（VP、OID4VCI proof）在任何驗證器上都不過。parity 測試只斷言 `signature.length > 0`，還寫了「原生 SDK 會簽使用者的 header（TODO）」。修正：自訂 header 時在 JS 組簽名輸入，用同一把金鑰 `signRawP256` 簽一次 SHA-256。
+2. `signJwtEs256`/`verifyJwtEs256`（`packages/shared/src/identity/jwt.ts`）：noble v2 預設 `prehash: true`，對已經是 SHA-256 的 digest 再雜湊一次，所以手機簽的標準 ES256（VC 實測單次雜湊才過）一律驗不過。`jws.ts`、`crd1.ts` 早就是 `prehash: false`；凍結 fixture `identity/es256_jwt.json` 是 0 筆，沒有向量綁住舊行為。修正：兩邊都 `prehash: false`。shared 3.1.0 → 3.2.0。
+兩個都先寫回歸測試看到紅（`packages/shared/test/jws.test.ts`、`spruceDid.parity.test.ts`），修完綠。順帶也修了 OID4VCI proof、匯入 VC 的簽發者驗章、DPoP（都走同兩個函式）——這幾條本次沒有實測。
+
+**E4 之後才改、沒在裝置上重看**：答覆欄位原本把巢狀物件 JSON 整串印出來（`subject_core`、`publicKeyJwk`、`@type`），改成只顯示純值與純值清單、略過 `@` 開頭與巢狀物件；用真的那包答覆離線跑 `verifyCredentialAnswer`，欄位變成 name / businessCardId / updatedAt。A 手機上已存的答覆是改之前算的，`p3-R-E4-answer.png` 仍是舊欄位。
+
+P3 沒跑：SD-JWT 欄位挑選（模擬器上沒有 SD-JWT 憑證可匯入）、外部簽發者（「unknown」標示）的 VC、請求過期、拒絕。
+P3 執行偏差：第一次 E4 FAIL 後，A 的舊請求要等 7 天過期才能再請求、B 已標成已答覆，所以 A「重設 App 資料」再重來；重跑的 E2–E4 在修正後的 bundle 上。
+
 ## 失敗與修正
 - **C7 第一次 FAIL**：`PassportConsentSheet` 失敗時用 `pushToast`，但 toast overlay 在 root layout，畫在原生 formSheet **下面** → 持有人按了送出、Face ID 失敗後畫面只是回到原狀，不知道有沒有送出。修正：兩個 sheet（同意、請求表單）的失敗訊息改成 sheet 內的 inline 文字（成功仍是先關 sheet 再 toast，看得到）。
 
@@ -51,7 +73,7 @@ P2 執行偏差：expiry 修正的 session 在 02:2x 也用了同一台 iPhone 1
 - 開發者模式要點「版本」5 次；第一次點錯位置開到重新播放引導流程，關掉重來，未影響資料。
 
 ## 中繼站上留下的東西（拋棄式測試身分，不清除）
-- A、B 各一個 kind 30078 Page、一個 kind 10050；B 收到 1 個 1059、A 收到 1 個 1059。沒有 NIP-05 名稱。
+- A、B 各一個 kind 30078 Page、一個 kind 10050；P1–P3 結束時 nos.lol / relay.primal.net 上 p-tag A、B 的 1059 各 5 個（`relay-P3-final.txt`）。沒有 NIP-05 名稱。
 
 ## Not run
 - L3（App Attest / Android Key Attestation 真機簽名）：模擬器沒有，需要 TestFlight 實機兩台。
@@ -60,5 +82,6 @@ P2 執行偏差：expiry 修正的 session 在 02:2x 也用了同一台 iPhone 1
 - relay.damus.io 需要 NIP-42 AUTH 才肯回 1059，目前不在 `DM_RELAYS`，AUTH 是後續工作。
 
 ## 順便發現（code reading + 這次操作碰到，不在本次範圍）
+- 請求者送出後只要還沒過期就看不到「請求」鈕；對方的答覆若被丟掉（驗不過），請求者要等 7 天（護照請求同樣）。
 - **護照到期日 2030 年以後被判定為過期**：`validateMrzDraft`（`apps/expo/src/passport/pipeline.ts`）與 `fromMrzYyMmDd`（`PassportMrzStep.tsx`）都用出生日的世紀規則（YY≥30 → 19xx），所以到期 2030–2039 的護照手動輸入時顯示 1930 並報「Passport appears to be expired.」。本次改用 2029/12/31 繞過。
 - 全 App 的 toast 都畫在原生 Modal 下面；其他 sheet 裡的 `pushToast` 失敗訊息也可能看不到（本次只修了私密交換的兩個 sheet）。

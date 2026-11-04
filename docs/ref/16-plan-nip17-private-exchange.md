@@ -234,3 +234,21 @@ UI、訂閱迴圈、寄出流程不寫單元測試，由 E2E 涵蓋。`presentRe
 24. device 是 notary、device 驗不過（換 bytes、換 npub）→ 拒
 25. device 為 null → L1；device 有效但 chip ≠ passiveAuth → L1；device 有效且 passiveAuth → L3
 26. DG1 姓名解析：標準 TD3、只有姓、名字中間有 `<`、長度不足 88、全是填充字元 → 正確或「沒有姓名」
+
+## 12. P3 開工前盤點（2026-11-05，code reading）
+
+- **錢包裡沒有可請求的 claim 詞彙**：目前只有護照會寫 `ProvableClaimEntity`（`app/passport/index.tsx:423`），而護照本來就不能做成 VP（§0 第 1 點）。OID4VCI 匯入的錢包憑證只存成 `StoredCredential`（`type`、`rawJwt`），沒有 claim 層；presenter 對直接選的 credential id 只能整張出示（`resolveEmbeddedCredential`：JWT-VC 不能部分出示，SD-JWT 沒有 claim 對照時也是整張）。§8 R6 想要的「固定 claim 清單」沒有資料可依。
+- **請求者只驗得了 did:key 發證者**：`oidc/proofVerifier.ts` 的 `resolveIssuerJwk` 只認 `did:key`。did:web 發證者（L2）簽的憑證在請求者這邊一律驗不過；要支援就得去抓別人指定網域的 `/.well-known/did.json`，必須走 `profile/httpsOwnership.ts` 的 https／非私有 IP 防護，範圍變大。
+- **模擬器上唯一做得出的憑證是自簽的**：開發者「憑證庫 › 建立 did:key 憑證」（`credentials/didKeyCredential.ts`）簽發者＝持有人自己，tag `self_issued`，而且要先有舊的名片（`useCardStore`）。出示它只證明「這把金鑰簽了自己的話」，不證明任何事。
+- **時效陷阱同 P1**：VP `exp` 固定 300 秒（`presenter.ts` `VP_LIFETIME_SECONDS`），舊的 cardKeyBinding 也是 300 秒；請求者晚開 App 就一定過期。P3 要改成跟 P1 一樣「簽在請求開著的期間」。
+- **cardKeyBinding** 最後一版在 `028398ba^:apps/expo/src/oidc/cardKeyBinding.ts`（root DID 簽 `{rootDid, cardDid, aud, nonce, iat, exp}`），可取回並把時效改成請求期間。
+
+**2026-11-05 Kidney（P3）**：做通用版、只支援 did:key 發證者；請求只帶用途，由持有人挑要出示哪張憑證（SD-JWT 可挑欄位）。did:web 解析列為後續。
+
+### 12.1 P3 設計
+- **wire**：新訊息 `credential.request` `{ purpose?, nonce, exp, page? }`；回覆 `credential.response` `{ vp, binding, page? }`，rumor 帶 `["e", 請求 id]`。`vp` ≤ 60 000 字、`binding` ≤ 4 000 字。
+- **持有人**：同意畫面列出錢包裡能出示的憑證（JWT-VC／SD-JWT、不是 `unverified`、持有人＝我的簽章金鑰、沒過期）→ 選一張；SD-JWT 列出欄位可勾 → Face ID（`sendPrivate`）→ 簽章金鑰簽 VP（`aud = nostr:<請求者 npub>`、`nonce`、`exp = 請求到期`）→ root 金鑰簽 cardKeyBinding（`cardDid = VP 持有人`、同 aud／nonce、`exp = 請求到期`）→ 寄出。
+- **請求者驗證**（順序固定，任何一步失敗就丟）：VP 的 `iat` 落在請求期間 → 以 `iat` 當時間驗 VP 簽章、aud、nonce、每張內嵌 VC（簽章、持有人綁定）→ binding 由寄件人 Page 的 root DID 簽、`cardDid` = VP 持有人、aud／nonce 相同。
+- **誠實顯示**：簽發者＝出示者自己（VP 持有人或 root DID）→「對方自己簽的，不證明任何事」；其他 did:key →「簽發者 did:key…，App 不認得這個簽發者」。永遠不顯示成「已驗證身分」。
+- **tdd**：cardKeyBinding 簽／驗（失敗模式：別的 root 簽、cardDid 不符、aud／nonce 不符、typ 錯、時間在請求期間外）；回覆驗證的組合順序。
+- **E2E 才抓到的（2026-11-05）**：手機簽的 VP 在任何驗證器上都不過——`signJwt` 在原生簽完後才換上自訂 `typ`/`kid` header，且 shared `verifyJwtEs256` 雙重雜湊。兩個都修在根部（見 `docs/e2e/2026-11-05-nip17-private-exchange/result.md` P3）；OID4VCI proof、匯入 VC 驗章、DPoP 走同一條，未另外實測。
