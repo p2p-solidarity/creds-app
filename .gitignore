@@ -245,3 +245,12 @@ system_logs.logarchive/
 __pycache__/
 *.pyc
 .alma-snapshots
+
+# E2E screenshots and recordings stay local; result.md is the committed evidence
+docs/e2e/**/*.png
+docs/e2e/**/*.jpg
+docs/e2e/**/*.jpeg
+docs/e2e/**/*.gif
+docs/e2e/**/*.webp
+docs/e2e/**/*.mp4
+docs/e2e/**/*.mov
