@@ -1520,6 +1520,7 @@
   "privateExchange.privacyNote": "內容用對方的金鑰加密：中繼站看不到內容，也看不到是誰寄的；但看得到有人在某個時間寄了一則加密訊息給對方。",
   "privateExchange.section.title": "私下請求",
   "privateExchange.request.button": "請求護照資料",
+  "privateExchange.request.again": "再請求一次",
   "privateExchange.request.title": "向 {{name}} 請求護照資料",
   "privateExchange.request.body": "對方會在 App 裡看到你的請求，自己決定要給哪些。7 天內沒回就過期。",
   "privateExchange.request.send": "加密送出請求",

@@ -60,6 +60,8 @@ P2 執行偏差：expiry 修正的 session 在 02:2x 也用了同一台 iPhone 1
 
 **E4 之後才改、沒在裝置上重看**：答覆欄位原本把巢狀物件 JSON 整串印出來（`subject_core`、`publicKeyJwk`、`@type`），改成只顯示純值與純值清單、略過 `@` 開頭與巢狀物件；用真的那包答覆離線跑 `verifyCredentialAnswer`，欄位變成 name / businessCardId / updatedAt。A 手機上已存的答覆是改之前算的，`p3-R-E4-answer.png` 仍是舊欄位。
 
+**再請求一次**（Kidney 2026-11-05 決定）：原本請求還沒過期就看不到請求鈕，答覆被丟掉或被拒時要等 7 天。改成等待中也顯示「再請求一次」（護照與憑證兩區，舊請求仍有效，持有人每人最多留 20 則）。實測：A 送出憑證請求 → 出現「等待對方出示憑證」與「再請求一次」→ 點開是請求表單（`reask-*.png`，沒有再送出）。護照區同一段邏輯，沒在裝置上另外看。
+
 P3 沒跑：SD-JWT 欄位挑選（模擬器上沒有 SD-JWT 憑證可匯入）、外部簽發者（「unknown」標示）的 VC、請求過期、拒絕。
 P3 執行偏差：第一次 E4 FAIL 後，A 的舊請求要等 7 天過期才能再請求、B 已標成已答覆，所以 A「重設 App 資料」再重來；重跑的 E2–E4 在修正後的 bundle 上。
 
@@ -82,6 +84,5 @@ P3 執行偏差：第一次 E4 FAIL 後，A 的舊請求要等 7 天過期才能
 - relay.damus.io 需要 NIP-42 AUTH 才肯回 1059，目前不在 `DM_RELAYS`，AUTH 是後續工作。
 
 ## 順便發現（code reading + 這次操作碰到，不在本次範圍）
-- 請求者送出後只要還沒過期就看不到「請求」鈕；對方的答覆若被丟掉（驗不過），請求者要等 7 天（護照請求同樣）。
 - **護照到期日 2030 年以後被判定為過期**：`validateMrzDraft`（`apps/expo/src/passport/pipeline.ts`）與 `fromMrzYyMmDd`（`PassportMrzStep.tsx`）都用出生日的世紀規則（YY≥30 → 19xx），所以到期 2030–2039 的護照手動輸入時顯示 1930 並報「Passport appears to be expired.」。本次改用 2029/12/31 繞過。
 - 全 App 的 toast 都畫在原生 Modal 下面；其他 sheet 裡的 `pushToast` 失敗訊息也可能看不到（本次只修了私密交換的兩個 sheet）。

@@ -39,15 +39,13 @@ export function CredentialRequestSection({ record }: { readonly record: ProfileR
       {requests.slice(0, 3).map((request) => (
         <CredentialRequestStatus key={request.id} request={request} name={record.displayName} now={now} />
       ))}
-      {waiting ? null : (
-        <ThemedButton
-          fullWidth
-          variant="secondary"
-          icon="lock"
-          label={t('privateExchange.credential.button')}
-          onPress={() => { setAsking(true); }}
-        />
-      )}
+      <ThemedButton
+        fullWidth
+        variant="secondary"
+        icon="lock"
+        label={t(waiting ? 'privateExchange.request.again' : 'privateExchange.credential.button')}
+        onPress={() => { setAsking(true); }}
+      />
       <ModalSheet visible={asking} presentationStyle="formSheet" onRequestClose={() => { setAsking(false); }}>
         <CredentialRequestForm record={record} onClose={() => { setAsking(false); }} />
       </ModalSheet>

@@ -1520,6 +1520,7 @@
   "privateExchange.privacyNote": "Encrypted to their key: relays can't read it or see who sent it, but they can see that someone sent them an encrypted message, and when.",
   "privateExchange.section.title": "Private requests",
   "privateExchange.request.button": "Request passport details",
+  "privateExchange.request.again": "Ask again",
   "privateExchange.request.title": "Ask {{name}} for passport details",
   "privateExchange.request.body": "They'll see your request in the app and choose what to give. It expires after 7 days.",
   "privateExchange.request.send": "Send encrypted request",

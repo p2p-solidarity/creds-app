@@ -37,15 +37,14 @@ export function PassportRequestSection({ record }: { readonly record: ProfileRec
         <RequestStatus key={request.id} request={request} name={record.displayName} now={now} />
       ))}
       {reachable ? (
-        waiting ? null : (
-          <ThemedButton
-            fullWidth
-            variant="secondary"
-            icon="lock"
-            label={t('privateExchange.request.button')}
-            onPress={() => { setAsking(true); }}
-          />
-        )
+        // Open while waiting too: a dropped or declined answer must not lock the asker out for 7 days.
+        <ThemedButton
+          fullWidth
+          variant="secondary"
+          icon="lock"
+          label={t(waiting ? 'privateExchange.request.again' : 'privateExchange.request.button')}
+          onPress={() => { setAsking(true); }}
+        />
       ) : (
         <ThemedText variant="bodySmall" tone="tertiary">
           {t('privateExchange.request.notOnNostr', { name: record.displayName })}
