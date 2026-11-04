@@ -1,6 +1,6 @@
 # 15 — Plan：不帶 `@` 的名稱網址（`creds.id/gimmy`）與保留字表
 
-> 2026-11-04 · 狀態：**P0 完成**——後端保留字已上線（backend `6197549`，worker `solidarity-id` 版本 `9193b1d8`；199 字線上逐字回 `reserved`），收窄版 AASA 已上線（web `main` `d28df9a`，Apple CDN 已更新）。P1–P3 尚未動。
+> 2026-11-04 · 狀態：**P0 完成**——後端保留字已上線（backend `6197549`，worker `solidarity-id` 版本 `9193b1d8`；199 字線上逐字回 `reserved`），收窄版 AASA 已上線（web `main` `d28df9a`，Apple CDN 已更新）。**P1 已做、未合併**（2026-11-05）：airmeishi `claude/bare-name-p1`、web `bare-name-p1`、backend `c08c0ff`（未部署）；E2E 見 `docs/e2e/2026-11-05-bare-name-p1/result.md`。P2–P3 尚未動。
 > 範圍：`packages/shared`、`apps/expo`、`apps/notary`、`../airmeishi-web`、`../airmeishi-backend`（NIP-05 worker `solidarity-id`）。
 > 屬於 **L**：會動到 witness 的 bio 標記比對、名稱註冊、iOS / Android 系統連結。名字一旦發出去就收不回，所以保留字要在推廣短網址**之前**先上線。
 
