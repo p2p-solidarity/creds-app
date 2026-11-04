@@ -1,7 +1,7 @@
 /**
  * SocialVerifyPanel — the link check of docs/ref/10 §2, click and confirm,
  * shown by the add-link sheet right after a link is added. (A Page link row
- * checks inline through `src/zktls/checkJobs.ts`; the old `/verify/social`
+ * checks inline through `src/socialProof/checkJobs.ts`; the old `/verify/social`
  * route is gone.)
  *
  *   intro    → 「複製並打開 X」copies creds.id/@name and opens the bio editor
@@ -31,11 +31,11 @@ import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
 import { linkDisplay } from '@/profile/linkPresentation';
 import { usePreferences } from '@/settings/preferences';
-import { proveSocialTarget, type ProofFailure } from '@/zktls/engine';
-import { confirmSocialClaim } from '@/zktls/flow';
-import { bioEditUrl, publicProfileUrl } from '@/zktls/links';
+import { proveSocialTarget, type ProofFailure } from '@/socialProof/engine';
+import { confirmSocialClaim } from '@/socialProof/flow';
+import { bioEditUrl, publicProfileUrl } from '@/socialProof/links';
 import type { NostrEvent } from '@/nostr/nostrAdapter';
-import type { SocialTarget, ZktlsSocialPlatform } from '@solidarity/shared';
+import type { SocialTarget, SocialProofPlatform } from '@solidarity/shared';
 
 type Screen =
   | { readonly kind: 'intro' }
@@ -102,14 +102,14 @@ export function SocialVerifyPanel({
     };
   }, [prove, screen.kind]);
 
-  const platformName = t(`zktls.platform.${target.platform}`);
+  const platformName = t(`socialProof.platform.${target.platform}`);
   const marker = `creds.id/@${name}`;
 
   const copyAndOpen = async () => {
     await Clipboard.setStringAsync(marker);
     const editUrl = bioEditUrl(target);
     if (editUrl === null) {
-      pushToast(t('zktls.markerCopied'), 'success');
+      pushToast(t('socialProof.markerCopied'), 'success');
       setScreen({ kind: 'waiting' });
       return;
     }
@@ -134,11 +134,11 @@ export function SocialVerifyPanel({
             <MarkerCard marker={marker} platformName={platformName} platform={target.platform} />
             {screen.kind === 'waiting' ? (
               <ThemedText variant="bodySmall" tone="secondary">
-                {t(target.platform === 'x' ? 'zktls.waitingX' : 'zktls.waiting', { platform: platformName })}
+                {t(target.platform === 'x' ? 'socialProof.waitingX' : 'socialProof.waiting', { platform: platformName })}
               </ThemedText>
             ) : null}
             <ThemedButton
-              label={target.platform === 'website' ? t('zktls.copyMarker') : t('zktls.copyAndOpen', { platform: platformName })}
+              label={target.platform === 'website' ? t('socialProof.copyMarker') : t('socialProof.copyAndOpen', { platform: platformName })}
               variant="primary"
               fullWidth
               onPress={() => {
@@ -146,7 +146,7 @@ export function SocialVerifyPanel({
               }}
             />
             <ThemedButton
-              label={t('zktls.alreadyAdded')}
+              label={t('socialProof.alreadyAdded')}
               variant="secondary"
               fullWidth
               onPress={() => {
@@ -159,9 +159,9 @@ export function SocialVerifyPanel({
         {screen.kind === 'proving' ? (
           <View style={{ alignItems: 'center', gap: 12, paddingVertical: 32 }}>
             <ActivityIndicator />
-            <ThemedText variant="bodyMedium">{t('zktls.proving', { platform: platformName })}</ThemedText>
+            <ThemedText variant="bodyMedium">{t('socialProof.proving', { platform: platformName })}</ThemedText>
             <ThemedText variant="caption" tone="tertiary" style={{ textAlign: 'center' }}>
-              {screen.attempt > 1 ? t('zktls.provingRetry') : t('zktls.provingPrivacy')}
+              {screen.attempt > 1 ? t('socialProof.provingRetry') : t('socialProof.provingPrivacy')}
             </ThemedText>
           </View>
         ) : null}
@@ -171,14 +171,14 @@ export function SocialVerifyPanel({
             <ThemedSurface variant="card" style={{ padding: 16, gap: 10, borderWidth: 1, borderColor: c.divider }}>
               <SealPill state="verified" label={t('mePage.verified')} />
               <ThemedText variant="titleMedium">
-                {t('zktls.found', { platform: platformName, handle: displayHandle(target) })}
+                {t('socialProof.found', { platform: platformName, handle: displayHandle(target) })}
               </ThemedText>
               <ThemedText variant="bodySmall" tone="secondary">
-                {t('zktls.foundDetail')}
+                {t('socialProof.foundDetail')}
               </ThemedText>
             </ThemedSurface>
             <ThemedButton
-              label={t('zktls.addCheck')}
+              label={t('socialProof.addCheck')}
               variant="primary"
               fullWidth
               loading={screen.kind === 'saving'}
@@ -193,14 +193,14 @@ export function SocialVerifyPanel({
           <>
             <ThemedSurface variant="card" style={{ padding: 16, gap: 10 }}>
               <SealPill state="verified" label={t('mePage.verified')} />
-              <ThemedText variant="bodyMedium">{t('zktls.done')}</ThemedText>
+              <ThemedText variant="bodyMedium">{t('socialProof.done')}</ThemedText>
               {screen.published ? null : (
                 <ThemedText variant="caption" tone="error">
-                  {t('zktls.publishPending')}
+                  {t('socialProof.publishPending')}
                 </ThemedText>
               )}
             </ThemedSurface>
-            <ThemedButton label={finishLabel ?? t('zktls.finish')} variant="inverted" fullWidth onPress={onFinish} />
+            <ThemedButton label={finishLabel ?? t('socialProof.finish')} variant="inverted" fullWidth onPress={onFinish} />
           </>
         ) : null}
 
@@ -255,7 +255,7 @@ function MarkerCard({
 }: {
   readonly marker: string;
   readonly platformName: string;
-  readonly platform: ZktlsSocialPlatform;
+  readonly platform: SocialProofPlatform;
 }): ReactNode {
   const { t } = useTranslation();
   const c = useThemeColors();
@@ -263,8 +263,8 @@ function MarkerCard({
     <View style={{ gap: 10 }}>
       <ThemedText variant="bodySmall" tone="secondary">
         {platform === 'website'
-          ? t('zktls.instructionsWebsite')
-          : t(platform === 'x' ? 'zktls.instructionsX' : 'zktls.instructions', { platform: platformName })}
+          ? t('socialProof.instructionsWebsite')
+          : t(platform === 'x' ? 'socialProof.instructionsX' : 'socialProof.instructions', { platform: platformName })}
       </ThemedText>
       <View
         style={{
@@ -282,24 +282,24 @@ function MarkerCard({
         </ThemedText>
       </View>
       <ThemedText variant="caption" tone="tertiary">
-        {t('zktls.keepMarker')}
+        {t('socialProof.keepMarker')}
       </ThemedText>
     </View>
   );
 }
 
 export const FAILURE_KEY: Record<ProofFailure | 'signDenied' | 'noName', string> = {
-  unsupported: 'zktls.error.unsupported',
-  serverUnavailable: 'zktls.error.serverUnavailable',
-  deviceRejected: 'zktls.error.deviceRejected',
-  network: 'zktls.error.network',
-  noNostrKey: 'zktls.error.noNostrKey',
-  notFound: 'zktls.error.notFound',
-  blocked: 'zktls.error.blocked',
-  markerMissing: 'zktls.error.markerMissing',
-  failed: 'zktls.error.failed',
-  signDenied: 'zktls.error.signDenied',
-  noName: 'zktls.error.noName',
+  unsupported: 'socialProof.error.unsupported',
+  serverUnavailable: 'socialProof.error.serverUnavailable',
+  deviceRejected: 'socialProof.error.deviceRejected',
+  network: 'socialProof.error.network',
+  noNostrKey: 'socialProof.error.noNostrKey',
+  notFound: 'socialProof.error.notFound',
+  blocked: 'socialProof.error.blocked',
+  markerMissing: 'socialProof.error.markerMissing',
+  failed: 'socialProof.error.failed',
+  signDenied: 'socialProof.error.signDenied',
+  noName: 'socialProof.error.noName',
 };
 
 function ErrorBody({
@@ -318,11 +318,11 @@ function ErrorBody({
         <ThemedText variant="bodyMedium">{t(FAILURE_KEY[failure], { platform: platformName })}</ThemedText>
       </ThemedSurface>
       {failure === 'noName' ? (
-        <ThemedButton label={t('zktls.claimName')} variant="primary" fullWidth onPress={() => { router.push('/settings/username'); }} />
+        <ThemedButton label={t('socialProof.claimName')} variant="primary" fullWidth onPress={() => { router.push('/settings/username'); }} />
       ) : failure === 'noNostrKey' ? (
-        <ThemedButton label={t('zktls.setupNostr')} variant="primary" fullWidth onPress={() => { router.push('/verify/nostr'); }} />
+        <ThemedButton label={t('socialProof.setupNostr')} variant="primary" fullWidth onPress={() => { router.push('/verify/nostr'); }} />
       ) : onRetry !== null && failure !== 'unsupported' && failure !== 'deviceRejected' ? (
-        <ThemedButton label={t('zktls.retry')} variant="primary" fullWidth onPress={onRetry} />
+        <ThemedButton label={t('socialProof.retry')} variant="primary" fullWidth onPress={onRetry} />
       ) : null}
     </View>
   );

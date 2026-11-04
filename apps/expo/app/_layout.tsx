@@ -74,11 +74,11 @@ import { capabilities } from '@/platform/distribution';
 import { hydrateProfile } from '@/profile/store';
 import { pushToast } from '@/feedback/toast';
 import { translate } from '@/i18n';
-import { renewDueProofs } from '@/zktls/flow';
+import { renewDueProofs } from '@/socialProof/flow';
 import { renewPassportStatement } from '@/passport/npubBinding';
 import { dropRetiredPassportZkData } from '@/passport/retiredZkData';
 import { DEFAULT_RELAYS } from '@/nostr/publish';
-import { hydrateZktlsProofs } from '@/zktls/store';
+import { hydrateSocialProofs } from '@/socialProof/store';
 import { hydratePreferences, usePreferences } from '@/settings/preferences';
 import { runLegacyWipeOnce } from '@/settings/legacyWipe';
 import { initMmkv, ManifestStorage } from '@/storage';
@@ -212,7 +212,7 @@ export default function RootLayout() {
         hydratePreferences();
         hydrateSensitiveActionPolicy();
         hydrateProfile();
-        hydrateZktlsProofs();
+        hydrateSocialProofs();
         hydrateProfileSnapshots();
         // Awaited, not fired-and-forgotten: every Pro gate reads this store
         // synchronously, so a late hydration would flash "locked" at someone
@@ -342,7 +342,7 @@ export default function RootLayout() {
     dropRetiredPassportZkData();
     const renew = () => {
       void renewDueProofs().then((failed) => {
-        if (failed.length > 0) pushToast(translate('zktls.renewFailed'), 'error');
+        if (failed.length > 0) pushToast(translate('socialProof.renewFailed'), 'error');
       });
       void renewPassportStatement(DEFAULT_RELAYS);
     };

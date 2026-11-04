@@ -3,11 +3,11 @@
  * URL parsing, shared so the app (which proves) and creds.id (which shows the
  * owner each link's state) agree on what counts as a verifiable link.
  */
-import { isAllowedWebsiteHost, ZKTLS_PLATFORMS } from './platforms';
-import type { ZktlsSocialPlatform } from './socialProof';
+import { isAllowedWebsiteHost, PROOF_PLATFORMS } from './platforms';
+import type { SocialProofPlatform } from './socialProof';
 
 export interface SocialTarget {
-  readonly platform: ZktlsSocialPlatform;
+  readonly platform: SocialProofPlatform;
   readonly handle: string;
 }
 
@@ -46,7 +46,7 @@ export function socialTargetForLink(rawUrl: string): SocialTarget | null {
     const segments = url.pathname.split('/').filter(Boolean);
     const handle = (segments[0] ?? '').replace(/^@/u, '');
     if (segments.length !== 1 || RESERVED_PATHS[platform].has(handle.toLowerCase())) return null;
-    return ZKTLS_PLATFORMS[platform].handlePattern.test(handle) ? { platform, handle } : null;
+    return PROOF_PLATFORMS[platform].handlePattern.test(handle) ? { platform, handle } : null;
   }
   if (OTHER_PLATFORM_HOSTS.has(host) || [...OTHER_PLATFORM_HOSTS].some((h) => host.endsWith(`.${h}`))) return null;
   const site = url.hostname.toLowerCase();

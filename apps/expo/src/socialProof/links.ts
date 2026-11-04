@@ -3,7 +3,7 @@
  * §2 step ②). Which links are verifiable at all is `socialTargetForLink` in
  * `@solidarity/shared` — the same rule creds.id's editor uses.
  */
-import { ZKTLS_PLATFORMS, type SocialTarget } from '@solidarity/shared';
+import { PROOF_PLATFORMS, type SocialTarget } from '@solidarity/shared';
 
 /** Where the owner pastes the marker; null when there is no edit page to open (websites). */
 export function bioEditUrl(target: SocialTarget): string | null {
@@ -21,6 +21,6 @@ export function bioEditUrl(target: SocialTarget): string | null {
 
 /** The public page the proof fetches — what the owner can open to check it saved. */
 export function publicProfileUrl(target: SocialTarget): string {
-  const rule = ZKTLS_PLATFORMS[target.platform];
+  const rule = PROOF_PLATFORMS[target.platform];
   return `https://${rule.host(target.handle)}${rule.path(target.handle)}`;
 }

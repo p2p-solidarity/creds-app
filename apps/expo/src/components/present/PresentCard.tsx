@@ -130,7 +130,7 @@ export function PresentCard({
           <ThemedButton
             variant="secondary"
             size="sm"
-            label={t('zktls.claimName')}
+            label={t('socialProof.claimName')}
             onPress={() => { router.push('/settings/username'); }}
           />
         </ThemedSurface>

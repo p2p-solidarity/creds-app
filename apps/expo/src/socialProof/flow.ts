@@ -28,7 +28,7 @@ import {
 } from '@solidarity/shared';
 
 import { currentNpub, proveSocialTarget } from './engine';
-import { proofAge, useZktlsProofs } from './store';
+import { proofAge, useSocialProofs } from './store';
 
 export type ConfirmFailure = 'noProfile' | 'noNostrKey' | 'signDenied' | 'invalidProof';
 
@@ -57,7 +57,7 @@ export async function confirmSocialClaim(event: NostrEvent): Promise<Result<Conf
     );
     if (!saved.ok) return err('signDenied');
   }
-  useZktlsProofs.getState().put(claim, event, verified.value.statement.observedAt);
+  useSocialProofs.getState().put(claim, event, verified.value.statement.observedAt);
 
   const [page, published] = await Promise.all([publishToNostr(DEFAULT_RELAYS), publishWitness(event, DEFAULT_RELAYS)]);
   // Pro: one more witness, from the creds.id notary, in its next hourly batch.
@@ -87,21 +87,21 @@ export async function renewDueProofs(nowMs: number = Date.now()): Promise<readon
     const record = useProfileStore.getState().record;
     const name = usePreferences.getState().publicPageRegisteredUsername;
     if (record === null || name === '') return [];
-    for (const [claim, entry] of Object.entries(useZktlsProofs.getState().proofs)) {
+    for (const [claim, entry] of Object.entries(useSocialProofs.getState().proofs)) {
       const target = socialTargetForClaim(claim);
       if (!record.alsoKnownAs.includes(claim) || target === null) {
-        useZktlsProofs.getState().remove(claim);
+        useSocialProofs.getState().remove(claim);
         continue;
       }
       if (proofAge(entry, nowMs) === 'fresh') continue;
       const renewed = await proveSocialTarget(target, name);
       if (renewed.ok) {
-        useZktlsProofs.getState().put(claim, renewed.value, renewed.value.created_at);
+        useSocialProofs.getState().put(claim, renewed.value, renewed.value.created_at);
         await publishWitness(renewed.value, DEFAULT_RELAYS);
         continue;
       }
       if (!entry.renewalFailedNotified) {
-        useZktlsProofs.getState().markRenewalFailed(claim);
+        useSocialProofs.getState().markRenewalFailed(claim);
         newlyFailed.push(claim);
       }
     }

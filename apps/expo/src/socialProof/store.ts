@@ -39,7 +39,7 @@ export function proofAge(entry: StoredProof, nowMs: number = Date.now()): ProofA
   return age < LAPSE_AFTER_MS ? 'renewing' : 'lapsed';
 }
 
-interface ZktlsProofState {
+interface SocialProofState {
   readonly proofs: Readonly<Record<string, StoredProof>>;
   readonly put: (claim: string, event: NostrEvent, verifiedAtSeconds: number) => void;
   readonly markRenewalFailed: (claim: string) => void;
@@ -55,7 +55,7 @@ function persist(proofs: Readonly<Record<string, StoredProof>>): void {
   }
 }
 
-export const useZktlsProofs = create<ZktlsProofState>((set, get) => ({
+export const useSocialProofs = create<SocialProofState>((set, get) => ({
   proofs: {},
   put: (claim, event, verifiedAtSeconds) => {
     const epoch = captureLocalDataEpoch();
@@ -81,7 +81,7 @@ export const useZktlsProofs = create<ZktlsProofState>((set, get) => ({
   },
 }));
 
-export function hydrateZktlsProofs(): void {
+export function hydrateSocialProofs(): void {
   try {
     const mmkv = getMmkv();
     mmkv.remove(LEGACY_KEY);
@@ -89,7 +89,7 @@ export function hydrateZktlsProofs(): void {
     if (raw === undefined) return;
     const parsed: unknown = JSON.parse(raw);
     if (parsed !== null && typeof parsed === 'object') {
-      useZktlsProofs.setState({ proofs: parsed as Record<string, StoredProof> });
+      useSocialProofs.setState({ proofs: parsed as Record<string, StoredProof> });
     }
   } catch {
     // Corrupt or unreadable: start empty rather than show a badge we can't back.

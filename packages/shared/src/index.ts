@@ -28,7 +28,7 @@
  *                 (request/response) + fail-closed verify (notes-1.3.3 §4)
  *   deviceproof/  App Attest + Android Key Attestation verifiers and p2p
  *                 witness statements (docs/ref/10 §3.11)
- *   zktls/        Notary-signed zkTLS evidence + platform rules (docs/ref/10)
+ *   socialProof/  social-link page checks + platform rules
  */
 export * from './badges';
 export * from './canonical';
@@ -53,4 +53,4 @@ export * from './types';
 export * from './vault';
 export * from './vcf';
 export * from './webSign';
-export * from './zktls';
+export * from './socialProof';

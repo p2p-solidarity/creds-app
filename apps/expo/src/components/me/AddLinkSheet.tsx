@@ -530,7 +530,7 @@ function AddedStep({
         ) : (
           <Animated.View entering={fadeUpIn(3, reduceMotion)} style={{ gap: 10 }}>
             <ThemedText variant="bodySmall" tone="secondary">
-              {t('meEdit.linkSheet.checkPrompt', { platform: t(`zktls.platform.${target.platform}`) })}
+              {t('meEdit.linkSheet.checkPrompt', { platform: t(`socialProof.platform.${target.platform}`) })}
             </ThemedText>
             <ThemedButton
               label={t('meEdit.linkSheet.checkNow')}

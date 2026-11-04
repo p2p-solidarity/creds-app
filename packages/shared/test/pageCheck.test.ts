@@ -14,7 +14,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { ok, type Result } from '../src/types/result';
-import { checkSocialMarker, markerInPage, type PageFetch } from '../src/zktls';
+import { checkSocialMarker, markerInPage, type PageFetch } from '../src/socialProof';
 
 const page = (file: string) => readFileSync(join(import.meta.dir, 'fixtures/pages', file), 'utf8');
 const X = page('x-kidneyweakx.html');

@@ -41,7 +41,7 @@ import { useProfileStore } from '@/profile/store';
 import { SealPill } from '@/components/badges/SealPill';
 import { socialTargetForLink, type SocialTarget } from '@solidarity/shared';
 import { deviceAttestSupported } from '@/witness/deviceKey';
-import { proofAge, useZktlsProofs } from '@/zktls/store';
+import { proofAge, useSocialProofs } from '@/socialProof/store';
 import {
   dismissLinkCheck,
   linkCheckKey,
@@ -49,7 +49,7 @@ import {
   startLinkCheck,
   useLinkChecks,
   type LinkCheckJob,
-} from '@/zktls/checkJobs';
+} from '@/socialProof/checkJobs';
 import { FAILURE_KEY } from '@/components/verify/SocialVerifyPanel';
 import {
   CREDS_DEVICE_TRUST,
@@ -109,7 +109,7 @@ export function ProfileLinksList({
   const [orderedVisibility, setOrderedVisibility] = useState(linkVisibility);
   const [reordering, setReordering] = useState(false);
   const websiteEvidence = useWebsiteLinkEvidence(record, jws);
-  const zktlsStates = useZktlsClaimStates(record);
+  const socialProofStates = useSocialProofClaimStates(record);
   const canProve = useMemo(() => deviceAttestSupported(), []);
   useSyncExternalStore(
     subscribeBadgeStatusCache,
@@ -168,7 +168,7 @@ export function ProfileLinksList({
   }, [linkVisibility, links, orderedLinks, orderedVisibility, record, reordering, saveProfile, t]);
 
   const pillFor = (link: ProfileLink): RowVerificationPill | null =>
-    record === null ? null : linkVerificationPill(link, websiteEvidence, zktlsStates, record);
+    record === null ? null : linkVerificationPill(link, websiteEvidence, socialProofStates, record);
 
   // A link the zkTLS engine can prove, with no pill yet, offers 「驗證」(docs/ref/10 §2).
   const verifyTargetFor = (link: ProfileLink): SocialTarget | null =>
@@ -299,7 +299,7 @@ function LinkRowsSection({
                 ...(verifyTarget !== null && !showBanner
                   ? [{
                       icon: 'checkmark.seal' as const,
-                      label: t('zktls.verifyLink'),
+                      label: t('socialProof.verifyLink'),
                       onPress: () => { void startLinkCheck(verifyTarget); },
                     }]
                   : []),
@@ -382,9 +382,9 @@ function LinkRowsSection({
                       haptic="tap"
                       onPress={() => { void startLinkCheck(verifyTarget); }}
                       accessibilityRole="button"
-                      accessibilityLabel={t('zktls.verifyLink')}
+                      accessibilityLabel={t('socialProof.verifyLink')}
                       style={{ minHeight: 44, justifyContent: 'center' }}>
-                      <SealPill state="declared" label={t('zktls.verifyLink')} />
+                      <SealPill state="declared" label={t('socialProof.verifyLink')} />
                     </PressableScale>
                   ) : null}
                   <PressableScale
@@ -415,7 +415,7 @@ const LINK_CARD_HEIGHT = 68;
 /**
  * The 「驗證」 banner under a link row (Linktree's "Finish connecting"): one
  * tap copies the marker and opens the platform; the check itself runs in
- * the background (`@/zktls/checkJobs`) and the row's pill appears when done.
+ * the background (`@/socialProof/checkJobs`) and the row's pill appears when done.
  */
 function LinkVerifyBanner({
   target,
@@ -427,7 +427,7 @@ function LinkVerifyBanner({
   const { t } = useTranslation();
   const c = useThemeColors();
   const reduceMotion = useReducedMotion();
-  const platform = t(`zktls.platform.${target.platform}`);
+  const platform = t(`socialProof.platform.${target.platform}`);
 
   let message: string;
   let action: { readonly label: string; readonly onPress: () => void } | null;
@@ -436,21 +436,21 @@ function LinkVerifyBanner({
     message = t('mePage.linkVerify.prompt', { platform });
     action = { label: t('mePage.linkVerify.action', { platform }), onPress: () => { void startLinkCheck(target); } };
   } else if (job.phase === 'waiting') {
-    message = t(target.platform === 'x' ? 'zktls.waitingX' : 'zktls.waiting', { platform });
-    action = { label: t('zktls.alreadyAdded'), onPress: () => { void runLinkCheck(target); } };
+    message = t(target.platform === 'x' ? 'socialProof.waitingX' : 'socialProof.waiting', { platform });
+    action = { label: t('socialProof.alreadyAdded'), onPress: () => { void runLinkCheck(target); } };
   } else if (job.phase === 'checking') {
-    message = `${t('zktls.proving', { platform })} ${t(job.attempt > 1 ? 'zktls.provingRetry' : 'mePage.linkVerify.background')}`;
+    message = `${t('socialProof.proving', { platform })} ${t(job.attempt > 1 ? 'socialProof.provingRetry' : 'mePage.linkVerify.background')}`;
     action = null;
     busy = true;
   } else {
     message = t(FAILURE_KEY[job.failure], { platform });
     action = job.failure === 'noName'
-      ? { label: t('zktls.claimName'), onPress: () => { router.push('/settings/username'); } }
+      ? { label: t('socialProof.claimName'), onPress: () => { router.push('/settings/username'); } }
       : job.failure === 'noNostrKey'
-        ? { label: t('zktls.setupNostr'), onPress: () => { router.push('/verify/nostr'); } }
+        ? { label: t('socialProof.setupNostr'), onPress: () => { router.push('/verify/nostr'); } }
         : job.failure === 'unsupported' || job.failure === 'deviceRejected'
           ? null
-          : { label: t('zktls.retry'), onPress: () => { void runLinkCheck(target); } };
+          : { label: t('socialProof.retry'), onPress: () => { void runLinkCheck(target); } };
   }
 
   return (
@@ -532,7 +532,7 @@ function useWebsiteLinkEvidence(
 function linkVerificationPill(
   link: ProfileLink,
   websiteEvidence: readonly HttpsOwnershipEvidence[],
-  zktlsStates: ReadonlyMap<string, 'verified' | 'stale'>,
+  socialProofStates: ReadonlyMap<string, 'verified' | 'stale'>,
   record: ProfileRecord,
   nowMs: number = Date.now(),
 ): RowVerificationPill | null {
@@ -577,8 +577,8 @@ function linkVerificationPill(
       states.push('verified');
     }
     const target = socialTargetForLink(link.url);
-    const zktls = target === null ? undefined : zktlsStates.get(pageSocialClaim(target.platform, target.handle));
-    if (zktls !== undefined) states.push(zktls);
+    const proofState = target === null ? undefined : socialProofStates.get(pageSocialClaim(target.platform, target.handle));
+    if (proofState !== undefined) states.push(proofState);
   } catch {
     return null;
   }
@@ -590,8 +590,8 @@ function linkVerificationPill(
  * verifies against this revision of the Page (claim and npub both present); older than
  * 90 days it asks for a recheck while the background renewal catches up.
  */
-function useZktlsClaimStates(record: ProfileRecord | null): ReadonlyMap<string, 'verified' | 'stale'> {
-  const proofs = useZktlsProofs((state) => state.proofs);
+function useSocialProofClaimStates(record: ProfileRecord | null): ReadonlyMap<string, 'verified' | 'stale'> {
+  const proofs = useSocialProofs((state) => state.proofs);
   return useMemo(() => {
     const states = new Map<string, 'verified' | 'stale'>();
     if (record === null) return states;

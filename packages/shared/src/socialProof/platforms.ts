@@ -7,7 +7,7 @@
  * Markup changes on a platform make checks fail closed, never pass.
  */
 
-export type ZktlsPlatform = 'x' | 'x-link' | 'x-profile' | 'telegram' | 'github' | 'website';
+export type ProofPlatform = 'x' | 'x-link' | 'x-profile' | 'telegram' | 'github' | 'website';
 
 export interface PlatformRule {
   readonly handlePattern: RegExp;
@@ -23,7 +23,7 @@ export interface PlatformRule {
     | null;
 }
 
-export const ZKTLS_PLATFORMS: Readonly<Record<ZktlsPlatform, PlatformRule>> = {
+export const PROOF_PLATFORMS: Readonly<Record<ProofPlatform, PlatformRule>> = {
   // Logged-out x.com serves the bio as the description meta tag; URLs in it are t.co links.
   x: {
     handlePattern: /^[A-Za-z0-9_]{1,15}$/u,
@@ -74,7 +74,7 @@ export const ZKTLS_PLATFORMS: Readonly<Record<ZktlsPlatform, PlatformRule>> = {
 const RESERVED_WEBSITE_HOSTS = new Set(['x.com', 'twitter.com', 't.co', 't.me', 'github.com', 'creds.id']);
 
 export function isAllowedWebsiteHost(host: string): boolean {
-  if (!ZKTLS_PLATFORMS.website.handlePattern.test(host)) return false;
+  if (!PROOF_PLATFORMS.website.handlePattern.test(host)) return false;
   for (const reserved of RESERVED_WEBSITE_HOSTS) {
     if (host === reserved || host.endsWith(`.${reserved}`)) return false;
   }

@@ -98,7 +98,7 @@ export async function startLinkCheck(target: SocialTarget): Promise<void> {
   ensureForegroundListener();
   const editUrl = bioEditUrl(target);
   if (editUrl === null) {
-    pushToast(translate('zktls.markerCopied'), 'success');
+    pushToast(translate('socialProof.markerCopied'), 'success');
     return;
   }
   await Linking.openURL(editUrl).catch(() => Linking.openURL(publicProfileUrl(target)).catch(() => undefined));
@@ -127,7 +127,7 @@ export async function runLinkCheck(target: SocialTarget): Promise<void> {
         }
         setJob(key, null);
         haptic('success');
-        pushToast(translate(confirmed.value.published ? 'zktls.done' : 'zktls.publishPending'), 'success');
+        pushToast(translate(confirmed.value.published ? 'socialProof.done' : 'socialProof.publishPending'), 'success');
         return;
       }
       if (result.error !== 'markerMissing' || attempt === MARKER_RETRIES) {

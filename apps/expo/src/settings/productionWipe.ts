@@ -46,7 +46,7 @@ import {
 import { rekeyEmptyMmkv } from '@/storage/mmkv';
 import { deleteMasterKey } from '@/storage/secureMasterKey';
 import { useWebSignPending } from '@/websign/pendingRequest';
-import { useZktlsProofs } from '@/zktls/store';
+import { useSocialProofs } from '@/socialProof/store';
 
 import { usePreferences } from './preferences';
 import { legacyWipe } from './legacyWipe';
@@ -92,7 +92,7 @@ function clearMemoryCaches(): void {
   useLeaveCardStore.getState().resetForLocalWipe();
   useCredentialStore.getState().resetForLocalWipe();
   useIssuerMetadataStore.getState().resetForLocalWipe();
-  useZktlsProofs.getState().resetForLocalWipe();
+  useSocialProofs.getState().resetForLocalWipe();
   useProfileStore.getState().resetForLocalWipe();
   useProfileSnapshotStore.getState().resetForLocalWipe();
   useIdentityData.getState().resetForLocalWipe();

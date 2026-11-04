@@ -7,8 +7,8 @@
  */
 import { err, ok, type Result } from '../types/result';
 import type { SocialTarget } from './links';
-import { bioCarriesMarker, ZKTLS_PLATFORMS } from './platforms';
-import type { ZktlsSocialPlatform } from './socialProof';
+import { bioCarriesMarker, PROOF_PLATFORMS } from './platforms';
+import type { SocialProofPlatform } from './socialProof';
 import { isMarkerUrl, parseXProfile } from './xProfile';
 
 /** Fetch a page as text, following redirects. Injected: app, notary and tests fetch differently. */
@@ -33,7 +33,7 @@ function fieldValues(body: string, start: string, stop: string): string[] {
 
 /** X's embedded profile: the anchor through the end of its JS string literal. */
 function xProfilePayload(body: string, handle: string): string | null {
-  const rule = ZKTLS_PLATFORMS['x-profile'].field?.(handle);
+  const rule = PROOF_PLATFORMS['x-profile'].field?.(handle);
   if (rule === undefined) return null;
   const at = body.indexOf(rule.start);
   if (at < 0) return null;
@@ -49,7 +49,7 @@ function xProfilePayload(body: string, handle: string): string | null {
  * profile the answer needs the bio's t.co hops, returned for the caller to fetch.
  */
 export function markerInPage(
-  platform: ZktlsSocialPlatform,
+  platform: SocialProofPlatform,
   handle: string,
   name: string,
   body: string,
@@ -60,7 +60,7 @@ export function markerInPage(
       return verdict(bioCarriesMarker(body, name));
     case 'telegram':
     case 'github': {
-      const field = ZKTLS_PLATFORMS[platform].field?.(handle);
+      const field = PROOF_PLATFORMS[platform].field?.(handle);
       return verdict(field !== undefined && fieldValues(body, field.start, field.stop).some((v) => bioCarriesMarker(v, name)));
     }
     case 'x': {
@@ -69,7 +69,7 @@ export function markerInPage(
         const urls = parseXProfile(payload, handle);
         return verdict(urls.ok && urls.value.some((u) => isMarkerUrl(u, name)));
       }
-      const field = ZKTLS_PLATFORMS.x.field?.(handle);
+      const field = PROOF_PLATFORMS.x.field?.(handle);
       const bio = field === undefined ? [] : fieldValues(body, field.start, field.stop);
       const ids = [...new Set(bio.flatMap((b) => [...b.matchAll(TCO_RE)].map((m) => m[1] ?? '')).filter((id) => id !== ''))];
       return ids.length === 0 ? 'missing' : { tco: ids.slice(0, MAX_TCO_HOPS) };
@@ -77,8 +77,8 @@ export function markerInPage(
   }
 }
 
-function pageUrl(platform: 'x' | 'x-link' | ZktlsSocialPlatform, handle: string): string {
-  const rule = ZKTLS_PLATFORMS[platform];
+function pageUrl(platform: 'x' | 'x-link' | SocialProofPlatform, handle: string): string {
+  const rule = PROOF_PLATFORMS[platform];
   return `https://${rule.host(handle)}${rule.path(handle)}`;
 }
 
@@ -99,7 +99,7 @@ export async function checkSocialMarker(
   name: string,
   fetchPage: PageFetch,
 ): Promise<Result<void, MarkerCheckFailure>> {
-  const rule = ZKTLS_PLATFORMS[target.platform];
+  const rule = PROOF_PLATFORMS[target.platform];
   if (!rule.handlePattern.test(target.handle)) return err('notFound');
   const body = await fetchOwnerPage(fetchPage, pageUrl(target.platform, target.handle));
   if (!body.ok) return body;
@@ -108,7 +108,7 @@ export async function checkSocialMarker(
   if (found === 'found') return ok(undefined);
   if (found === 'missing') return err('markerMissing');
 
-  const titleField = ZKTLS_PLATFORMS['x-link'].field?.('');
+  const titleField = PROOF_PLATFORMS['x-link'].field?.('');
   const hops = await Promise.all(found.tco.map((id) => fetchOwnerPage(fetchPage, pageUrl('x-link', id))));
   for (const hop of hops) {
     if (hop.ok && titleField !== undefined && fieldValues(hop.value, titleField.start, titleField.stop).some((t) => bioCarriesMarker(t, name))) {
