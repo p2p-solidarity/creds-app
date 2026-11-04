@@ -85,7 +85,8 @@ export type SensitiveAction =
   | 'rotateMasterKey'
   | 'revealRecoveryBundle'
   | 'registerTrustAnchor'
-  | 'deleteZKIdentity';
+  | 'deleteZKIdentity'
+  | 'sendPrivate';
 
 export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
   'issueCredential',
@@ -95,6 +96,7 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
   'revealRecoveryBundle',
   'registerTrustAnchor',
   'deleteZKIdentity',
+  'sendPrivate',
 ];
 
 /**
@@ -104,9 +106,10 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
  * wiping local data and deleting the ZK identity destroy something that cannot
  * be recovered; revealing the recovery phrase hands over the master secret,
  * which is worse than deletion — a leaked phrase is leaked forever, while
- * deleted data may still exist in a backup. Everything else (showing a proof,
- * exporting attestations, unlocking the vault, saving a passport) is
- * access-level and follows the user's mode.
+ * deleted data may still exist in a backup. Sending private data to another
+ * person (NIP-17, docs/ref/16 Q3) cannot be taken back either. Everything
+ * else (showing a proof, exporting attestations, unlocking the vault, saving
+ * a passport) is access-level and follows the user's mode.
  *
  * `biometricGatekeeper` imports this exact set as its grace-window exemption,
  * so the two can no longer drift: an action too dangerous to ride a five-minute
@@ -116,6 +119,7 @@ export const RED_LINE_ACTIONS: ReadonlySet<SensitiveAction> = new Set([
   'rotateMasterKey',
   'revealRecoveryBundle',
   'deleteZKIdentity',
+  'sendPrivate',
 ]);
 
 /**

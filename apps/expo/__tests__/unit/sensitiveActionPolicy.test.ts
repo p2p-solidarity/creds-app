@@ -7,7 +7,7 @@
  * three named modes. The `SensitiveAction` enum survives — it still picks the
  * prompt copy and decides red-line membership — so these pins cover the seams:
  *
- *   1. `SENSITIVE_ACTIONS` still lists all 7; `RED_LINE_ACTIONS` is a
+ *   1. `SENSITIVE_ACTIONS` lists all 8; `RED_LINE_ACTIONS` is a
  *      subset of them.
  *   2. Fresh install lands on `balanced` (fail closed).
  *   3. `redLineOnly` disables exactly the OPTIONAL actions; every red-line
@@ -72,7 +72,8 @@ type Action =
   | 'rotateMasterKey'
   | 'revealRecoveryBundle'
   | 'registerTrustAnchor'
-  | 'deleteZKIdentity';
+  | 'deleteZKIdentity'
+  | 'sendPrivate';
 
 type Mode = 'everyTime' | 'balanced' | 'redLineOnly';
 
@@ -177,17 +178,19 @@ describe('SensitiveAction set', () => {
     'revealRecoveryBundle',
     'registerTrustAnchor',
     'deleteZKIdentity',
+    'sendPrivate',
   ];
 
-  it('SENSITIVE_ACTIONS still lists exactly the 7 actions', () => {
+  it('SENSITIVE_ACTIONS lists exactly the 8 actions', () => {
     expect([...policyMod.SENSITIVE_ACTIONS].sort()).toEqual([...allActions].sort());
   });
 
-  it('RED_LINE_ACTIONS is the irreversible trio', () => {
+  it('RED_LINE_ACTIONS are the irreversible ones', () => {
     const expected: readonly Action[] = [
       'deleteZKIdentity',
       'revealRecoveryBundle',
       'rotateMasterKey',
+      'sendPrivate',
     ];
     expect([...policyMod.RED_LINE_ACTIONS].sort()).toEqual([...expected].sort());
   });

@@ -12,7 +12,7 @@
  */
 import { z } from 'zod';
 
-import { deviceProofSchema } from '../deviceproof/witness';
+import { deviceProofSchema, type DeviceProof } from '../deviceproof/witness';
 import { err, ok, type Result } from '../types/result';
 
 import type { UnsignedNostrEvent } from './event';
@@ -57,7 +57,10 @@ const passportPresentationWireSchema = z
     device: deviceProofSchema.nullable(),
   })
   .strict();
-export type PassportPresentationWire = z.infer<typeof passportPresentationWireSchema>;
+export interface PassportPresentationWire {
+  readonly statement: string;
+  readonly device: DeviceProof | null;
+}
 
 const proofResponseSchema = z
   .object({

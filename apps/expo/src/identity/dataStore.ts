@@ -12,6 +12,7 @@ import { useMemo } from 'react';
 import { create } from 'zustand';
 
 import { decryptJson, encryptJson } from '@/storage/encryptionManager';
+import { forgetPassportPrivateClaims } from '@/passport/privateClaims';
 import { forgetPassportStatement } from '@/passport/statementStore';
 import { getMmkv } from '@/storage/mmkv';
 import {
@@ -277,6 +278,7 @@ export const useIdentityData = create<IdentityDataState>((set, get) => ({
     );
     // Every passport goes, so no statement may keep being re-signed.
     forgetPassportStatement();
+    forgetPassportPrivateClaims();
     for (const id of passportCardIds) {
       if (generation !== localWipeGeneration || !canCommitLocalData(writeEpoch)) return;
       getMmkv().remove(`${CARD_PREFIX}${id}`);

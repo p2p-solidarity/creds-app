@@ -74,7 +74,19 @@ import {
   type LocalDataEpoch,
 } from '@/settings/localDataWipeBarrier';
 
-import { HKDF_INFO_NOSTR, deriveSecp256k1Scalar, err, ok, type Result } from '@solidarity/shared';
+import {
+  HKDF_INFO_NOSTR,
+  createRumor,
+  deriveSecp256k1Scalar,
+  err,
+  ok,
+  unwrapGiftWrap,
+  wrapRumor,
+  type Result,
+  type RumorInput,
+  type UnwrapFailure,
+  type UnwrappedMessage,
+} from '@solidarity/shared';
 
 const SCALAR_ALIAS = 'gg.solidarity.nostrkey.scalar.v1';
 const NSEC_HRP = 'nsec';
@@ -610,4 +622,51 @@ export async function signNostrEvent(unsigned: UnsignedNostrEvent): Promise<Resu
   }
 
   return ok({ ...event, id, sig });
+}
+
+// ── NIP-17 private messages (docs/ref/16) ───────────────────────────────
+//
+// The scalar never leaves this module: both functions load it, use it for
+// the ECDH / seal signature, and zero it before returning.
+
+export interface WrappedForRecipient {
+  readonly wrap: NostrEvent;
+  /** The rumor id — what a reply's `e` tag will name. */
+  readonly rumorId: string;
+}
+
+/** Seal + gift-wrap a rumor from this key to `recipientHex` (NIP-59). */
+export async function wrapForRecipient(
+  input: Omit<RumorInput, 'created_at'>,
+  recipientHex: string
+): Promise<Result<WrappedForRecipient, string>> {
+  const scalarResult = await loadScalar();
+  if (!scalarResult.ok) return scalarResult;
+  const scalar = scalarResult.value;
+  try {
+    const rumor = createRumor({ ...input, created_at: Math.floor(Date.now() / 1000) }, hexEncode(schnorr.getPublicKey(scalar)));
+    const wrapped = wrapRumor(rumor, scalar, recipientHex);
+    return wrapped.ok ? ok({ wrap: wrapped.value, rumorId: rumor.id }) : wrapped;
+  } catch {
+    return err('wrapFailed');
+  } finally {
+    scalar.fill(0);
+  }
+}
+
+/** Open a batch of gift wraps addressed to this key. One scalar read per batch. */
+export async function unwrapForMe(
+  wraps: readonly unknown[]
+): Promise<Result<{ readonly myHex: string; readonly opened: readonly Result<UnwrappedMessage, UnwrapFailure>[] }, string>> {
+  const scalarResult = await loadScalar();
+  if (!scalarResult.ok) return scalarResult;
+  const scalar = scalarResult.value;
+  try {
+    const myHex = hexEncode(schnorr.getPublicKey(scalar));
+    return ok({ myHex, opened: wraps.map((w) => unwrapGiftWrap(w, scalar)) });
+  } catch {
+    return err('unwrapFailed');
+  } finally {
+    scalar.fill(0);
+  }
 }

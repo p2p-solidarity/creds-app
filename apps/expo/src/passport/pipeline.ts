@@ -432,6 +432,22 @@ export function derivePassportPublicSignals(args: {
   };
 }
 
+/**
+ * The holder's name from DG1 (TD3 line 1, chars 6–44: `SURNAME<<GIVEN<NAMES`),
+ * as one space-separated string. Null when DG1 is not a full TD3 MRZ or the
+ * name field is all filler (the simulated chip) — never a stand-in name.
+ */
+export function derivePassportName(dg1MRZData: string): string | null {
+  const sanitized = sanitizeMRZ(dg1MRZData);
+  if (sanitized.length < 88) return null;
+  const name = sanitized
+    .slice(5, 44)
+    .split('<')
+    .filter((part) => part.length > 0)
+    .join(' ');
+  return name.length > 0 ? name : null;
+}
+
 function sanitizeMRZ(raw: string): string {
   const upper = raw.toUpperCase();
   let out = '';

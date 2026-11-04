@@ -67,4 +67,14 @@ describe('planNostrErasure', () => {
     expect(plan.deletion?.tags).toContainEqual(['e', 'k0']);
     expect(planNostrErasure(PK, [], ev('k0', 0, [], JSON.stringify({ name: 'Ann' })))).toEqual({ replacements: [], deletion: null });
   });
+
+  test('takes back a kind 10050 only while it is the exact list this app published', () => {
+    const list = ev('dm', 10050, [['relay', 'wss://nos.lol']]);
+    const ours = planNostrErasure(PK, [], null, { latest: list, publishedId: 'dm' });
+    expect(ours.replacements).toEqual([{ kind: 10050, tags: [], content: '' }]);
+    expect(ours.deletion?.tags).toContainEqual(['e', 'dm']);
+    // Replaced since (e.g. in another client) or never ours: left alone.
+    expect(planNostrErasure(PK, [], null, { latest: list, publishedId: 'older' })).toEqual({ replacements: [], deletion: null });
+    expect(planNostrErasure(PK, [], null, { latest: list, publishedId: null })).toEqual({ replacements: [], deletion: null });
+  });
 });

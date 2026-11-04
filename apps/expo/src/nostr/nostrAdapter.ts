@@ -101,6 +101,7 @@ export interface NostrFilter {
   readonly '#d'?: readonly string[];
   readonly '#e'?: readonly string[];
   readonly '#n'?: readonly string[];
+  readonly '#p'?: readonly string[];
   readonly since?: number;
   readonly limit?: number;
 }

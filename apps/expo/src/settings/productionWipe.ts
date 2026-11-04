@@ -31,6 +31,7 @@ import {
   quiesceNostrKeyOperations,
 } from '@/nostr/userKey';
 import { preparePageDesign, usePageDesignStore } from '@/page/pageDesignStore';
+import { usePrivateExchangeStore } from '@/privateExchange/store';
 import { useProEntitlementStore } from '@/pro/entitlementStore';
 import { useProfileSnapshotStore } from '@/people/profileSnapshots';
 import { useProfileStore } from '@/profile/store';
@@ -98,6 +99,7 @@ function clearMemoryCaches(): void {
   useIdentityCoordinator.getState().resetForLocalWipe();
   useIssuerTrustAnchorStore.getState().resetForLocalWipe();
   usePageDesignStore.getState().resetForLocalWipe();
+  usePrivateExchangeStore.getState().resetForLocalWipe();
   // Cached authority data, not the authority: the subscription lives in the
   // user's store account, so a wiped device re-verifies and gets it straight
   // back on next launch.

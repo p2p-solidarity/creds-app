@@ -32,6 +32,7 @@
 import { create } from 'zustand';
 
 import { fetchAndCacheIssuer } from '@/credentials/issuerStore';
+import { forgetPassportPrivateClaims } from '@/passport/privateClaims';
 import { forgetPassportStatement } from '@/passport/statementStore';
 import { decryptJson, encryptJson } from '@/storage/encryptionManager';
 import { ManifestStorage } from '@/storage/manifestStorage';
@@ -218,7 +219,10 @@ export const useCredentialStore = create<CredentialStoreState>((set, get) => ({
     if (!canCommitLocalData(captureLocalDataEpoch())) return;
     const type = get().details.get(id)?.type ?? get().manifest.find((m) => m.id === id)?.type;
     // A deleted passport must not keep its device-attested statement alive.
-    if (type === 'passport') forgetPassportStatement(id);
+    if (type === 'passport') {
+      forgetPassportStatement(id);
+      forgetPassportPrivateClaims(id);
+    }
     getMmkv().remove(`${PREFIX}${id}`);
     set((s) => {
       const nextManifest = s.manifest.filter((m) => m.id !== id);

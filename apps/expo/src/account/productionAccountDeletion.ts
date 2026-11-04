@@ -26,6 +26,7 @@ import {
   type StepRunResult,
 } from './accountDeletion';
 import { eraseNostrFootprint } from './nostrErasure';
+import { readPublishedDmRelayListId } from '@/privateExchange/relays';
 
 const DONE: StepRunResult = { kind: 'done' };
 const NOTHING: StepRunResult = { kind: 'nothing' };
@@ -52,6 +53,7 @@ async function eraseNostr(): Promise<StepRunResult> {
     sign: signNostrEvent,
     subscribe: subscribeEvents,
     publish: (event, relays) => publishToRelays(event, relays, publishEvent),
+    publishedDmRelayListId: readPublishedDmRelayListId(),
   });
   return result.ok ? DONE : FAILED;
 }

@@ -152,7 +152,7 @@ export function verifyPassportPresentationWith(verifyDevice: DeviceVerifier) {
     if (wire.device !== null) {
       if (wire.device.platform === 'notary') return err('deviceRejected');
       const checked = verifyDevice(
-        wire.device,
+        wire.device as Parameters<DeviceVerifier>[0],
         new TextEncoder().encode(wire.statement),
         holderHex.value,
         presentation.signedAt * 1000,
