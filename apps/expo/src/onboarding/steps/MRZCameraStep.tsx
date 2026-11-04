@@ -40,6 +40,7 @@ import {
 import { ThemedButton } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { useTranslation } from '@/i18n';
+import { mrzDate, type MrzDateKind } from '@/passport/pipeline';
 import { useCameraPermission } from '@/scan/useCameraPermission';
 import { MONO } from '@/constants/fonts';
 import { Radius } from '@/constants/radius';
@@ -757,11 +758,11 @@ function ConfirmationCard({
         />
         <InfoRow
           label={developerMode ? 'Date of Birth' : t('passportSetup.camera.birthDate')}
-          value={formatYyMmDd(draft.dateOfBirth)}
+          value={formatYyMmDd(draft.dateOfBirth, 'birth')}
         />
         <InfoRow
           label={developerMode ? 'Expiry' : t('passportSetup.camera.expiry')}
-          value={formatYyMmDd(draft.expiryDate)}
+          value={formatYyMmDd(draft.expiryDate, 'expiry')}
         />
       </View>
 
@@ -796,14 +797,10 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function formatYyMmDd(s: string): string {
-  if (s.length !== 6) return s;
-  const yy = s.slice(0, 2);
-  const mm = s.slice(2, 4);
-  const dd = s.slice(4, 6);
-  const yyNum = Number(yy);
-  const fullYear = yyNum >= 30 ? 1900 + yyNum : 2000 + yyNum;
-  return `${dd}/${mm}/${String(fullYear)}`;
+function formatYyMmDd(s: string, kind: MrzDateKind): string {
+  const date = mrzDate(s, kind);
+  if (date === null) return s;
+  return `${s.slice(4, 6)}/${s.slice(2, 4)}/${String(date.getUTCFullYear())}`;
 }
 
 const styles = StyleSheet.create({
