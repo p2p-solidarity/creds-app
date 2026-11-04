@@ -1,6 +1,6 @@
 # 15 — Plan：不帶 `@` 的名稱網址（`creds.id/gimmy`）與保留字表
 
-> 2026-11-04 · 狀態：**P0 後端保留字已上線**（backend `6197549`，worker `solidarity-id` 版本 `9193b1d8`；199 字線上逐字回 `reserved`）。P0 的 web AASA、P1–P3 尚未動。
+> 2026-11-04 · 狀態：**P0 完成**——後端保留字已上線（backend `6197549`，worker `solidarity-id` 版本 `9193b1d8`；199 字線上逐字回 `reserved`），收窄版 AASA 已上線（web `main` `d28df9a`，Apple CDN 已更新）。P1–P3 尚未動。
 > 範圍：`packages/shared`、`apps/expo`、`apps/notary`、`../airmeishi-web`、`../airmeishi-backend`（NIP-05 worker `solidarity-id`）。
 > 屬於 **L**：會動到 witness 的 bio 標記比對、名稱註冊、iOS / Android 系統連結。名字一旦發出去就收不回，所以保留字要在推廣短網址**之前**先上線。
 
@@ -166,7 +166,7 @@ Apple 文件：`*` 是貪婪比對，會跨過 `/`；`?` 是單一字元；第�
 
 **P0 — 現在，只動伺服器，不依賴任何 client**
 - ✅ 後端：`RESERVED_NIP05_NAMES` 加上 §3 的 156 字並部署（2026-11-04，見檔頭）。
-- ⏳ web：收窄版 AASA（`b1fea68`，只改 AASA 一個檔）還只在 web `2.0.1`。web production 是 Cloudflare 從 web `main` 自動建置的，`2.0.1` 比 `main` 多 10 個 commit；要上線就把 `b1fea68` 單獨 cherry-pick 到 `main` 再 push，或等 `2.0.1` 合進 `main`。上線後才修得掉 iOS 2.0.0 點 `creds.id/edit` 掉進 Unmatched Route 的問題。
+- ✅ web：收窄版 AASA `b1fea68` 單獨 cherry-pick 到 web `main`（`d28df9a`）。web production 是 Cloudflare 從 `main` 自動建置的，不是本機部署。線上和 Apple CDN 現在只認領 `/`、`/@*`、`/c/*`、`/pear/*`、`/websign`，所以 iOS 上的 `creds.id/edit`、`/gimmy` 會留在 Safari。`/pear/*` 等 `2.0.1` 的 `7acffd5` 合進 `main` 時才會拿掉。iPhone 會在 app 更新或定期重抓時拿到新 AASA，已安裝的手機不會立刻生效。
 
 **P1 — 讀兩種**
 - shared：`credsPath.ts`；bio 標記比對同時接受 `creds.id/name` 和 `creds.id/@name`（安全路徑接縫，用 `tdd`：先列失敗模式，見 §9 第 1 點）。bump 版本 → web 重新 vendor、notary 重新部署。
