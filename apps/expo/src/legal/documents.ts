@@ -145,11 +145,7 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
                     "The camera reads QR codes and a passport’s machine-readable zone on the device."
                   ]
                 },
-                "Device permissions and provider settings affect these optional features.",
-                {
-                  "heading": "Private card exchange (Pear)"
-                },
-                "Private card exchange connects your phone directly to the other person’s phone over a peer-to-peer network when you start or accept an exchange. The other phone and the network’s nodes see your IP address; the card you approve is sent only to that person. You can turn private exchange off in Settings."
+                "Device permissions and provider settings affect these optional features."
               ]
             },
             {
@@ -626,11 +622,7 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
                     "相機在裝置上讀取 QR code 與護照的機讀區。"
                   ]
                 },
-                "裝置權限及供應商設定會影響這些選用功能。",
-                {
-                  "heading": "私密名片交換（Pear）"
-                },
-                "私密名片交換會在你發起或接受交換時，透過點對點網路讓你的手機直接連到對方手機。對方手機與該網路的節點會看到你的 IP 位址；你核准的名片只傳給那個人。你可以在設定中關閉私密交換。"
+                "裝置權限及供應商設定會影響這些選用功能。"
               ]
             },
             {
