@@ -254,7 +254,7 @@ export function MRZCameraStep({
    *  repeated signal never re-renders. */
   const setPhaseTo = useCallback((next: ScanPhase) => {
     if (phaseRef.current === next) return;
-    console.log(`[MRZ] phase: ${phaseRef.current} → ${next}`);
+    if (__DEV__) console.log(`[MRZ] phase: ${phaseRef.current} → ${next}`);
     phaseRef.current = next;
     setPhase(next);
   }, []);
@@ -279,7 +279,7 @@ export function MRZCameraStep({
       if (hasAcceptedRef.current) return;
       hasAcceptedRef.current = true;
       const totalMs = Date.now() - mountTimeRef.current;
-      console.log(
+      if (__DEV__) console.log(
         `[MRZ] ACCEPT after ${String(totalMs)}ms / ${String(calls)} ocr calls (avg ${String(avgMs)}ms/call)`,
       );
       clearPhaseTimers();
@@ -483,7 +483,7 @@ export function MRZCameraStep({
   );
 
   const handleRescan = useCallback(() => {
-    console.log('[MRZ] rescan — resetting counters and timers');
+    if (__DEV__) console.log('[MRZ] rescan — resetting counters and timers');
     frameTick.value = 0;
     scanAccepted.value = false;
     lastBucket.value = -1;
@@ -518,12 +518,12 @@ export function MRZCameraStep({
   }, [draft, onScanned]);
 
   useEffect(() => {
-    console.log(
+    if (__DEV__) console.log(
       `[MRZ] mount — target=${String(FRAME_OUTPUT_RESOLUTION.width)}x${String(FRAME_OUTPUT_RESOLUTION.height)} fps=30 throttle=${String(FRAME_THROTTLE)} struggleMs=${String(STRUGGLE_MS)} hold=${String(PHASE_HOLD_MS)}ms advance=${String(AUTO_ADVANCE_DELAY_MS)}ms nativeDraft=true`,
     );
     mountTimeRef.current = Date.now();
     return () => {
-      console.log(
+      if (__DEV__) console.log(
         `[MRZ] unmount after ${String(Date.now() - mountTimeRef.current)}ms / ${String(ocrCount.value)} ocr calls`,
       );
       if (phaseTimerRef.current !== null) {

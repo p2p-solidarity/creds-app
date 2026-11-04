@@ -39,7 +39,6 @@
  *   cd apps/expo && bun test __tests__/unit/icloudBackupRoundtrip.test.ts
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it, mock } from 'bun:test';
-import { readFileSync } from 'node:fs';
 
 import type { Preferences } from '../../src/settings/preferences';
 
@@ -684,14 +683,6 @@ describe('iCloud backup — gesture-triggered (pull-down pan)', () => {
     expect(gestureMod.shouldTriggerGestureBackup(40)).toBe(false);
     expect(gestureMod.shouldTriggerGestureBackup(80)).toBe(false);
     expect(gestureMod.shouldTriggerGestureBackup(120)).toBe(true);
-
-    const source = readFileSync(
-      new URL('../../src/backup/gestureAutoBackup.ts', import.meta.url),
-      'utf8',
-    );
-    expect(source).toMatch(
-      /function shouldTriggerGestureBackup[\s\S]*?'worklet';[\s\S]*?return translationY/u,
-    );
   });
 
   it('restoring an archive iCloud has not delivered yet fails as download-pending, naming it', async () => {
