@@ -13,13 +13,15 @@ import { Colors } from '@/constants/Colors';
 import { Radius } from '@/constants/radius';
 import { useTranslation } from '@/i18n';
 
-import { usePendingIncoming, usePrivateInboxSync } from './usePrivateExchange';
+import { usePendingIncoming, usePrivateInboxSync, useUnsavedContactShares } from './usePrivateExchange';
 
 export function PrivateRequestsRow(): ReactNode {
   const { t } = useTranslation();
   usePrivateInboxSync();
   const pending = usePendingIncoming();
-  if (pending.length === 0) return null;
+  const shares = useUnsavedContactShares();
+  const count = pending.length + shares.length;
+  if (count === 0) return null;
 
   return (
     <View className="px-4 pb-3">
@@ -35,12 +37,12 @@ export function PrivateRequestsRow(): ReactNode {
         <PressableScale
           onPress={() => { router.push('/inbox'); }}
           accessibilityRole="button"
-          accessibilityLabel={t('privateExchange.inbox.row', { count: pending.length })}
+          accessibilityLabel={t('privateExchange.inbox.row', { count })}
           style={{ minHeight: 52, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14 }}
         >
           <SfIcon name="lock" size={18} color={Colors.primaryBlue} />
           <ThemedText variant="bodyMedium" tabularNums style={{ flex: 1 }}>
-            {t('privateExchange.inbox.row', { count: pending.length })}
+            {t('privateExchange.inbox.row', { count })}
           </ThemedText>
           <SfIcon name="chevron.right" size={12} color={Colors.text2} />
         </PressableScale>

@@ -1,6 +1,7 @@
 /**
  * Private inbox (docs/ref/16 §4): passport requests other creds users sent
- * over NIP-17. Tapping one opens the consent sheet.
+ * over NIP-17 (tapping one opens the consent sheet), and contact details
+ * shared by people not yet in my People.
  */
 import type { ReactNode } from 'react';
 import { useState } from 'react';
@@ -9,8 +10,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
+import { ContactShareInboxItem } from '@/components/privateExchange/ContactShareInboxItem';
 import { PassportConsentSheet, shortDid } from '@/components/privateExchange/PassportConsentSheet';
-import { usePendingIncoming, usePrivateInboxSync } from '@/components/privateExchange/usePrivateExchange';
+import {
+  usePendingIncoming,
+  usePrivateInboxSync,
+  useUnsavedContactShares,
+} from '@/components/privateExchange/usePrivateExchange';
 import { ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { useTranslation } from '@/i18n';
@@ -22,6 +28,7 @@ export default function PrivateInboxScreen(): ReactNode {
   const insets = useSafeAreaInsets();
   const sync = usePrivateInboxSync();
   const pending = usePendingIncoming();
+  const shares = useUnsavedContactShares();
   const [open, setOpen] = useState<IncomingPassportRequest | null>(null);
 
   return (
@@ -46,13 +53,13 @@ export default function PrivateInboxScreen(): ReactNode {
           <ThemedText variant="bodyMedium" tone="error">{t('privateExchange.inbox.unreachable')}</ThemedText>
         ) : null}
 
-        {pending.length === 0 ? (
+        {pending.length === 0 && shares.length === 0 ? (
           sync === 'syncing' ? (
             <ThemedText variant="bodyMedium" tone="secondary">{t('privateExchange.inbox.syncing')}</ThemedText>
           ) : sync === 'idle' ? (
             <ThemedText variant="bodyMedium" tone="secondary">{t('privateExchange.inbox.empty')}</ThemedText>
           ) : null
-        ) : (
+        ) : pending.length === 0 ? null : (
           <ThemedSurface variant="card" style={{ overflow: 'hidden' }}>
             {pending.map((request, index) => (
               <PressableScale
@@ -74,6 +81,10 @@ export default function PrivateInboxScreen(): ReactNode {
             ))}
           </ThemedSurface>
         )}
+
+        {shares.map((share) => (
+          <ContactShareInboxItem key={share.senderDid} share={share} />
+        ))}
 
         <ThemedText variant="caption" tone="tertiary">{t('privateExchange.inbox.openAppNote')}</ThemedText>
       </ScrollView>

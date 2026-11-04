@@ -1,11 +1,14 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { useProfileSnapshotStore } from '@/people/profileSnapshots';
 import { syncPrivateInbox } from '@/privateExchange/inbox';
 import {
   usePrivateExchangeStore,
+  type ContactShareDraft,
   type IncomingPassportRequest,
   type OutgoingPassportRequest,
+  type ReceivedContactShare,
 } from '@/privateExchange/store';
 
 export type InboxSyncState = 'idle' | 'syncing' | 'noKey' | 'unreachable';
@@ -66,4 +69,35 @@ export function useOutgoingFor(did: string): readonly OutgoingPassportRequest[] 
     () => Object.values(outgoing).filter((r) => r.recipientDid === did).sort((a, b) => b.sentAt - a.sentAt),
     [outgoing, did]
   );
+}
+
+/** The latest details `did` shared with me privately. */
+export function useContactShareFrom(did: string): ReceivedContactShare | undefined {
+  useHydrated();
+  return usePrivateExchangeStore((s) => s.contacts[did]);
+}
+
+/** Shares from people not saved in my People: they wait in the inbox. */
+export function useUnsavedContactShares(): readonly ReceivedContactShare[] {
+  useHydrated();
+  const contacts = usePrivateExchangeStore((s) => s.contacts);
+  const snapshots = useProfileSnapshotStore((s) => s.snapshots);
+  return useMemo(() => {
+    const saved = new Set<string>();
+    for (const snapshot of snapshots.values()) if (snapshot.kind === 'verified') saved.add(snapshot.did);
+    return Object.values(contacts)
+      .filter((c) => !saved.has(c.senderDid))
+      .sort((a, b) => b.sharedAt - a.sharedAt);
+  }, [contacts, snapshots]);
+}
+
+export function useContactShareDraft(): ContactShareDraft | null {
+  useHydrated();
+  return usePrivateExchangeStore((s) => s.contactDraft);
+}
+
+/** Unix s I last shared my details with `did`, if ever. */
+export function useContactSentAt(did: string): number | undefined {
+  useHydrated();
+  return usePrivateExchangeStore((s) => s.contactsSent[did]);
 }

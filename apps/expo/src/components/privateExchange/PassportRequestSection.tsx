@@ -13,7 +13,8 @@ import { ThemedButton, ThemedSurface, ThemedSwitch, ThemedText } from '@/compone
 import { Colors } from '@/constants/Colors';
 import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
-import { recipientHexOf, sendPassportRequest } from '@/privateExchange/passportExchange';
+import { sendPassportRequest } from '@/privateExchange/passportExchange';
+import { recipientHexOf } from '@/privateExchange/send';
 import type { OutgoingPassportRequest } from '@/privateExchange/store';
 
 import { useOutgoingFor, usePrivateInboxSync } from './usePrivateExchange';

@@ -1,7 +1,8 @@
 /**
  * Private exchange state (docs/ref/16): passport requests I sent and their
- * verified answers, requests others sent me, which gift wraps were already
- * opened, and the inbox cursor. MMKV-backed, this phone only.
+ * verified answers, requests others sent me, contact details people shared
+ * with me privately, which gift wraps were already opened, and the inbox
+ * cursor. MMKV-backed, this phone only.
  *
  * Seeds empty in memory and hydrates on first use (Rule 10). Every write
  * re-checks the local-data epoch, so a wipe in progress is never undone.
@@ -16,6 +17,7 @@ const STORE_KEY = 'privateExchange:v1';
 const MAX_INCOMING = 200;
 const MAX_INCOMING_PER_SENDER = 20;
 const SEEN_RETENTION_SECONDS = 30 * 86_400;
+const MAX_CONTACT_SHARES = 200;
 
 export interface VerifiedPassportAnswer {
   readonly claims: PassportClaimValues;
@@ -51,16 +53,51 @@ export interface IncomingPassportRequest {
   readonly status: 'pending' | 'answered' | 'dismissed';
 }
 
+/** The newest contact details one person shared with me (one per sender DID). */
+export interface ReceivedContactShare {
+  /** The rumor id. */
+  readonly id: string;
+  readonly senderHex: string;
+  readonly senderDid: string;
+  /** From the sender's verified Page; self-chosen, shown with the short DID. */
+  readonly senderName: string;
+  readonly phone?: string;
+  readonly email?: string;
+  readonly note?: string;
+  /** Unix s, the rumor's own time (author-stated): newer replaces older. */
+  readonly sharedAt: number;
+}
+
+export interface ContactShareDraft {
+  readonly phone: string;
+  readonly email: string;
+  readonly note: string;
+}
+
 interface Persisted {
   readonly outgoing: Readonly<Record<string, OutgoingPassportRequest>>;
   readonly incoming: Readonly<Record<string, IncomingPassportRequest>>;
+  /** sender DID → their latest share. */
+  readonly contacts: Readonly<Record<string, ReceivedContactShare>>;
+  /** What I last shared, prefilled next time. */
+  readonly contactDraft: ContactShareDraft | null;
+  /** recipient DID → unix s I last shared my details with them. */
+  readonly contactsSent: Readonly<Record<string, number>>;
   /** wrap id → unix s first seen. */
   readonly seen: Readonly<Record<string, number>>;
   /** Unix s of the last sync that reached at least one relay's EOSE. */
   readonly cursor: number | null;
 }
 
-const EMPTY: Persisted = { outgoing: {}, incoming: {}, seen: {}, cursor: null };
+const EMPTY: Persisted = {
+  outgoing: {},
+  incoming: {},
+  contacts: {},
+  contactDraft: null,
+  contactsSent: {},
+  seen: {},
+  cursor: null,
+};
 
 interface PrivateExchangeState extends Persisted {
   readonly hydrated: boolean;
@@ -69,6 +106,10 @@ interface PrivateExchangeState extends Persisted {
   readonly answerOutgoing: (id: string, answer: VerifiedPassportAnswer, epoch: LocalDataEpoch) => boolean;
   readonly addIncoming: (request: IncomingPassportRequest, epoch: LocalDataEpoch) => boolean;
   readonly setIncomingStatus: (id: string, status: IncomingPassportRequest['status'], epoch: LocalDataEpoch) => boolean;
+  /** Keeps only the newest share per sender. */
+  readonly addContactShare: (share: ReceivedContactShare, epoch: LocalDataEpoch) => boolean;
+  readonly removeContactShare: (senderDid: string, epoch: LocalDataEpoch) => boolean;
+  readonly recordContactSent: (recipientDid: string, draft: ContactShareDraft, at: number, epoch: LocalDataEpoch) => boolean;
   readonly markSeen: (wrapIds: readonly string[], cursor: number | null, epoch: LocalDataEpoch) => boolean;
   readonly resetForLocalWipe: () => void;
 }
@@ -81,6 +122,9 @@ function readPersisted(): Persisted {
     return {
       outgoing: parsed.outgoing ?? {},
       incoming: parsed.incoming ?? {},
+      contacts: parsed.contacts ?? {},
+      contactDraft: parsed.contactDraft ?? null,
+      contactsSent: parsed.contactsSent ?? {},
       seen: parsed.seen ?? {},
       cursor: typeof parsed.cursor === 'number' ? parsed.cursor : null,
     };
@@ -90,7 +134,22 @@ function readPersisted(): Persisted {
 }
 
 function pick(state: Persisted): Persisted {
-  return { outgoing: state.outgoing, incoming: state.incoming, seen: state.seen, cursor: state.cursor };
+  return {
+    outgoing: state.outgoing,
+    incoming: state.incoming,
+    contacts: state.contacts,
+    contactDraft: state.contactDraft,
+    contactsSent: state.contactsSent,
+    seen: state.seen,
+    cursor: state.cursor,
+  };
+}
+
+function capContacts(contacts: Record<string, ReceivedContactShare>): Record<string, ReceivedContactShare> {
+  const kept = Object.values(contacts)
+    .sort((a, b) => b.sharedAt - a.sharedAt)
+    .slice(0, MAX_CONTACT_SHARES);
+  return Object.fromEntries(kept.map((c) => [c.senderDid, c]));
 }
 
 /** Keep the newest `MAX_INCOMING_PER_SENDER` per sender and `MAX_INCOMING` overall. */
@@ -152,6 +211,22 @@ export const usePrivateExchangeStore = create<PrivateExchangeState>((set, get) =
       const request = s.incoming[id];
       if (request === undefined) return false;
       return commit({ ...s, incoming: { ...s.incoming, [id]: { ...request, status } } }, epoch);
+    },
+    addContactShare: (share, epoch) => {
+      const s = current();
+      const existing = s.contacts[share.senderDid];
+      if (existing !== undefined && existing.sharedAt >= share.sharedAt) return false;
+      return commit({ ...s, contacts: capContacts({ ...s.contacts, [share.senderDid]: share }) }, epoch);
+    },
+    removeContactShare: (senderDid, epoch) => {
+      const s = current();
+      if (s.contacts[senderDid] === undefined) return false;
+      const { [senderDid]: _removed, ...contacts } = s.contacts;
+      return commit({ ...s, contacts }, epoch);
+    },
+    recordContactSent: (recipientDid, draft, at, epoch) => {
+      const s = current();
+      return commit({ ...s, contactDraft: draft, contactsSent: { ...s.contactsSent, [recipientDid]: at } }, epoch);
     },
     markSeen: (wrapIds, cursor, epoch) => {
       const s = current();

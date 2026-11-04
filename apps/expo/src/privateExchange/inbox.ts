@@ -1,6 +1,7 @@
 /**
  * Inbox sync (docs/ref/16 §3): fetch kind 1059 wraps p-tagged to me, open
- * them, tie each sender's npub to a DID, and route requests and answers.
+ * them, tie each sender's npub to a DID, and route requests, answers and
+ * shared contact details.
  *
  * Every rejection is dropped silently (no reply, no UI) and logged as a fixed
  * tag only — never an npub, DID or content. The cursor advances only after a
@@ -12,6 +13,7 @@ import {
   pageBindsSender,
   parsePrivateMessage,
   verifyPassportPresentation,
+  type ContactShareMessage,
   type ParsedPrivateMessage,
   type ProfileRecord,
   type ProofRequestMessage,
@@ -88,6 +90,22 @@ function onRequest(parsed: ParsedPrivateMessage, message: ProofRequestMessage, s
       exp: message.exp,
       receivedAt: Math.floor(Date.now() / 1000),
       status: 'pending',
+    },
+    epoch
+  );
+}
+
+function onContactShare(parsed: ParsedPrivateMessage, message: ContactShareMessage, sender: BoundSender, epoch: LocalDataEpoch): void {
+  usePrivateExchangeStore.getState().addContactShare(
+    {
+      id: parsed.rumorId,
+      senderHex: parsed.senderHex,
+      senderDid: sender.did,
+      senderName: sender.record.displayName,
+      ...(message.phone === undefined ? {} : { phone: message.phone }),
+      ...(message.email === undefined ? {} : { email: message.email }),
+      ...(message.note === undefined ? {} : { note: message.note }),
+      sharedAt: parsed.createdAt,
     },
     epoch
   );
@@ -183,6 +201,7 @@ async function runSync(): Promise<InboxSyncResult> {
     const { message } = parsed.value;
     if (message.type === 'proof.request') onRequest(parsed.value, message, sender, epoch);
     else if (message.type === 'proof.response') onResponse(parsed.value, message, sender, opened.value.myHex, epoch);
+    else onContactShare(parsed.value, message, sender, epoch);
   }
 
   usePrivateExchangeStore

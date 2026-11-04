@@ -24,6 +24,7 @@ import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { buildProfileShareModel } from '@/components/me/meProfileModel';
 import { PageLocalDetailsSection } from '@/components/people/PageLocalDetails';
+import { ContactShareSection } from '@/components/privateExchange/ContactShareSection';
 import { PassportRequestSection } from '@/components/privateExchange/PassportRequestSection';
 import { VerifiedProfileView } from '@/components/scan/VerifiedProfileView';
 import { ThemedText } from '@/components/themed';
@@ -90,6 +91,9 @@ export default function VerifiedProfileDetailScreen(): ReactNode {
             <PageLocalDetailsSection snapshot={snapshot} />
           </Animated.View>
           <Animated.View entering={fadeUpIn(2, reduceMotion)}>
+            <ContactShareSection record={snapshot.record} />
+          </Animated.View>
+          <Animated.View entering={fadeUpIn(3, reduceMotion)}>
             <PassportRequestSection record={snapshot.record} />
           </Animated.View>
         </ScrollView>
