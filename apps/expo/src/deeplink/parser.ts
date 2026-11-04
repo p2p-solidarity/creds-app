@@ -3,11 +3,10 @@
  * it tests cleanly under Bun without dragging the Flow-typed RN runtime.
  * The handler (with `router.push` side effects) lives in ./handler.
  */
-import { DEFAULT_HANDLE_RESOLVERS, matchHandleResolver } from '@solidarity/shared';
-
 import { WEBSIGN_DEEPLINK_HOST, WEBSIGN_REQUEST_PARAM } from '../websign/transport';
 import { isAppSchemeProtocol } from './appScheme';
 import { isProductHost, isVerifiedDomain } from './domainVerification';
+import { handleFromProductUrl } from './pageUrl';
 
 export type DeepLinkRoute =
   | { readonly kind: 'card'; readonly cardId: string }
@@ -30,27 +29,6 @@ const MAX_NPUB_LENGTH = 90;
 
 const UUID_RE =
   /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/u;
-
-function parseVerifiedHandleRoute(
-  productHost: boolean,
-  segments: readonly string[],
-  hash: string
-): DeepLinkRoute | null {
-  const segment = segments[0];
-  if (!productHost || hash.length > 0 || segments.length !== 1 || !segment?.startsWith('@')) {
-    return null;
-  }
-
-  let handle: string;
-  try {
-    handle = decodeURIComponent(segment.slice(1));
-  } catch {
-    return null;
-  }
-  return matchHandleResolver(handle, DEFAULT_HANDLE_RESOLVERS) === undefined
-    ? null
-    : { kind: 'verifiedHandle', handle };
-}
 
 /**
  * The `https://<product-host>/websign#req=<X>` fragment form of the App↔Web
@@ -96,8 +74,8 @@ function parseVerifiedDomainRoute(url: URL, devProductHosts: boolean): DeepLinkR
   if (productHost && segments.length === 1 && segments[0] === WEBSIGN_DEEPLINK_HOST) {
     return parseWebSignDomainRoute(url.hash);
   }
-  const handleRoute = parseVerifiedHandleRoute(productHost, segments, url.hash);
-  if (handleRoute !== null) return handleRoute;
+  const handle = handleFromProductUrl(url, devProductHosts);
+  if (handle !== null) return { kind: 'verifiedHandle', handle };
   // Verified Page link: `https://creds.id/#<fragment>`
   // — the fragment never leaves the device over the network,
   // so this is just recognising the shape and handing the raw fragment blob

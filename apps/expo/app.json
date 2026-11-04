@@ -124,6 +124,28 @@
               "host": "app.solidarity.gg"
             },
             {
+              "path": "/"
+            },
+            {
+              "pathPrefix": "/@"
+            },
+            {
+              "pathPrefix": "/c/"
+            },
+            {
+              "path": "/websign"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ],
+          "autoVerify": true
+        },
+        {
+          "action": "VIEW",
+          "data": [
+            {
               "scheme": "https",
               "host": "creds.id"
             },
@@ -138,6 +160,9 @@
             },
             {
               "path": "/websign"
+            },
+            {
+              "pathAdvancedPattern": "/[a-z0-9]{3,30}"
             }
           ],
           "category": [
