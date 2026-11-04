@@ -19,7 +19,7 @@ bun run lint                                                 # 0 errors (cosmeti
 
 ### Dev client required — Expo Go is not a development path
 
-`react-native-bare-kit` (Pear lane, `docs/ref/04-plan-app.md` Phase A3) ships
+`react-native-bare-kit` (Pear lane) ships
 a `BareKit` TurboModule + a vendored `BareKit.xcframework` / Bare Android
 runtime. Expo Go only bundles Expo's own module set, so **Expo Go cannot run
 this app** — it never could, given the existing Nitro modules
