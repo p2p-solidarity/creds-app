@@ -83,12 +83,48 @@ const contactShareSchema = z
   .strict()
   .refine((m) => m.phone !== undefined || m.email !== undefined || m.note !== undefined);
 
-const messageSchema = z.union([proofRequestSchema, proofResponseSchema, contactShareSchema]);
+/** Ask for "a credential": no claim list — the holder picks (docs/ref/16 §12). */
+const credentialRequestSchema = z
+  .object({
+    v: z.literal(1),
+    type: z.literal('credential.request'),
+    page: pageSchema,
+    purpose: z.string().min(1).max(140).optional(),
+    nonce: nonceSchema,
+    exp: z.number().int().positive(),
+  })
+  .strict();
+
+/** A vp+jwt from the holder's signing key, plus the root DID's cardKeyBinding. */
+const credentialResponseSchema = z
+  .object({
+    v: z.literal(1),
+    type: z.literal('credential.response'),
+    page: pageSchema,
+    vp: z.string().min(1).max(60_000),
+    binding: z.string().min(1).max(4_000),
+  })
+  .strict();
+
+const messageSchema = z.union([
+  proofRequestSchema,
+  proofResponseSchema,
+  contactShareSchema,
+  credentialRequestSchema,
+  credentialResponseSchema,
+]);
 
 export type ProofRequestMessage = z.infer<typeof proofRequestSchema>;
 export type ProofResponseMessage = z.infer<typeof proofResponseSchema>;
 export type ContactShareMessage = z.infer<typeof contactShareSchema>;
-export type PrivateMessage = ProofRequestMessage | ProofResponseMessage | ContactShareMessage;
+export type CredentialRequestMessage = z.infer<typeof credentialRequestSchema>;
+export type CredentialResponseMessage = z.infer<typeof credentialResponseSchema>;
+export type PrivateMessage =
+  | ProofRequestMessage
+  | ProofResponseMessage
+  | ContactShareMessage
+  | CredentialRequestMessage
+  | CredentialResponseMessage;
 
 export type PrivateMessageRejection = 'notCreds' | 'notForMe' | 'malformed' | 'expired' | 'expiryTooFar';
 
@@ -99,7 +135,7 @@ export interface ParsedPrivateMessage {
   readonly wrapId: string;
   /** Unix seconds, from the rumor (the canonical time). */
   readonly createdAt: number;
-  /** For `proof.response`: the request's rumor id (its `e` tag). */
+  /** For `proof.response` / `credential.response`: the request's rumor id (its `e` tag). */
   readonly replyTo?: string;
 }
 
@@ -135,12 +171,12 @@ export function parsePrivateMessage(
     createdAt: rumor.created_at,
   };
 
-  if (message.type === 'proof.request') {
+  if (message.type === 'proof.request' || message.type === 'credential.request') {
     if (message.exp <= nowSeconds) return err('expired');
     if (message.exp > nowSeconds + MAX_REQUEST_LIFETIME_SECONDS + SKEW_SECONDS) return err('expiryTooFar');
     return ok(base);
   }
-  if (message.type === 'proof.response') {
+  if (message.type === 'proof.response' || message.type === 'credential.response') {
     const replyTo = rumor.tags.find((t) => t[0] === 'e')?.[1];
     if (replyTo === undefined || !/^[0-9a-f]{64}$/u.test(replyTo)) return err('malformed');
     return ok({ ...base, replyTo });
@@ -189,6 +225,41 @@ export function buildProofResponseRumor(args: {
   return rumorInput(
     args.recipientHex,
     { type: 'proof.response', ...(args.page === undefined ? {} : { page: args.page }), passport: args.passport },
+    [['e', args.requestId]]
+  );
+}
+
+export function buildCredentialRequestRumor(args: {
+  readonly recipientHex: string;
+  readonly nonce: string;
+  readonly exp: number;
+  readonly page?: string;
+  readonly purpose?: string;
+}): Omit<RumorInput, 'created_at'> {
+  return rumorInput(args.recipientHex, {
+    type: 'credential.request',
+    ...(args.page === undefined ? {} : { page: args.page }),
+    ...(args.purpose === undefined ? {} : { purpose: args.purpose }),
+    nonce: args.nonce,
+    exp: args.exp,
+  });
+}
+
+export function buildCredentialResponseRumor(args: {
+  readonly recipientHex: string;
+  readonly requestId: string;
+  readonly vp: string;
+  readonly binding: string;
+  readonly page?: string;
+}): Omit<RumorInput, 'created_at'> {
+  return rumorInput(
+    args.recipientHex,
+    {
+      type: 'credential.response',
+      ...(args.page === undefined ? {} : { page: args.page }),
+      vp: args.vp,
+      binding: args.binding,
+    },
     [['e', args.requestId]]
   );
 }

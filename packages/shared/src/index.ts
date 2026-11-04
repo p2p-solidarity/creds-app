@@ -32,6 +32,7 @@
  */
 export * from './badges';
 export * from './canonical';
+export * from './cardKeyBinding';
 export * from './challenge';
 export * from './crypto';
 export * from './derive';
