@@ -16,11 +16,11 @@ export function handleFromProductUrl(url: URL, devProductHosts: boolean): string
   if (url.protocol !== 'https:' || url.hash.length > 0 || !isProductHost(url.host, devProductHosts)) {
     return null;
   }
-  const segments = url.pathname.replace(/^\//u, '').split('/');
-  if (segments.length !== 1 || segments[0] === undefined) return null;
+  const [raw, ...rest] = url.pathname.replace(/^\//u, '').split('/');
+  if (raw === undefined || rest.length > 0) return null;
   let segment: string;
   try {
-    segment = decodeURIComponent(segments[0]);
+    segment = decodeURIComponent(raw);
   } catch {
     return null;
   }
