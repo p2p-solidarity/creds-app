@@ -65,7 +65,7 @@ gift wrap  kind 1059  pubkey=一次性隨機金鑰  tags=[["p", 收件人]]  cre
 
 ### 2.3 中繼站
 
-- **自己**：npub 已就緒時，發佈 kind 10050，relay 清單＝`DEFAULT_RELAYS`（damus、nos.lol、primal）。發佈前先讀現有的 10050：**拿到 EOSE 且沒有**才發；讀到了就沿用（尊重用戶在別的客戶端設的清單）；盲讀（沒有任何 EOSE）就不發，下次再試。發佈成功後在本機記下「這份 10050 是 App 發的」（事件 id）；刪帳號時（`account/nostrErasure.ts`）只有現存的 10050 就是那一份才換成空清單，別的客戶端設的不動。
+- **自己**：npub 已就緒時，發佈 kind 10050，relay 清單＝`DM_RELAYS`（nos.lol、primal；damus 不在內，見 R1 實測）。發佈前先讀現有的 10050：**拿到 EOSE 且沒有**才發；讀到了就沿用（尊重用戶在別的客戶端設的清單）；盲讀（沒有任何 EOSE）就不發，下次再試。發佈成功後在本機記下「這份 10050 是 App 發的」（事件 id）；刪帳號時（`account/nostrErasure.ts`）只有現存的 10050 就是那一份才換成空清單，別的客戶端設的不動。
 - 前提：寄件人的 Page 已經發佈到 Nostr（`profile/store.ts` 發佈時才寫入 `nostr:<npub>`），收件人的已存 Page 裡也要有 `nostr:<npub>`。缺任何一邊，按鈕直接說「對方（或你）的 Page 還沒連上 Nostr」，不假裝能送。
 - **寄給對方**：讀對方的 10050。有 → 只送到那些 relay（NIP-17 的 MUST）。確認沒有（有 EOSE）→ 顯示「對方的 App 還不能收私密訊息」，不送。盲讀 → 「現在連不到中繼站」，不送。
 - 收：前景時訂閱自己 10050 relay 上的 `{kinds:[1059], "#p":[me], since: 上次游標 − 2 天}`（seal／wrap 的時間往前隨機最多 2 天）。沒有推播：對方要開 App 才收得到，UI 照實寫。
@@ -156,6 +156,7 @@ UI、訂閱迴圈、寄出流程不寫單元測試，由 E2E 涵蓋。`presentRe
 ## 8. 風險
 
 - **R1 中繼站不收 1059**：有些 relay 要 NIP-42 AUTH 才收或才給 1059。P1 第一步先用拋棄式 npub 實測 damus／nos.lol／primal 收發 1059；不行就換 relay 或在 App 實作 NIP-42 AUTH（多一段工作）。
+  - **實測（2026-11-05）**：nos.lol、relay.primal.net 不用 AUTH 就收也給 1059；relay.damus.io 收 1059，但要 NIP-42 AUTH 才回（AUTH → CLOSED），10050 發佈也沒回 OK。→ `DM_RELAYS = [nos.lol, relay.primal.net]`；NIP-42 AUTH 列為後續。兩身分 E2E 見 `docs/e2e/2026-11-05-nip17-private-exchange/result.md`。
 - **R2 Page JWS 太大**：avatar 欄位格式自由，public 投影可能超過 24 KB；P1 實測大小，超過就走 `resolveProfileByNpub` 後備。
 - **R3 P2 的測試憑證**：模擬器上需要一張能出示的 JWT-VC／SD-JWT。先查有沒有現成的 OID4VCI 測試發證者；沒有就在開發者模式用自簽憑證（只在 `developerMode`，Rule 8）。
 - **R4 兩支模擬器不能同時開**：本來就是非同步，A 寄完關機、B 開機收，正好證明「不必同時在線」。
