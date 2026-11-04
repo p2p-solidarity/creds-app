@@ -3,7 +3,7 @@
  * key, deliver it to the recipient's kind 10050 relays. Every message carries
  * my published Page when it fits, so the recipient can tie my npub to my DID.
  */
-import { err, npubToHex, ok, type ProfileRecord, type Result } from '@solidarity/shared';
+import { err, hexToNpub, npubToHex, ok, type ProfileRecord, type Result } from '@solidarity/shared';
 
 import { wrapForRecipient } from '@/nostr/userKey';
 import { useProfileStore } from '@/profile/store';
@@ -21,6 +21,12 @@ export type PrivateSendFailure =
   | 'wrapFailed';
 
 /** The npub hex a saved Page declares, or null when it has not joined Nostr. */
+/** The audience a private answer is for: `nostr:<npub>`. */
+export function audienceFor(hex: string): string | null {
+  const npub = hexToNpub(hex);
+  return npub.ok ? `nostr:${npub.value}` : null;
+}
+
 export function recipientHexOf(record: ProfileRecord): string | null {
   for (const entry of record.alsoKnownAs) {
     if (!entry.startsWith('nostr:npub1')) continue;

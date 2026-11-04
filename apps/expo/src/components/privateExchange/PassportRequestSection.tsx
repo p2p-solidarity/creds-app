@@ -17,6 +17,7 @@ import { sendPassportRequest } from '@/privateExchange/passportExchange';
 import { recipientHexOf } from '@/privateExchange/send';
 import type { OutgoingPassportRequest } from '@/privateExchange/store';
 
+import { CredentialRequestSection } from './CredentialRequestSection';
 import { useOutgoingFor, usePrivateInboxSync } from './usePrivateExchange';
 
 export function PassportRequestSection({ record }: { readonly record: ProfileRecord }): ReactNode {
@@ -50,6 +51,7 @@ export function PassportRequestSection({ record }: { readonly record: ProfileRec
           {t('privateExchange.request.notOnNostr', { name: record.displayName })}
         </ThemedText>
       )}
+      <CredentialRequestSection record={record} />
       <ModalSheet visible={asking} presentationStyle="formSheet" onRequestClose={() => { setAsking(false); }}>
         <RequestForm record={record} onClose={() => { setAsking(false); }} />
       </ModalSheet>

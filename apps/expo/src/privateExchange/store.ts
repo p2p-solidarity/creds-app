@@ -8,6 +8,8 @@
  * re-checks the local-data epoch, so a wipe in progress is never undone.
  */
 import type { PassportChipState, PassportClaimValues, PassportRequestClaim } from '@solidarity/shared';
+
+import type { VerifiedCredentialAnswer } from './credentialAnswer';
 import { create } from 'zustand';
 
 import { getProfileSnapshot } from '@/people/profileSnapshots';
@@ -54,6 +56,31 @@ export interface IncomingPassportRequest {
   readonly status: 'pending' | 'answered' | 'dismissed';
 }
 
+/** A request for "a credential" I sent (docs/ref/16 §12). */
+export interface OutgoingCredentialRequest {
+  readonly id: string;
+  readonly recipientDid: string;
+  readonly recipientHex: string;
+  readonly purpose: string | null;
+  readonly nonce: string;
+  readonly exp: number;
+  readonly sentAt: number;
+  readonly answer: (VerifiedCredentialAnswer & { readonly verifiedAt: number }) | null;
+}
+
+export interface IncomingCredentialRequest {
+  readonly id: string;
+  readonly senderHex: string;
+  readonly senderDid: string;
+  readonly senderName: string;
+  /** Written by the requester; shown as theirs. */
+  readonly purpose: string | null;
+  readonly nonce: string;
+  readonly exp: number;
+  readonly receivedAt: number;
+  readonly status: 'pending' | 'answered' | 'dismissed';
+}
+
 /** The newest contact details one person shared with me (one per sender DID). */
 export interface ReceivedContactShare {
   /** The rumor id. */
@@ -78,6 +105,8 @@ export interface ContactShareDraft {
 interface Persisted {
   readonly outgoing: Readonly<Record<string, OutgoingPassportRequest>>;
   readonly incoming: Readonly<Record<string, IncomingPassportRequest>>;
+  readonly credentialOutgoing: Readonly<Record<string, OutgoingCredentialRequest>>;
+  readonly credentialIncoming: Readonly<Record<string, IncomingCredentialRequest>>;
   /** sender DID → their latest share. */
   readonly contacts: Readonly<Record<string, ReceivedContactShare>>;
   /** Phone and email I last shared, prefilled next time (a note is per person, never prefilled). */
@@ -93,6 +122,8 @@ interface Persisted {
 const EMPTY: Persisted = {
   outgoing: {},
   incoming: {},
+  credentialOutgoing: {},
+  credentialIncoming: {},
   contacts: {},
   contactDraft: null,
   contactsSent: {},
@@ -107,6 +138,10 @@ interface PrivateExchangeState extends Persisted {
   readonly answerOutgoing: (id: string, answer: VerifiedPassportAnswer, epoch: LocalDataEpoch) => boolean;
   readonly addIncoming: (request: IncomingPassportRequest, epoch: LocalDataEpoch) => boolean;
   readonly setIncomingStatus: (id: string, status: IncomingPassportRequest['status'], epoch: LocalDataEpoch) => boolean;
+  readonly addCredentialOutgoing: (request: OutgoingCredentialRequest, epoch: LocalDataEpoch) => boolean;
+  readonly answerCredentialOutgoing: (id: string, answer: NonNullable<OutgoingCredentialRequest['answer']>, epoch: LocalDataEpoch) => boolean;
+  readonly addCredentialIncoming: (request: IncomingCredentialRequest, epoch: LocalDataEpoch) => boolean;
+  readonly setCredentialIncomingStatus: (id: string, status: IncomingCredentialRequest['status'], epoch: LocalDataEpoch) => boolean;
   /** Keeps only the newest share per sender. */
   readonly addContactShare: (share: ReceivedContactShare, epoch: LocalDataEpoch) => boolean;
   readonly removeContactShare: (senderDid: string, epoch: LocalDataEpoch) => boolean;
@@ -123,6 +158,8 @@ function readPersisted(): Persisted {
     return {
       outgoing: parsed.outgoing ?? {},
       incoming: parsed.incoming ?? {},
+      credentialOutgoing: parsed.credentialOutgoing ?? {},
+      credentialIncoming: parsed.credentialIncoming ?? {},
       contacts: parsed.contacts ?? {},
       contactDraft: parsed.contactDraft ?? null,
       contactsSent: parsed.contactsSent ?? {},
@@ -138,6 +175,8 @@ function pick(state: Persisted): Persisted {
   return {
     outgoing: state.outgoing,
     incoming: state.incoming,
+    credentialOutgoing: state.credentialOutgoing,
+    credentialIncoming: state.credentialIncoming,
     contacts: state.contacts,
     contactDraft: state.contactDraft,
     contactsSent: state.contactsSent,
@@ -156,10 +195,12 @@ function capContacts(contacts: Record<string, ReceivedContactShare>): Record<str
 }
 
 /** Keep the newest `MAX_INCOMING_PER_SENDER` per sender and `MAX_INCOMING` overall. */
-function capIncoming(incoming: Record<string, IncomingPassportRequest>): Record<string, IncomingPassportRequest> {
+function capIncoming<T extends { readonly id: string; readonly senderHex: string; readonly receivedAt: number }>(
+  incoming: Record<string, T>
+): Record<string, T> {
   const newestFirst = Object.values(incoming).sort((a, b) => b.receivedAt - a.receivedAt);
   const perSender = new Map<string, number>();
-  const kept: Record<string, IncomingPassportRequest> = {};
+  const kept: Record<string, T> = {};
   let total = 0;
   for (const request of newestFirst) {
     const n = perSender.get(request.senderHex) ?? 0;
@@ -214,6 +255,27 @@ export const usePrivateExchangeStore = create<PrivateExchangeState>((set, get) =
       const request = s.incoming[id];
       if (request === undefined) return false;
       return commit({ ...s, incoming: { ...s.incoming, [id]: { ...request, status } } }, epoch);
+    },
+    addCredentialOutgoing: (request, epoch) => {
+      const s = current();
+      return commit({ ...s, credentialOutgoing: { ...s.credentialOutgoing, [request.id]: request } }, epoch);
+    },
+    answerCredentialOutgoing: (id, answer, epoch) => {
+      const s = current();
+      const request = s.credentialOutgoing[id];
+      if (request?.answer !== null) return false;
+      return commit({ ...s, credentialOutgoing: { ...s.credentialOutgoing, [id]: { ...request, answer } } }, epoch);
+    },
+    addCredentialIncoming: (request, epoch) => {
+      const s = current();
+      if (s.credentialIncoming[request.id] !== undefined) return false;
+      return commit({ ...s, credentialIncoming: capIncoming({ ...s.credentialIncoming, [request.id]: request }) }, epoch);
+    },
+    setCredentialIncomingStatus: (id, status, epoch) => {
+      const s = current();
+      const request = s.credentialIncoming[id];
+      if (request === undefined) return false;
+      return commit({ ...s, credentialIncoming: { ...s.credentialIncoming, [id]: { ...request, status } } }, epoch);
     },
     addContactShare: (share, epoch) => {
       const s = current();

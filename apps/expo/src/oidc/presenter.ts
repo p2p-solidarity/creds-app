@@ -87,6 +87,9 @@ export interface PresentationBuilderInput {
   /** Provable-claim ids OR credential ids (we look in both stores). */
   readonly selectedClaimIds: readonly string[];
   readonly holderDid: string;
+  /** Unix s. Default: 300 s after signing (an OID4VP verifier is online). A
+   *  private answer that waits on relays uses the request's expiry instead. */
+  readonly expiresAt?: number;
   readonly deps?: PresentationBuilderDeps;
 }
 
@@ -322,7 +325,7 @@ export async function buildVpToken(
     iss: derivedDid,
     sub: derivedDid,
     iat: now,
-    exp: now + VP_LIFETIME_SECONDS,
+    exp: input.expiresAt ?? now + VP_LIFETIME_SECONDS,
     aud: audience,
     nonce,
     vp: {

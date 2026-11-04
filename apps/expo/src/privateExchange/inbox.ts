@@ -14,6 +14,8 @@ import {
   parsePrivateMessage,
   verifyPassportPresentation,
   type ContactShareMessage,
+  type CredentialRequestMessage,
+  type CredentialResponseMessage,
   type ParsedPrivateMessage,
   type ProfileRecord,
   type ProofRequestMessage,
@@ -27,7 +29,9 @@ import { useProfileSnapshotStore } from '@/people/profileSnapshots';
 import { verifyProfileJws } from '@/scan/verifiedPageHandler';
 import { captureLocalDataEpoch, type LocalDataEpoch } from '@/settings/localDataWipeBarrier';
 
+import { verifyCredentialAnswer } from './credentialAnswer';
 import { collectEvents, ensureOwnDmRelays } from './relays';
+import { audienceFor } from './send';
 import { getPrivateExchangeSnapshot, usePrivateExchangeStore } from './store';
 
 const MAX_OPEN_PER_SYNC = 200;
@@ -93,6 +97,54 @@ function onRequest(parsed: ParsedPrivateMessage, message: ProofRequestMessage, s
     },
     epoch
   );
+}
+
+function onCredentialRequest(
+  parsed: ParsedPrivateMessage,
+  message: CredentialRequestMessage,
+  sender: BoundSender,
+  epoch: LocalDataEpoch
+): void {
+  usePrivateExchangeStore.getState().addCredentialIncoming(
+    {
+      id: parsed.rumorId,
+      senderHex: parsed.senderHex,
+      senderDid: sender.did,
+      senderName: sender.record.displayName,
+      purpose: message.purpose ?? null,
+      nonce: message.nonce,
+      exp: message.exp,
+      receivedAt: Math.floor(Date.now() / 1000),
+      status: 'pending',
+    },
+    epoch
+  );
+}
+
+async function onCredentialResponse(
+  parsed: ParsedPrivateMessage,
+  message: CredentialResponseMessage,
+  sender: BoundSender,
+  myHex: string,
+  epoch: LocalDataEpoch
+): Promise<void> {
+  const request = parsed.replyTo === undefined ? undefined : getPrivateExchangeSnapshot().credentialOutgoing[parsed.replyTo];
+  if (request === undefined) { drop('noMatchingRequest'); return; }
+  if (request.answer !== null) { drop('alreadyAnswered'); return; }
+  if (request.recipientHex !== parsed.senderHex || request.recipientDid !== sender.did) { drop('wrongResponder'); return; }
+  const aud = audienceFor(myHex);
+  if (aud === null) { drop('noAudience'); return; }
+  const now = Math.floor(Date.now() / 1000);
+  const verified = await verifyCredentialAnswer(message, {
+    senderRootDid: sender.did,
+    aud,
+    nonce: request.nonce,
+    requestSentAt: request.sentAt,
+    requestExp: request.exp,
+    nowSeconds: now,
+  });
+  if (!verified.ok) { drop(verified.error); return; }
+  usePrivateExchangeStore.getState().answerCredentialOutgoing(request.id, { ...verified.value, verifiedAt: now }, epoch);
 }
 
 function onContactShare(parsed: ParsedPrivateMessage, message: ContactShareMessage, sender: BoundSender, epoch: LocalDataEpoch): void {
@@ -202,6 +254,8 @@ async function runSync(): Promise<InboxSyncResult> {
     const { message } = parsed.value;
     if (message.type === 'proof.request') onRequest(parsed.value, message, sender, epoch);
     else if (message.type === 'proof.response') onResponse(parsed.value, message, sender, opened.value.myHex, epoch);
+    else if (message.type === 'credential.request') onCredentialRequest(parsed.value, message, sender, epoch);
+    else if (message.type === 'credential.response') await onCredentialResponse(parsed.value, message, sender, opened.value.myHex, epoch);
     else onContactShare(parsed.value, message, sender, epoch);
   }
 

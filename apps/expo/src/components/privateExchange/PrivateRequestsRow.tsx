@@ -13,14 +13,20 @@ import { Colors } from '@/constants/Colors';
 import { Radius } from '@/constants/radius';
 import { useTranslation } from '@/i18n';
 
-import { usePendingIncoming, usePrivateInboxSync, useUnsavedContactShares } from './usePrivateExchange';
+import {
+  usePendingCredentialIncoming,
+  usePendingIncoming,
+  usePrivateInboxSync,
+  useUnsavedContactShares,
+} from './usePrivateExchange';
 
 export function PrivateRequestsRow(): ReactNode {
   const { t } = useTranslation();
   usePrivateInboxSync();
   const pending = usePendingIncoming();
   const shares = useUnsavedContactShares();
-  const count = pending.length + shares.length;
+  const credentialRequests = usePendingCredentialIncoming();
+  const count = pending.length + shares.length + credentialRequests.length;
   if (count === 0) return null;
 
   return (

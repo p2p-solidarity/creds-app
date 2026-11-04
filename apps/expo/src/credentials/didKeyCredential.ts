@@ -1,4 +1,5 @@
 import {
+  businessCardSchema,
   decodeJwtUnsafe,
   type BusinessCard,
 } from '@solidarity/shared';
@@ -79,4 +80,24 @@ async function resolveDefaultSigner(): Promise<SolidarityQrSigner> {
     publicKeyJwk: jwk,
     signJwt,
   };
+}
+
+/**
+ * A minimal card from the Page's display name, for the developer
+ * "create did:key credential" tool when no legacy card exists (2.0 has none).
+ * Null when the Page has no name yet.
+ */
+export async function businessCardFromPage(): Promise<BusinessCard | null> {
+  const { useProfileStore } = await import('@/profile/store');
+  const name = useProfileStore.getState().record?.displayName.trim() ?? '';
+  if (name === '') return null;
+  const { randomUUID } = await import('expo-crypto');
+  const now = new Date();
+  return businessCardSchema.parse({
+    id: randomUUID(),
+    name,
+    sharingPreferences: { publicFields: ['name'], professionalFields: ['name'], personalFields: ['name'] },
+    createdAt: now,
+    updatedAt: now,
+  });
 }

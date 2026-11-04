@@ -6,7 +6,9 @@ import { syncPrivateInbox } from '@/privateExchange/inbox';
 import {
   usePrivateExchangeStore,
   type ContactShareDraft,
+  type IncomingCredentialRequest,
   type IncomingPassportRequest,
+  type OutgoingCredentialRequest,
   type OutgoingPassportRequest,
   type ReceivedContactShare,
 } from '@/privateExchange/store';
@@ -100,4 +102,26 @@ export function useContactShareDraft(): ContactShareDraft | null {
 export function useContactSentAt(did: string): number | undefined {
   useHydrated();
   return usePrivateExchangeStore((s) => s.contactsSent[did]);
+}
+
+/** Pending, unexpired credential requests sent to me, newest first. */
+export function usePendingCredentialIncoming(): readonly IncomingCredentialRequest[] {
+  useHydrated();
+  const incoming = usePrivateExchangeStore((s) => s.credentialIncoming);
+  return useMemo(() => {
+    const now = Math.floor(Date.now() / 1000);
+    return Object.values(incoming)
+      .filter((r) => r.status === 'pending' && r.exp > now)
+      .sort((a, b) => b.receivedAt - a.receivedAt);
+  }, [incoming]);
+}
+
+/** Credential requests I sent to `did`, newest first. */
+export function useCredentialOutgoingFor(did: string): readonly OutgoingCredentialRequest[] {
+  useHydrated();
+  const outgoing = usePrivateExchangeStore((s) => s.credentialOutgoing);
+  return useMemo(
+    () => Object.values(outgoing).filter((r) => r.recipientDid === did).sort((a, b) => b.sentAt - a.sentAt),
+    [outgoing, did]
+  );
 }

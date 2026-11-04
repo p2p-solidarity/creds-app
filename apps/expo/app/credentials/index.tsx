@@ -31,7 +31,7 @@ import { VerifiedCredentialRow } from '@/components/me';
 import { ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { useCardStore } from '@/cards/cardManager';
-import { createDidKeyBusinessCardCredential } from '@/credentials/didKeyCredential';
+import { businessCardFromPage, createDidKeyBusinessCardCredential } from '@/credentials/didKeyCredential';
 import type { CredentialManifestEntry } from '@/credentials/credentialManifest';
 import { useIssuerMetadataStore } from '@/credentials/issuerStore';
 import { useCredentialStore } from '@/credentials/store';
@@ -155,7 +155,7 @@ function VCManagementScreen() {
       const first = cardState.manifest[0];
       const card = first
         ? (cardState.details.get(first.id) ?? (await loadCardDetail(first.id)))
-        : null;
+        : await businessCardFromPage();
       if (!card) {
         appAlert({ title: t('vcManage.title'), message: t('vc.createDidKey.noCard') });
         return;

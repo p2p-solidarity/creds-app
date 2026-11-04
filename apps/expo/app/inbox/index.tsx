@@ -11,8 +11,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ContactShareInboxItem } from '@/components/privateExchange/ContactShareInboxItem';
+import { CredentialConsentSheet } from '@/components/privateExchange/CredentialConsentSheet';
 import { PassportConsentSheet, shortDid } from '@/components/privateExchange/PassportConsentSheet';
 import {
+  usePendingCredentialIncoming,
   usePendingIncoming,
   usePrivateInboxSync,
   useUnsavedContactShares,
@@ -21,7 +23,7 @@ import { ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { useTranslation } from '@/i18n';
 import { safeBack } from '@/navigation/safeBack';
-import type { IncomingPassportRequest } from '@/privateExchange/store';
+import type { IncomingCredentialRequest, IncomingPassportRequest } from '@/privateExchange/store';
 
 export default function PrivateInboxScreen(): ReactNode {
   const { t } = useTranslation();
@@ -29,7 +31,9 @@ export default function PrivateInboxScreen(): ReactNode {
   const sync = usePrivateInboxSync();
   const pending = usePendingIncoming();
   const shares = useUnsavedContactShares();
+  const credentialRequests = usePendingCredentialIncoming();
   const [open, setOpen] = useState<IncomingPassportRequest | null>(null);
+  const [openCredential, setOpenCredential] = useState<IncomingCredentialRequest | null>(null);
 
   return (
     <View className="flex-1 bg-pageBg" style={{ paddingTop: insets.top }}>
@@ -53,7 +57,7 @@ export default function PrivateInboxScreen(): ReactNode {
           <ThemedText variant="bodyMedium" tone="error">{t('privateExchange.inbox.unreachable')}</ThemedText>
         ) : null}
 
-        {pending.length === 0 && shares.length === 0 ? (
+        {pending.length === 0 && shares.length === 0 && credentialRequests.length === 0 ? (
           sync === 'syncing' ? (
             <ThemedText variant="bodyMedium" tone="secondary">{t('privateExchange.inbox.syncing')}</ThemedText>
           ) : sync === 'idle' ? (
@@ -82,6 +86,29 @@ export default function PrivateInboxScreen(): ReactNode {
           </ThemedSurface>
         )}
 
+        {credentialRequests.length === 0 ? null : (
+          <ThemedSurface variant="card" style={{ overflow: 'hidden' }}>
+            {credentialRequests.map((request, index) => (
+              <PressableScale
+                key={request.id}
+                onPress={() => { setOpenCredential(request); }}
+                accessibilityRole="button"
+                className="flex-row items-center gap-3 px-4 py-3"
+                style={{ minHeight: 60, borderTopWidth: index === 0 ? 0 : 0.5, borderTopColor: Colors.divider }}
+              >
+                <SfIcon name="lock" size={16} color={Colors.primaryBlue} />
+                <View style={{ flex: 1, gap: 2 }}>
+                  <ThemedText variant="bodyMedium">{t('privateExchange.credential.consentTitle', { name: request.senderName })}</ThemedText>
+                  <ThemedText variant="caption" tone="tertiary" numberOfLines={1}>
+                    {request.purpose === null ? shortDid(request.senderDid) : `${request.purpose} · ${shortDid(request.senderDid)}`}
+                  </ThemedText>
+                </View>
+                <SfIcon name="chevron.right" size={12} color={Colors.text3} />
+              </PressableScale>
+            ))}
+          </ThemedSurface>
+        )}
+
         {shares.map((share) => (
           <ContactShareInboxItem key={share.senderDid} share={share} />
         ))}
@@ -90,6 +117,7 @@ export default function PrivateInboxScreen(): ReactNode {
       </ScrollView>
 
       <PassportConsentSheet request={open} onClose={() => { setOpen(null); }} />
+      <CredentialConsentSheet request={openCredential} onClose={() => { setOpenCredential(null); }} />
     </View>
   );
 }
