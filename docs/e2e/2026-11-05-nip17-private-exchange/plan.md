@@ -26,3 +26,14 @@
 - L3（App Attest／Key Attestation）：模擬器沒有，需 TestFlight 實機。
 - Android、網頁。
 - 拒絕後請求過期的 7 天路徑。
+
+## P2 私下分享聯絡方式（同一天，同兩個身分）
+前提：A 的 People 有 B；B 的 People 沒有 A。
+| ID | 目標 | 步驟 | 預期 | 驗證位置 |
+|---|---|---|---|---|
+| D1 | A 私下分享給 B | A → B 個人頁 →「私下分享我的聯絡方式」→ 填電話、Email、備註 → 用 Face ID 送出 | toast「已加密寄出」；個人頁「你在 … 私下分享過」；p-tag B 的 1059 +1 | 截圖＋bun 腳本 |
+| D2 | B 收到、對方不在 People | 關 A 開 B → People | 「N 則私密訊息」→ 收件匣卡片：A 名字＋short DID · 不在你的 People、三個欄位、存到 People／刪除 | 截圖 |
+| D3 | 存到 People 後移到個人頁 | B 按「存到 People」→ 開 A 個人頁 | People 有 E2E Asker；個人頁「E2E Asker 私下分享給你 · 日期」區塊，與「我記的」分開 | 截圖 |
+| D4 | 存進我的備註 | B 在 A 個人頁按「存進我的備註」 | 「我記的」出現同樣的電話、Email、備註 | 截圖 |
+| D5 | B 回分享給 A（要 Face ID） | B → A 個人頁 → 分享 → Face ID | 有 Face ID／密碼提示且理由是 sendPrivate 的字；送出後 p-tag A 的 1059 +1 | 截圖＋bun 腳本 |
+| D6 | A 看到、上次填的會預填 | 關 B 開 A → B 個人頁 → 再開分享 sheet | B 的分享區塊出現；sheet 預填 D1 的值 | 截圖 |

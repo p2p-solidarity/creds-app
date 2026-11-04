@@ -26,6 +26,19 @@
 
 整體：**PASS**（C7 第一次 FAIL，修正後在含修正的 bundle 上重跑 PASS；R1 在含 code review 修正的 bundle 上跑）。
 
+## P2 私下分享聯絡方式（commit `7286cc88`，同一份 bundle 裝在兩台，`cmp` 確認）
+| ID | 預期 | 實際 | 判定 | 證據 |
+|---|---|---|---|---|
+| D1 | A 分享給 B | 電話＋Email＋備註 → 密碼畫面理由「驗證後私下送出資料。」（sendPrivate）；第一次 Face ID 鎖住、取消後 sheet 內顯示「沒有通過 Face ID，什麼都沒送出。」；重設後通過 →「已加密寄出」＋「你在 2026/11/05 私下分享過聯絡方式給對方」；p-tag B 的 1059：nos.lol 2→3、primal 2→3 | PASS | `D1-a-share-form.png`、`D1-a-sendPrivate-prompt.png`、`D1-a-sent.png`、relay 腳本 |
+| D2 | B 收到、A 不在 People | People「1 則私密訊息」→ 收件匣卡片：E2E Asker 私下分享給你 · 2026/11/05、`did:key:zDnaeVen…AsPgTk · 不在你的 People`、名字是對方自填、三個欄位、存到 People／刪除 | PASS | `D2-b-people-row.png`、`D2-b-inbox-share.png` |
+| D3 | 存到 People 後移到個人頁 | 重新從 relay 取 A 的 Page 驗過才存 →「已把 E2E Asker 存到 People」，收件匣清空；A 個人頁「私下分享 · E2E Asker 私下分享給你」區塊，和「新增電話、Email 或備註」分開 | PASS | `D3-b-saved-toast.png`、`D3-b-person-page-share.png` |
+| D4 | 存進我的備註 | 「你加的資訊 · 只存在這支手機」出現同樣三個欄位（原本是空的，所以沒有跳「取代」確認） | PASS | `D4-b-copied.png` |
+| D5 | B 回分享（要 Face ID） | 只填 Email → Face ID 提示 →「已加密寄出」；p-tag A 的 1059：2→3 | PASS | `D5-b-share-form.png`、`D5-b-faceid-prompt.png`、`D5-b-sent.png`、relay 腳本 |
+| D6 | A 看到、預填 | B 個人頁「E2E Holder 私下分享給你 · holder@example.com」；再開分享 sheet，D1 的三個值預填 | PASS | `D6-a-received.png`、`D6-a-prefilled.png` |
+
+P2 沒跑：「取代」確認框（本機備註已有不同值時）、刪除收件匣的分享、對方 Page 查不到時「存到 People」的錯誤訊息。
+P2 執行偏差：expiry 修正的 session 在 02:2x 也用了同一台 iPhone 18 Pro（我給它的 brief 指定了這台），中途把 App 換成它的 bundle；它關機後我重裝本分支 bundle（`cmp` 一致）才繼續，D1 起全部在本分支 bundle 上跑。
+
 ## 失敗與修正
 - **C7 第一次 FAIL**：`PassportConsentSheet` 失敗時用 `pushToast`，但 toast overlay 在 root layout，畫在原生 formSheet **下面** → 持有人按了送出、Face ID 失敗後畫面只是回到原狀，不知道有沒有送出。修正：兩個 sheet（同意、請求表單）的失敗訊息改成 sheet 內的 inline 文字（成功仍是先關 sheet 再 toast，看得到）。
 
