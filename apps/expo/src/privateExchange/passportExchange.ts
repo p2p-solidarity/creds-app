@@ -28,7 +28,7 @@ import { getNostrPubkey, wrapForRecipient } from '@/nostr/userKey';
 import { readPassportPrivateClaims, type PassportPrivateClaims } from '@/passport/privateClaims';
 import { useProfileStore } from '@/profile/store';
 import { captureLocalDataEpoch } from '@/settings/localDataWipeBarrier';
-import { signWithDeviceKey } from '@/witness/deviceKey';
+import { deviceAttestSupported, signWithDeviceKey } from '@/witness/deviceKey';
 
 import { deliverWrap, type DeliverFailure } from './relays';
 import { usePrivateExchangeStore, type IncomingPassportRequest } from './store';
@@ -105,7 +105,13 @@ export function passportClaimsFor(
   return { stored, available };
 }
 
-export type PassportAnswerFailure = PrivateSendFailure | 'noPassport' | 'nothingChosen' | 'faceIdDenied' | 'expired';
+export type PassportAnswerFailure =
+  | PrivateSendFailure
+  | 'noPassport'
+  | 'nothingChosen'
+  | 'faceIdDenied'
+  | 'expired'
+  | 'deviceSignFailed';
 
 export interface PassportAnswerSent {
   /** False when this phone could not attest its key: the requester sees L1. */
@@ -142,6 +148,8 @@ export async function answerPassportRequest(
   if (!statement.ok) return err('noPassport');
 
   const device = await signWithDeviceKey(me.value, statement.value);
+  // A phone that can attest must not quietly send a weaker (L1) answer.
+  if (!device.ok && deviceAttestSupported()) return err('deviceSignFailed');
   const sent = await sendRumor(
     buildProofResponseRumor({
       recipientHex: request.senderHex,

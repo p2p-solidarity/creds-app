@@ -1552,6 +1552,7 @@
   "privateExchange.error.noNostrKey": "這支手機還沒有 Nostr 金鑰。",
   "privateExchange.error.wrapFailed": "加密失敗，什麼都沒送出。",
   "privateExchange.error.faceIdDenied": "沒有通過 Face ID，什麼都沒送出。",
+  "privateExchange.error.deviceSignFailed": "這支手機沒能用裝置金鑰簽下回覆，什麼都沒送出。請再試一次。",
   "privateExchange.error.noPassport": "請重新掃描護照才能私下出示。",
   "privateExchange.error.nothingChosen": "至少選一項。",
   "privateExchange.error.expired": "這個請求已過期。"

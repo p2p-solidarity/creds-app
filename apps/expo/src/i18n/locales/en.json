@@ -1552,6 +1552,7 @@
   "privateExchange.error.noNostrKey": "This phone has no Nostr key yet.",
   "privateExchange.error.wrapFailed": "Encryption failed; nothing was sent.",
   "privateExchange.error.faceIdDenied": "Face ID didn't pass; nothing was sent.",
+  "privateExchange.error.deviceSignFailed": "This phone couldn't sign the answer with its device key; nothing was sent. Try again.",
   "privateExchange.error.noPassport": "Scan your passport again to share it privately.",
   "privateExchange.error.nothingChosen": "Choose at least one.",
   "privateExchange.error.expired": "This request has expired."

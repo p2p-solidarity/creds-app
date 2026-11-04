@@ -55,7 +55,8 @@ export function readPublishedDmRelayListId(): string | null {
 }
 
 let ownListInFlight: Promise<readonly string[]> | null = null;
-let ownListRelays: readonly string[] | null = null;
+/** Keyed by npub hex: a local wipe can bring a different key in the same process. */
+let ownList: { readonly hex: string; readonly relays: readonly string[] } | null = null;
 
 /**
  * Make sure others can reach us, and return the relays to read our inbox from.
@@ -63,15 +64,15 @@ let ownListRelays: readonly string[] | null = null;
  * list (maybe set in another client) is kept and read from.
  */
 export function ensureOwnDmRelays(): Promise<readonly string[]> {
-  if (ownListRelays !== null) return Promise.resolve(ownListRelays);
   ownListInFlight ??= (async () => {
     try {
       const me = await getNostrPubkey();
       if (!me.ok) return DM_RELAYS;
+      if (ownList?.hex === me.value) return ownList.relays;
       const lookup = await lookupDmRelays(me.value);
       if (lookup.kind === 'found') {
-        ownListRelays = [...new Set([...lookup.relays, ...DM_RELAYS])];
-        return ownListRelays;
+        ownList = { hex: me.value, relays: [...new Set([...lookup.relays, ...DM_RELAYS])] };
+        return ownList.relays;
       }
       if (lookup.kind === 'unreachable') return DM_RELAYS;
       const signed = await signNostrEvent(buildDmRelayListEvent(DM_RELAYS));
@@ -83,7 +84,7 @@ export function ensureOwnDmRelays(): Promise<readonly string[]> {
         } catch {
           // Without the id, deletion leaves this list alone — harmless.
         }
-        ownListRelays = DM_RELAYS;
+        ownList = { hex: me.value, relays: DM_RELAYS };
       }
       return DM_RELAYS;
     } finally {

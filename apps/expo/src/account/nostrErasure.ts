@@ -205,7 +205,7 @@ export async function eraseNostrFootprint(deps: NostrErasureDeps): Promise<Resul
       : collect(deps, { kinds: [KIND_DM_RELAYS], authors: [pubkey.value], limit: 1 }),
   ]);
   // Without one relay's EOSE we can't tell "nothing published" from "didn't hear".
-  if (!records.confirmed || !metadata.confirmed) return err('relaysUnreachable');
+  if (!records.confirmed || !metadata.confirmed || !dmLists.confirmed) return err('relaysUnreachable');
 
   const latestKind0 = metadata.events
     .filter((e) => e.kind === KIND_METADATA && e.pubkey === pubkey.value)
