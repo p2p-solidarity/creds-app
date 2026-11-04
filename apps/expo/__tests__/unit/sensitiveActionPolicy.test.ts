@@ -7,8 +7,8 @@
  * three named modes. The `SensitiveAction` enum survives — it still picks the
  * prompt copy and decides red-line membership — so these pins cover the seams:
  *
- *   1. `SENSITIVE_ACTIONS` still lists all 7; `RED_LINE_ACTIONS` and
- *      `OPTIONAL_ACTIONS` partition them.
+ *   1. `SENSITIVE_ACTIONS` still lists all 7; `RED_LINE_ACTIONS` is a
+ *      subset of them.
  *   2. Fresh install lands on `balanced` (fail closed).
  *   3. `redLineOnly` disables exactly the OPTIONAL actions; every red-line
  *      action still reaches the OS prompt.
@@ -79,7 +79,6 @@ type Mode = 'everyTime' | 'balanced' | 'redLineOnly';
 interface PolicyMod {
   readonly SENSITIVE_ACTIONS: readonly Action[];
   readonly RED_LINE_ACTIONS: ReadonlySet<Action>;
-  readonly OPTIONAL_ACTIONS: readonly Action[];
   readonly BIOMETRIC_GATE_MODES: readonly Mode[];
   readonly useSensitiveActionPolicy: {
     getState: () => {
@@ -123,7 +122,6 @@ interface BioMod {
   readonly resetBiometricGrace: () => void;
   readonly armBiometricGrace: () => void;
   readonly hasBiometricGrace: () => boolean;
-  readonly isBiometricGraceEnabled: () => boolean;
   readonly setBiometricGraceEnabled: (enabled: boolean) => void;
   readonly requireBiometric: (reason: string) => Promise<boolean>;
 }
@@ -137,6 +135,11 @@ let gatekeeper: GatekeeperMod;
 let bio: BioMod;
 let enLocale: LocaleModule;
 let zhHantLocale: LocaleModule;
+
+/** The actions the gate mode governs: everything outside the red line. */
+function optionalActions(): readonly Action[] {
+  return policyMod.SENSITIVE_ACTIONS.filter((a) => !policyMod.RED_LINE_ACTIONS.has(a));
+}
 
 beforeAll(async () => {
   await mock.module('@/storage/mmkv', () => mmkvMock);
@@ -189,11 +192,10 @@ describe('SensitiveAction set', () => {
     expect([...policyMod.RED_LINE_ACTIONS].sort()).toEqual([...expected].sort());
   });
 
-  it('RED_LINE and OPTIONAL partition SENSITIVE_ACTIONS with no overlap or gap', () => {
-    const optional = [...policyMod.OPTIONAL_ACTIONS];
-    const redLine = [...policyMod.RED_LINE_ACTIONS];
-    expect(optional.filter((a) => policyMod.RED_LINE_ACTIONS.has(a))).toEqual([]);
-    expect([...optional, ...redLine].sort()).toEqual([...allActions].sort());
+  it('every red-line action is a sensitive action', () => {
+    for (const action of policyMod.RED_LINE_ACTIONS) {
+      expect(policyMod.SENSITIVE_ACTIONS).toContain(action);
+    }
   });
 
   it('BIOMETRIC_GATE_MODES is ordered strongest to weakest', () => {
@@ -225,9 +227,9 @@ describe('gate modes', () => {
     }
   });
 
-  it('redLineOnly disables exactly the OPTIONAL actions', () => {
+  it('redLineOnly disables exactly the non-red-line actions', () => {
     policyMod.useSensitiveActionPolicy.getState().setMode('redLineOnly');
-    for (const action of policyMod.OPTIONAL_ACTIONS) {
+    for (const action of optionalActions()) {
       expect(policyMod.getSensitivePolicyFor(action).enabled).toBe(false);
     }
   });
@@ -252,7 +254,7 @@ describe('gate modes', () => {
 
   it('an optional action short-circuits without prompting in redLineOnly', async () => {
     policyMod.useSensitiveActionPolicy.getState().setMode('redLineOnly');
-    for (const action of policyMod.OPTIONAL_ACTIONS) {
+    for (const action of optionalActions()) {
       authCalls.length = 0;
       const r = await gatekeeper.requireSensitiveAction(action, `do ${action}`);
       expect(r.success).toBe(true);
@@ -292,7 +294,7 @@ describe('RED_LINE_ACTIONS matches the gatekeeper grace-window exemption', () =>
   });
 
   it('every optional action is silenced by an armed grace window', async () => {
-    for (const action of policyMod.OPTIONAL_ACTIONS) {
+    for (const action of optionalActions()) {
       bio.resetBiometricGrace();
       bio.armBiometricGrace();
       authCalls.length = 0;
@@ -316,13 +318,15 @@ describe('RED_LINE_ACTIONS matches the gatekeeper grace-window exemption', () =>
 describe('everyTime disables the shared grace window', () => {
   it('selecting everyTime turns the grace bucket off', () => {
     policyMod.useSensitiveActionPolicy.getState().setMode('everyTime');
-    expect(bio.isBiometricGraceEnabled()).toBe(false);
+    bio.armBiometricGrace();
+    expect(bio.hasBiometricGrace()).toBe(false);
   });
 
   it('selecting balanced turns it back on', () => {
     policyMod.useSensitiveActionPolicy.getState().setMode('everyTime');
     policyMod.useSensitiveActionPolicy.getState().setMode('balanced');
-    expect(bio.isBiometricGraceEnabled()).toBe(true);
+    bio.armBiometricGrace();
+    expect(bio.hasBiometricGrace()).toBe(true);
   });
 
   it('switching to everyTime drops a window that is already open', () => {
@@ -353,7 +357,8 @@ describe('everyTime disables the shared grace window', () => {
   it('hydrating a persisted everyTime re-applies the grace consequence', () => {
     kv.set(V3_KEY, JSON.stringify({ mode: 'everyTime' }));
     policyMod.hydrateSensitiveActionPolicy();
-    expect(bio.isBiometricGraceEnabled()).toBe(false);
+    bio.armBiometricGrace();
+    expect(bio.hasBiometricGrace()).toBe(false);
   });
 });
 

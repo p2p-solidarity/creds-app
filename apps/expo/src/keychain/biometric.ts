@@ -110,11 +110,6 @@ export function setBiometricGraceEnabled(enabled: boolean): void {
   }
 }
 
-/** Whether the grace window is allowed at all under the current gate mode. */
-export function isBiometricGraceEnabled(): boolean {
-  return graceEnabled;
-}
-
 /**
  * Drop any active grace so the next sensitive action re-prompts. Also drops
  * the native sign context of a legacy native-ACL key, so neither window

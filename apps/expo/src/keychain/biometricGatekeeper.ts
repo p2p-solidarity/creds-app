@@ -165,17 +165,3 @@ export async function requireSensitiveAction(
     method: biometricUsable ? 'biometric' : 'passcode',
   };
 }
-
-/**
- * Convenience wrapper for call sites that still use the old
- * `requireBiometric(reason) => Promise<boolean>` shape — returns `true`
- * only on real success. Use `requireSensitiveAction` for new code so the
- * caller can react to lockout / unavailable.
- */
-export async function requireSensitiveActionBoolean(
-  action: SensitiveAction,
-  reason: string
-): Promise<boolean> {
-  const r = await requireSensitiveAction(action, reason);
-  return r.success;
-}

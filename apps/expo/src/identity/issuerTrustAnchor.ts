@@ -141,15 +141,3 @@ export const useIssuerTrustAnchorStore = create<IssuerTrustAnchorState>((set, ge
     set({ trusted: [], hydrated: true });
   },
 }));
-
-/** Test-only — wipe in-memory state. */
-export function __resetIssuerTrustAnchorStoreForTesting(): void {
-  useIssuerTrustAnchorStore.setState({ trusted: [], hydrated: false });
-  try {
-    for (const k of getMmkv().getAllKeys()) {
-      if (k.startsWith(KEY_PREFIX)) getMmkv().remove(k);
-    }
-  } catch {
-    // ignore — MMKV may not be initialised in tests
-  }
-}

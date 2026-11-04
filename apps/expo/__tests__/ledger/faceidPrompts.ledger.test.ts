@@ -303,7 +303,7 @@ interface Story {
 
 async function freshIdentity(): Promise<void> {
   profileStore.useProfileStore.getState().resetForLocalWipe();
-  await rootKey.deleteRootKey();
+  await rootKey.deleteRootKeyForLocalWipe();
   await nostrKey.deleteNostrKey();
   await signingKey.deleteSigningKey();
   const created = await rootKey.createFromFreshMnemonic();
@@ -318,7 +318,7 @@ const STORIES: readonly Story[] = [
     label: '建立（新身分）→ 連結頁簽 Page → 背景發佈',
     setup: async () => {
       profileStore.useProfileStore.getState().resetForLocalWipe();
-      await rootKey.deleteRootKey();
+      await rootKey.deleteRootKeyForLocalWipe();
       await nostrKey.deleteNostrKey();
       await signingKey.deleteSigningKey();
     },

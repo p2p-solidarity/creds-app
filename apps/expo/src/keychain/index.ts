@@ -1,6 +1,5 @@
 export {
   isBiometricAvailable,
-  isBiometricGraceEnabled,
   requireBiometric,
   setBiometricGraceEnabled,
   type BiometricReason,
@@ -8,9 +7,7 @@ export {
 export {
   ensureSigningKey,
   hasExistingSigningKey,
-  listSyncableSigningKeys,
   publicJwk,
-  resolveSigningKeyConflict,
   signJwt,
   signRawEs256,
   didKeyForCurrentIdentity,
@@ -18,7 +15,6 @@ export {
   quiesceSigningKeyOperations,
   resetSigningKeyForTesting,
   type SigningIdentity,
-  type SigningKeyCandidate,
 } from './signingKey';
 export {
   pairwisePrivateKey,
@@ -29,7 +25,6 @@ export {
 } from './pairwiseKey';
 export {
   BIOMETRIC_GATE_MODES,
-  OPTIONAL_ACTIONS,
   RED_LINE_ACTIONS,
   SENSITIVE_ACTIONS,
   getSensitivePolicyFor,
@@ -44,7 +39,6 @@ export {
 } from './sensitiveActionPolicy';
 export {
   requireSensitiveAction,
-  requireSensitiveActionBoolean,
   type BiometricFailureReason,
   type BiometricResult,
   type BiometricSuccessMethod,

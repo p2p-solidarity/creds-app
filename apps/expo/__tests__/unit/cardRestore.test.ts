@@ -177,8 +177,6 @@ beforeAll(async () => {
     // T7 conflict surface — mocks stay export-complete (A5.3 lesson: a
     // partial module mock poisons real-import files in the same run).
     hasExistingSigningKey: async () => false,
-    listSyncableSigningKeys: async () => [],
-    resolveSigningKeyConflict: async () => ({ ok: false, error: 'test: unavailable' }),
   }));
 
   cardMod = (await import('../../src/cards/cardManager')) as unknown as CardStoreSurface;

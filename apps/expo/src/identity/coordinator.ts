@@ -111,13 +111,3 @@ export const useIdentityCoordinator = create<IdentityCoordinatorState>((set, get
 export function useActiveDid(): string | null {
   return useIdentityCoordinator((s) => s.profile.activeDID?.did ?? null);
 }
-
-/** Test-only — wipe the in-memory cache between suites. */
-export function __resetIdentityCoordinatorForTesting(): void {
-  useIdentityCoordinator.setState({
-    profile: { activeDID: null },
-    isLoading: false,
-    lastError: null,
-    hydrated: false,
-  });
-}

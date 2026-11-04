@@ -20,13 +20,11 @@ export {
   verifiedFieldsForHolder,
 } from './verifiedClaimIndex';
 export {
-  __resetIdentityCoordinatorForTesting,
   useActiveDid,
   useIdentityCoordinator,
 } from './coordinator';
 export type { DIDDescriptor, UnifiedProfile } from './coordinator';
 export {
-  __resetIssuerTrustAnchorStoreForTesting,
   useIssuerTrustAnchorStore,
   type TrustAnchor,
   type TrustAnchorSource,
@@ -40,7 +38,6 @@ export {
 export {
   clearSyncedRootKey,
   createFromFreshMnemonic,
-  deleteRootKey,
   deleteRootKeyForLocalWipe,
   deriveDidFromMnemonic,
   enableICloudBackup,

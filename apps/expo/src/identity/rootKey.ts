@@ -811,26 +811,8 @@ export async function clearSyncedRootKey(): Promise<Result<void, RootKeyError>> 
 }
 
 /**
- * Delete the persisted root key. Used by tests and by a future rotate/reset
- * flow. Also best-effort deletes the synchronizable iCloud item (if any)
- * so a reset never leaves an orphaned synced mnemonic behind — swallowed on
- * failure (Android's `secrets-vault` implementation always rejects here,
- * and an iOS delete of a missing item is already a no-op at the native
- * layer, so a real failure here is not actionable for the caller).
- */
-export async function deleteRootKey(): Promise<void> {
-  await activeStorage.deleteMnemonic();
-  try {
-    await activeSyncStorage.deleteSyncedMnemonic();
-  } catch {
-    // best-effort — see doc above.
-  }
-}
-
-/**
- * Production-wipe deletion. Unlike the general reset helper above, a wipe
- * must not report completion while either the local or synchronizable
- * recovery phrase remains. Both targets are attempted so a retry can make
+ * Production-wipe deletion. A wipe must not report completion while either
+ * the local or synchronizable recovery phrase remains. Both targets are attempted so a retry can make
  * progress even if only one backend was temporarily unavailable.
  */
 export async function deleteRootKeyForLocalWipe(): Promise<LocalDeletionResult> {

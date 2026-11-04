@@ -160,7 +160,6 @@ interface RootKeyMod {
   >;
   readonly hasRootKey: () => Promise<boolean>;
   readonly quiesceRootKeyOperations: () => Promise<void>;
-  readonly deleteRootKey: () => Promise<void>;
   readonly deleteRootKeyForLocalWipe: () => Promise<
     | { readonly ok: true; readonly value: undefined }
     | { readonly ok: false; readonly error: { readonly kind: string } }
@@ -192,12 +191,12 @@ beforeEach(async () => {
   syncedWriteStarted = null;
   __resetLocalDataWipeBarrierForTesting();
   biometricCalls.length = 0;
-  await mod.deleteRootKey();
+  await mod.deleteRootKeyForLocalWipe();
 });
 
 afterEach(async () => {
   __resetLocalDataWipeBarrierForTesting();
-  await mod.deleteRootKey();
+  await mod.deleteRootKeyForLocalWipe();
 });
 
 // ── 1. Create + resolve ────────────────────────────────────────────────────
@@ -531,9 +530,9 @@ describe('enableICloudBackup', () => {
   });
 });
 
-// ── 7. deleteRootKey — best-effort cleans the synchronizable item too ─────
+// ── 7. deleteRootKeyForLocalWipe — clears the synchronizable item too ─────
 
-describe('deleteRootKey', () => {
+describe('deleteRootKeyForLocalWipe', () => {
   it('clears both local and synced storage', async () => {
     const created = await mod.createFromFreshMnemonic();
     expect(created.ok).toBe(true);
@@ -541,18 +540,9 @@ describe('deleteRootKey', () => {
     expect(enabled.ok).toBe(true);
     expect(syncStore.size).toBe(1);
 
-    await mod.deleteRootKey();
+    expect((await mod.deleteRootKeyForLocalWipe()).ok).toBe(true);
 
     expect(syncStore.size).toBe(0);
-    expect(await mod.hasRootKey()).toBe(false);
-  });
-
-  it('never throws even when the synced-storage delete fails (best-effort)', async () => {
-    await mod.createFromFreshMnemonic();
-    nextSyncDeleteError = new Error('unsupported');
-    // If this rejected, the `await` below would fail the test with an
-    // unhandled rejection — that IS the "never throws" assertion.
-    await mod.deleteRootKey();
     expect(await mod.hasRootKey()).toBe(false);
   });
 

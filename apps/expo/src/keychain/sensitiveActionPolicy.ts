@@ -130,11 +130,6 @@ export const RED_LINE_ACTIONS: ReadonlySet<SensitiveAction> = new Set([
   'deleteZKIdentity',
 ]);
 
-/** Actions the mode actually governs (the complement of the red line). */
-export const OPTIONAL_ACTIONS: readonly SensitiveAction[] = SENSITIVE_ACTIONS.filter(
-  (action) => !RED_LINE_ACTIONS.has(action)
-);
-
 /**
  * How often the app asks. Three named positions instead of a bare on/off,
  * because "on" was hiding a five-minute grace window the user could neither

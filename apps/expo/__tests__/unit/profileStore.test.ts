@@ -141,7 +141,7 @@ interface RootKeyModuleSurface {
     | { readonly ok: true; readonly value: { readonly mnemonic: string; readonly did: string } }
     | { readonly ok: false; readonly error: { readonly kind: string } }
   >;
-  readonly deleteRootKey: () => Promise<void>;
+  readonly deleteRootKeyForLocalWipe: () => Promise<unknown>;
 }
 
 interface NostrUserKeyModuleSurface {
@@ -237,7 +237,7 @@ beforeEach(async () => {
     status: 'empty',
     nostrPublishedJws: null,
   });
-  await rootKeyMod.deleteRootKey();
+  await rootKeyMod.deleteRootKeyForLocalWipe();
   await nostrUserKeyMod.deleteNostrKey();
   mod.__setNostrPublishForTesting(null);
 });
