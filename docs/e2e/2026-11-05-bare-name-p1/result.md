@@ -39,7 +39,7 @@ A2 的 builder 要過 Chrome 首次使用畫面才看得到，那一步是同意
 - iOS：P1 沒有 iOS 系統連結改動（AASA 認領短版是 P3）；parser 和掃描器只有單元測試。
 - bio 標記同時接受兩種形式：沒有 bio 寫著 `creds.id/<name>` 的真實帳號，只有 shared 的單元測試（`pageCheck.test.ts`）。
 - notary：要等合回 2.0.1 才部署。
-- 後端改成 import shared 清單（`c08c0ff`）：production 部署被 auto mode 擋下，**還沒上線**；線上仍是 `9193b1d8`（同一份 199 字，行為相同）。
+- 後端改成 import shared 清單（`c08c0ff`）：auto mode 擋下部署後，Kidney 自己跑了 `deploy:nip05`，版本 `7d3aaf5c`（100% 流量）。線上複驗：199 字全部 `reserved`，`EDIT` → `reserved`，`_` / `c` / `id` → `invalid`（原本是 `reserved`，符合預期），`gimmy` → `taken`，`zq7probe9x` → `available`。
 
 ## 遠端狀態變更
 
