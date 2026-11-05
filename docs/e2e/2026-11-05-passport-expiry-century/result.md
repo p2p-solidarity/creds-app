@@ -34,7 +34,19 @@
 - NFC 讀取（模擬或真晶片）與之後的存檔：本修正只動到存檔時的 `passportExpiresAt` 世紀判斷，有單元測試，沒有實機跑。
 - 相機掃描（模擬器沒相機）：`MRZCameraStep` 的日期顯示改用 `mrzDate`，沒有實機跑。
 - 從草稿值重新掛載日期欄（掃描後帶入）：只有程式碼與單元測試。
-- Android、真機。
+- 真機。
+
+## Android 補測（release vc33，2026-11-05）
+
+AVD `aniseekr_test`。合併後（cf996550）打的 release AAB vc33，用 template debug key 重簽後覆蓋安裝。深連結 `credsid://passport?manual=1`，數字用 `adb shell input text` 一次送一個字元。
+
+| 案例 | 預期 | 實際 | 判定 | 證據 |
+|---|---|---|---|---|
+| A1 冷啟動 | boot-complete，沒有 FATAL | 同預期 | PASS | logcat |
+| A2 出生日一次打一個數字 | 打到一半就顯示 `1990` | 同預期，打完是 `1990/01/15` | PASS | uiautomator dump |
+| A3 到期日 2031/01/01 → Continue | 進 NFC 步驟（SCREEN PASS-2） | 同預期 | PASS | `vc33-E2-after-continue.png`（本機） |
+
+沒讀 NFC，沒存檔。vc33 已送 Play internal。
 
 ## 單元測試（不是 E2E）
 
