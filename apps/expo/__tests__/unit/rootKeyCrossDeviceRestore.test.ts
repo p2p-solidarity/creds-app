@@ -57,6 +57,7 @@ function useDevice(store: Map<string, string>): void {
 beforeAll(() => {
   rootKeyModule.__setRootKeyBiometricGateForTesting(() => Promise.resolve(true));
   rootKeyModule.__setRootKeySyncStorageForTesting(syncStorage);
+  rootKeyModule.__setRootActivationHookForTesting(() => Promise.resolve({ ok: true, value: undefined }));
 });
 
 beforeEach(() => {
