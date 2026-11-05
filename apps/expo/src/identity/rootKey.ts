@@ -342,6 +342,42 @@ async function persistSyncedMnemonicForEpoch(
   return false;
 }
 
+/**
+ * Runs after a root is persisted as the active identity. Default: make the
+ * stored Nostr key this root's (`nostr/userKey.ts` `reconcileNostrKeyWithRoot`),
+ * lazy-loaded so this module never pulls the Nostr stack in at load time.
+ */
+export type RootActivationHook = (
+  mnemonic: string,
+  did: string,
+) => Promise<Result<void, string>>;
+
+async function defaultRootActivationHook(
+  mnemonic: string,
+  did: string,
+): Promise<Result<void, string>> {
+  const { reconcileNostrKeyWithRoot } = await import('@/nostr/userKey');
+  return reconcileNostrKeyWithRoot(mnemonic, did);
+}
+
+let activeRootActivationHook: RootActivationHook = defaultRootActivationHook;
+
+/** Test-only override. Pass `null` to restore the real Nostr-key reconcile. */
+export function __setRootActivationHookForTesting(hook: RootActivationHook | null): void {
+  activeRootActivationHook = hook ?? defaultRootActivationHook;
+}
+
+async function activateRoot(mnemonic: string, did: string): Promise<Result<void, RootKeyError>> {
+  let reconciled: Result<void, string>;
+  try {
+    reconciled = await activeRootActivationHook(mnemonic, did);
+  } catch {
+    reconciled = err('nostrKeyReconcileFailed');
+  }
+  if (reconciled.ok) return ok(undefined);
+  return err({ kind: 'storageFailed', message: `Nostr key not switched: ${reconciled.error}` });
+}
+
 function normalizeMnemonic(raw: string): string {
   return raw.trim().toLowerCase().replace(/\s+/g, ' ');
 }
@@ -388,6 +424,8 @@ async function createFromFreshMnemonicAtEpoch(
   } catch (e) {
     return err(toStorageError(e));
   }
+  const activated = await activateRoot(mnemonic, didResult.value);
+  if (!activated.ok) return activated;
   return ok({ mnemonic, did: didResult.value });
 }
 
@@ -418,6 +456,8 @@ async function importFromMnemonicAtEpoch(
   } catch (e) {
     return err(toStorageError(e));
   }
+  const activated = await activateRoot(normalized, didResult.value);
+  if (!activated.ok) return activated;
   return ok({ did: didResult.value });
 }
 
@@ -755,6 +795,8 @@ async function restoreRootKeyFromICloudAtEpoch(
   } catch (e) {
     return err(toStorageError(e));
   }
+  const activated = await activateRoot(normalized, syncedDid.value);
+  if (!activated.ok) return activated;
   return ok({ kind: 'restoredFromICloud', did: syncedDid.value });
 }
 

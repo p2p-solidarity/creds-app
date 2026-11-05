@@ -114,6 +114,9 @@ interface RootKeyMod {
   readonly __setRootKeyStorageForTesting: (storage: typeof fakeStorage | null) => void;
   readonly __setRootKeyBiometricGateForTesting: (gate: typeof fakeBiometricGate | null) => void;
   readonly __setRootKeySyncStorageForTesting: (storage: typeof fakeSyncStorage | null) => void;
+  readonly __setRootActivationHookForTesting: (
+    hook: () => Promise<{ readonly ok: true; readonly value: undefined }>
+  ) => void;
   readonly enableICloudBackup: () => Promise<
     | { readonly ok: true; readonly value: undefined }
     | { readonly ok: false; readonly error: { readonly kind: string; readonly message?: string } }
@@ -173,6 +176,8 @@ beforeAll(async () => {
   mod.__setRootKeyStorageForTesting(fakeStorage);
   mod.__setRootKeyBiometricGateForTesting(fakeBiometricGate);
   mod.__setRootKeySyncStorageForTesting(fakeSyncStorage);
+  // Nostr-key reconcile on activation is covered by restoreNostrKey.test.ts.
+  mod.__setRootActivationHookForTesting(() => Promise.resolve({ ok: true, value: undefined }));
 });
 
 beforeEach(async () => {

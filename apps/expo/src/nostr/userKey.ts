@@ -21,6 +21,9 @@
  *     (`Invalid checksum in ${str}`), so every decode failure is
  *     collapsed to a fixed `'invalidNsec: …'` reason instead of
  *     forwarding the library's message verbatim.
+ * (c) `reconcileNostrKeyWithRoot()` — run by `identity/rootKey.ts` whenever a
+ *     root becomes active (create / phrase import / iCloud restore), so the
+ *     stored key always belongs to the active root.
  *
  * ── Custody model — READ BEFORE CHANGING `getNostrPubkey`/`signNostrEvent`
  *
@@ -93,6 +96,25 @@ const NSEC_HRP = 'nsec';
 const NPUB_HRP = 'npub';
 const SCALAR_BYTE_LENGTH = 32;
 const HAS_KEY_MIRROR_KEY = 'nostr:hasKey:v1';
+// A stored value is `<scalar hex>` or `<scalar hex>\n<root did>`. The suffix
+// records the root an imported nsec belongs to, in the same Keychain item so
+// the key and its binding can never be written apart.
+const ROOT_BINDING_SEPARATOR = '\n';
+
+interface StoredNostrKey {
+  readonly scalarHex: string;
+  readonly rootDid: string | null;
+}
+
+function parseStoredKey(value: string): StoredNostrKey {
+  const at = value.indexOf(ROOT_BINDING_SEPARATOR);
+  if (at < 0) return { scalarHex: value, rootDid: null };
+  return { scalarHex: value.slice(0, at), rootDid: value.slice(at + 1) || null };
+}
+
+function encodeStoredKey(scalarHex: string, rootDid: string | null): string {
+  return rootDid ? `${scalarHex}${ROOT_BINDING_SEPARATOR}${rootDid}` : scalarHex;
+}
 
 // ── Storage — own alias, own namespace (never shares state with
 //    `identity/rootKey.ts`'s mnemonic alias or `dag/devKey.ts`'s MMKV
@@ -270,6 +292,21 @@ export function __setNostrMnemonicRevealerForTesting(revealer: MnemonicRevealer 
   activeMnemonicRevealer = revealer ?? defaultMnemonicRevealer;
 }
 
+export type RootDidReader = () => Promise<string | null>;
+
+async function defaultRootDidReader(): Promise<string | null> {
+  const { getRootDid } = await import('@/identity/rootKey');
+  const did = await getRootDid();
+  return did.ok ? did.value : null;
+}
+
+let activeRootDidReader: RootDidReader = defaultRootDidReader;
+
+/** Test-only override. Pass `null` to restore the real root-DID reader. */
+export function __setNostrRootDidReaderForTesting(reader: RootDidReader | null): void {
+  activeRootDidReader = reader ?? defaultRootDidReader;
+}
+
 function storageErrorMessage(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
@@ -297,18 +334,6 @@ async function provisionFromRootMnemonicAtEpoch(
   if (!revealed.ok) return revealed;
 
   return provisionFromMnemonicAtEpoch(revealed.value, writeEpoch);
-}
-
-/**
- * Path (a′): derive from a mnemonic the caller ALREADY holds — onboarding's
- * freshly minted root (`createFromFreshMnemonic` returns it once, before it is
- * ever stored behind Face ID). Same derivation and persistence as path (a),
- * minus the reveal prompt, so a new identity reaches its first publish with
- * one Face ID instead of two. Never call it with a mnemonic fetched just for
- * this: fetching IS the gated read path (a) exists for.
- */
-export function provisionFromFreshRootMnemonic(mnemonic: string): Promise<Result<string, string>> {
-  return trackKeyWrite(provisionFromMnemonicAtEpoch(mnemonic, captureLocalDataEpoch()));
 }
 
 async function provisionFromMnemonicAtEpoch(
@@ -434,10 +459,19 @@ async function importNsecAtEpoch(
     return err('invalidNsec: scalar out of range for secp256k1');
   }
 
+  // An nsec is not derivable from the root, so record which root it was
+  // imported under: restoring that same root keeps it, any other replaces it.
+  let rootDid: string | null;
+  try {
+    rootDid = await activeRootDidReader();
+  } catch {
+    rootDid = null;
+  }
+
   if (!canCommitLocalData(writeEpoch)) return err('localDataWipeInProgress');
 
   try {
-    await activeStorage.setScalarHex(hexEncode(scalar));
+    await activeStorage.setScalarHex(encodeStoredKey(hexEncode(scalar), rootDid));
   } catch (e) {
     return err(storageErrorMessage(e));
   }
@@ -448,6 +482,75 @@ async function importNsecAtEpoch(
   }
   activeMirrorStorage.setHasKey(true);
   return ok(pubkeyHex);
+}
+
+/**
+ * Make the device's Nostr key belong to a root that just became active
+ * (create, phrase import, iCloud restore). Keychain items outlive app
+ * deletes and identity switches, so without this a restored identity keeps
+ * publishing and receiving as the previous identity's npub.
+ *
+ * Kept: a key derived from `mnemonic`, or an nsec imported under `rootDid`.
+ * Anything else (another root's key, a pre-binding key that is not this
+ * root's) is overwritten with this root's derived key. If that write fails
+ * the old key is deleted; `err` only when a foreign key may still be stored,
+ * so the caller must not treat the restore as done. Errors never carry the
+ * mnemonic or scalar.
+ */
+export function reconcileNostrKeyWithRoot(
+  mnemonic: string,
+  rootDid: string,
+): Promise<Result<void, string>> {
+  return trackKeyWrite(reconcileAtEpoch(mnemonic, rootDid, captureLocalDataEpoch()));
+}
+
+async function reconcileAtEpoch(
+  mnemonic: string,
+  rootDid: string,
+  writeEpoch: LocalDataEpoch,
+): Promise<Result<void, string>> {
+  if (!canCommitLocalData(writeEpoch)) return err('localDataWipeInProgress');
+
+  let derivedHex: string;
+  try {
+    const scalar = deriveSecp256k1Scalar(mnemonic, HKDF_INFO_NOSTR);
+    schnorr.getPublicKey(scalar);
+    derivedHex = hexEncode(scalar);
+  } catch {
+    return err('nostrKeyDerivationFailed');
+  }
+
+  let stored: StoredNostrKey | null;
+  try {
+    const value = await activeStorage.getScalarHex();
+    stored = value === null ? null : parseStoredKey(value);
+  } catch {
+    stored = null;
+  }
+  if (stored && (stored.scalarHex === derivedHex || stored.rootDid === rootDid)) {
+    return ok(undefined);
+  }
+
+  if (!canCommitLocalData(writeEpoch)) return err('localDataWipeInProgress');
+
+  try {
+    await activeStorage.setScalarHex(derivedHex);
+  } catch {
+    try {
+      await activeStorage.deleteScalarHex();
+    } catch {
+      return err('staleNostrKeyNotRemoved');
+    }
+    activeMirrorStorage.setHasKey(false);
+    return ok(undefined);
+  }
+
+  if (!canCommitLocalData(writeEpoch)) {
+    await deleteStaleScalar();
+    return err('localDataWipeInProgress');
+  }
+  activeMirrorStorage.setHasKey(true);
+  return ok(undefined);
 }
 
 /** Whether a production Nostr key has been provisioned on this device. */
@@ -532,7 +635,7 @@ async function loadScalar(): Promise<Result<Uint8Array, string>> {
   }
   if (!scalarHex) return err('notProvisioned');
   try {
-    return ok(hexDecode(scalarHex));
+    return ok(hexDecode(parseStoredKey(scalarHex).scalarHex));
   } catch {
     // `hexDecode`'s own RangeError interpolates the offending substring
     // of `scalarHex` — i.e. a fragment of the secret scalar itself — into

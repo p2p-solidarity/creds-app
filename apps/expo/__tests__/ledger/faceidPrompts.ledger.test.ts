@@ -308,7 +308,6 @@ async function freshIdentity(): Promise<void> {
   await signingKey.deleteSigningKey();
   const created = await rootKey.createFromFreshMnemonic();
   if (!created.ok) throw new Error('root');
-  await nostrKey.provisionFromFreshRootMnemonic(created.value.mnemonic);
   await signingKey.ensureSigningKey();
 }
 
@@ -328,8 +327,7 @@ const STORIES: readonly Story[] = [
         run: async () => {
           const created = await rootKey.createFromFreshMnemonic();
           if (!created.ok) throw new Error('root');
-          await nostrKey.provisionFromFreshRootMnemonic(created.value.mnemonic);
-          await signingKey.ensureSigningKey();
+                  await signingKey.ensureSigningKey();
         },
       },
       {

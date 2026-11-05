@@ -688,6 +688,8 @@ describe('publishToNostr', () => {
 
   it('returns err when no Nostr key is provisioned — no biometric prompt, no MMKV mutation, no relay calls', async () => {
     await rootKeyMod.createFromFreshMnemonic();
+    // Creating a root also derives its Nostr key; this case needs none.
+    await nostrUserKeyMod.deleteNostrKey();
     await mod.useProfileStore.getState().saveProfile({ displayName: 'Alice', bio: '', links: [] });
     biometricCalls.length = 0;
     const jwsBefore = mod.useProfileStore.getState().jws;
