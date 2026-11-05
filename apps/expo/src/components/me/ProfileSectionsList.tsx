@@ -331,16 +331,21 @@ function PageBlockEditorContent({ block, onClose }: { readonly block: PageBlock;
         media,
       };
     });
+  // A text block has no heading on the Page; its first line names it in the
+  // section list and satisfies the schema's required title.
+  const savedTitle = isText
+    ? (textLines[0]?.slice(0, MAX_PAGE_BLOCK_TITLE_LENGTH) ?? block.title)
+    : title;
   // The card at the top is this draft painted exactly as the Page will.
-  const draft: PageBlock = { ...block, title: title.trim() || block.title, style, size, items: cleanedItems };
-  const canSave = title.trim().length > 0 && itemsValid;
-  const dirty = title !== block.title || style !== block.style || size !== cardSizeOf(block)
+  const draft: PageBlock = { ...block, title: savedTitle.trim() || block.title, style, size, items: cleanedItems };
+  const canSave = savedTitle.trim().length > 0 && itemsValid;
+  const dirty = (!isText && title !== block.title) || style !== block.style || size !== cardSizeOf(block)
     || (isText
       ? text !== block.items.map((item) => item.title).join('\n')
       : JSON.stringify(items) !== JSON.stringify(block.items));
   const save = () => {
     if (!canSave) return;
-    updateBlock(block.id, { title, style, items: cleanedItems });
+    updateBlock(block.id, { title: savedTitle, style, items: cleanedItems });
     setBlockSize(block.id, size);
     onClose();
   };
@@ -390,7 +395,7 @@ function PageBlockEditorContent({ block, onClose }: { readonly block: PageBlock;
                   block={draft}
                   record={record}
                   appearance={appearance}
-                  emptyHint={isText ? undefined : t('pageDesign.previewEmptyHint')}
+                  emptyHint={t('pageDesign.previewEmptyHint')}
                 />
               </View>
             </View>
@@ -426,7 +431,7 @@ function PageBlockEditorContent({ block, onClose }: { readonly block: PageBlock;
             />
           </ThemedSurface>
 
-          {catalog.styles.length > 1 && !isText ? (
+          {catalog.styles.length > 1 ? (
             <View className="gap-2">
               <ThemedText variant="label" tone="tertiary">{t('pageDesign.style')}</ThemedText>
               <View className="flex-row flex-wrap gap-2">
@@ -442,17 +447,19 @@ function PageBlockEditorContent({ block, onClose }: { readonly block: PageBlock;
             </View>
           ) : null}
           {blockHasCardSize(style) ? <CardSizePicker value={size} onChange={setSize} /> : null}
-          <ThemedTextInput
-            label={t('pageDesign.sectionTitle')}
-            value={title}
-            maxLength={MAX_PAGE_BLOCK_TITLE_LENGTH}
-            onChangeText={setTitle}
-            showClear
-          />
+          {isText ? null : (
+            <ThemedTextInput
+              label={t('pageDesign.sectionTitle')}
+              value={title}
+              maxLength={MAX_PAGE_BLOCK_TITLE_LENGTH}
+              onChangeText={setTitle}
+              showClear
+            />
+          )}
 
           {isText ? (
             <ThemedTextInput
-              label={t('pageDesign.textBody')}
+              accessibilityLabel={t('pageDesign.block.text')}
               value={text}
               onChangeText={setText}
               placeholder={t('pageDesign.textPlaceholder')}

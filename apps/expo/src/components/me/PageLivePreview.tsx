@@ -120,7 +120,7 @@ export function PageLivePreview({
         {block.type === 'links' ? null : (
           <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
             <View style={{ flex: 1 }}>
-              <PagePreviewSectionTitle title={block.title} palette={palette} fontFamily={fontFamily} />
+              {block.type === 'text' ? null : <PagePreviewSectionTitle title={block.title} palette={palette} fontFamily={fontFamily} />}
             </View>
             {editable && !block.visible ? (
               <ThemedText variant="caption" style={{ color: palette.subtle, fontFamily }}>
@@ -220,7 +220,7 @@ export function PageBlockPreview({
   return (
     <PageGround appearance={appearance}>
       <View style={{ padding: metrics.padX, gap: 4 }}>
-        <PagePreviewSectionTitle title={block.title} palette={palette} fontFamily={fontFamily} />
+        {block.type === 'text' ? null : <PagePreviewSectionTitle title={block.title} palette={palette} fontFamily={fontFamily} />}
         <PreviewBlockItems
           block={block}
           items={items}
