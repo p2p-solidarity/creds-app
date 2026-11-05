@@ -21,7 +21,13 @@
  */
 import { useMemo, type ReactNode } from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
-import { GestureDetector, useExclusiveGestures, usePanGesture, useTapGesture } from 'react-native-gesture-handler';
+import {
+  GestureDetector,
+  useCompetingGestures,
+  useExclusiveGestures,
+  usePanGesture,
+  useTapGesture,
+} from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedReaction,
   useAnimatedStyle,
@@ -32,8 +38,10 @@ import Animated, {
 import Svg, { Circle } from 'react-native-svg';
 import { scheduleOnRN } from 'react-native-worklets';
 
+import { SfIcon } from '@/components/icons/SfIcon';
 import { Colors } from '@/constants/Colors';
 import { haptic } from '@/feedback/haptics';
+import { ON_DARK } from '@/components/themed/contrast';
 import { SCALE, SPRING } from '@/feedback/motion';
 
 import { dragDestinationForSlots, rowSlot, slotOffset } from './pageRowStyles';
@@ -219,11 +227,23 @@ function useRowDragPan({
   });
 }
 
+/** How far a row must travel left before letting go asks to remove it. */
+const SWIPE_REMOVE_DISTANCE = 88;
+
+/** Past the threshold the row keeps following the finger, only heavier. */
+function swipeTravel(translationX: number): number {
+  'worklet';
+  if (translationX >= 0) return 0;
+  if (translationX > -SWIPE_REMOVE_DISTANCE) return translationX;
+  return -SWIPE_REMOVE_DISTANCE + (translationX + SWIPE_REMOVE_DISTANCE) * 0.35;
+}
+
 /**
  * A whole row as its own grip, for rows that are content rather than list
  * items (the Page preview's blocks): a tap opens it, a long press picks it up
- * and drags it. Exposed to assistive tech as a button plus increment /
- * decrement to move one slot.
+ * and drags it, and a swipe left asks to remove it (`onRemove` confirms).
+ * Exposed to assistive tech as a button plus increment / decrement to move
+ * one slot and a remove action.
  */
 export function RowDragArea({
   controller,
@@ -232,8 +252,10 @@ export function RowDragArea({
   stride,
   label,
   moveLabel,
+  removeLabel,
   onPress,
   onMove,
+  onRemove,
   children,
 }: {
   readonly controller: RowDragController;
@@ -242,10 +264,14 @@ export function RowDragArea({
   readonly stride: number;
   readonly label: string;
   readonly moveLabel: string;
+  readonly removeLabel: string;
   readonly onPress: () => void;
   readonly onMove: (destination: number) => void;
+  readonly onRemove: () => void;
   readonly children: ReactNode;
 }): ReactNode {
+  const swipeX = useSharedValue(0);
+  const armed = useSharedValue(false);
   const pan = useRowDragPan({
     controller,
     index,
@@ -255,6 +281,32 @@ export function RowDragArea({
     longPressMs: 250,
     onMove,
   });
+  // Left only, and it gives way to the page's vertical scroll.
+  const swipe = usePanGesture({
+    activeOffsetX: [-14, 10000],
+    failOffsetY: [-12, 12],
+    onUpdate: (event) => {
+      swipeX.value = swipeTravel(event.translationX);
+      const past = event.translationX <= -SWIPE_REMOVE_DISTANCE;
+      if (past !== armed.value) {
+        armed.value = past;
+        scheduleOnRN(haptic, 'selection');
+      }
+    },
+    onDeactivate: (event) => {
+      const remove = event.translationX <= -SWIPE_REMOVE_DISTANCE || event.velocityX < -900;
+      swipeX.value = withSpring(0, SPRING.press);
+      armed.value = false;
+      // The row springs home either way; the confirm decides what happens.
+      if (remove) scheduleOnRN(onRemove);
+    },
+    onFinalize: (event) => {
+      if (event.canceled) {
+        swipeX.value = withSpring(0, SPRING.press);
+        armed.value = false;
+      }
+    },
+  });
   const tap = useTapGesture({
     runOnJS: true,
     onActivate: () => {
@@ -262,7 +314,14 @@ export function RowDragArea({
       onPress();
     },
   });
-  const gesture = useExclusiveGestures(pan, tap);
+  const gesture = useExclusiveGestures(useCompetingGestures(pan, swipe), tap);
+  const rowStyle = useAnimatedStyle(() => ({ transform: [{ translateX: swipeX.value }] }));
+  // Only the strip the row has uncovered turns red, so the Page ground
+  // behind the block's transparent parts never tints.
+  const revealStyle = useAnimatedStyle(() => ({
+    width: Math.max(0, -swipeX.value),
+    opacity: armed.value ? 1 : Math.min(1, -swipeX.value / SWIPE_REMOVE_DISTANCE),
+  }));
   return (
     <GestureDetector gesture={gesture}>
       <View
@@ -274,14 +333,34 @@ export function RowDragArea({
           { name: 'activate', label },
           { name: 'decrement', label: moveLabel },
           { name: 'increment', label: moveLabel },
+          { name: 'delete', label: removeLabel },
         ]}
         onAccessibilityAction={(event) => {
           const action = event.nativeEvent.actionName;
           if (action === 'activate') onPress();
           if (action === 'decrement' && index > 0) onMove(index - 1);
           if (action === 'increment' && index < itemCount - 1) onMove(index + 1);
+          if (action === 'delete') onRemove();
         }}>
-        {children}
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            {
+              position: 'absolute',
+              top: 0,
+              bottom: 0,
+              right: 0,
+              borderRadius: 14,
+              alignItems: 'center',
+              justifyContent: 'center',
+              overflow: 'hidden',
+              backgroundColor: Colors.destructive,
+            },
+            revealStyle,
+          ]}>
+          <SfIcon name="trash" size={18} color={ON_DARK} />
+        </Animated.View>
+        <Animated.View style={rowStyle}>{children}</Animated.View>
       </View>
     </GestureDetector>
   );

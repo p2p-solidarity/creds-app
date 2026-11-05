@@ -41,6 +41,8 @@ import type { ProfileRecord } from '@solidarity/shared';
 
 import { SheetHeader } from './AddLinkSheet';
 import { PHONE_SCREEN_RADIUS, PageLivePreview } from './PageLivePreview';
+import { PublishChangesCard } from './PublishChangesCard';
+import { usePagePublish } from './usePagePublish';
 import { TEMPLATE_NATIVE_BACKGROUND, paletteFor } from './pagePreviewTheme';
 
 export interface PageAppearanceSheetProps {
@@ -113,6 +115,9 @@ function DesignScreen({
   const reduceMotion = useReducedMotion();
   const [tab, setTab] = useState<DesignTab | null>(null);
   const design = usePageDesignStore((state) => state.design);
+  // A design change is a draft until it is published; the button lives
+  // here too, so the owner never closes the sheet thinking it went live.
+  const pagePublish = usePagePublish(handle);
 
   const panelIn = reduceMotion
     ? FadeIn.duration(DURATION.enter)
@@ -162,6 +167,15 @@ function DesignScreen({
           </Animated.View>
         ) : null}
       </View>
+      {pagePublish.showCard && tab === null ? (
+        <View className="px-4 pb-3 pt-2">
+          <PublishChangesCard
+            state={pagePublish.cardState}
+            onPublish={pagePublish.publish}
+            onDismiss={pagePublish.dismiss}
+          />
+        </View>
+      ) : null}
       <DesignTabBar
         selected={tab}
         bottomInset={insets.bottom}
