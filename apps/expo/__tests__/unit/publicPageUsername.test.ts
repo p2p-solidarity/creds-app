@@ -21,6 +21,6 @@ describe('public page username', () => {
   });
 
   it('uses the official short @name path without a long identifier', () => {
-    expect(publicPagePath('gimmy26')).toBe('creds.id/@gimmy26');
+    expect(publicPagePath('gimmy26')).toBe('creds.id/gimmy26');
   });
 });

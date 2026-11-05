@@ -91,7 +91,7 @@ export function UsernameStep({
         <ThemedTextInput
           value={username}
           kind="handle"
-          inlinePrefix="creds.id/@"
+          inlinePrefix="creds.id/"
           autoCapitalize="none"
           autoCorrect={false}
           maxLength={30}

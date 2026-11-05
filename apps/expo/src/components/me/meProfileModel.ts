@@ -29,6 +29,8 @@ export interface ProfileShareModel {
   readonly offlineUrl: string;
   readonly usernameUrl: string | null;
   readonly usernameDisplayUrl: string | null;
+  /** `/@name` until 15 §6 P3: 2.0.0 apps scanning a QR only know `/@`. */
+  readonly usernameQrUrl: string | null;
   readonly shortUrl: string | null;
   readonly oversize: boolean;
 }
@@ -58,15 +60,18 @@ export function buildProfileShareModel(
     offlineUrl: `${PROFILE_PAGE_URL}${fragment.fragment}`,
     // A username is exposed only after the caller's directory + kind-0
     // readiness gate. Never append the long offline JWS to the public URL.
-    usernameUrl: validUsername
-      ? `${PROFILE_PAGE_ORIGIN}/@${validUsername}`
-      : null,
-    usernameDisplayUrl: validUsername
-      ? `${PROFILE_PAGE_ORIGIN}/@${validUsername}`
-      : null,
+    // Shared and printed as the bare `creds.id/name` (15 §6 P2).
+    usernameUrl: validUsername ? publicNameUrl(validUsername) : null,
+    usernameDisplayUrl: validUsername ? publicNameUrl(validUsername) : null,
+    usernameQrUrl: validUsername ? `${PROFILE_PAGE_ORIGIN}/@${validUsername}` : null,
     shortUrl: nostrClaim ? `${PROFILE_PAGE_URL}${nostrClaim}` : null,
     oversize: fragment.oversize,
   };
+}
+
+/** The bare `https://creds.id/name` a claimed name is shared and printed as. */
+export function publicNameUrl(name: string): string {
+  return `${PROFILE_PAGE_ORIGIN}/${name}`;
 }
 
 export type ProfileShareUrlCandidate =
@@ -74,6 +79,7 @@ export type ProfileShareUrlCandidate =
       readonly kind: 'username';
       readonly url: string;
       readonly displayUrl: string;
+      readonly qrUrl: string;
     }
   | {
       readonly kind: 'handle';
@@ -158,11 +164,12 @@ export function buildProfileShareUrlSelection(
   nostrShortUrlReady: boolean
 ): ProfileShareUrlResolution {
   const candidates: ProfileShareUrlCandidate[] = [];
-  if (model.usernameUrl !== null && model.usernameDisplayUrl !== null) {
+  if (model.usernameUrl !== null && model.usernameDisplayUrl !== null && model.usernameQrUrl !== null) {
     candidates.push({
       kind: 'username',
       url: model.usernameUrl,
       displayUrl: model.usernameDisplayUrl,
+      qrUrl: model.usernameQrUrl,
     });
   }
   if (verifiedHandle !== null) {

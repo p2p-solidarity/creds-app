@@ -87,5 +87,5 @@ export function validatePublicPageUsername(
 }
 
 export function publicPagePath(username: string): string {
-  return `creds.id/@${username}`;
+  return `creds.id/${username}`;
 }

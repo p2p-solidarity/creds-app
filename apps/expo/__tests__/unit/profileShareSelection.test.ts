@@ -21,15 +21,16 @@ describe('pickBestShareUrl', () => {
   it('prefers the official short name and contains no long fragment', () => {
     const username: ProfileShareUrlCandidate = {
       kind: 'username',
-      url: 'https://creds.id/@alice',
-      displayUrl: 'https://creds.id/@alice',
+      url: 'https://creds.id/alice',
+      displayUrl: 'https://creds.id/alice',
+      qrUrl: 'https://creds.id/@alice',
     };
 
     expect(pickBestShareUrl([OFFLINE, SHORT, username])).toEqual({
       kind: 'ready',
       candidate: username,
     });
-    expect(displayProfileShareUrl(username)).toBe('creds.id/@alice');
+    expect(displayProfileShareUrl(username)).toBe('creds.id/alice');
   });
 
   it('selects a currently verified handle ahead of the npub and offline formats', () => {
@@ -82,6 +83,7 @@ describe('buildProfileShareUrlSelection', () => {
     offlineUrl: OFFLINE.url,
     usernameUrl: null,
     usernameDisplayUrl: null,
+    usernameQrUrl: null,
     shortUrl: SHORT.url,
     oversize: false,
   };
@@ -96,15 +98,17 @@ describe('buildProfileShareUrlSelection', () => {
   it('offers /name first when onboarding has stored a valid username', () => {
     const usernameModel: ProfileShareModel = {
       ...model,
-      usernameUrl: 'https://creds.id/@alice',
-      usernameDisplayUrl: 'https://creds.id/@alice',
+      usernameUrl: 'https://creds.id/alice',
+      usernameDisplayUrl: 'https://creds.id/alice',
+      usernameQrUrl: 'https://creds.id/@alice',
     };
 
     const resolution = buildProfileShareUrlSelection(usernameModel, null, false);
     const usernameCandidate: ProfileShareUrlCandidate = {
       kind: 'username',
-      url: 'https://creds.id/@alice',
-      displayUrl: 'https://creds.id/@alice',
+      url: 'https://creds.id/alice',
+      displayUrl: 'https://creds.id/alice',
+      qrUrl: 'https://creds.id/@alice',
     };
     expect(resolution.selection).toEqual({ kind: 'ready', candidate: usernameCandidate });
     expect(resolution.candidates[0]).toEqual(usernameCandidate);
