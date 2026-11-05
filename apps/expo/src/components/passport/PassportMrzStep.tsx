@@ -8,8 +8,10 @@
  *
  * Date entry: user types YYYY/MM/DD (auto-formatted). Stored on the draft
  * as the MRZ-native YYMMDD because the BAC/PACE key derivation hashes that
- * 6-char string verbatim — see passport/pipeline.parseYyMmDd.
+ * 6-char string verbatim; only the displayed century comes from
+ * passport/pipeline.mrzDate (expiry and birth use different rules).
  */
+import { useState } from 'react';
 import { Text, TextInput, View } from 'react-native';
 
 import { PressableScale } from '@/components/common/PressableScale';
@@ -17,7 +19,7 @@ import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedButton } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { useTranslation } from '@/i18n';
-import type { PassportMRZDraft } from '@/passport/pipeline';
+import { mrzDate, type MrzDateKind, type PassportMRZDraft } from '@/passport/pipeline';
 
 /** Convert raw digit input → display `YYYY/MM/DD` (truncates >8 digits). */
 function formatYyyyMmDd(digits: string): string {
@@ -34,13 +36,11 @@ function toMrzYyMmDd(display: string): string {
   return digits.slice(2);
 }
 
-/** MRZ YYMMDD → display `YYYY/MM/DD`. Birth years 30+ → 1900s, else 2000s. */
-function fromMrzYyMmDd(mrz: string): string {
-  if (mrz.length !== 6) return '';
-  const yy = Number(mrz.slice(0, 2));
-  if (Number.isNaN(yy)) return '';
-  const century = yy >= 30 ? '19' : '20';
-  return `${century}${mrz.slice(0, 2)}/${mrz.slice(2, 4)}/${mrz.slice(4, 6)}`;
+/** MRZ YYMMDD → display `YYYY/MM/DD`. */
+function fromMrzYyMmDd(mrz: string, kind: MrzDateKind): string {
+  if (!/^\d{6}$/.test(mrz)) return '';
+  const year = mrzDate(mrz, kind)?.getUTCFullYear() ?? 2000 + Number(mrz.slice(0, 2));
+  return `${String(year)}/${mrz.slice(2, 4)}/${mrz.slice(4, 6)}`;
 }
 
 export function PassportMrzStep({
@@ -141,27 +141,19 @@ export function PassportMrzStep({
         autoCapitalize="characters"
         maxLength={3}
       />
-      <Field
+      <DateField
         label={t('passportSetup.details.birthDate')}
-        value={fromMrzYyMmDd(draft.dateOfBirth)}
-        onChangeText={(v) => {
-          const display = formatYyyyMmDd(v);
-          patch({ dateOfBirth: toMrzYyMmDd(display) });
-        }}
+        mrz={draft.dateOfBirth}
+        kind="birth"
+        onChange={(mrz) => { patch({ dateOfBirth: mrz }); }}
         placeholder="1990/01/15"
-        keyboardType="number-pad"
-        maxLength={10}
       />
-      <Field
+      <DateField
         label={t('passportSetup.details.expiryDate')}
-        value={fromMrzYyMmDd(draft.expiryDate)}
-        onChangeText={(v) => {
-          const display = formatYyyyMmDd(v);
-          patch({ expiryDate: toMrzYyMmDd(display) });
-        }}
+        mrz={draft.expiryDate}
+        kind="expiry"
+        onChange={(mrz) => { patch({ expiryDate: mrz }); }}
         placeholder="2030/12/31"
-        keyboardType="number-pad"
-        maxLength={10}
       />
       <View className="pt-2">
         <ThemedButton
@@ -181,6 +173,46 @@ export function PassportMrzStep({
         </PressableScale>
       ) : null}
     </View>
+  );
+}
+
+/**
+ * A YYYY/MM/DD field over an MRZ YYMMDD value. The typed text lives here: the
+ * draft only holds the last 6 digits, which can't be shown back mid-typing.
+ * A value set from outside (camera scan) replaces the text.
+ */
+function DateField({
+  label,
+  mrz,
+  kind,
+  onChange,
+  placeholder,
+}: {
+  readonly label: string;
+  readonly mrz: string;
+  readonly kind: MrzDateKind;
+  readonly onChange: (mrz: string) => void;
+  readonly placeholder: string;
+}) {
+  const [text, setText] = useState(() => fromMrzYyMmDd(mrz, kind));
+  const [shownMrz, setShownMrz] = useState(mrz);
+  if (mrz !== shownMrz) {
+    setShownMrz(mrz);
+    if (toMrzYyMmDd(text) !== mrz) setText(fromMrzYyMmDd(mrz, kind));
+  }
+  return (
+    <Field
+      label={label}
+      value={text}
+      onChangeText={(v) => {
+        const display = formatYyyyMmDd(v);
+        setText(display);
+        onChange(toMrzYyMmDd(display));
+      }}
+      placeholder={placeholder}
+      keyboardType="number-pad"
+      maxLength={10}
+    />
   );
 }
 

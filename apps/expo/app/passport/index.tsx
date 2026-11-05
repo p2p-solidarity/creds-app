@@ -48,6 +48,7 @@ import {
   chipFromNitro,
   derivePassportPublicSignals,
   initialPassportPipelineState,
+  mrzDate,
   PASSPORT_STEP_META,
   passportPipelineReducer,
   selectNfcReadStrategy,
@@ -76,23 +77,6 @@ import { recordPassportPrivateClaims } from '@/passport/privateClaims';
 import { DEFAULT_RELAYS } from '@/nostr/publish';
 import { hasNostrKeySync } from '@/nostr/userKey';
 import { deviceAttestSupported } from '@/witness/deviceKey';
-
-/**
- * Parse a YYMMDD MRZ date into a JS Date in UTC. Returns null on
- * malformed input so the credential just doesn't get an expiry field
- * rather than ending up with `Invalid Date`. Years 00..69 map to
- * 2000..2069, 70..99 map to 1970..1999 — the ICAO 9303 sliding window.
- */
-function parseMrzYyMmDd(yymmdd: string): Date | null {
-  if (yymmdd.length !== 6) return null;
-  const yy = Number.parseInt(yymmdd.slice(0, 2), 10);
-  const mm = Number.parseInt(yymmdd.slice(2, 4), 10);
-  const dd = Number.parseInt(yymmdd.slice(4, 6), 10);
-  if (Number.isNaN(yy) || Number.isNaN(mm) || Number.isNaN(dd)) return null;
-  const year = yy <= 69 ? 2000 + yy : 1900 + yy;
-  const d = new Date(Date.UTC(year, mm - 1, dd));
-  return Number.isNaN(d.getTime()) ? null : d;
-}
 
 /**
  * A saved record of the same passport blocks a second save — unless it was
@@ -342,7 +326,7 @@ export default function PassportSetup() {
         );
         return;
       }
-      const expiry = parseMrzYyMmDd(draft.expiryDate);
+      const expiry = mrzDate(draft.expiryDate, 'expiry');
       const chipVerified = !chip.isSimulated && chip.passiveAuthValid;
 
       // Device-attested passport statement (docs/ref/11 §6.1): only for a real

@@ -55,11 +55,13 @@ export interface ValidationError {
 }
 
 /**
- * Validate the user-entered MRZ draft. Mirrors Swift
- * `PassportPipelineService.validateMRZ` (passport ≥ 6 chars,
- * 3-letter nationality, expiry > today).
+ * Validate the user-entered MRZ draft: passport ≥ 6 chars, 3-letter
+ * nationality, not expired (a passport is valid through its expiry day).
  */
-export function validateMrzDraft(draft: PassportMRZDraft): ValidationError | null {
+export function validateMrzDraft(
+  draft: PassportMRZDraft,
+  now: Date = new Date(),
+): ValidationError | null {
   const passport = draft.passportNumber.trim();
   const nationality = draft.nationalityCode.trim();
   if (passport.length < 6) {
@@ -68,21 +70,34 @@ export function validateMrzDraft(draft: PassportMRZDraft): ValidationError | nul
   if (nationality.length !== 3) {
     return { kind: 'validation', message: 'Nationality code must be 3 letters.' };
   }
-  const expiryDate = parseYyMmDd(draft.expiryDate);
-  if (expiryDate && expiryDate.getTime() <= Date.now()) {
+  const expiry = mrzDate(draft.expiryDate, 'expiry', now);
+  if (expiry && expiry.getTime() + DAY_MS <= now.getTime()) {
     return { kind: 'validation', message: 'Passport appears to be expired.' };
   }
   return null;
 }
 
-function parseYyMmDd(s: string): Date | null {
-  if (s.length !== 6) return null;
-  const yy = Number(s.slice(0, 2));
-  const mm = Number(s.slice(2, 4));
-  const dd = Number(s.slice(4, 6));
-  if (Number.isNaN(yy) || Number.isNaN(mm) || Number.isNaN(dd)) return null;
-  const fullYear = yy >= 30 ? 1900 + yy : 2000 + yy;
-  return new Date(Date.UTC(fullYear, mm - 1, dd));
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+export type MrzDateKind = 'birth' | 'expiry';
+
+/**
+ * MRZ YYMMDD → the date at UTC midnight, or null when malformed. Only the
+ * century is interpreted here; the YYMMDD string itself goes to BAC/PACE
+ * verbatim. Expiry is always 20YY (a passport is valid ≤ 10 years, so a
+ * 19xx expiry is never live). A birth date can't be after `now`, so a YY
+ * that would put it in the future is 19YY.
+ */
+export function mrzDate(yymmdd: string, kind: MrzDateKind, now: Date = new Date()): Date | null {
+  if (!/^\d{6}$/.test(yymmdd)) return null;
+  const yy = Number(yymmdd.slice(0, 2));
+  const mm = Number(yymmdd.slice(2, 4));
+  const dd = Number(yymmdd.slice(4, 6));
+  let year = 2000 + yy;
+  if (kind === 'birth' && Date.UTC(year, mm - 1, dd) > now.getTime()) year -= 100;
+  const date = new Date(Date.UTC(year, mm - 1, dd));
+  if (date.getUTCMonth() !== mm - 1 || date.getUTCDate() !== dd) return null;
+  return date;
 }
 
 /** Mask the document number for display — keeps first 2 + last 1 chars. */
