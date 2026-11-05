@@ -30,6 +30,7 @@ import {
   type ProfileShareSelectionState,
 } from './useProfileShareSelection';
 import type { ProfileShareUrlCandidate, PublicPageShareSource } from './meProfileModel';
+import { profileShareQrUrl } from './meProfileModel';
 
 type ShareModelState = ReadyProfileShareModel | Exclude<ProfileShareSelectionState, { readonly kind: 'ready' }>;
 
@@ -134,7 +135,7 @@ function ProfileQrSheet({
     if (!visible) setSelectedKind(null);
   }, [visible]);
 
-  const activeUrl = shareState.kind === 'ready' ? shareState.selected.url : null;
+  const activeUrl = shareState.kind === 'ready' ? profileShareQrUrl(shareState.selected) : null;
   const qrBlockedBySize =
     shareState.kind === 'ready' &&
     profileShareQrIsOversize(shareState.selected, shareState.model);
@@ -251,7 +252,7 @@ function ProfileQrSheet({
                   setSelectedKind(candidate.kind);
                 }}
                 onRetryQr={() => {
-                  setQrState({ kind: 'loading', url: shareState.selected.url });
+                  setQrState({ kind: 'loading', url: activeUrl });
                   setQrRetryNonce((value) => value + 1);
                 }}
               />

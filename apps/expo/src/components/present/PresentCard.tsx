@@ -27,6 +27,7 @@ import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
 import {
   displayProfileShareUrl,
+  profileShareQrUrl,
   publicNameUrl,
   type PublicPageShareSource,
   type ProfileShareUrlCandidate,
@@ -68,10 +69,8 @@ function onlineCandidate(
   );
 }
 
-/** What the QR encodes: a claimed name keeps `/@name` until 15 §6 P3. */
 function qrValue(candidate: ProfileShareUrlCandidate | null): string | null {
-  if (candidate === null) return null;
-  return candidate.kind === 'username' ? candidate.qrUrl : candidate.url;
+  return candidate === null ? null : profileShareQrUrl(candidate);
 }
 
 /**

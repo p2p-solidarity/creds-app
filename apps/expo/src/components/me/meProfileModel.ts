@@ -91,6 +91,11 @@ export type ProfileShareUrlCandidate =
       readonly url: string;
     };
 
+/** What a QR encodes: a claimed name keeps `/@name` until 15 §6 P3 (iOS universal links claim only `/@*`). */
+export function profileShareQrUrl(candidate: ProfileShareUrlCandidate): string {
+  return candidate.kind === 'username' ? candidate.qrUrl : candidate.url;
+}
+
 export type ProfileShareUrlSelection =
   | {
       readonly kind: 'ready';
