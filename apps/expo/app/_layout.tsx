@@ -76,6 +76,7 @@ import { translate } from '@/i18n';
 import { renewDueProofs } from '@/socialProof/flow';
 import { renewPassportStatement } from '@/passport/npubBinding';
 import { dropRetiredPassportZkData } from '@/passport/retiredZkData';
+import { ensureOwnDmRelays } from '@/privateExchange/relays';
 import { DEFAULT_RELAYS } from '@/nostr/publish';
 import { hydrateSocialProofs } from '@/socialProof/store';
 import { hydratePreferences, usePreferences } from '@/settings/preferences';
@@ -344,6 +345,9 @@ export default function RootLayout() {
         if (failed.length > 0) pushToast(translate('socialProof.renewFailed'), 'error');
       });
       void renewPassportStatement(DEFAULT_RELAYS);
+      // Others can only send us NIP-17 messages once our kind 10050 is up;
+      // waiting for the People tab left people unreachable.
+      void ensureOwnDmRelays().catch(() => undefined);
     };
     renew();
     const sub = AppState.addEventListener('change', (state) => {
