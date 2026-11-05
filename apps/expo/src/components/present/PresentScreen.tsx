@@ -24,7 +24,7 @@ import { capabilities } from '@/platform/distribution';
 import { presentPublicLinks, type PresentPublicLink } from '@/present/presentModel';
 import { linkDisplay, linkSecondaryLabel } from '@/profile/linkPresentation';
 import { useProfileStore } from '@/profile/store';
-import { usePreferences } from '@/settings/preferences';
+import { usePageAddressLive } from '@/profile/usePageAddressLive';
 
 export function PresentScreen(): ReactNode {
   const insets = useSafeAreaInsets();
@@ -34,16 +34,12 @@ export function PresentScreen(): ReactNode {
   const shared = useProfileStore((state) => state.shared);
   const jws = useProfileStore((state) => state.jws);
   const published = useProfileStore((state) => state.published);
-  const nostrPublishedJws = useProfileStore((state) => state.nostrPublishedJws);
   const shareRecord = shared?.record ?? record;
   const shareJws = shared?.jws ?? jws;
   const publicPage: PublicPageShareSource | null = published
     ? { record: published.record, jws: published.jws }
     : null;
-  // Online is the address, not the latest edit: once relays took this Page,
-  // creds.id keeps serving it while newer edits wait to be published.
-  const publishedOnce = usePreferences((state) => state.nostrPagePublishedOnce);
-  const nostrShortUrlReady = published !== null && (publishedOnce || nostrPublishedJws === published.jws);
+  const nostrShortUrlReady = usePageAddressLive();
   const ownerName = record?.displayName.trim() ?? '';
 
   return (

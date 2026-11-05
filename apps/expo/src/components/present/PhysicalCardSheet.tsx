@@ -4,18 +4,18 @@ import { ScrollView, View } from 'react-native';
 import { ModalSheet, sheetTopInset } from '@/components/common/ModalSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CredsMark } from '@/components/brand/CredsMark';
 import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
+import { CARD_FINISHES, CardFaceBackground, finishPalette, finishSwatch, useCardFinish } from '@/components/present/cardFinish';
 import { SheetHeader } from '@/components/me/AddLinkSheet';
 import { ThemedButton, ThemedSurface, ThemedSwitch, ThemedText } from '@/components/themed';
-import { CardMetalColors, Colors } from '@/constants/Colors';
+import { Colors } from '@/constants/Colors';
 import { useThemeColors } from '@/constants/useThemeColors';
 import { Radius } from '@/constants/radius';
 import { useTranslation } from '@/i18n';
 import type { PhysicalCardMaterial } from '@/present/presentModel';
 import { usePreferences } from '@/settings/preferences';
-
-const MATERIALS = ['steel', 'blackTitanium', 'brass'] as const satisfies readonly PhysicalCardMaterial[];
 
 export interface PhysicalCardSheetProps {
   readonly visible: boolean;
@@ -34,9 +34,7 @@ export function PhysicalCardSheet({
   const { t } = useTranslation();
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
-  const material = usePreferences(
-    (state) => state.presentPhysicalCardMaterial ?? 'steel'
-  );
+  const material = useCardFinish();
   const engraveName = usePreferences(
     (state) => state.presentPhysicalCardEngraveName ?? true
   );
@@ -74,17 +72,19 @@ export function PhysicalCardSheet({
             <ThemedText variant="label" tone="secondary">
               {t('present.physicalCard.material')}
             </ThemedText>
-            <View className="flex-row" style={{ gap: 8 }}>
-              {MATERIALS.map((option) => (
-                <MaterialOption
-                  key={option}
-                  material={option}
-                  label={t(`present.physicalCard.material.${option}`)}
-                  selected={material === option}
-                  onPress={() => {
-                    setPreference('presentPhysicalCardMaterial', option);
-                  }}
-                />
+            {/* Two by two: four labels never fit one row in English. */}
+            <View className="flex-row flex-wrap" style={{ rowGap: 8, columnGap: 8 }}>
+              {CARD_FINISHES.map((option) => (
+                <View key={option} style={{ width: '48.5%' }}>
+                  <MaterialOption
+                    material={option}
+                    label={t(`present.physicalCard.material.${option}`)}
+                    selected={material === option}
+                    onPress={() => {
+                      setPreference('presentPhysicalCardMaterial', option);
+                    }}
+                  />
+                </View>
               ))}
             </View>
           </View>
@@ -136,8 +136,9 @@ export function PhysicalCardSheet({
   );
 }
 
-/** `.metal` proportions, painted in the chosen material. The QR corner is a
- *  position mark (an icon), not a code — the real one is cut at order time. */
+/** `.metal` proportions, painted in the chosen finish — the same finish the
+ *  Present card wears. The QR corner is a position mark (an icon), not a
+ *  code — the real one is cut at order time. */
 function CardPreview({
   material,
   name,
@@ -149,6 +150,7 @@ function CardPreview({
   readonly address: string | null;
   readonly qr: boolean;
 }): ReactNode {
+  const palette = finishPalette(material);
   return (
     <View
       style={{
@@ -162,51 +164,42 @@ function CardPreview({
         shadowOffset: { width: 0, height: 8 },
         elevation: 6,
       }}>
-      <LinearGradient
-        colors={materialGradient(material)}
-        start={{ x: 0, y: 0.3 }}
-        end={{ x: 1, y: 0.7 }}
+      <View
         style={{
           flex: 1,
           borderRadius: Radius.card,
           borderWidth: 1,
-          borderColor: CardMetalColors.faceBorder,
-          padding: 16,
-          justifyContent: 'space-between',
+          borderColor: palette.faceBorder,
+          overflow: 'hidden',
         }}>
-        <View>
-          {name !== null ? (
-            <ThemedText variant="titleMedium" numberOfLines={1} style={ETCH}>
-              {name}
-            </ThemedText>
-          ) : null}
-          {address !== null ? (
-            <ThemedText variant="caption" numberOfLines={1} ellipsizeMode="middle" style={{ ...ETCH, opacity: 0.82 }}>
-              {address}
-            </ThemedText>
-          ) : null}
-        </View>
-        <View className="flex-row items-end justify-between">
-          <View style={{ opacity: 0.55 }}>
-            <SfIcon name="wave.3.right" size={14} color={CardMetalColors.etch} />
+        <CardFaceBackground finish={material} side="front" style={{ padding: 16, justifyContent: 'space-between' }}>
+          <View>
+            {name !== null ? (
+              <ThemedText variant="titleMedium" numberOfLines={1} style={palette.ink}>
+                {name}
+              </ThemedText>
+            ) : null}
+            {address !== null ? (
+              <ThemedText variant="caption" numberOfLines={1} ellipsizeMode="middle" style={{ ...palette.ink, opacity: 0.82 }}>
+                {address}
+              </ThemedText>
+            ) : null}
           </View>
-          {qr ? (
-            <View style={{ opacity: 0.85 }}>
-              <SfIcon name="qrcode" size={34} color={CardMetalColors.etch} />
+          <View className="flex-row items-end justify-between">
+            <View style={{ opacity: 0.7 }}>
+              <CredsMark size={20} ink={palette.markInk} accent={palette.markAccent} />
             </View>
-          ) : null}
-        </View>
-      </LinearGradient>
+            {qr ? (
+              <View style={{ opacity: 0.85 }}>
+                <SfIcon name="qrcode" size={34} color={palette.ink.color} />
+              </View>
+            ) : null}
+          </View>
+        </CardFaceBackground>
+      </View>
     </View>
   );
 }
-
-const ETCH = {
-  color: CardMetalColors.etch,
-  textShadowColor: CardMetalColors.etchShadow,
-  textShadowOffset: { width: 0, height: 1 },
-  textShadowRadius: 0,
-} as const;
 
 function MaterialOption({
   material,
@@ -222,7 +215,6 @@ function MaterialOption({
   const colors = useThemeColors();
   return (
     <PressableScale
-      fill
       haptic="tap"
       accessibilityRole="radio"
       accessibilityLabel={label}
@@ -242,7 +234,7 @@ function MaterialOption({
         }}
       >
         <LinearGradient
-          colors={materialGradient(material)}
+          colors={finishSwatch(material)}
           start={{ x: 0, y: 0.5 }}
           end={{ x: 1, y: 0.5 }}
           style={{ width: 16, height: 16, borderRadius: Radius.pill }}
@@ -274,21 +266,4 @@ function EngravingToggle({
       <ThemedSwitch accessibilityLabel={label} value={value} onValueChange={onValueChange} />
     </View>
   );
-}
-
-function materialGradient(
-  material: PhysicalCardMaterial
-): readonly [string, string, string] {
-  switch (material) {
-    case 'steel':
-      return [
-        CardMetalColors.frontStops[0],
-        CardMetalColors.frontStops[2],
-        CardMetalColors.frontStops[7],
-      ];
-    case 'blackTitanium':
-      return [Colors.pageNight, CardMetalColors.backStops[0], CardMetalColors.backStops[3]];
-    case 'brass':
-      return [Colors.warningText, Colors.cardDog, Colors.pageSunEnd];
-  }
 }

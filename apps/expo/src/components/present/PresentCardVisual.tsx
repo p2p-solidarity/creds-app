@@ -13,10 +13,11 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { CredsMark } from '@/components/brand/CredsMark';
 import { PressableScale } from '@/components/common/PressableScale';
-import { SfIcon } from '@/components/icons/SfIcon';
+import { CardFaceBackground, finishPalette, type CardFinish } from '@/components/present/cardFinish';
 import { ThemedText } from '@/components/themed';
-import { CardMetalColors, Colors } from '@/constants/Colors';
+import { Colors } from '@/constants/Colors';
 import { ContentWidth } from '@/constants/layout';
 import { Radius } from '@/constants/radius';
 import { DURATION, EASE_OUT, IDLE, SPRING } from '@/feedback/motion';
@@ -24,13 +25,6 @@ import { DURATION, EASE_OUT, IDLE, SPRING } from '@/feedback/motion';
 /** `.metal` — credit-card proportions; corners follow the card role. */
 const CARD_ASPECT_RATIO = 1.586;
 const CARD_RADIUS = Radius.card;
-/** `.etch` — engraved lettering: pale steel type with a shadow under it. */
-const ETCH_TEXT = {
-  color: CardMetalColors.etch,
-  textShadowColor: CardMetalColors.etchShadow,
-  textShadowOffset: { width: 0, height: 1 },
-  textShadowRadius: 0,
-} as const;
 
 function CardSheen(): ReactNode {
   const reduceMotion = useReducedMotion();
@@ -114,6 +108,7 @@ function useCardMotion(isFlipped: boolean) {
 }
 
 interface PresentCardVisualProps {
+  readonly finish: CardFinish;
   readonly name: string | null;
   /** Printed under the name in mono — the page address this card hands over. */
   readonly displayUrl: string;
@@ -127,13 +122,15 @@ interface PresentCardVisualProps {
 export function PresentCardVisual(props: PresentCardVisualProps): ReactNode {
   const [isFlipped, setIsFlipped] = useState(false);
   const { tiltStyle, frontStyle, backStyle } = useCardMotion(isFlipped);
+  const palette = finishPalette(props.finish);
+  const ETCH_TEXT = palette.ink;
   const faceStyle = {
     position: 'absolute' as const,
     inset: 0,
     overflow: 'hidden' as const,
     borderRadius: CARD_RADIUS,
     borderWidth: 1,
-    borderColor: CardMetalColors.faceBorder,
+    borderColor: palette.faceBorder,
     backfaceVisibility: 'hidden' as const,
   };
   const toggleFlip = () => {
@@ -161,16 +158,15 @@ export function PresentCardVisual(props: PresentCardVisualProps): ReactNode {
             elevation: 8,
           }}>
           <Animated.View style={[faceStyle, frontStyle]}>
-            <LinearGradient
-              colors={CardMetalColors.frontStops}
-              locations={CardMetalColors.frontLocations}
-              start={{ x: 0, y: 0.39 }}
-              end={{ x: 1, y: 0.61 }}
-              style={{ flex: 1, paddingVertical: 15, paddingHorizontal: 16 }}>
-              <CardSheen />
-              {/* `.m-nfc` — the tap-to-exchange mark, quiet in the corner. */}
-              <View style={{ position: 'absolute', top: 14, right: 15, opacity: 0.55 }}>
-                <SfIcon name="wave.3.right" size={16} color={CardMetalColors.etch} />
+            <CardFaceBackground
+              finish={props.finish}
+              side="front"
+              style={{ paddingVertical: 15, paddingHorizontal: 16 }}>
+              {palette.metal ? <CardSheen /> : null}
+              {/* The creds mark, quiet in the corner: the same drawing on every
+                  platform, never a status glyph. */}
+              <View style={{ position: 'absolute', top: 14, right: 15, opacity: 0.7 }}>
+                <CredsMark size={22} ink={palette.markInk} accent={palette.markAccent} />
               </View>
               {props.name !== null ? (
                 <ThemedText variant="titleLarge" numberOfLines={1} style={ETCH_TEXT}>
@@ -200,28 +196,24 @@ export function PresentCardVisual(props: PresentCardVisualProps): ReactNode {
                   </ThemedText>
                 </View>
               </View>
-            </LinearGradient>
+            </CardFaceBackground>
           </Animated.View>
           <Animated.View style={[faceStyle, backStyle]}>
-            <LinearGradient
-              colors={CardMetalColors.backStops}
-              locations={CardMetalColors.backLocations}
-              start={{ x: 1, y: 0.61 }}
-              end={{ x: 0, y: 0.39 }}
+            <CardFaceBackground
+              finish={props.finish}
+              side="back"
               style={{
-                flex: 1,
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 10,
                 padding: 18,
               }}>
-              <CardSheen />
+              {palette.metal ? <CardSheen /> : null}
+              {/* A fixed brand mark, not a glyph that could read as network state. */}
+              <CredsMark size={44} ink={palette.markInk} accent={palette.markAccent} />
               <ThemedText variant="caption" style={{ ...ETCH_TEXT, letterSpacing: 2.2 }}>
                 CREDS.ID
               </ThemedText>
-              <View style={{ opacity: 0.6 }}>
-                <SfIcon name="wave.3.right" size={24} color={CardMetalColors.etch} />
-              </View>
               <ThemedText
                 variant="caption"
                 numberOfLines={1}
@@ -229,7 +221,7 @@ export function PresentCardVisual(props: PresentCardVisualProps): ReactNode {
                 style={{ ...ETCH_TEXT, opacity: 0.6 }}>
                 {props.displayUrl}
               </ThemedText>
-            </LinearGradient>
+            </CardFaceBackground>
           </Animated.View>
         </PressableScale>
       </Animated.View>

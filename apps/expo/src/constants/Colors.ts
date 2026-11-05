@@ -379,6 +379,42 @@ export const CardMetalColors = {
   qrInk: '#14161A',
 } as const;
 
+/**
+ * Card finishes beyond steel (`CardMetalColors`): the other two metals and the
+ * creds night sky, from the creds.id landing's blue-hour band (`.door-trust`:
+ * `#2c2557 → #1c1741 → #13102e`, aurora fields, twinkling dots and sparks).
+ * Like the steel card they ignore `Appearance`.
+ */
+export const CardFinishColors = {
+  blackTitanium: {
+    frontStops: ['#1B1D21', '#3B3E44', '#5A5E65', '#2C2F34', '#202226', '#44484E', '#62666D', '#2A2D31', '#17191C'],
+    backStops: ['#1F2125', '#3A3D42', '#54585E', '#2E3135', '#18191C'],
+    etch: '#DADDE2',
+    etchShadow: 'rgba(0,0,0,0.7)',
+    faceBorder: 'rgba(255,255,255,0.16)',
+  },
+  brass: {
+    frontStops: ['#6B4F1D', '#A9853D', '#D9BC74', '#8E6C2C', '#73561F', '#B8954C', '#E6CD8A', '#94722F', '#5E4418'],
+    backStops: ['#6A4E1C', '#9C7A35', '#C9AA62', '#82632A', '#563E15'],
+    etch: '#FFF6DC',
+    etchShadow: 'rgba(58,38,4,0.6)',
+    faceBorder: 'rgba(255,240,200,0.32)',
+  },
+  creds: {
+    sky: ['#2C2557', '#1C1741', '#13102E'],
+    skyLocations: [0, 0.55, 1],
+    /** `.door-aurora-a/b/c` in the dark theme, a little stronger on a small face. */
+    auroraA: 'rgba(150,60,140,0.62)',
+    auroraB: 'rgba(64,72,176,0.6)',
+    auroraC: 'rgba(250,226,160,0.2)',
+    star: '#FFFFFF',
+    spark: '#FFF6D8',
+    ink: '#FCF8F0',
+    inkShadow: 'rgba(5,6,26,0.6)',
+    faceBorder: 'rgba(255,255,255,0.18)',
+  },
+} as const;
+
 type RawKey = keyof typeof RAW;
 
 type ThemeScheme = 'light' | 'dark';
