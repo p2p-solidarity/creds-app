@@ -98,7 +98,7 @@ export function ContactsAddSheet({
                 }}
                 kind="handle"
                 label={t('peopleList.credsNameLabel')}
-                inlinePrefix="creds.id/@"
+                inlinePrefix="creds.id/"
                 placeholder={t('peopleList.credsNamePlaceholder')}
                 error={nameError}
                 hint={t('peopleList.credsNameHint')}

@@ -57,15 +57,16 @@ describe('profile share model', () => {
       jws: publicJws,
     });
 
-    expect(model.usernameUrl).toBe('https://creds.id/@alice');
+    expect(model.usernameUrl).toBe('https://creds.id/alice');
     expect(model.usernameUrl).not.toContain('#');
   });
 
   it('does not attach a local projection to the official short URL', () => {
     const model = buildProfileShareModel(PROFILE, 'header.payload.signature', 'alice');
 
-    expect(model.usernameUrl).toBe('https://creds.id/@alice');
-    expect(model.usernameDisplayUrl).toBe('https://creds.id/@alice');
+    expect(model.usernameUrl).toBe('https://creds.id/alice');
+    expect(model.usernameDisplayUrl).toBe('https://creds.id/alice');
+    expect(model.usernameQrUrl).toBe('https://creds.id/@alice');
   });
 });
 
