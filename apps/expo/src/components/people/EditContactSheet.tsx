@@ -150,52 +150,52 @@ function EditContactSheetContent({
       >
         <View style={{ rowGap: 20 }}>
           <FieldRow
-            label="Name"
-            placeholder="Required"
+            label={t('contactForm.name')}
+            placeholder={t('contactForm.required')}
             value={name}
             onChange={setName}
             autoCapitalize="words"
           />
           <FieldRow
-            label="Title"
-            placeholder="Optional"
+            label={t('contactForm.title')}
+            placeholder={t('pageLocalDetails.optional')}
             value={title}
             onChange={setTitle}
             autoCapitalize="words"
           />
           <FieldRow
-            label="Company"
-            placeholder="Optional"
+            label={t('contactForm.company')}
+            placeholder={t('pageLocalDetails.optional')}
             value={company}
             onChange={setCompany}
             autoCapitalize="words"
           />
           <FieldRow
-            label="Email"
-            placeholder="Optional"
+            label={t('personDetail.email')}
+            placeholder={t('pageLocalDetails.optional')}
             value={email}
             onChange={setEmail}
             keyboardType="email-address"
             autoCapitalize="none"
           />
           <FieldRow
-            label="Phone"
-            placeholder="Optional"
+            label={t('personDetail.phone')}
+            placeholder={t('pageLocalDetails.optional')}
             value={phone}
             onChange={setPhone}
             keyboardType="phone-pad"
             autoCapitalize="none"
           />
           <FieldRow
-            label="Tags"
-            placeholder="Comma separated"
+            label={t('contactForm.tags')}
+            placeholder={t('contactForm.tagsHint')}
             value={tags}
             onChange={setTags}
             autoCapitalize="none"
           />
           <FieldRow
-            label="Note"
-            placeholder="Optional"
+            label={t('personDetail.noteLabel')}
+            placeholder={t('pageLocalDetails.optional')}
             value={notes}
             onChange={setNotes}
             autoCapitalize="sentences"
@@ -224,14 +224,15 @@ export function SheetToolbar({
   title,
   onCancel,
   onSave,
-  canSave,
-  saving,
+  canSave = false,
+  saving = false,
 }: {
   readonly title: string;
   readonly onCancel: () => void;
-  readonly onSave: () => void;
-  readonly canSave: boolean;
-  readonly saving: boolean;
+  /** Absent for a pick-only sheet: no Save button. */
+  readonly onSave?: () => void;
+  readonly canSave?: boolean;
+  readonly saving?: boolean;
 }): ReactNode {
   const { t } = useTranslation();
   return (
@@ -254,22 +255,26 @@ export function SheetToolbar({
         {title}
       </Text>
 
-      <Pressable
-        accessibilityRole="button"
-        onPress={onSave}
-        disabled={!canSave}
-        hitSlop={8}
-      >
-        <Text
-          style={{
-            fontSize: 16,
-            color: canSave ? Colors.text1 : Colors.text3,
-            fontWeight: '600',
-          }}
+      {onSave ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={onSave}
+          disabled={!canSave}
+          hitSlop={8}
         >
-          {saving ? 'Saving…' : t('common.save')}
-        </Text>
-      </Pressable>
+          <Text
+            style={{
+              fontSize: 16,
+              color: canSave ? Colors.text1 : Colors.text3,
+              fontWeight: '600',
+            }}
+          >
+            {saving ? t('contactForm.saving') : t('common.save')}
+          </Text>
+        </Pressable>
+      ) : (
+        <View style={{ width: 44 }} />
+      )}
     </View>
   );
 }

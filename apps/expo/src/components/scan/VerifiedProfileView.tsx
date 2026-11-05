@@ -28,12 +28,15 @@ import type { ProfileRecord } from '@solidarity/shared';
 export interface VerifiedProfileViewProps {
   readonly record: ProfileRecord;
   readonly handleBinding?: VerifiedHandleBinding;
+  /** A saved Page's creds.id name this phone checked both ways earlier
+   *  (`VerifiedSnapshot.handle`); a live `handleBinding` wins. */
+  readonly username?: string | null;
 }
 
 /** Opens on the person's Page exactly as visitors see it — their published
  *  design, or the default Page of their signed links when they never
  *  designed one — then the signature / handle chips and this phone's checks. */
-export function VerifiedProfileView({ record, handleBinding }: VerifiedProfileViewProps): ReactNode {
+export function VerifiedProfileView({ record, handleBinding, username = null }: VerifiedProfileViewProps): ReactNode {
   const { t } = useTranslation();
   const design = useMemo(() => record.page ?? createInitialPageDesign(), [record.page]);
   return (
@@ -43,7 +46,7 @@ export function VerifiedProfileView({ record, handleBinding }: VerifiedProfileVi
         blocks={design.blocks}
         appearance={design.appearance}
         variant="public"
-        handle={handleBinding?.handle ?? null}
+        handle={handleBinding?.handle ?? (username === null ? null : `@${username}`)}
       />
 
       <ThemedSurface variant="card" style={{ overflow: 'hidden' }}>
@@ -53,7 +56,7 @@ export function VerifiedProfileView({ record, handleBinding }: VerifiedProfileVi
               "signature valid" left people guessing which signature. */}
           <View style={{ flex: 1, gap: 2 }}>
             <ThemedText variant="bodyMedium">{t('verifiedPage.signatureValid')}</ThemedText>
-            <ThemedText variant="caption" tone="tertiary" numberOfLines={2}>
+            <ThemedText variant="caption" tone="tertiary" numberOfLines={3}>
               {t('verifiedPage.signatureValidDetail', { key: `…${record.did.slice(-6)}` })}
             </ThemedText>
           </View>

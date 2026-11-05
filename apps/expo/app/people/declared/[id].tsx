@@ -29,7 +29,7 @@ import {
   PersonLinksCard,
   buildLinkRows,
 } from '@/components/people/personDetailSupport';
-import { snapshotDisplayName } from '@/components/people/ContactsList';
+import { snapshotDisplayName } from '@/people/person';
 import { ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { fadeUpIn } from '@/feedback/motion';

@@ -25,29 +25,30 @@ import {
   ContactSectionHeader,
   flattenContactSections,
   groupContactsByInitial,
-  snapshotDisplayName,
 } from '@/components/people/ContactsList';
 import { DeleteContactsSheet } from '@/components/people/DeleteContactsSheet';
 import { ManualContactEntrySheet } from '@/components/people/ManualContactEntrySheet';
 import { PeopleSearchField } from '@/components/people/PeopleSearchField';
-import { TrustGraphContactRow } from '@/components/people/TrustGraphContactRow';
-import { SavedPageRow } from '@/components/people/SavedPageRow';
+import { MergeSuggestionCard } from '@/components/people/MergeSuggestionCard';
+import { PersonRow } from '@/components/people/PersonRow';
 import { LinkPageImportSheet, type LinkPageImportResult } from '@/components/profile/LinkPageImportSheet';
 import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { Radius } from '@/constants/radius';
 import { useThemeColors } from '@/constants/useThemeColors';
 import { useTranslation } from '@/i18n';
-import { useContactStore, type ContactManifestEntry } from '@/contacts/repository';
+import { useContactStore } from '@/contacts/repository';
 import { shareContactVCard } from '@/contacts/shareContactVCard';
 import { confirmDialog } from '@/feedback/confirmDialog';
 import { haptic } from '@/feedback/haptics';
 import { pushToast } from '@/feedback/toast';
 import {
-  useProfileSnapshotStore,
-  useSortedProfileSnapshots,
-  type ProfileSnapshot,
-} from '@/people/profileSnapshots';
+  useCheckPageUsernames,
+  useMergeSuggestions,
+  usePeople,
+  type Person,
+} from '@/people/person';
+import { useProfileSnapshotStore } from '@/people/profileSnapshots';
 import { usePagesPullRefresh } from '@/people/usePagesPullRefresh';
 import { usePeopleScreen } from '@/people/usePeopleScreen';
 import { usePreferences } from '@/settings/preferences';
@@ -58,14 +59,16 @@ import { usePreferences } from '@/settings/preferences';
 
 export default function PeopleTab() {
   const { t } = useTranslation();
-  const { contacts, loading, error, refresh, retry } = usePeopleScreen();
+  const { loading, error, refresh, retry } = usePeopleScreen();
   const removeContact = useContactStore((s) => s.remove);
   const removePage = useProfileSnapshotStore((s) => s.remove);
   const loadDetail = useContactStore((s) => s.loadDetail);
   const upsertDeclared = useProfileSnapshotStore((s) => s.upsertDeclared);
-  const savedPages = useSortedProfileSnapshots();
-  const savedPageCount = savedPages.length;
+  const people = usePeople();
+  const savedPageCount = useMemo(() => people.filter((p) => p.page !== null).length, [people]);
   const pullRefresh = usePagesPullRefresh(savedPageCount);
+  const mergeSuggestions = useMergeSuggestions(people);
+  useCheckPageUsernames(people);
   const backupEnabled = usePreferences((s) => s.backupEnabled);
   const insets = useSafeAreaInsets();
   const { edit } = useLocalSearchParams<{ edit?: string }>();
@@ -80,16 +83,15 @@ export default function PeopleTab() {
   const [editMode, setEditMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(() => new Set());
 
-  // Every selectable row (contacts and saved Pages), keyed like the list, so
-  // select / select-all / delete treat a saved Page as a person too.
+  // Every selectable row, keyed like the list.
   const selectableItems = useMemo(
-    () => flattenContactSections(groupContactsByInitial(contacts, '', savedPages), false)
+    () => flattenContactSections(groupContactsByInitial(people, ''), false)
       .flatMap((item) => (item.kind === 'header' ? [] : [item])),
-    [contacts, savedPages],
+    [people],
   );
   const filteredSections = useMemo(
-    () => groupContactsByInitial(contacts, searchQuery, savedPages),
-    [contacts, searchQuery, savedPages],
+    () => groupContactsByInitial(people, searchQuery),
+    [people, searchQuery],
   );
   const filteredCount = useMemo(
     () => filteredSections.reduce((count, section) => count + section.entries.length, 0),
@@ -105,7 +107,7 @@ export default function PeopleTab() {
     [selectableItems, selectedIds],
   );
   const selectedContacts = useMemo(
-    () => selectedItems.flatMap((item) => (item.kind === 'contact' ? [item.contact] : [])),
+    () => selectedItems.flatMap((item) => (item.person.contact ? [item.person.contact] : [])),
     [selectedItems],
   );
   const allSelected =
@@ -120,15 +122,18 @@ export default function PeopleTab() {
     setSelectedIds(new Set());
   };
 
-  const onSelectContact = (c: ContactManifestEntry) => {
+  const onOpenPerson = (person: Person) => {
     if (editMode) {
-      toggleSelected(c.id);
+      toggleSelected(person.key);
       return;
     }
-    router.push({
-      pathname: '/people/[id]',
-      params: { id: c.id, name: c.name },
-    });
+    if (person.page) {
+      router.push({ pathname: '/people/profile/[did]', params: { did: person.page.did } });
+    } else if (person.declared) {
+      router.push({ pathname: '/people/declared/[id]', params: { id: person.declared.id } });
+    } else if (person.contact) {
+      router.push({ pathname: '/people/[id]', params: { id: person.contact.id, name: person.contact.name } });
+    }
   };
 
   const toggleSelected = (id: string) => {
@@ -150,35 +155,29 @@ export default function PeopleTab() {
     toggleSelected(key);
   };
 
-  const onDeletePage = (snapshot: ProfileSnapshot) => {
-    void (async () => {
-      const ok = await confirmDialog({
-        title: t('peopleList.deleteNameTitle', { name: snapshotDisplayName(snapshot) }),
-        message: t('peopleList.deleteOnePageMessage'),
-        confirmLabel: t('peopleList.delete'),
-        destructive: true,
-      });
-      if (!ok) return;
-      if (removePage(snapshot)) {
-        haptic('success');
-      } else {
-        haptic('error');
-        pushToast(t('peopleList.deleteFailed'), 'error');
-      }
-    })();
+  /** Removes every stored part of a person: the saved Page and the merged or
+   *  manual contact. */
+  const deletePerson = async (person: Person): Promise<void> => {
+    const snapshot = person.page ?? person.declared;
+    if (snapshot && !removePage(snapshot)) throw new Error('page delete refused');
+    if (person.contact) await removeContact(person.contact.id);
   };
 
-  const onDeleteContact = (c: ContactManifestEntry) => {
+  const onDeletePerson = (person: Person) => {
     void (async () => {
       const ok = await confirmDialog({
-        title: t('peopleList.deleteNameTitle', { name: c.name }),
-        message: t('peopleList.deleteOneMessage'),
+        title: t('peopleList.deleteNameTitle', { name: person.name }),
+        message: person.page && person.contact
+          ? t('peopleList.deleteMergedMessage')
+          : person.contact
+            ? t('peopleList.deleteOneMessage')
+            : t('peopleList.deleteOnePageMessage'),
         confirmLabel: t('peopleList.delete'),
         destructive: true,
       });
       if (!ok) return;
       try {
-        await removeContact(c.id);
+        await deletePerson(person);
         haptic('success');
         refresh();
       } catch {
@@ -199,10 +198,7 @@ export default function PeopleTab() {
     setDeleting(true);
     void (async () => {
       try {
-        for (const item of items) {
-          if (item.kind === 'contact') await removeContact(item.contact.id);
-          else if (!removePage(item.snapshot)) throw new Error('page delete refused');
-        }
+        for (const item of items) await deletePerson(item.person);
         haptic('success');
         pushToast(
           items.length === 1
@@ -290,10 +286,7 @@ export default function PeopleTab() {
 
       <DeleteContactsSheet
         visible={deleteSheetOpen}
-        names={selectedItems.map((item) =>
-          item.kind === 'contact'
-            ? { key: item.key, name: item.contact.name }
-            : { key: item.key, name: snapshotDisplayName(item.snapshot) })}
+        names={selectedItems.map((item) => ({ key: item.key, name: item.person.name }))}
         deleting={deleting}
         onConfirm={confirmBatchDelete}
         onClose={() => { setDeleteSheetOpen(false); }}
@@ -303,7 +296,7 @@ export default function PeopleTab() {
         <ContactsLoadError onRetry={retry} />
       ) : loading ? (
         <LoadingState />
-      ) : contacts.length === 0 && savedPageCount === 0 ? (
+      ) : people.length === 0 ? (
         <EmptyContactsContent
           onImportPhone={() => { router.push('/contacts/import-phone'); }}
           onAdd={() => { setAddSheetOpen(true); }}
@@ -320,6 +313,11 @@ export default function PeopleTab() {
             </View>
           ) : null}
           {!editMode && !searching ? <ContactsActivitySections onContactAdded={refresh} /> : null}
+          {!editMode && !searching && mergeSuggestions[0] ? (
+            <View className="px-4 pb-2">
+              <MergeSuggestionCard suggestion={mergeSuggestions[0]} />
+            </View>
+          ) : null}
           {filteredCount === 0 ? (
             <View style={{ flex: 1, paddingHorizontal: 16 }}>
               <EmptySearchState
@@ -348,29 +346,15 @@ export default function PeopleTab() {
                   <View>
                     {item.kind === 'header' ? (
                       <ContactSectionHeader title={item.title} />
-                    ) : item.kind === 'page' ? (
-                      <SwipeToDelete
-                        enabled={!editMode}
-                        onDelete={() => { onDeletePage(item.snapshot); }}>
-                        <SavedPageRow
-                          snapshot={item.snapshot}
-                          selection={{
-                            selectionMode: editMode,
-                            selected: selectedIds.has(item.key),
-                            onToggle: () => { toggleSelected(item.key); },
-                            onLongPress: () => { onLongPressItem(item.key); },
-                          }}
-                        />
-                      </SwipeToDelete>
                     ) : (
                       <SwipeToDelete
                         enabled={!editMode}
-                        onDelete={() => { onDeleteContact(item.contact); }}>
-                        <TrustGraphContactRow
-                          contact={item.contact}
+                        onDelete={() => { onDeletePerson(item.person); }}>
+                        <PersonRow
+                          person={item.person}
                           selectionMode={editMode}
                           selected={selectedIds.has(item.key)}
-                          onPress={() => { onSelectContact(item.contact); }}
+                          onPress={() => { onOpenPerson(item.person); }}
                           onLongPress={() => { onLongPressItem(item.key); }}
                         />
                       </SwipeToDelete>

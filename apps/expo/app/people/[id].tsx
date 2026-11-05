@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { Image, TextInput, View, type TextInputInstance } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
@@ -11,9 +11,10 @@ import { SfIcon } from '@/components/icons/SfIcon';
 import {
   contactSourceDescription,
   contactSourceTag,
-} from '@/components/people/ContactRow';
+} from '@/components/people/contactSource';
 import { EditContactSheet } from '@/components/people/EditContactSheet';
 import { PersonDetailMoreSheet } from '@/components/people/PersonDetailMoreSheet';
+import { PersonMergeSection } from '@/components/people/PersonMergeSection';
 import {
   ContextTag,
   PersonHeroCard,
@@ -33,6 +34,7 @@ import { fadeUpIn } from '@/feedback/motion';
 import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
 import { safeBack } from '@/navigation/safeBack';
+import { usePageLinkedTo } from '@/people/person';
 import type { Animal, Contact } from '@solidarity/shared';
 
 const HORIZONTAL_PADDING = 16;
@@ -47,6 +49,11 @@ export default function PersonDetailScreen(): ReactNode {
   const reduceMotion = useReducedMotion();
   const insets = useSafeAreaInsets();
   const noteInputRef = useRef<TextInputInstance>(null);
+  // A contact merged into a Page is shown as that one person.
+  const mergedInto = usePageLinkedTo(id);
+  useEffect(() => {
+    if (mergedInto) router.replace({ pathname: '/people/profile/[did]', params: { did: mergedInto.did } });
+  }, [mergedInto]);
 
   const [moreSheetOpen, setMoreSheetOpen] = useState(false);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
@@ -157,7 +164,8 @@ export default function PersonDetailScreen(): ReactNode {
           </Animated.View>
         ) : null}
         {contact ? (
-          <Animated.View entering={fadeUpIn(4, reduceMotion)} style={{ paddingHorizontal: HORIZONTAL_PADDING }}>
+          <Animated.View entering={fadeUpIn(4, reduceMotion)} style={{ paddingHorizontal: HORIZONTAL_PADDING, gap: 10 }}>
+            <PersonMergeSection target={{ kind: 'contact', contactId: contact.id, name: contact.businessCard.name }} />
             <ThemedButton
               fullWidth
               variant="secondary"
