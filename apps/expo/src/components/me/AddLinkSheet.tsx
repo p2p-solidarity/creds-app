@@ -433,7 +433,7 @@ function ClipboardChip({ url, onUse }: { readonly url: string; readonly onUse: (
   );
 }
 
-/** The row the link will become, with the picture fetched from its page. */
+/** The row the link will become, with the tile the Page will draw. */
 function DetectedPreview({ url, label }: { readonly url: string; readonly label: string }): ReactNode {
   const c = useThemeColors();
   const reduceMotion = useReducedMotion();

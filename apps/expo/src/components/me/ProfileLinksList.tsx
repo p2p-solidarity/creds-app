@@ -343,7 +343,6 @@ function LinkRowsSection({
                       size={LINK_AVATAR_SIZE}
                       glyph={ICON_TILE_GLYPH}
                       surface={c.chipSurface}
-                      brandOnly
                     />
                   </RowDragHandle>
                   <PressableScale

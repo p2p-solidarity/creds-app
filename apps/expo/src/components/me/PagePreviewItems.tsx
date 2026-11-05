@@ -14,7 +14,7 @@ import type { ReactNode } from 'react';
 import { Linking, View } from 'react-native';
 
 import { PressableScale } from '@/components/common/PressableScale';
-import { BrandIcon } from '@/components/icons/BrandIcon';
+import { LinkIcon } from '@/components/icons/LinkIcon';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedText } from '@/components/themed';
 import { BrandBadge } from '@/components/icons/BrandBadge';
@@ -177,31 +177,26 @@ export function LinkCard({
           previewCardStyle(palette, metrics),
           { minHeight: 44, paddingVertical: sized(metrics.cardPadV, size) },
         ]}>
-        <View
-          style={{
-            width: icon,
-            height: icon,
-            borderRadius: Radius.field,
-            overflow: 'hidden',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: palette.iconBg,
-          }}>
-          {mediaUrl ? (
+        {mediaUrl ? (
+          <View style={{ width: icon, height: icon, borderRadius: Radius.field, overflow: 'hidden', backgroundColor: palette.iconBg }}>
             <Image
               source={{ uri: mediaUrl }}
               contentFit="cover"
               accessibilityLabel={item.title}
               style={{ width: '100%', height: '100%' }}
             />
-          ) : (
-            <BrandIcon
-              name={linkDisplay(item.title, item.url ?? '').brand}
-              size={Math.round(icon * 0.5)}
-              color={palette.iconTint}
-            />
-          )}
-        </View>
+          </View>
+        ) : (
+          // The same tile every link row in the app draws.
+          <LinkIcon
+            label={item.title}
+            url={item.url ?? ''}
+            size={icon}
+            glyph={Math.round(icon * 0.5)}
+            surface={palette.iconBg}
+            color={palette.iconTint}
+          />
+        )}
         <View style={{ flex: 1, gap: 1 }}>
           <ThemedText
             variant={size === 'small' ? 'bodyMedium' : size === 'large' ? 'titleLarge' : 'titleMedium'}

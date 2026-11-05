@@ -40,5 +40,6 @@ describe('pageRowStyles worklet contract', () => {
     const code = transform('../../src/components/me/rowDrag.tsx');
     expect(code).toMatch(/rubberClamp\.__workletHash\s*=/u);
     expect(code).toMatch(/settleBack\.__workletHash\s*=/u);
+    expect(code).toMatch(/swipeTravel\.__workletHash\s*=/u);
   });
 });
