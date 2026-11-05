@@ -1,7 +1,8 @@
 /**
- * A Page group label that folds its group (區塊 / 證明). The tab leads with
- * the hero and the links; everything else stays one row tall until asked for,
- * with a short summary so a folded group still says what is inside.
+ * A Page group label that folds its group (證明). The tab leads with the hero
+ * and the links; a folding group stays one row tall until asked for, with a
+ * short summary so a folded group still says what is inside. Without
+ * `onToggle` the label does not fold (區塊: its preview is always on screen).
  */
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
@@ -23,20 +24,14 @@ export function PageCollapsibleHeader({
   readonly title: string;
   /** What the folded group holds, e.g. 「2 個」; null says nothing. */
   readonly summary: string | null;
-  readonly open: boolean;
-  readonly onToggle: () => void;
+  readonly open?: boolean;
+  readonly onToggle?: () => void;
   /** A ＋ beside the fold that adds to this group; `disabled` once full. */
   readonly add?: { readonly label: string; readonly disabled: boolean; readonly onPress: () => void };
 }): ReactNode {
   const c = useThemeColors();
-  const header = (
-    <PressableScale
-      haptic="tap"
-      onPress={onToggle}
-      accessibilityRole="button"
-      accessibilityState={{ expanded: open }}
-      accessibilityLabel={summary === null ? title : `${title}, ${summary}`}
-      style={{ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44 }}>
+  const label = (
+    <>
       <PageSectionLabel title={title} />
       <View style={{ flex: 1 }}>
         {summary !== null ? (
@@ -45,6 +40,25 @@ export function PageCollapsibleHeader({
           </ThemedText>
         ) : null}
       </View>
+    </>
+  );
+  const header = onToggle === undefined ? (
+    <View
+      accessible
+      accessibilityRole="header"
+      accessibilityLabel={summary === null ? title : `${title}, ${summary}`}
+      style={{ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44 }}>
+      {label}
+    </View>
+  ) : (
+    <PressableScale
+      haptic="tap"
+      onPress={onToggle}
+      accessibilityRole="button"
+      accessibilityState={{ expanded: open }}
+      accessibilityLabel={summary === null ? title : `${title}, ${summary}`}
+      style={{ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44 }}>
+      {label}
       <SfIcon name={open ? 'chevron.up' : 'chevron.down'} size={13} color={c.text3} />
     </PressableScale>
   );

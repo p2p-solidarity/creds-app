@@ -129,7 +129,7 @@ function PublishPageScreen(): ReactNode {
     }
     dispatch({ type: 'publishingSucceeded', outcome: result.value });
     // Partial acceptance (≥1 relay holding each copy) is an accepted outcome
-    // (04-plan S8f) — the outcome step renders the honest per-relay panel.
+    // — the outcome step renders the honest per-relay panel.
     // Only zero acceptance of either copy raises the error sheet.
     if (!isNostrPublishOutcomePartiallyAccepted(result.value)) {
       reportFailure('publish quorum was not met', result.value);

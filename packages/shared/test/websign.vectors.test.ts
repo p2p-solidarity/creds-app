@@ -1,6 +1,5 @@
 /**
- * webSign.ts — App↔Web per-action remote-signing envelopes (research
- * notes-1.3.3 §4). Round-trip (buildWebSignRequest → signWebSignRequest →
+ * webSign.ts — App↔Web per-action remote-signing envelopes. Round-trip (buildWebSignRequest → signWebSignRequest →
  * verifyWebSignRequest, and the response mirror) plus consumption of the
  * frozen conformance/adversarial vectors in ../vectors/websign.json — the
  * same vectors airmeishi-web will later replay against its own

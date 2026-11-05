@@ -1,5 +1,5 @@
 /**
- * Production Nostr user key — 04-plan Phase A4 task A4.1.
+ * Production Nostr user key.
  *
  * TS module under test: apps/expo/src/nostr/userKey.ts
  *

@@ -5,22 +5,19 @@
  * `@/badges/badgeStatusCache`'s lazy-MMKV side effect and stays trivially
  * unit-testable with fake lookups (`meProfileModel.test.ts`).
  *
- * S8h reuse (`docs/ref/04-plan-app.md` S8h): a handle candidate is
+ * A handle candidate is
  * VERIFIED only when there is a completed, still-fresh (`shouldReverifyBadge`
  * TTL) cached check whose claim matches the candidate's own handle. This
  * module never triggers a live check itself — it only reads whatever the
- * existing S8h producers (`ProfileBadgeChips`'s focus effect, onboarding's
+ * existing producers (`ProfileBadgeChips`'s focus effect, onboarding's
  * `badgeVerification.ts`) already wrote. Re-verifying here at share time
- * would reopen the exact relay-fan-out regression S8h fixed.
+ * would fan out to the relays on every share.
  *
  * `ens`/`dns` always read as unverified: no producer populates a
- * per-scheme cache for the user's OWN profile yet (the DNS binding wizard,
- * `docs/ref/04-plan-app.md` Phase A8, is still unbuilt) — so these
- * candidates can structurally never be offered today. That is the correct
- * fail-closed behaviour, not a bug: wiring a real dns/ens own-profile
- * verification loop is out of this task's scope ("badge verification
- * logic"), and this function only needs to change its lookup, never its
- * pure caller, once that loop lands.
+ * per-scheme cache for the user's OWN profile yet (no DNS binding wizard) —
+ * so these candidates can structurally never be offered today. That is the
+ * correct fail-closed behaviour; once such a loop exists only this lookup
+ * changes, never its pure caller.
  */
 import {
   readCachedAtprotoResult,

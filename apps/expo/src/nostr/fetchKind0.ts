@@ -1,8 +1,7 @@
 /**
  * fetchKind0.ts — IO adapter bridging `dag/nostrAdapter.ts`'s raw relay
  * client to `@solidarity/shared`'s `badges/nostr.ts` `NostrKind0Fetcher`
- * shape (04-plan Phase A4 task A4.4, "wire the badge row to real
- * verification").
+ * shape.
  *
  * Reuses `publish.ts`'s `fetchLatestKind0`/`parseKind0Content` verbatim
  * (same per-relay racing + timeout logic, same JSON-parse tolerance)

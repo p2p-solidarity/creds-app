@@ -1,7 +1,6 @@
 /**
  * Root identity — seed-derived did:key (BIP-39 mnemonic -> HKDF -> P-256
- * scalar), the App<->Web portable identity from packages/shared/derive.ts
- * (04-plan Phase A1 task A1.4).
+ * scalar), the App<->Web portable identity from packages/shared/derive.ts.
  *
  * TS port under test:
  *   apps/expo/src/identity/rootKey.ts
@@ -115,6 +114,9 @@ interface RootKeyMod {
   readonly __setRootKeyStorageForTesting: (storage: typeof fakeStorage | null) => void;
   readonly __setRootKeyBiometricGateForTesting: (gate: typeof fakeBiometricGate | null) => void;
   readonly __setRootKeySyncStorageForTesting: (storage: typeof fakeSyncStorage | null) => void;
+  readonly __setRootActivationHookForTesting: (
+    hook: () => Promise<{ readonly ok: true; readonly value: undefined }>
+  ) => void;
   readonly enableICloudBackup: () => Promise<
     | { readonly ok: true; readonly value: undefined }
     | { readonly ok: false; readonly error: { readonly kind: string; readonly message?: string } }
@@ -160,7 +162,6 @@ interface RootKeyMod {
   >;
   readonly hasRootKey: () => Promise<boolean>;
   readonly quiesceRootKeyOperations: () => Promise<void>;
-  readonly deleteRootKey: () => Promise<void>;
   readonly deleteRootKeyForLocalWipe: () => Promise<
     | { readonly ok: true; readonly value: undefined }
     | { readonly ok: false; readonly error: { readonly kind: string } }
@@ -175,6 +176,8 @@ beforeAll(async () => {
   mod.__setRootKeyStorageForTesting(fakeStorage);
   mod.__setRootKeyBiometricGateForTesting(fakeBiometricGate);
   mod.__setRootKeySyncStorageForTesting(fakeSyncStorage);
+  // Nostr-key reconcile on activation is covered by restoreNostrKey.test.ts.
+  mod.__setRootActivationHookForTesting(() => Promise.resolve({ ok: true, value: undefined }));
 });
 
 beforeEach(async () => {
@@ -192,12 +195,12 @@ beforeEach(async () => {
   syncedWriteStarted = null;
   __resetLocalDataWipeBarrierForTesting();
   biometricCalls.length = 0;
-  await mod.deleteRootKey();
+  await mod.deleteRootKeyForLocalWipe();
 });
 
 afterEach(async () => {
   __resetLocalDataWipeBarrierForTesting();
-  await mod.deleteRootKey();
+  await mod.deleteRootKeyForLocalWipe();
 });
 
 // ── 1. Create + resolve ────────────────────────────────────────────────────
@@ -281,8 +284,8 @@ describe('getRootSigner — Phase A1 conformance contract', () => {
 
 describe('getRootSigner — one authorization per user intent (2026-10-30)', () => {
   // Failure modes: (a) a three-projection Page save asks three times; (b) the
-  // reuse leaks to ANOTHER intent's signer; (c) a long-lived signer (Pear
-  // connection) keeps signing silently forever; (d) a denied first call is
+  // reuse leaks to ANOTHER intent's signer; (c) a long-lived signer keeps
+  // signing silently forever; (d) a denied first call is
   // remembered as authorized.
   async function signer(): Promise<Signer> {
     const r = await mod.getRootSigner();
@@ -531,9 +534,9 @@ describe('enableICloudBackup', () => {
   });
 });
 
-// ── 7. deleteRootKey — best-effort cleans the synchronizable item too ─────
+// ── 7. deleteRootKeyForLocalWipe — clears the synchronizable item too ─────
 
-describe('deleteRootKey', () => {
+describe('deleteRootKeyForLocalWipe', () => {
   it('clears both local and synced storage', async () => {
     const created = await mod.createFromFreshMnemonic();
     expect(created.ok).toBe(true);
@@ -541,18 +544,9 @@ describe('deleteRootKey', () => {
     expect(enabled.ok).toBe(true);
     expect(syncStore.size).toBe(1);
 
-    await mod.deleteRootKey();
+    expect((await mod.deleteRootKeyForLocalWipe()).ok).toBe(true);
 
     expect(syncStore.size).toBe(0);
-    expect(await mod.hasRootKey()).toBe(false);
-  });
-
-  it('never throws even when the synced-storage delete fails (best-effort)', async () => {
-    await mod.createFromFreshMnemonic();
-    nextSyncDeleteError = new Error('unsupported');
-    // If this rejected, the `await` below would fail the test with an
-    // unhandled rejection — that IS the "never throws" assertion.
-    await mod.deleteRootKey();
     expect(await mod.hasRootKey()).toBe(false);
   });
 

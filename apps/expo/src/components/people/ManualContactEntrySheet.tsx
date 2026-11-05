@@ -1,8 +1,5 @@
 /**
- * ManualContactEntrySheet — 1:1 port of
- * solidarity/Views/PeopleViews/ManualContactEntrySheet.swift.
- *
- * Lightweight form for typing a contact directly into the People list
+ * ManualContactEntrySheet — lightweight form for typing a contact directly into the People list
  * without bouncing through the system Contacts picker. Saved contacts are
  * marked source = 'Manual' and remain Unverified — they don't carry a
  * cryptographic signature, just user-entered fields.
@@ -164,45 +161,45 @@ function ManualContactEntryContent({
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: insets.bottom + 32 }}>
         <View style={{ rowGap: 20 }}>
           <FieldRow
-            label="Name"
-            placeholder="Required"
+            label={t('contactForm.name')}
+            placeholder={t('contactForm.required')}
             value={name}
             onChange={setName}
             autoCapitalize="words"
           />
           <FieldRow
-            label="Title"
-            placeholder="Optional"
+            label={t('contactForm.title')}
+            placeholder={t('pageLocalDetails.optional')}
             value={title}
             onChange={setTitle}
             autoCapitalize="words"
           />
           <FieldRow
-            label="Company"
-            placeholder="Optional"
+            label={t('contactForm.company')}
+            placeholder={t('pageLocalDetails.optional')}
             value={company}
             onChange={setCompany}
             autoCapitalize="words"
           />
           <FieldRow
-            label="Email"
-            placeholder="Optional"
+            label={t('personDetail.email')}
+            placeholder={t('pageLocalDetails.optional')}
             value={email}
             onChange={setEmail}
             keyboardType="email-address"
             autoCapitalize="none"
           />
           <FieldRow
-            label="Phone"
-            placeholder="Optional"
+            label={t('personDetail.phone')}
+            placeholder={t('pageLocalDetails.optional')}
             value={phone}
             onChange={setPhone}
             keyboardType="phone-pad"
             autoCapitalize="none"
           />
           <FieldRow
-            label="Note"
-            placeholder="Optional"
+            label={t('personDetail.noteLabel')}
+            placeholder={t('pageLocalDetails.optional')}
             value={notes}
             onChange={setNotes}
             autoCapitalize="sentences"
@@ -241,6 +238,7 @@ function Toolbar({
   readonly canSave: boolean;
   readonly saving: boolean;
 }): ReactNode {
+  const { t } = useTranslation();
   return (
     <View
       className="flex-row items-center justify-between"
@@ -252,12 +250,12 @@ function Toolbar({
         hitSlop={8}
       >
         <Text className="text-text1" style={{ fontSize: 16 }}>
-          Cancel
+          {t('common.cancel')}
         </Text>
       </Pressable>
 
       <Text className="text-text1" style={{ fontSize: 17, fontWeight: '600' }}>
-        Add Contact
+        {t('contactForm.addTitle')}
       </Text>
 
       <Pressable accessibilityRole="button" onPress={onSave} disabled={!canSave} hitSlop={8}>
@@ -267,7 +265,7 @@ function Toolbar({
             color: canSave ? Colors.text1 : Colors.text3,
             fontWeight: '600',
           }}>
-          {saving ? 'Saving…' : 'Save'}
+          {saving ? t('contactForm.saving') : t('common.save')}
         </Text>
       </Pressable>
     </View>

@@ -1,6 +1,5 @@
 /**
- * OIDCTokenService — TS port of the token-endpoint client embedded in
- * solidarity/Services/OIDC/CredentialIssuanceService.swift `requestToken`.
+ * OIDCTokenService — the OID4VCI token-endpoint client.
  *
  * Supports the two grants OID4VCI in the wild uses:
  *   1. `urn:ietf:params:oauth:grant-type:pre-authorized_code` (most common

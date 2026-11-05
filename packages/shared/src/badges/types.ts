@@ -1,7 +1,7 @@
 /**
- * BadgeState — the single state machine shared by every badge verifier
- * (01-spec-verified-page.md §7), single source of truth for `packages/
- * shared`, apps/expo's UI, and the future web viewer.
+ * BadgeState — the single state machine shared by every badge verifier,
+ * single source of truth for `packages/shared`, apps/expo's UI, and the
+ * future web viewer.
  *
  *   verified — live check passed right now (both directions of a
  *              bidirectional binding hold, or the relevant single-sided
@@ -17,8 +17,7 @@
  *              platform has no reverse-binding mechanism at all (e.g.
  *              LinkedIn), or a reverse-binding mechanism exists but this
  *              specific claim does not (yet) reciprocate. Never rendered
- *              with a green check (01-spec §7 / 03-spec §3: "單向宣稱不畫
- *              綠勾是最重要的一條" — the single-direction-no-green-check
- *              rule).
+ *              with a green check ("單向宣稱不畫綠勾是最重要的一條" —
+ *              the single-direction-no-green-check rule).
  */
 export type BadgeState = 'verified' | 'stale' | 'revoked' | 'declared';

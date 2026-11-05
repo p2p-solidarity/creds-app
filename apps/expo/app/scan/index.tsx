@@ -1,5 +1,5 @@
 /**
- * Scan screen — 1:1 port of Swift ScanTabView. Full-screen camera preview
+ * Scan screen. Full-screen camera preview
  * with a dimmed-mask ScanWindowOverlay (centred square cut-out + four
  * green corner brackets), nav bar "Scan" inline, and concise human-facing
  * scan guidance.
@@ -15,7 +15,7 @@
  *   - unrecognised payloads resume scanning with a concise error; their raw
  *     diagnostic view is available only in Developer Mode.
  */
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import type { TFunction } from 'i18next';
 import { safeBack } from '@/navigation/safeBack';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -54,6 +54,7 @@ import { presentWebSignEntry } from '@/websign/pendingRequest';
 import { classifyWebSignScan } from '@/websign/transport';
 import { verifyVpToken } from '@/oidc';
 import { useTranslation } from '@/i18n';
+import { capabilities } from '@/platform/distribution';
 import { usePreferences } from '@/settings/preferences';
 import { isDeveloperOnlyScanPayload } from '@/scan/technicalFlowGate';
 import { MONO } from '@/constants/fonts';
@@ -65,7 +66,13 @@ type ScanRoute =
   | { kind: 'verifier'; result: VerifierResult; developerOnly?: boolean }
   | { kind: 'raw'; payload: string };
 
-export default function ScanScreen() {
+/** No in-app QR scanner in this build (F-Droid): its decoder is ML Kit. */
+export default function ScanEntry() {
+  if (!capabilities.qrScanner) return <Redirect href="/" />;
+  return <ScanScreen />;
+}
+
+function ScanScreen() {
   const { t } = useTranslation();
   const developerMode = usePreferences((state) => state.developerMode);
   const insets = useSafeAreaInsets();
@@ -138,7 +145,7 @@ export default function ScanScreen() {
       return;
     }
 
-    // Verified Page fragment QR (1.3.3 Task A2.3, US-11) — tried first as a
+    // Verified Page fragment QR — tried first as a
     // cheap, self-contained format sniff. Returns `null` for anything that
     // isn't a verified-page payload at all (old exchange-QR wire formats,
     // OIDC URLs, ...), so every existing format below is completely
@@ -168,20 +175,16 @@ export default function ScanScreen() {
     }
 
     // Our OWN deep links, printed as QR (05-spec §8-D ruling, 2026-08-25):
-    // a scanned `solidarity://card|group|pear/…` or
-    // `https://<product-host>/c|pear/…` must route exactly like tapping it —
-    // not die as 「無法讀取」. `parseDeepLink` is pure; ONLY the three kinds
+    // a scanned `solidarity://card|group/…` or
+    // `https://<product-host>/c/…` must route exactly like tapping it —
+    // not die as 「無法讀取」. `parseDeepLink` is pure; ONLY the two kinds
     // that were previously dead in the scanner are handed to the deeplink
     // router (webSign / offers / OID4VP keep their dedicated scan ceremonies
     // above and below — routing `oidc` here would bypass the dev verifier
     // sheet). Placed AFTER the Verified Page classifier so fragment/pointer/
     // handle URLs keep their existing scan presentation.
     const deepLinkRoute = parseDeepLink(payload, { devProductHosts: developerMode });
-    if (
-      deepLinkRoute.kind === 'card' ||
-      deepLinkRoute.kind === 'groupInvite' ||
-      deepLinkRoute.kind === 'pear'
-    ) {
+    if (deepLinkRoute.kind === 'card' || deepLinkRoute.kind === 'groupInvite') {
       handleDeepLink(payload);
       safeBack();
       return;

@@ -1,5 +1,5 @@
 /**
- * Biometric gatekeeper — 1:1 port of `BiometricGatekeeper.swift`.
+ * Biometric gatekeeper.
  *
  * Wraps the low-level `biometric.ts` `requireBiometric` helper with the
  * per-action policy lookup from `sensitiveActionPolicy.ts`, returning a
@@ -164,18 +164,4 @@ export async function requireSensitiveAction(
     success: true,
     method: biometricUsable ? 'biometric' : 'passcode',
   };
-}
-
-/**
- * Convenience wrapper for call sites that still use the old
- * `requireBiometric(reason) => Promise<boolean>` shape — returns `true`
- * only on real success. Use `requireSensitiveAction` for new code so the
- * caller can react to lockout / unavailable.
- */
-export async function requireSensitiveActionBoolean(
-  action: SensitiveAction,
-  reason: string
-): Promise<boolean> {
-  const r = await requireSensitiveAction(action, reason);
-  return r.success;
 }

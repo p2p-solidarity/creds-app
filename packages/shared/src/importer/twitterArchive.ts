@@ -1,5 +1,5 @@
 /**
- * Twitter / X archive importer — mirrors Swift TwitterArchiveImporter.
+ * Twitter / X archive importer.
  *
  * Twitter's "Download your data" archive ships as a folder with JS files
  * that begin with `window.YTD.<kind>.part0 = [` followed by JSON. We strip

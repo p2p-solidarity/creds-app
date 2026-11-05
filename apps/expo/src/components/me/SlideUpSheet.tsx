@@ -21,6 +21,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   View,
@@ -38,6 +39,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { Colors } from '@/constants/Colors';
 import { ContentWidth } from '@/constants/layout';
 import { TIMING } from '@/feedback/motion';
+import { ToastOverlay } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
 
 /** Animate the sheet out, then unmount it, call `onClose`, then `after`. */
@@ -158,6 +160,7 @@ export function SlideUpSheet({ visible, onClose, dismissOnBackdrop = false, chil
         <Animated.View onLayout={onSheetLayout} style={[styles.sheet, sheetStyle]}>
           {children(close)}
         </Animated.View>
+        {Platform.OS === 'android' ? <ToastOverlay /> : null}
       </View>
     </Modal>
   );

@@ -13,7 +13,7 @@
 import type { SFSymbol } from 'expo-symbols';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRef, useState, type ReactNode } from 'react';
-import { Platform, ScrollView, Switch, View } from 'react-native';
+import { Platform, ScrollView, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown, useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,8 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ModalSheet, sheetTopInset } from '@/components/common/ModalSheet';
 import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
-import { ThemedButton, ThemedChoiceChip, ThemedText, ThemedTextInput } from '@/components/themed';
-import { Colors } from '@/constants/Colors';
+import { ThemedButton, ThemedChoiceChip, ThemedSwitch, ThemedText, ThemedTextInput } from '@/components/themed';
 import { Radius, shadow } from '@/constants/radius';
 import { useThemeColors } from '@/constants/useThemeColors';
 import { haptic } from '@/feedback/haptics';
@@ -42,6 +41,8 @@ import type { ProfileRecord } from '@solidarity/shared';
 
 import { SheetHeader } from './AddLinkSheet';
 import { PHONE_SCREEN_RADIUS, PageLivePreview } from './PageLivePreview';
+import { PublishChangesCard } from './PublishChangesCard';
+import { usePagePublish } from './usePagePublish';
 import { TEMPLATE_NATIVE_BACKGROUND, paletteFor } from './pagePreviewTheme';
 
 export interface PageAppearanceSheetProps {
@@ -114,6 +115,9 @@ function DesignScreen({
   const reduceMotion = useReducedMotion();
   const [tab, setTab] = useState<DesignTab | null>(null);
   const design = usePageDesignStore((state) => state.design);
+  // A design change is a draft until it is published; the button lives
+  // here too, so the owner never closes the sheet thinking it went live.
+  const pagePublish = usePagePublish(handle);
 
   const panelIn = reduceMotion
     ? FadeIn.duration(DURATION.enter)
@@ -163,6 +167,15 @@ function DesignScreen({
           </Animated.View>
         ) : null}
       </View>
+      {pagePublish.showCard && tab === null ? (
+        <View className="px-4 pb-3 pt-2">
+          <PublishChangesCard
+            state={pagePublish.cardState}
+            onPublish={pagePublish.publish}
+            onDismiss={pagePublish.dismiss}
+          />
+        </View>
+      ) : null}
       <DesignTabBar
         selected={tab}
         bottomInset={insets.bottom}
@@ -346,7 +359,7 @@ function HeaderControls({
 
 function WallpaperControls(): ReactNode {
   const { t } = useTranslation();
-  const { isPro, openUpgrade } = useProGate();
+  const { designUnlocked, openUpgrade } = useProGate();
   const appearance = usePageDesignStore((state) => state.design.appearance);
   const setAppearance = usePageDesignStore((state) => state.setAppearance);
   return (
@@ -363,7 +376,7 @@ function WallpaperControls(): ReactNode {
       </View>
       <CustomColorInput
         appearance={appearance}
-        locked={!isPro}
+        locked={!designUnlocked}
         onOpenPro={openUpgrade}
         onChange={(customBackground) => { setAppearance({ customBackground }); }}
       />
@@ -373,7 +386,7 @@ function WallpaperControls(): ReactNode {
 
 function TextControls(): ReactNode {
   const { t } = useTranslation();
-  const { isPro, openUpgrade } = useProGate();
+  const { designUnlocked, openUpgrade } = useProGate();
   const appearance = usePageDesignStore((state) => state.design.appearance);
   const setAppearance = usePageDesignStore((state) => state.setAppearance);
   return (
@@ -383,9 +396,9 @@ function TextControls(): ReactNode {
           key={font}
           label={t(`pageDesign.font.${font}`)}
           selected={appearance.font === font}
-          pro={index > 1 && !isPro}
+          pro={index > 1 && !designUnlocked}
           onPress={() => {
-            if (index > 1 && !isPro) {
+            if (index > 1 && !designUnlocked) {
               openUpgrade();
               return;
             }
@@ -399,19 +412,24 @@ function TextControls(): ReactNode {
 
 function FooterControls(): ReactNode {
   const { t } = useTranslation();
-  const { isPro, openUpgrade } = useProGate();
+  const { designUnlocked, openUpgrade } = useProGate();
   const appearance = usePageDesignStore((state) => state.design.appearance);
   const setAppearance = usePageDesignStore((state) => state.setAppearance);
   return (
     <>
       <View className="flex-row items-center justify-between">
         <ThemedText variant="bodyMedium">{t('pageDesign.showBrand')}</ThemedText>
-        <Switch
-          style={{ alignSelf: 'center' }}
+        <ThemedSwitch
           value={appearance.showBrand}
-          onValueChange={isPro ? (showBrand) => { setAppearance({ showBrand }); } : openUpgrade}
-          accessibilityHint={isPro ? undefined : t('pageDesign.proControl')}
-          trackColor={{ true: Colors.primaryBlue }}
+          onValueChange={designUnlocked ? (showBrand) => { setAppearance({ showBrand }); } : openUpgrade}
+          accessibilityHint={designUnlocked ? undefined : t('pageDesign.proControl')}
+        />
+      </View>
+      <View className="flex-row items-center justify-between">
+        <ThemedText variant="bodyMedium" className="flex-1 pr-3">{t('pageDesign.showNostr')}</ThemedText>
+        <ThemedSwitch
+          value={appearance.showNostr === true}
+          onValueChange={(showNostr) => { setAppearance({ showNostr }); }}
         />
       </View>
       <ProTextField
@@ -419,7 +437,7 @@ function FooterControls(): ReactNode {
         value={appearance.footerText}
         maxLength={40}
         hint={t('pageDesign.proControl')}
-        locked={!isPro}
+        locked={!designUnlocked}
         onOpenPro={openUpgrade}
         onChangeText={(footerText) => { setAppearance({ footerText }); }}
       />

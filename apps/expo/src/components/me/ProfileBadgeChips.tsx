@@ -30,6 +30,7 @@ import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { sweepOrphanedClaims } from '@/credentials/removeCredential';
 import { useThemeColors } from '@/constants/useThemeColors';
+import { confirmDialog } from '@/feedback/confirmDialog';
 import { haptic } from '@/feedback/haptics';
 import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
@@ -110,7 +111,7 @@ export function ProfileBadgeChips({
     [publicRecord],
   );
 
-  const hideClaimFromPage = (claim: ProvableClaimEntity): void => {
+  const hideClaimFromPage = async (claim: ProvableClaimEntity): Promise<void> => {
     if (savingClaimId !== null) return;
     const badges = record.badges.filter(
       (badge) => !(
@@ -119,18 +120,18 @@ export function ProfileBadgeChips({
       ),
     );
     if (badges.length === record.badges.length) {
-      // There is no real public disclosure to toggle on locally. Open the
-      // backing credential instead of inventing a public badge reference.
-      // `product: '1'` keeps the credential screen in product context even for
-      // a developer-mode user: this is a product surface, so the protocol
-      // vocabulary (VC / ZK / nonce / challenge) must stay behind Developer
-      // Mode's own entry points, never leak in from the Page tab.
-      router.push({
-        pathname: '/credentials/[id]',
-        params: { id: claim.identityCardId, claimId: claim.id, product: '1' },
-      });
+      // Hidden: showing it again needs a fresh signed disclosure (never an
+      // invented badge reference), which lives on the proofs screen.
+      router.push('/credentials');
       return;
     }
+    const confirmed = await confirmDialog({
+      title: t('mePage.hideProofTitle', { claim: claimPresentation(claim, t).label }),
+      message: t('mePage.hideProofMessage'),
+      confirmLabel: t('mePage.hideProofAction'),
+      destructive: true,
+    });
+    if (!confirmed) return;
     setSavingClaimId(claim.id);
     void saveProfile({
       displayName: record.displayName,
@@ -220,7 +221,7 @@ export function ProfileBadgeChips({
             key={claim.id}
             haptic="tap"
             disabled={savingClaimId !== null}
-            onPress={() => { hideClaimFromPage(claim); }}
+            onPress={() => { void hideClaimFromPage(claim); }}
             accessibilityRole="button"
             accessibilityLabel={t('mePage.proofVisibilityLabel', {
               claim: presentation.label,
@@ -341,7 +342,7 @@ function visibilitySubtitleKey(
   shownLocally: boolean,
 ): string {
   if (visibility !== 'pending') {
-    return visibility === 'public' ? 'mePage.shownOnPage' : 'mePage.notShownOnPage';
+    return visibility === 'public' ? 'mePage.shownOnPage' : 'mePage.notShownOnPageReshow';
   }
   // Say what the visitor sees RIGHT NOW, not what the owner intended.
   return shownLocally ? 'mePage.proofPendingShown' : 'mePage.proofPendingHidden';

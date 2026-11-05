@@ -1,6 +1,6 @@
 /**
  * SettingsBlockSection — section wrapper used in dev-mode "Developer" block
- * on the Me tab. Swift parity:
+ * on the Me tab.
  *   • Section header (14pt textPrimary, horiz pad 16)
  *   • Rows stacked with 8pt gap, inset in mutedSurface card with rounded 8
  *

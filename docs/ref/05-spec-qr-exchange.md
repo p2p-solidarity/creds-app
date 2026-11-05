@@ -1,7 +1,7 @@
 # solidarity — QR 與交換統一規格（App／Web／creds 設計對齊版）
 
 > 2026-08-24 · 對象：`airmeishi` 分支 `2.0.0`（HEAD `f0a9529`＋本輪修正）、`airmeishi-web` 分支 `feat/creds-design-alignment`（`b06ab7e`）、`creds-design`（CREDS.md v5 · mock v3.9）。
-> 目的：QR 的三代 wire、Nostr 交換核心、與 creds 設計（已定案 #17、§3.3、§3.5）之間的**單一對照表**。之前這些事實散在四份互相過時的文件裡（見 §7）。
+> 目的：QR 的三代 wire、Nostr 交換核心、與 creds 設計（已定案 #17、§3.3、§3.5）之間的**單一對照表**。
 > 引用規則：程式碼行號以本日 HEAD 為準；與程式碼不符時以程式碼為準並回來改這裡。
 
 ---
@@ -15,7 +15,7 @@
 | 1 | **CRD1 名片 wire** | `CRD1:` 前綴 | claims→CBOR→COSE_Sign1(tag 18)→zlib→Base45 | ES256 單簽（名片簽名 did:key，`signRaw` 64B r‖s） | 2,420 字元硬限 · exp 夾 30 天 · EC-Q | `buildCrd1CardWire`（`cards/crd1Envelope.ts:46`），`solidarityQrRuntime.ts` 優先嘗試；08-25 起 claims 可帶 `subscription.nostr` 訂閱指標（§3 v1.1，僅綁定 verified 時） | `envelopeHandler.ts` → `verifyCrd1Wire`（含 holder-binding fail-closed）；指標經簽章覆蓋才萃取 | **現行首選** |
 | 2 | **CRD1 證據包** | `CRD1:` ＋ claims `typ === 'gg.solidarity.evidence-pack.v1'` | 同上 | ES256 單簽（**root** did:key，`identity/rootKey`） | 同上；UI 即時字數表（`estimateCrd1` 不觸發生物辨識） | `app/me/evidence-pack.tsx` → `signEvidencePack` | `envelopeHandler.ts:182-202` 以 `typ` 分流 → `rebuildCardFromEvidencePack` | **現行** |
 | 3 | legacy didSigned（裸 VC-JWT） | `eyJ` 開頭＋三段 | base64url JWT（無外包裝） | ES256 JWT | 無硬限；QR 級聯自 L 起 | `solidarityQrRuntime.ts` 在 CRD1 回傳 null 時後備 | `qrEnvelope.ts:75` 合成 v2 envelope → `handleDidSigned` | 永久後備（同一個 claims builder，掃出同一張卡） |
-| 4 | legacy zkProof envelope | `sce1:`（raw-DEFLATE）或裸 JSON | JSON envelope(version:2) 內嵌 `encryptedPayload` | AES-GCM **同發送者主鑰**（收方須持同鑰＝同帳號多裝置模型，不是收件人加密） | 預設 24h 效期 | `buildZKEnvelope`（`solidarityQrPayload.ts`）；**新卡預設格式**（`sharing/defaults.ts:86`） | `handleZkProof` → 解密＋lazy 驗 `sdProof`／`issuerProof`（08-24 起：issuerProof 收發兩代 wire 都吃、且 scope/signal 須綁定本 envelope，見 §7） | legacy（Swift parity；§3.3 落地後應讓位） |
+| 4 | legacy zkProof envelope | `sce1:`（raw-DEFLATE）或裸 JSON | JSON envelope(version:2) 內嵌 `encryptedPayload` | AES-GCM **同發送者主鑰**（收方須持同鑰＝同帳號多裝置模型，不是收件人加密） | 預設 24h 效期 | 發射端已刪（2026-11-04 cleanup），只剩掃描端 | `handleZkProof` → 解密＋lazy 驗 `sdProof`／`issuerProof`（issuerProof 只驗、不再把卡升為 Verified） | legacy（Swift parity；§3.3 落地後應讓位） |
 | 5 | legacy plaintext envelope | 裸 `{` JSON | stableStringify，無壓縮 | 無 | 無 | 僅作為 didSigned／zkProof 建構失敗的自動後備 | `handlePlaintext`（一律 `Unverified`） | legacy 後備 |
 | 6 | Verified Page fragment | `https://creds.id/#<blob>`（或裸 blob；切換前的 `solidarity.gg`／`app.solidarity.gg` 連結照收） | profileJws→deflateRaw→base64url | JWS（root did:key 自驗）；離線、零網路 | 軟預算 2048B（僅旗標）；decode 硬限 16KB/64KB | `meProfileModel.ts`（Me 分享面、onboarding） | 掃描：`verifiedPageHandler`；deep link：`parser.ts`（僅信任網域） | **現行** |
 | 7 | Nostr 短指標 | `…#nostr:<npub>` | — | 解析後走 kind 30078＋反向綁定檢查 | — | `meProfileModel.ts:79`（僅在 JWS 已確認發布時） | `resolveProfileByNpub`（app）／`ViewerLandingPage`（web） | **現行** |
@@ -111,18 +111,9 @@
 
 ---
 
-## 7. 對既有文件的修正紀錄（2026-08-24）
+## 7. 對既有文件的修正紀錄
 
-| 文件 | 過時之處 | 現況 |
-|---|---|---|
-| creds-design `docs/2026-08-18-airmeishi-app-convergence.md` 列 10 | 「✅ 交換走 QR」 | 形狀 ✅ 但 §3.3 訂閱憑據整層缺（本文件 §3） |
-| 同上 列 18 | 「🔴 格式不是 CRD1」；並引用 `profileQrCapacity` | CRD1 已於 08-19（`472b417`）落地 app＋shared；`profileQrCapacity` 不是 src 模組——容量門在 `me/profileShareQr.ts`（同名測試檔已於 2026-09-28 測試清理時刪除） |
-| 同上 列 19 | 「airmeishi-web 是 static mock」 | 已是真 SPA（§5）；缺的是 creds 四條路由，不是「整個 web」 |
-| `docs/ref/01/03/04`＋`.superpowers/sdd/progress.md` | 全部停在 1.3.3 合併點（`d0143eb`）之前 | 之後的 creds-v3 重建（Present/Page/Contacts/CRD1/NIP-05/evidence pack）完全未入帳；progress.md 對 CRD1 這一片安全面**零審查紀錄** |
-| `docs/ref/03` §6 處置表 | 無 `sakura/` 列 | Sakura（Shoutouts relay＋push routing）可達且被 vault shard 依賴，處置未定 |
-| airmeishi-web `docs/design/qr-pairing-*.md`、`README.md` | mock-fragment 時代／React Router v7／`src/routing/` | 皆與現碼不符，僅考古用 |
-| 本輪程式修正（一） | — | `buildZKEnvelope` 不再把 `issuerCommitment` 放進分享 payload（lists-anonymity audit 2026-08-18 §5 唯一急件；roster＋commitment＝查表去匿名化）。精確定性：該 payload 整包先經 AES-GCM 同主鑰加密才上 wire，所以不是「wire 上明文」——威脅是**任何能解密的一方**（今天＝同帳號裝置；未來任何脫離 escrow 的傳輸）都能查表識人，故屬 defence-in-depth＋為 §3.3 脫離 escrow 預先關門。`IssuerProofResult` 一併移除 commitment 欄位（結構上不可再犯）；型別欄位保留 parse-only legacy 註記；回歸測試釘住（`envelopeHandler.test.ts` issuerProof describe，audit 要求「要有測試守住」） |
-| 本輪程式修正（二） | — | **issuerProof wire 形狀 bug（審查發現，pre-existing）**：發射端原本只放 inner Rust proof JSON，掃描端 JSON.parse 後直接餵 `verifyGroupProof`——但兩平台原生都讀 `proof.proofJson`，所以凡帶 issuerProof 的 envelope 一律掃成 `Failed`。修正：發射端改序列化**完整 `SemaphoreProof`**（與 `vault/zkAgeVerification` 同 convention）；掃描端兩代 wire 都吃（完整 envelope 直通；legacy inner JSON 包回 `proofJson`）；並新增**envelope 綁定**——proof 的 scope／signal 必須等於 payload 的 scope／shareId（或其 32-byte UTF-8 clamp），不綁定不進驗證器（堵「自造群組的有效證明點亮 is_human」，§6-8 的前半）。五條測試釘住 |
+舊文件（01／03／04 等）已刪，見 `git log -- docs/`。
 
 ---
 
@@ -137,7 +128,6 @@
 
 ---
 
-> **批次層決策**（北極星、批次規則 airmeishi＞creds-design、Q1–Q6、舊功能去留、執行計畫）在 **`06-plan-convergence-2.0.0.md`**——本文件是其中 QR/交換的 wire 細節。
 
 ---
 

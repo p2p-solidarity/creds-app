@@ -1,16 +1,11 @@
 /**
  * Nitro spec — hardware-backed DID signing keys
  *
- * (Historically "SpruceID DID": this module once wrapped SpruceID's mobile
- * SDK for DID derivation + JWS/VC verification. Those 5 methods had ZERO
- * production TS callers — did:key codec + verification live in pure TS at
- * `packages/shared` (`didKeyFromJwk` / `resolveDidKey` / `verifyJwtEs256`)
- * — so 1.3.3 S7a removed them together with the whole SpruceID SDK
- * dependency (iOS SPM `sprucekit-mobile`, Android Maven
- * `com.spruceid.mobile.sdk`). What remains is the hardware key-management
- * shell: generation, existence, auth-mode probe, deletion, public-JWK
- * export, ES256 JWS + raw-digest signing, and the key lifecycle event
- * stream. Inventory + rationale: docs/ref/notes-sprucekit-slim.md.)
+ * The name is historical: did:key codec + verification live in pure TS at
+ * `packages/shared` (`didKeyFromJwk` / `resolveDidKey` / `verifyJwtEs256`).
+ * This module is the hardware key-management shell: generation, existence,
+ * auth-mode probe, deletion, public-JWK export, ES256 JWS + raw-digest
+ * signing, and the key lifecycle event stream.
  *
  * Hardware-backed keystores:
  *   iOS    : Secure Enclave (P-256) via Apple Security framework. Keys are

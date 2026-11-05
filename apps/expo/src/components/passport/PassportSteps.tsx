@@ -13,7 +13,7 @@
  * page-level reducer remains the single source of truth.
  */
 import { useEffect } from 'react';
-import { ActivityIndicator, StyleSheet, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -27,7 +27,7 @@ import Animated, {
 import Svg, { Path } from 'react-native-svg';
 
 import { SfIcon } from '@/components/icons/SfIcon';
-import { ThemedButton } from '@/components/themed';
+import { ThemedButton, ThemedSwitch } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { SPRING, TIMING } from '@/feedback/motion';
 import { useTranslation } from '@/i18n';
@@ -439,12 +439,11 @@ export function PersistStep({
             <Text className="text-text1 flex-1 text-[15px] font-semibold">
               {t('passportStatement.optInTitle')}
             </Text>
-            <Switch
+            <ThemedSwitch
               value={countAsWitness}
               onValueChange={onCountAsWitnessChange}
               disabled={busy}
               accessibilityLabel={t('passportStatement.optInTitle')}
-              style={{ alignSelf: 'center' }}
             />
           </View>
           <Text className="text-text3 text-[13px] leading-[18px]">{t('passportStatement.optInBody')}</Text>

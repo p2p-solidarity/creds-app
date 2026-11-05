@@ -3,8 +3,8 @@
  * is the account's shareable address. Protocol inspectors and credential tools
  * remain behind the five-tap Developer Options unlock.
  *
- * Two levels at most (docs/ref/notes-settings-ia-2026-10.md): a setting with
- * one or two controls (colour mode, language, Recent Updates, Pear exchange,
+ * Two levels at most: a setting with
+ * one or two controls (colour mode, language, Recent Updates,
  * the two resets) lives here as an inline row instead of its own sub-page.
  */
 import Constants from 'expo-constants';
@@ -30,8 +30,8 @@ import { readPasskeyCount } from '@/identity/passkeyRegistry';
 import { haptic } from '@/feedback/haptics';
 import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
+import { capabilities } from '@/platform/distribution';
 import { publicPagePath } from '@/onboarding/publicPageUsername';
-import { stopLaneManager } from '@/pear/laneManager';
 import { advanceDeveloperUnlock } from '@/settings/developerUnlock';
 import { type AppColorScheme, usePreferences } from '@/settings/preferences';
 
@@ -57,7 +57,6 @@ export default function SettingsHub() {
   const colorScheme = usePreferences((s) => s.appColorScheme);
   // '' = follow the device; the live i18n language still marks a segment.
   const language = usePreferences((s) => s.language) || i18n.language;
-  const pearEnabled = usePreferences((s) => s.pearExchangeEnabled);
   const recentUpdatesEnabled = useRecentUpdatesStore((s) => s.enabled);
   const setRecentUpdatesEnabled = useRecentUpdatesStore((s) => s.setEnabled);
   const setPref = usePreferences((s) => s.set);
@@ -117,24 +116,28 @@ export default function SettingsHub() {
 
           {/* Account */}
           <SettingsBlockSection index={1} title={t('settingsHub.accountIdentity')}>
-            <SettingsBlockRow
-              icon="key.fill"
-              title={t('settingsHub.passkeys')}
-              trailingText={passkeyCount === null ? t('settingsHub.passkeysLoading') : passkeyCount.ok
-                ? t('settingsHub.passkeysCount', { count: passkeyCount.value }) : t('settingsHub.passkeysUnavailable')}
-              onPress={() => { router.push('/settings/passkeys'); }}
-            />
+            {capabilities.passkeys ? (
+              <SettingsBlockRow
+                icon="key.fill"
+                title={t('settingsHub.passkeys')}
+                trailingText={passkeyCount === null ? t('settingsHub.passkeysLoading') : passkeyCount.ok
+                  ? t('settingsHub.passkeysCount', { count: passkeyCount.value }) : t('settingsHub.passkeysUnavailable')}
+                onPress={() => { router.push('/settings/passkeys'); }}
+              />
+            ) : null}
             <SettingsBlockRow
               icon="lock.shield"
               title={t('settingsHub.accountProtection')}
               onPress={() => { router.push('/settings/security'); }}
             />
-            <SettingsBlockRow
-              icon="icloud"
-              title={t('settingsHub.identityExport')}
-              trailingText={backupEnabled ? t('common.on') : t('common.off')}
-              onPress={() => { router.push('/settings/backup'); }}
-            />
+            {capabilities.cloudBackup ? (
+              <SettingsBlockRow
+                icon="icloud"
+                title={t('settingsHub.identityExport')}
+                trailingText={backupEnabled ? t('common.on') : t('common.off')}
+                onPress={() => { router.push('/settings/backup'); }}
+              />
+            ) : null}
             <SettingsBlockRow
               icon="key.horizontal"
               title={t('settingsHub.recoveryPhrase')}
@@ -142,14 +145,16 @@ export default function SettingsHub() {
             />
           </SettingsBlockSection>
 
-          <SettingsBlockSection index={2} title={t('settingsHub.plan')}>
-            <SettingsBlockRow
-              icon="sparkles"
-              leading={<CredsMark size={16} />}
-              title={t('settingsHub.plan')}
-              onPress={() => { router.push('/settings/pro'); }}
-            />
-          </SettingsBlockSection>
+          {capabilities.proPurchase ? (
+            <SettingsBlockSection index={2} title={t('settingsHub.plan')}>
+              <SettingsBlockRow
+                icon="sparkles"
+                leading={<CredsMark size={16} />}
+                title={t('settingsHub.plan')}
+                onPress={() => { router.push('/settings/pro'); }}
+              />
+            </SettingsBlockSection>
+          ) : null}
 
           <SettingsBlockSection index={3} title={t('settingsHub.preferences')}>
             <SettingsBlockSegmentRow
@@ -175,16 +180,6 @@ export default function SettingsHub() {
               subtitle={t('notifications.contactUpdates.subtitle')}
               value={recentUpdatesEnabled}
               onValueChange={setRecentUpdatesEnabled}
-            />
-            <SettingsBlockToggleRow
-              icon="person.2"
-              title={t('settingsHub.pearExchange')}
-              subtitle={t('settingsHub.pearExchangeSubtitle')}
-              value={pearEnabled}
-              onValueChange={(next) => {
-                if (!next) stopLaneManager();
-                setPref('pearExchangeEnabled', next);
-              }}
             />
           </SettingsBlockSection>
 

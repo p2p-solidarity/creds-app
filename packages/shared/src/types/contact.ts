@@ -1,5 +1,5 @@
 /**
- * Contact + supporting enums — mirrors solidarity/Models/Contact.swift.
+ * Contact + supporting enums.
  *
  * Wire format note: Swift rawValues are display-form strings for
  * ContactSource ("QR Code", "App Clip", …) and for VerificationStatus

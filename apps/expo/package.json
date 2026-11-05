@@ -1,6 +1,6 @@
 {
   "name": "@solidarity/expo",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
@@ -21,11 +21,9 @@
     "typecheck": "tsc --noEmit",
     "test": "bun run test:unit && bun run test:parity",
     "test:unit": "SKIP_INTEGRATION=1 bun test --preload ./test-setup.ts --max-concurrency=1 __tests__/unit",
-    "test:parity": "bun test --preload ./test-setup.ts --max-concurrency=1 __tests__/parity",
-    "pear:pack": "node scripts/pack-pear-worklet.mjs"
+    "test:parity": "bun test --preload ./test-setup.ts --max-concurrency=1 __tests__/parity"
   },
   "dependencies": {
-    "@gorhom/bottom-sheet": "^5.2.14",
     "@noble/ciphers": "^2.4.0",
     "@noble/curves": "^2.4.0",
     "@noble/hashes": "^2.4.0",
@@ -35,11 +33,9 @@
     "@solidarity/nitro-attest": "workspace:*",
     "@solidarity/nitro-keystone": "workspace:*",
     "@solidarity/shared": "workspace:*",
-    "b4a": "^1.9.0",
     "expo": "^58.0.21",
+    "expo-application": "~58.1.2",
     "expo-asset": "~58.0.19",
-    "expo-auth-session": "~58.0.16",
-    "expo-blur": "~58.0.5",
     "expo-build-properties": "~58.0.11",
     "expo-camera": "~58.0.14",
     "expo-clipboard": "~58.0.4",
@@ -56,9 +52,8 @@
     "expo-linking": "~58.0.15",
     "expo-local-authentication": "~58.0.2",
     "expo-localization": "~58.0.5",
-    "expo-notifications": "~58.1.7",
+    "expo-network": "~58.0.4",
     "expo-router": "~58.0.28",
-    "expo-screen-orientation": "~58.0.3",
     "expo-secure-store": "~58.0.2",
     "expo-sharing": "~58.0.21",
     "expo-splash-screen": "~58.0.12",
@@ -67,17 +62,15 @@
     "expo-symbols": "~58.0.4",
     "expo-web-browser": "~58.0.7",
     "fflate": "^0.8.3",
-    "hyperswarm": "^4.17.2",
     "i18next": "^26.5.11",
     "mrz": "5.0.2",
     "nativewind": "^4.2.7",
     "react": "19.3.0",
     "react-i18next": "^17.1.9",
     "react-native": "0.88.1",
-    "react-native-bare-kit": "^0.15.6",
     "react-native-gesture-handler": "~3.3.0",
     "react-native-get-random-values": "^2.1.0",
-    "react-native-keyboard-controller": "1.22.7",
+    "react-native-keyboard-controller": "1.22.9",
     "react-native-mmkv": "^4.3.2",
     "react-native-nitro-image": "^0.15.2",
     "react-native-nitro-modules": "^0.37.1",
@@ -87,9 +80,7 @@
     "react-native-screens": "~4.30.1",
     "react-native-svg": "15.16.0",
     "react-native-vision-camera": "^5.2.4",
-    "react-native-vision-camera-resizer": "^5.2.4",
     "react-native-vision-camera-worklets": "^5.2.4",
-    "react-native-webrtc": "^124.0.8",
     "react-native-worklets": "0.13.0",
     "zod": "^4.6.7",
     "zustand": "^5.0.16"
@@ -97,7 +88,6 @@
   "devDependencies": {
     "@babel/core": "^7.29.7",
     "@expo/config-plugins": "~58.0.11",
-    "@types/b4a": "^1.9.0",
     "@types/bun": "^1.4.4",
     "@types/react": "~19.3.0",
     "@types/streamx": "^2.9.5",
@@ -115,7 +105,8 @@
   "expo": {
     "install": {
       "exclude": [
-        "react-native-get-random-values"
+        "react-native-get-random-values",
+        "react-native-keyboard-controller"
       ]
     }
   }

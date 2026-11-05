@@ -2,8 +2,7 @@
  * Biometric gate policy — three named modes, plus a red line no mode disarms.
  *
  * History: this was a per-action store (7 independent `enabled` flags, each
- * with its own `biometricOnly` / `biometricOrPasscode` mode), a 1:1 port of
- * Swift's `SensitiveActionPolicyStore`. That surfaced 16 controls on the
+ * with its own `biometricOnly` / `biometricOrPasscode` mode). That surfaced 16 controls on the
  * Security screen for a decision users have no basis to make. It collapsed to
  * one boolean, and then (2026-09-08) to three modes — because the boolean's
  * "on" was hiding a five-minute grace window the user could neither see nor
@@ -30,19 +29,8 @@
  * fresh reference per read would retrigger the React 19 `useSyncExternalStore`
  * max-update-depth loop this repo has already been bitten by.
  *
- * DELIBERATE NON-MIGRATIONS — the only gates a mode does not govern:
- *   1. Pear card release (`src/pear/useCardExchange.ts`) stays on
- *      `requireBiometric('cardRelease')`. It hands a signed credential to a
- *      REMOTE peer, so it is a per-peer consent decision, not a device-mode
- *      one: it always prompts and never arms the grace bucket. Routing it
- *      through an optional action would let `redLineOnly` release a card to a
- *      peer with no Face ID at all — the exact regression round 2 of the
- *      2026-06-13 grace fix was written to prevent. By the same
- *      irreversibility rule used for RED_LINE_ACTIONS it IS a red line;
- *      `biometric.ts` already implements precisely that, so it stays there.
- *   2. Nothing else. Every other `requireBiometric` call site was migrated on
- *      2026-09-08 — if you add a new one, migrate it or the Security screen's
- *      copy becomes a lie.
+ * Every `requireBiometric` call site is governed by the mode — if you add a
+ * new one, migrate it or the Security screen's copy becomes a lie.
  *
  * Storage:
  *   - MMKV `gg.solidarity.biometric.gate.v3` = `{"mode":"balanced"}`.
@@ -97,7 +85,8 @@ export type SensitiveAction =
   | 'rotateMasterKey'
   | 'revealRecoveryBundle'
   | 'registerTrustAnchor'
-  | 'deleteZKIdentity';
+  | 'deleteZKIdentity'
+  | 'sendPrivate';
 
 export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
   'issueCredential',
@@ -107,6 +96,7 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
   'revealRecoveryBundle',
   'registerTrustAnchor',
   'deleteZKIdentity',
+  'sendPrivate',
 ];
 
 /**
@@ -116,9 +106,10 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
  * wiping local data and deleting the ZK identity destroy something that cannot
  * be recovered; revealing the recovery phrase hands over the master secret,
  * which is worse than deletion — a leaked phrase is leaked forever, while
- * deleted data may still exist in a backup. Everything else (showing a proof,
- * exporting attestations, unlocking the vault, saving a passport) is
- * access-level and follows the user's mode.
+ * deleted data may still exist in a backup. Sending private data to another
+ * person (NIP-17, docs/ref/16 Q3) cannot be taken back either. Everything
+ * else (showing a proof, exporting attestations, unlocking the vault, saving
+ * a passport) is access-level and follows the user's mode.
  *
  * `biometricGatekeeper` imports this exact set as its grace-window exemption,
  * so the two can no longer drift: an action too dangerous to ride a five-minute
@@ -128,12 +119,8 @@ export const RED_LINE_ACTIONS: ReadonlySet<SensitiveAction> = new Set([
   'rotateMasterKey',
   'revealRecoveryBundle',
   'deleteZKIdentity',
+  'sendPrivate',
 ]);
-
-/** Actions the mode actually governs (the complement of the red line). */
-export const OPTIONAL_ACTIONS: readonly SensitiveAction[] = SENSITIVE_ACTIONS.filter(
-  (action) => !RED_LINE_ACTIONS.has(action)
-);
 
 /**
  * How often the app asks. Three named positions instead of a bare on/off,

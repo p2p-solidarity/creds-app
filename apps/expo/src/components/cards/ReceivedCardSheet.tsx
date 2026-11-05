@@ -2,7 +2,7 @@
  * ReceivedCardSheet — incoming Card preview and save ceremony.
  *
  * Bottom-sheet preview for an incoming BusinessCard handed to the app
- * by a deep link. Mirrors the Swift screen: creds ring-mark header,
+ * by a deep link: creds ring-mark header,
  * card-detail block (avatar + name + title + company + verification +
  * email + phone) and the v2 reciprocal-exchange CTAs.
  *

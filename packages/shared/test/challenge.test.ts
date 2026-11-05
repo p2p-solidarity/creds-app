@@ -1,11 +1,11 @@
 /**
- * challenge.ts — DID-challenge (Verify QR-scan + Pear proximity channel)
+ * challenge.ts — DID-challenge (Verify QR-scan)
  * round trip: buildChallenge -> respondChallenge (signs via signCompact)
  * -> verifyChallengeResponse (verifyCompact under expected.subject +
  * strict field equality + bounded clock skew). Plus consumption of the
  * frozen conformance vectors in ../vectors/challenge.json — the same
  * vectors the web viewer will later replay against its own
- * implementation (03-spec §3).
+ * implementation.
  */
 import { describe, expect, test } from 'bun:test';
 import { p256 } from '@noble/curves/nist.js';
@@ -96,7 +96,8 @@ describe('buildChallenge / respondChallenge / verifyChallengeResponse — round 
   test('rejects when the expected purpose differs from the signed payload', async () => {
     const c = baseChallenge({ purpose: 'verify.scan' });
     const jws = await respondChallenge(c, SUBJECT_DID, subjectSigner);
-    const differentPurpose: Challenge = { ...c, purpose: 'pear.card' };
+    // A future purpose must not accept a response signed for another one.
+    const differentPurpose = { ...c, purpose: 'other.purpose' } as unknown as Challenge;
     const result = verifyChallengeResponse(jws, differentPurpose);
     expect(result.ok).toBe(false);
   });

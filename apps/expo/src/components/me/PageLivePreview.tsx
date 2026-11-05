@@ -74,8 +74,9 @@ export interface PageLivePreviewProps {
    * the display name exactly as the mock's `.pub-handle`; omitted entirely
    * when the caller has no address to show. */
   readonly handle?: string | null;
-  /** The owner's Page tab: a tapped non-links block opens its editor and a
-   *  long-pressed one drags to a new place; empty or hidden blocks still
+  /** The owner's Page tab: a tapped non-links block opens its editor, a
+   *  long-pressed one drags to a new place and a swiped-left one asks to be
+   *  removed; empty or hidden blocks still
    *  paint (hidden ones dimmed and tagged) so they can be found. Visitors
    *  never pass it. */
   readonly editing?: PreviewBlockEditing;
@@ -85,6 +86,8 @@ export interface PreviewBlockEditing {
   readonly onEdit: (block: PageBlock) => void;
   /** `destination` is a slot among the non-links blocks, links excluded. */
   readonly onMove: (block: PageBlock, destination: number) => void;
+  /** Asks first; the block stays until the owner confirms. */
+  readonly onRemove: (block: PageBlock) => void;
 }
 
 /** Travel per block before a block has measured itself; real heights win. */
@@ -120,7 +123,7 @@ export function PageLivePreview({
         {block.type === 'links' ? null : (
           <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
             <View style={{ flex: 1 }}>
-              <PagePreviewSectionTitle title={block.title} palette={palette} fontFamily={fontFamily} />
+              {block.type === 'text' ? null : <PagePreviewSectionTitle title={block.title} palette={palette} fontFamily={fontFamily} />}
             </View>
             {editable && !block.visible ? (
               <ThemedText variant="caption" style={{ color: palette.subtle, fontFamily }}>
@@ -178,7 +181,9 @@ export function PageLivePreview({
                 stride={BLOCK_DRAG_STRIDE}
                 label={t('pageDesign.editSection', { title: block.title })}
                 moveLabel={t('pageDesign.dragHint')}
+                removeLabel={t('pageDesign.removeSectionNamed', { title: block.title })}
                 onPress={() => { editing.onEdit(block); }}
+                onRemove={() => { editing.onRemove(block); }}
                 onMove={(destination) => {
                   editing.onMove(block, destination);
                   resetRowDrag(drag);
@@ -220,7 +225,7 @@ export function PageBlockPreview({
   return (
     <PageGround appearance={appearance}>
       <View style={{ padding: metrics.padX, gap: 4 }}>
-        <PagePreviewSectionTitle title={block.title} palette={palette} fontFamily={fontFamily} />
+        {block.type === 'text' ? null : <PagePreviewSectionTitle title={block.title} palette={palette} fontFamily={fontFamily} />}
         <PreviewBlockItems
           block={block}
           items={items}

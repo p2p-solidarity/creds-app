@@ -1,7 +1,7 @@
 /**
- * VC Management — port of solidarity/Views/SettingsViews/VCSettingsView.swift.
+ * VC Management.
  *
- * Layout (Swift parity):
+ * Layout:
  *   • Navigation title "VC Management" (inline)
  *   • Section "About" with footer "Manage your Verifiable Credentials (VCs) for did:key."
  *   • Section "Actions" with 4 rows: Create did:key VC, Receive Card (OIDC),
@@ -31,7 +31,7 @@ import { VerifiedCredentialRow } from '@/components/me';
 import { ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { useCardStore } from '@/cards/cardManager';
-import { createDidKeyBusinessCardCredential } from '@/credentials/didKeyCredential';
+import { businessCardFromPage, createDidKeyBusinessCardCredential } from '@/credentials/didKeyCredential';
 import type { CredentialManifestEntry } from '@/credentials/credentialManifest';
 import { useIssuerMetadataStore } from '@/credentials/issuerStore';
 import { useCredentialStore } from '@/credentials/store';
@@ -45,6 +45,7 @@ import {
 import { appAlert, showError } from '@/feedback/appAlert';
 import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
+import { capabilities } from '@/platform/distribution';
 import { requireSensitiveAction } from '@/keychain';
 import { usePreferences } from '@/settings/preferences';
 
@@ -154,7 +155,7 @@ function VCManagementScreen() {
       const first = cardState.manifest[0];
       const card = first
         ? (cardState.details.get(first.id) ?? (await loadCardDetail(first.id)))
-        : null;
+        : await businessCardFromPage();
       if (!card) {
         appAlert({ title: t('vcManage.title'), message: t('vc.createDidKey.noCard') });
         return;
@@ -281,7 +282,7 @@ function VCManagementScreen() {
 
   return (
     <View className="flex-1 bg-pageBg">
-      {/* Navigation bar — chevron.left + inline title (Swift parity) */}
+      {/* Navigation bar — chevron.left + inline title */}
       <View style={{ paddingTop: insets.top }} className="bg-pageBg">
         <View className="h-11 flex-row items-center px-4">
           <PressableScale
@@ -318,12 +319,14 @@ function VCManagementScreen() {
                 void onCreateDidKey();
               }}
             />
-            <ActionRow
-              icon="qrcode"
-              title={t('vcManage.receiveCard')}
-              disabled={busy}
-              onPress={onReceiveOidc}
-            />
+            {capabilities.qrScanner ? (
+              <ActionRow
+                icon="qrcode"
+                title={t('vcManage.receiveCard')}
+                disabled={busy}
+                onPress={onReceiveOidc}
+              />
+            ) : null}
             <ActionRow
               icon="square.and.arrow.up"
               title={t('vcManage.exportVcs')}

@@ -145,11 +145,7 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
                     "The camera reads QR codes and a passport’s machine-readable zone on the device."
                   ]
                 },
-                "Device permissions and provider settings affect these optional features.",
-                {
-                  "heading": "Private card exchange (Pear)"
-                },
-                "Private card exchange connects your phone directly to the other person’s phone over a peer-to-peer network when you start or accept an exchange. The other phone and the network’s nodes see your IP address; the card you approve is sent only to that person. You can turn private exchange off in Settings."
+                "Device permissions and provider settings affect these optional features."
               ]
             },
             {
@@ -285,7 +281,6 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
                     "unlink every creds.id name your key held and delete its directory operation logs;",
                     "delete every encrypted root-vault record in your owner index, including passkeys added on the website;",
                     "delete the link between your creds Pro purchase and your identity;",
-                    "delete any messages still held for you by the retired Shoutouts inbox;",
                     "finally, erase identity keys, cards, contacts, credentials and settings on the phone."
                   ]
                 },
@@ -627,11 +622,7 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
                     "相機在裝置上讀取 QR code 與護照的機讀區。"
                   ]
                 },
-                "裝置權限及供應商設定會影響這些選用功能。",
-                {
-                  "heading": "私密名片交換（Pear）"
-                },
-                "私密名片交換會在你發起或接受交換時，透過點對點網路讓你的手機直接連到對方手機。對方手機與該網路的節點會看到你的 IP 位址；你核准的名片只傳給那個人。你可以在設定中關閉私密交換。"
+                "裝置權限及供應商設定會影響這些選用功能。"
               ]
             },
             {
@@ -767,7 +758,6 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
                     "解除你的金鑰持有過的所有 creds.id 名稱連結，並刪除其目錄操作記錄；",
                     "刪除 owner index 中所有加密 root vault 紀錄，包括在網站上新增的 passkey；",
                     "刪除 creds Pro 購買與你身分之間的連結；",
-                    "刪除已停用的 Shoutouts 收件匣中仍為你保留的訊息；",
                     "最後清除手機上的身分金鑰、名片、聯絡人、憑證與設定。"
                   ]
                 },

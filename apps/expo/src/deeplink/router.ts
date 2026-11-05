@@ -1,6 +1,5 @@
 /**
  * Deep-link handler — wires the pure parser (./parser) into expo-router.
- * Mirrors Swift DeepLinkManager.shared.handleIncomingURL.
  */
 import { router } from 'expo-router';
 
@@ -36,7 +35,7 @@ export function handleDeepLink(raw: string): DeepLinkRoute {
       router.push({ pathname: '/people/[id]', params: { id: route.cardId } });
       break;
     case 'groupInvite':
-      // Groups were frozen (06-plan) and their screens removed (10 §5); an old
+      // Groups were frozen and their screens removed (10 §5); an old
       // invite link says so instead of opening nothing.
       pushToast(translate('deeplink.groupsRetired'), 'info');
       break;
@@ -69,15 +68,6 @@ export function handleDeepLink(raw: string): DeepLinkRoute {
       void resolveProfileByHandle(route.handle, { onInterim: present }).then(present);
       break;
     }
-    case 'pear':
-      // Task A5.4 (US-20) — reuse the Verified Page detail route: it already
-      // renders the full card-exchange surface for a did with a saved
-      // `VerifiedSnapshot`, and now also renders `PearConnectSection`'s
-      // honest "connect privately" landing for a did with none (see that
-      // screen's doc). Same route either way — the screen itself decides
-      // which to show based on whether it already knows this did.
-      router.push({ pathname: '/people/profile/[did]', params: { did: route.did } });
-      break;
     case 'webSign':
       // App↔Web per-action signing (research §4, G3). Stage the request (or an
       // honest decode error) and open the consent review screen. The review

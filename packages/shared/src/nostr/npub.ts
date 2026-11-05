@@ -1,6 +1,6 @@
 /**
  * npub.ts — pure NIP-19 `npub1…` bech32 codec, shared by apps/expo AND the
- * future web viewer (04-plan Phase A4 task A4.3).
+ * future web viewer.
  *
  * `apps/expo/src/nostr/userKey.ts` has its own app-side `npubEncode`
  * (task A4.2) but it lives next to `expo-secure-store`/keychain imports

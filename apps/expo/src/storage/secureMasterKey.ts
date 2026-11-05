@@ -1,6 +1,5 @@
 /**
- * Master encryption key — ported from KeychainService.swift's
- * `ensureEncryptionKey()` + the v1→v2 master alias migration.
+ * Master encryption key + the v1→v2 master alias migration.
  *
  * Storage:
  *   iOS    : expo-secure-store wraps Keychain (kSecAttrAccessibleWhenUnlocked).

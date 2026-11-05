@@ -1,7 +1,5 @@
 /**
- * Envelope handler — TS port of Swift `QRCodeScanService+Handlers.swift`
- * (decodeEnvelope + handleEnvelope + handleEncryptedPayload +
- * evaluateSharingPayload + handleDidSignedPayload). Routes a scanned QR
+ * Envelope handler — routes a scanned QR
  * payload into one of:
  *   - `card`        → a rebuilt BusinessCard the receive sheet can present
  *   - `oidc-request` / `oidc-response` / `vp-token` → existing OIDC routes
@@ -321,13 +319,7 @@ function handleDidSigned(envelope: QRCodeEnvelopePayload): ScanOutcome {
 interface ZkProofResult {
   readonly sdValid: boolean;
   readonly sdPresent: boolean;
-  /** SNARK verified AND the proof's scope/signal bind to this envelope. */
   readonly issuerCryptoValid: boolean;
-  /** The proof's merkleRoot matches a group THIS device holds (05-spec
-   *  §6-8): crypto validity alone proves membership in SOME group — an
-   *  attacker's own throwaway group included — so `is_human` requires both.
-   *  Unknown root = cannot check = Unverified, never Failed. */
-  readonly issuerRootKnown: boolean;
   readonly issuerPresent: boolean;
 }
 
@@ -340,7 +332,6 @@ async function verifyZkProofs(payload: QRSharingPayload): Promise<ZkProofResult>
     sdValid: false,
     sdPresent: payload.sdProof !== undefined,
     issuerCryptoValid: false,
-    issuerRootKnown: false,
     issuerPresent: payload.issuerProof !== undefined,
   };
 
@@ -348,7 +339,6 @@ async function verifyZkProofs(payload: QRSharingPayload): Promise<ZkProofResult>
 
   let sdValid = false;
   let issuerCryptoValid = false;
-  let issuerRootKnown = false;
 
   if (payload.sdProof !== undefined) {
     try {
@@ -372,27 +362,13 @@ async function verifyZkProofs(payload: QRSharingPayload): Promise<ZkProofResult>
           normalised.proof,
           normalised.proof.merkleTreeDepth
         );
-        if (issuerCryptoValid) {
-          // Root provenance (05-spec §6-8): membership only means something
-          // when the root names a group this device recognises. CRITICALLY,
-          // the root is read from the AUTHENTICATED inner proofJson (the only
-          // bytes verifyGroupProof/native actually verify), NOT the outer
-          // wire struct — an attacker mints a valid SNARK over their own
-          // throwaway group and could set any outer merkleRoot, so trusting
-          // the outer field would defeat the whole check.
-          const innerRoot = innerProofRoot(normalised.proof.proofJson);
-          if (innerRoot !== null) {
-            const { isKnownGroupRoot } = await import('@/zk/issuerProof');
-            issuerRootKnown = await isKnownGroupRoot(innerRoot);
-          }
-        }
       }
     } catch {
       // Treat verifier exceptions as unverified.
     }
   }
 
-  return { ...result, sdValid, issuerCryptoValid, issuerRootKnown };
+  return { ...result, sdValid, issuerCryptoValid };
 }
 
 /**
@@ -451,33 +427,6 @@ function normaliseIssuerProofWire(raw: string): NormalisedIssuerProof | null {
   };
 }
 
-/**
- * The Merkle root the SNARK actually committed to — parsed out of the
- * verified inner `proofJson` (`merkle_tree_root`). This is the only root
- * value the native verifier reads, so it is the only one safe to feed the
- * provenance check. Returns null when the inner blob can't be parsed.
- *
- * NOTE on envelope binding: a previous version also compared the wire's
- * outer `scope`/`signal` strings against the envelope. That check was
- * unsound — those outer fields are unauthenticated, and the SNARK commits
- * to scope/message as field-element HASHES the native layer computes, which
- * TS cannot recompute from the strings today. The trust decision therefore
- * rests solely on inner-root provenance (a proof over a group this device
- * holds); a sound per-share anti-replay binding needs a native
- * string→field-element helper and is deferred with the frozen Semaphore
- * lane. In the current model the zkProof envelope is AES-GCM escrow-scoped
- * (only the sender's own devices can decrypt it), so no third party reaches
- * this path at all.
- */
-function innerProofRoot(proofJson: string): string | null {
-  const parsed = safeJsonParse(proofJson);
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
-  const root = (parsed as Record<string, unknown>)['merkle_tree_root'];
-  if (typeof root === 'string' && root.length > 0) return root;
-  if (typeof root === 'number' && Number.isFinite(root)) return String(root);
-  return null;
-}
-
 function asWireString(value: unknown): string {
   if (typeof value === 'string') return value;
   if (typeof value === 'number' && Number.isFinite(value)) return String(value);
@@ -499,12 +448,10 @@ function resolveZkVerificationStatus(
   if (proofs.sdPresent && !proofs.sdValid) return 'Failed';
   if (proofs.issuerPresent && !proofs.issuerCryptoValid) return 'Failed';
 
-  // A crypto-valid proof whose root names NO group this device holds is
-  // honoured as nothing: not a lie (the sender may be in a real group we
-  // simply don't know), so never Failed — but it cannot upgrade anything
-  // either (05-spec §6-8).
-  const issuerTrusted = proofs.issuerCryptoValid && proofs.issuerRootKnown;
-
+  // A crypto-valid issuer proof shows membership in SOME Semaphore group —
+  // an attacker's own throwaway group included. Only a root this device
+  // recognises could make that mean anything, and groups are retired, so the
+  // proof is honoured as nothing: never Failed, never an upgrade.
   const claims = payload.proofClaims;
   if (claims && claims.length > 0) {
     if (claims.some((claim) => !SUPPORTED_PROOF_CLAIMS.has(claim))) return 'Failed';
@@ -513,12 +460,11 @@ function resolveZkVerificationStatus(
     // another's outright failure.
     if (claims.includes('is_human') && !proofs.issuerPresent) return 'Failed';
     if (claims.includes('age_over_18') && !proofs.sdValid) return 'Failed';
-    // is_human backed by a crypto-valid proof but over an UNKNOWN root:
-    // cannot check (root provenance missing), not a lie — Unverified.
-    if (claims.includes('is_human') && !issuerTrusted) return 'Unverified';
+    // is_human backed by a crypto-valid proof: cannot check, not a lie.
+    if (claims.includes('is_human')) return 'Unverified';
   }
 
-  if (proofs.sdValid || issuerTrusted) return 'Verified';
+  if (proofs.sdValid) return 'Verified';
   return 'Unverified';
 }
 

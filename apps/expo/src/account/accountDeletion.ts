@@ -11,7 +11,7 @@
  * The result names steps only. Underlying errors can carry identifiers and
  * never cross into UI copy or logs.
  */
-export const ACCOUNT_DELETION_STEPS = ['nostr', 'name', 'vault', 'pro', 'inbox', 'local'] as const;
+export const ACCOUNT_DELETION_STEPS = ['nostr', 'name', 'vault', 'pro', 'local'] as const;
 export type AccountDeletionStep = (typeof ACCOUNT_DELETION_STEPS)[number];
 export type ServerDeletionStep = Exclude<AccountDeletionStep, 'local'>;
 
@@ -35,7 +35,7 @@ export type AccountDeletionResult =
       readonly steps: Readonly<Record<AccountDeletionStep, StepOutcome>>;
     };
 
-const SERVER_STEPS: readonly ServerDeletionStep[] = ['nostr', 'name', 'vault', 'pro', 'inbox'];
+const SERVER_STEPS: readonly ServerDeletionStep[] = ['nostr', 'name', 'vault', 'pro'];
 
 async function attempt(run: () => Promise<StepRunResult>): Promise<StepOutcome> {
   try {

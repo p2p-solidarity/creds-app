@@ -1,6 +1,6 @@
 /**
  * VerifiedProfileView — the shared "here's the Verified Page we locally
- * verified" presentation (1.3.3 Task A2.3, US-11). Used by both
+ * verified" presentation. Used by both
  * `VerifiedPageResultSheet` (fresh scan result) and the People detail
  * screen (`app/people/profile/[did].tsx`, a persisted snapshot) so the two
  * never drift — both show the person's Page itself (`PageLivePreview`).
@@ -28,12 +28,15 @@ import type { ProfileRecord } from '@solidarity/shared';
 export interface VerifiedProfileViewProps {
   readonly record: ProfileRecord;
   readonly handleBinding?: VerifiedHandleBinding;
+  /** A saved Page's creds.id name this phone checked both ways earlier
+   *  (`VerifiedSnapshot.handle`); a live `handleBinding` wins. */
+  readonly username?: string | null;
 }
 
 /** Opens on the person's Page exactly as visitors see it — their published
  *  design, or the default Page of their signed links when they never
  *  designed one — then the signature / handle chips and this phone's checks. */
-export function VerifiedProfileView({ record, handleBinding }: VerifiedProfileViewProps): ReactNode {
+export function VerifiedProfileView({ record, handleBinding, username = null }: VerifiedProfileViewProps): ReactNode {
   const { t } = useTranslation();
   const design = useMemo(() => record.page ?? createInitialPageDesign(), [record.page]);
   return (
@@ -43,15 +46,20 @@ export function VerifiedProfileView({ record, handleBinding }: VerifiedProfileVi
         blocks={design.blocks}
         appearance={design.appearance}
         variant="public"
-        handle={handleBinding?.handle ?? null}
+        handle={handleBinding?.handle ?? (username === null ? null : `@${username}`)}
       />
 
       <ThemedSurface variant="card" style={{ overflow: 'hidden' }}>
         <View className="flex-row flex-wrap items-center gap-2 px-4 py-3">
           <SfIcon name="checkmark.seal.fill" size={18} color={Colors.terminalGreen} />
-          <ThemedText variant="bodyMedium" style={{ flex: 1 }}>
-            {t('verifiedPage.signatureValid')}
-          </ThemedText>
+          {/* Say WHAT the signature covers and whose key made it — a bare
+              "signature valid" left people guessing which signature. */}
+          <View style={{ flex: 1, gap: 2 }}>
+            <ThemedText variant="bodyMedium">{t('verifiedPage.signatureValid')}</ThemedText>
+            <ThemedText variant="caption" tone="tertiary" numberOfLines={3}>
+              {t('verifiedPage.signatureValidDetail', { key: `…${record.did.slice(-6)}` })}
+            </ThemedText>
+          </View>
           {handleBinding ? <HandleBindingBadge binding={handleBinding} /> : null}
         </View>
         <WitnessSection record={record} />

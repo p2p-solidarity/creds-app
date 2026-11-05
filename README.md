@@ -37,7 +37,7 @@ a URL fragment), and verification runs on the reader's own client.
 2. **My Page + verify** — add X / GitHub / Telegram / a website; tap verify, paste one marker into
    the platform's bio, come back, get a green check.
 3. **Show** — open one card with a QR; whoever scans it sees the Page and every check on it.
-4. **Collect people** — scan someone (or exchange over Pear); People re-checks their signatures and
+4. **Collect people** — scan someone; People re-checks their signatures and
    attestations on your phone.
 5. **Prove** — scan a passport once and the Page gains a passport badge.
 
@@ -77,8 +77,7 @@ Second tier, off the main line: credential wallet, OIDC, websign, Settings.
   mnemonic or DID. The mnemonic stays the only root; without PRF the user re-enters the phrase.
   Page content syncs through Nostr, not through the vault ([`docs/ref/08`](./docs/ref/08-plan-passkey-root-sync.md)).
 - **Signing is gated by Face ID.** Default mode is `redLineOnly`: irreversible actions — key
-  rotation, revealing the recovery bundle, deleting a ZK identity, releasing a card over Pear —
-  prompt every time; showing your own card never prompts
+  rotation, revealing the recovery bundle, deleting a ZK identity — prompt every time; showing your own card never prompts
   (`apps/expo/src/keychain/sensitiveActionPolicy.ts`).
 - **Terminology is deliberately narrow** — Recovery Phrase, Root Identity, Signing Identity, Device
   Storage Key, Portable Backup Key, Backup Archive are six _different_ things. See
@@ -160,8 +159,6 @@ off with your own footer, and the creds.id witness. A license bridge checks the 
 
 - **Websign** — build a Page on a keyboard, sign it with the phone: the phone shows a per-field
   diff, then Face ID signs. Now the fallback when passkey PRF is unavailable.
-- **Pear lane** — app-to-app private channel (Bare worklet + Hyperswarm, topic = hash(DID),
-  Noise-encrypted). Private channels only — the public Page never goes through Pear.
 - **Backup** — Backup Archives are encrypted with a key derived from the Recovery Phrase and written
   to **your** cloud (iCloud Drive Documents / Google Drive). Restore = phrase + archive.
 - **Account deletion** — every server-side delete is signed by the account key; server first, then
@@ -208,9 +205,9 @@ consolidation or the rebrand — they address existing users' keys.
 | Identity & keys   | `identity` · `keychain` · `storage` · `account`                                                               |
 | Page & card       | `page` · `me` · `cards` · `profile` · `present` · `disclosure`                                                |
 | Publish & resolve | `nostr` · `atproto` · `handles` · `nip05` · `domains` · `badges`                                              |
-| Verification      | `witness` · `passport` · `credentials` · `oidc` · `zk` · `groups`                                             |
-| Exchange          | `scan` · `sharing` · `deeplink` · `websign` · `pear`                                                          |
-| Data              | `contacts` · `people` · `vault` · `backup`                                                                    |
+| Verification      | `witness` · `passport` · `credentials` · `oidc` · `zk`                                                        |
+| Exchange          | `scan` · `deeplink` · `websign`                                                                               |
+| Data              | `contacts` · `people` · `backup`                                                                              |
 | Shell             | `components` · `constants` · `navigation` · `onboarding` · `settings` · `pro` · `i18n` · `feedback` · `legal` |
 
 </details>
@@ -250,7 +247,7 @@ bunx expo prebuild --clean --platform ios --no-install
 bun run ios          # builds + installs the dev client, launches the simulator
 ```
 
-Expo Go is not a development path: the app ships Nitro modules and a vendored `BareKit.xcframework`.
+Expo Go is not a development path: the app ships Nitro modules.
 Build a dev client once per native dependency change, then use `expo start` for the JS loop.
 
 ### Verify — run this before claiming anything works
@@ -297,20 +294,17 @@ are in English.
    **[`apps/expo/CLAUDE.md`](./apps/expo/CLAUDE.md)** — the coding rulebook. Mandatory before
    editing anything under `apps/expo/`.
 2. **Live plan** — [`docs/ref/10`](./docs/ref/10-plan-simplify-and-verify.md): five user stories and
-   local-first social verification (§3.11). Its zkTLS / notary-evidence sections are retired
-   history. [`11`](./docs/ref/11-plan-passport-openac.md) (passport, no circuit) and
+   local-first social verification (§3.11). [`11`](./docs/ref/11-plan-passport-openac.md) (passport, no circuit) and
    [`12-plan-ui-rebrand`](./docs/ref/12-plan-ui-rebrand.md) (creds.id rebrand, one card) take over
    pieces of 10.
 3. **Built mechanisms** — [`08`](./docs/ref/08-plan-passkey-root-sync.md) passkey root vault,
    [`09`](./docs/ref/09-plan-pro-entitlement.md) Pro entitlement,
    [`05`](./docs/ref/05-spec-qr-exchange.md) QR wires,
-   [`06`](./docs/ref/06-plan-convergence-2.0.0.md) 2.0.0 north star and keep/cut.
-4. **Background** — `docs/ref/01–03` (Verified Page spec). `04` and
-   `notes-archive-pre-2.0.0.md` are history.
+   [`13`](./docs/ref/13-plan-fdroid.md) F-Droid build.
+4. **Evidence** — `docs/e2e/<date>-<slug>/result.md` says what actually ran and what did not.
+   Screenshots stay on the machine that took them (gitignored).
 
-> **Stale by design:** `spec.md` and `architecture.png` describe the deleted SwiftUI app. Root
-> `ios/`, `android/`, `app.json`, `solidarity.xcodeproj/` and `ci_scripts/` are leftover artifacts —
-> the real native projects are `apps/expo/{ios,android}`, regenerated by prebuild.
+Older plans and audits were deleted on 2026-11-04; `git log -- docs/` has them.
 
 ### History
 
@@ -350,7 +344,7 @@ repository rather than opening a public issue.
 [Expo](https://expo.dev) · [React Native](https://reactnative.dev) ·
 [Nitro Modules](https://github.com/mrousavy/nitro) · [Expo Router](https://docs.expo.dev/router/introduction/) ·
 [NativeWind](https://www.nativewind.dev) · [Reanimated](https://docs.swmansion.com/react-native-reanimated/) ·
-[MMKV](https://github.com/mrousavy/react-native-mmkv) · [Bare](https://github.com/holepunchto/bare) / [Hyperswarm](https://github.com/holepunchto/hyperswarm) ·
+[MMKV](https://github.com/mrousavy/react-native-mmkv) ·
 [Semaphore](https://semaphore.pse.dev) · [SpruceID](https://spruceid.com) ·
 [Nostr](https://github.com/nostr-protocol/nips) · [atproto](https://atproto.com)
 

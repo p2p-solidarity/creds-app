@@ -21,7 +21,8 @@ export function presentPublicLinks(
   );
 }
 
-export type PhysicalCardMaterial = 'steel' | 'blackTitanium' | 'brass';
+/** The card's finish: the in-app card and the physical card preview share it. */
+export type PhysicalCardMaterial = 'steel' | 'blackTitanium' | 'brass' | 'creds';
 
 /**
  * Present-only preferences, as an optional augmentation so old `prefs:v1`

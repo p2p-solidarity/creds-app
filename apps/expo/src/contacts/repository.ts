@@ -202,20 +202,6 @@ export const useContactList = (): readonly ContactManifestEntry[] =>
   useContactStore(useShallow((s) => s.manifest));
 
 /**
- * Full Contact list — only call from screens that need email / phone /
- * sealed-route / lastInteraction. Triggers `hydrate()` in the background
- * so cold starts can still paint manifest rows immediately while the full
- * decrypt resolves.
- *
- * `useShallow` is required: `Array.from(...)` produces a new reference each
- * render, which trips Zustand v5's snapshot caching and triggers an infinite
- * re-render loop. Shallow comparison stabilises the snapshot when the
- * underlying map hasn't changed.
- */
-export const useContactListDetail = (): readonly Contact[] =>
-  useContactStore(useShallow((s) => Array.from(s.details.values())));
-
-/**
  * Sync accessor for a single Contact, indexed by id. Kicks off a lazy
  * `loadDetail(id)` in an effect when the requested id isn't in the
  * details map yet — frame 1 returns `undefined` and the component re-

@@ -188,12 +188,9 @@ class InMemorySpruceDidDriver implements SpruceDid {
     return this.keys.has(alias);
   }
 
-  // ── T7 syncable-item surface ─────────────────────────────────────────────
   // Simulates the iCloud-synced keychain items `listSyncableP256Keys`
-  // enumerates natively. Seeded per test; `rawListOverride` lets a test feed
-  // malformed JSON to pin the JS layer's fail-closed parse.
+  // enumerates natively. Seeded per test.
   private syncableItems = new Map<string, { labelHex: string; publicKeyHex: string }[]>();
-  rawListOverride: string | null = null;
   deleteKeyResultOverride: boolean | null = null;
 
   seedSyncableItemsForTesting(
@@ -204,7 +201,6 @@ class InMemorySpruceDidDriver implements SpruceDid {
   }
 
   async listSyncableP256Keys(alias: string): Promise<string> {
-    if (this.rawListOverride !== null) return this.rawListOverride;
     const items = this.syncableItems.get(alias) ?? [];
     return JSON.stringify(
       items.map((item) => ({ label: item.labelHex, publicKeyHex: item.publicKeyHex }))
@@ -234,10 +230,8 @@ class InMemorySpruceDidDriver implements SpruceDid {
     return JSON.stringify(publicKeyToJwk(entry.publicKey));
   }
 
-  // didKeyFromAlias / didDocumentJson / verifyJws / signCredentialJwt /
-  // verifyCredentialJwt were removed from the SpruceDid spec in 1.3.3 S7a
-  // (zero production callers — DID derivation + verification are pure TS in
-  // packages/shared), so the driver no longer implements them.
+  // DID derivation and verification are pure TS in packages/shared; the
+  // SpruceDid spec only signs.
 
   async signJws(alias: string, payload: ArrayBuffer): Promise<string> {
     const entry = this.keys.get(alias);
@@ -356,9 +350,7 @@ const {
   didKeyForCurrentIdentity,
   ensureSigningKey,
   hasExistingSigningKey,
-  listSyncableSigningKeys,
   publicJwk,
-  resolveSigningKeyConflict,
   signRawEs256,
   signJwt,
   deleteSigningKey,
@@ -545,7 +537,7 @@ describe('SpruceID DID Nitro module — JS-side wiring', () => {
     ).toBe(true);
   });
 
-  it('signJwt splices custom typ/kid headers without breaking the signature', async () => {
+  it('signJwt signs custom typ/kid headers (the signature covers the header)', async () => {
     const jwk = await publicJwk();
     const jwt = await signJwt(
       { alg: 'ES256', typ: 'vc+jwt', kid: 'did:key:zTest#keys-1' },
@@ -561,12 +553,9 @@ describe('SpruceID DID Nitro module — JS-side wiring', () => {
     expect(header.alg).toBe('ES256');
     expect(header.typ).toBe('vc+jwt');
     expect(header.kid).toBe('did:key:zTest#keys-1');
-    // Signature still verifies because the test driver re-signs with the
-    // default header during signJws; the JS layer then overwrites the
-    // header segment. In the *native* path the SDK signs the user-supplied
-    // header — that's covered by deeper end-to-end tests that exercise
-    // the real Nitro module (TODO when we have a device farm).
-    expect(parts[2]?.length ?? 0).toBeGreaterThan(0);
+    // Regression (2026-11-05 E2E): the header was swapped in after signing,
+    // so every VP failed verification on the receiving phone.
+    expect(verifyJwtEs256(jwt, jwk).header.kid).toBe('did:key:zTest#keys-1');
   });
 
   it('legacy migration: rotates DID when gg.solidarity.signing.v2 is present', async () => {
@@ -705,15 +694,8 @@ describe('SpruceID DID Nitro module — JS-side wiring', () => {
     });
   });
 
-  describe('T7 syncable-key conflict surface', () => {
+  describe('hasExistingSigningKey', () => {
     const ALIAS = 'solidarity.master.v2';
-    const toHex = (bytes: Uint8Array): string =>
-      [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('');
-
-    afterEach(() => {
-      driver.rawListOverride = null;
-      driver.seedSyncableItemsForTesting(ALIAS, []);
-    });
 
     it('hasExistingSigningKey probes without minting', async () => {
       expect(await hasExistingSigningKey()).toBe(false);
@@ -721,57 +703,6 @@ describe('SpruceID DID Nitro module — JS-side wiring', () => {
       expect(driver.hasKey(ALIAS)).toBe(false);
       await ensureSigningKey();
       expect(await hasExistingSigningKey()).toBe(true);
-    });
-
-    it('lists synced candidates and marks the resolver’s current winner active', async () => {
-      await ensureSigningKey();
-      const jwk = await publicJwk();
-      const activeHex = `04${toHex(base64UrlDecode(jwk.x))}${toHex(base64UrlDecode(jwk.y))}`;
-      driver.seedSyncableItemsForTesting(ALIAS, [
-        { labelHex: 'aaaa01', publicKeyHex: activeHex },
-        { labelHex: 'bbbb02', publicKeyHex: '04deadbeef' },
-      ]);
-
-      const candidates = await listSyncableSigningKeys();
-
-      expect(candidates).toHaveLength(2);
-      expect(candidates.find((c) => c.labelHex === 'aaaa01')?.active).toBe(true);
-      expect(candidates.find((c) => c.labelHex === 'bbbb02')?.active).toBe(false);
-    });
-
-    it('resolveSigningKeyConflict keeps exactly the chosen key and deletes the rest', async () => {
-      await ensureSigningKey();
-      driver.seedSyncableItemsForTesting(ALIAS, [
-        { labelHex: 'aaaa01', publicKeyHex: '04aa' },
-        { labelHex: 'bbbb02', publicKeyHex: '04bb' },
-        { labelHex: 'cccc03', publicKeyHex: '04cc' },
-      ]);
-
-      const result = await resolveSigningKeyConflict('bbbb02');
-
-      expect(result.ok).toBe(true);
-      const remaining = await listSyncableSigningKeys();
-      expect(remaining.map((c) => c.labelHex)).toEqual(['bbbb02']);
-    });
-
-    it('refuses to resolve onto a label that does not exist — deletes nothing', async () => {
-      await ensureSigningKey();
-      driver.seedSyncableItemsForTesting(ALIAS, [
-        { labelHex: 'aaaa01', publicKeyHex: '04aa' },
-        { labelHex: 'bbbb02', publicKeyHex: '04bb' },
-      ]);
-
-      const result = await resolveSigningKeyConflict('ffff99');
-
-      expect(result.ok).toBe(false);
-      if (!result.ok) expect(result.error).toBe('keepTargetMissing');
-      expect(await listSyncableSigningKeys()).toHaveLength(2);
-    });
-
-    it('fails closed to an empty list on malformed native JSON — never a phantom conflict', async () => {
-      await ensureSigningKey();
-      driver.rawListOverride = 'not json {';
-      expect(await listSyncableSigningKeys()).toEqual([]);
     });
   });
 });

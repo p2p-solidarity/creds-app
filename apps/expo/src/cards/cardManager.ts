@@ -1,7 +1,7 @@
 /**
  * Card manager — zustand store for the legacy business card (kept for backup
  * restore and wipe; the card editor and card wire left with 10 §4).
- * Mirrors Swift CardManager.shared (CRUD + dedup + validation).
+ * CRUD + dedup + validation.
  *
  * Boot model (Path A — manifest + lazy details):
  *
@@ -194,10 +194,6 @@ export const useCardStore = create<CardStoreState>((set, get) => ({
     set({ manifest: [], details: new Map(), detailsHydrated: true });
   },
 }));
-
-/** Selector for "my own card" — the first manifest entry. Frame-1 safe. */
-export const useMyCard = (): CardManifestEntry | undefined =>
-  useCardStore((s) => s.manifest[0]);
 
 /**
  * Full record for "my own card". Returns `undefined` until `hydrate()`

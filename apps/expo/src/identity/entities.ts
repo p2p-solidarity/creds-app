@@ -1,5 +1,5 @@
 /**
- * IdentityEntities — TS port of solidarity/Models/IdentityEntities.swift.
+ * IdentityEntities.
  *
  * Pure interface set (no SwiftData annotations). `ContactEntity` is NOT
  * re-ported here — `apps/expo/src/contacts/repository.ts` already covers it

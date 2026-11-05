@@ -4,8 +4,6 @@ import {
   buildProfileShareModel,
   handleShareCandidates,
   preferredVerifiedHandleShareCandidate,
-  profileIdentityLine,
-  selectProfileShareUrl,
   verifiedHandleShareCandidates,
   type HandleShareCandidate,
 } from '@/components/me/meProfileModel';
@@ -25,36 +23,6 @@ const PROFILE: ProfileRecord = {
   updatedAt: '2026-07-16T00:00:00.000Z',
 };
 
-describe('profileIdentityLine', () => {
-  it('prefers the profile-owned Bluesky handle and otherwise falls back to a short DID', () => {
-    expect(
-      profileIdentityLine({
-        ...PROFILE,
-        alsoKnownAs: ['at://alice.bsky.social'],
-      })
-    ).toEqual({ kind: 'handle', label: '@alice.bsky.social' });
-
-    expect(
-      profileIdentityLine({
-        ...PROFILE,
-        alsoKnownAs: ['at://@Alice.BSKY.Social'],
-      })
-    ).toEqual({ kind: 'handle', label: '@alice.bsky.social' });
-
-    expect(profileIdentityLine(PROFILE)).toEqual({
-      kind: 'did',
-      label: 'did:key:z6Mk...tifier',
-    });
-
-    expect(
-      profileIdentityLine({
-        ...PROFILE,
-        alsoKnownAs: ['at://not a handle'],
-      })
-    ).toEqual({ kind: 'did', label: 'did:key:z6Mk...tifier' });
-  });
-});
-
 describe('profile share model', () => {
   it('offers the Nostr pointer when published while retaining the self-contained offline fragment', () => {
     const model = buildProfileShareModel(
@@ -65,8 +33,6 @@ describe('profile share model', () => {
     expect(model.shortUrl).toBe('https://creds.id/#nostr:npub1alice');
     expect(model.offlineUrl.startsWith('https://creds.id/#')).toBe(true);
     expect(model.offlineUrl).not.toContain('SOLIDARITY::');
-    expect(selectProfileShareUrl(model, true)).toBe('https://creds.id/#nostr:npub1alice');
-    expect(selectProfileShareUrl(model, false)).toBe(model.offlineUrl);
   });
 
   it('builds a fragment-free official short URL', () => {
@@ -91,15 +57,16 @@ describe('profile share model', () => {
       jws: publicJws,
     });
 
-    expect(model.usernameUrl).toBe('https://creds.id/@alice');
+    expect(model.usernameUrl).toBe('https://creds.id/alice');
     expect(model.usernameUrl).not.toContain('#');
   });
 
   it('does not attach a local projection to the official short URL', () => {
     const model = buildProfileShareModel(PROFILE, 'header.payload.signature', 'alice');
 
-    expect(model.usernameUrl).toBe('https://creds.id/@alice');
-    expect(model.usernameDisplayUrl).toBe('https://creds.id/@alice');
+    expect(model.usernameUrl).toBe('https://creds.id/alice');
+    expect(model.usernameDisplayUrl).toBe('https://creds.id/alice');
+    expect(model.usernameQrUrl).toBe('https://creds.id/@alice');
   });
 });
 

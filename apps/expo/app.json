@@ -10,7 +10,7 @@
       "airmeishi",
       "openid-credential-offer"
     ],
-    "version": "2.0.0",
+    "version": "2.0.1",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -124,8 +124,45 @@
               "host": "app.solidarity.gg"
             },
             {
+              "path": "/"
+            },
+            {
+              "pathPrefix": "/@"
+            },
+            {
+              "pathPrefix": "/c/"
+            },
+            {
+              "path": "/websign"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ],
+          "autoVerify": true
+        },
+        {
+          "action": "VIEW",
+          "data": [
+            {
               "scheme": "https",
               "host": "creds.id"
+            },
+            {
+              "path": "/"
+            },
+            {
+              "pathPrefix": "/@"
+            },
+            {
+              "pathPrefix": "/c/"
+            },
+            {
+              "path": "/websign"
+            },
+            {
+              "pathAdvancedPattern": "/[a-z0-9]{3,30}"
             }
           ],
           "category": [
@@ -143,13 +180,6 @@
           "photosPermission": "creds.id lets you choose a photo from your library for your Page. The photo stays on this device.",
           "cameraPermission": "creds.id uses the camera to scan QR codes and passport MRZ.",
           "microphonePermission": false
-        }
-      ],
-      [
-        "expo-notifications",
-        {
-          "enableRemoteNotifications": false,
-          "enableBackgroundRemoteNotifications": false
         }
       ],
       [
@@ -200,7 +230,6 @@
         }
       ],
       "./plugins/withXcodeCloudScripts.js",
-      "./plugins/withPrecompiledVisionCameraResizerMetal.js",
       "./plugins/withExpoModulesJsiPatches.js",
       "./plugins/withSemaphoreBindingsPod.js",
       "./plugins/withRustXcframeworkSearchPath.js",
@@ -209,6 +238,7 @@
       "./plugins/withNfcReader.js",
       "./plugins/withIosBuildNumber.js",
       "./plugins/withAndroidReleaseSigning.js",
+      "./plugins/withFdroidFlavor.js",
       ["./plugins/withAndroidDisplayName.js", { "name": "creds.id" }],
       ["./plugins/withAndroidAssetStatements.js", { "sites": ["creds.id"] }],
       "expo-sqlite",

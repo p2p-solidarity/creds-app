@@ -1,6 +1,5 @@
 /**
- * Pairwise per-RP signing keys — mirrors KeychainService.swift's
- * `ensurePairwiseKey(forDomain:)` / `pairwisePublicJwk(forDomain:)`.
+ * Pairwise per-RP signing keys.
  *
  * Why pairwise: presenting the same DID to every verifier links the user
  * across services. Per RP domain we derive a deterministic sub-key from the

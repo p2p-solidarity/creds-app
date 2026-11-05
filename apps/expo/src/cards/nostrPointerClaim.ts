@@ -13,8 +13,7 @@
  *
  * Receive trust rule (see people/cardSubscriptionBootstrap.ts): the claim
  * proves only "the card SIGNER attests this npub". Nothing binds the card
- * signing key to the page's root did today (the A5b cardKeyBinding JWS is
- * session-scoped: 300 s + aud + nonce — unusable in a static QR), so the
+ * signing key to the page's root did today, so the
  * pointer bootstraps a SILENT refresh only for a did the user has already
  * saved; it never creates a new person. The v2 design (a long-lived
  * root-signed card-key attestation) is specced in 05 §3 before silent
@@ -77,51 +76,6 @@ export function parseNostrPointerClaim(
     return null;
   }
   return { npub, relays: sanitizeRelayHints(nostr['relays']) };
-}
-
-/**
- * Emit-side source: the sender's own verified Nostr binding, attached ONLY
- * when it is honestly current — the same three-part guard every other
- * consumer of this cache applies (badgeStatusCache.ts:6-18):
- *   1. cached state is `verified`;
- *   2. the cached npub STILL matches the profile record's own `nostr:` claim
- *      (guards a rotated/removed binding whose stale cache still says
- *      verified);
- *   3. the cache is within its reverify TTL for this record
- *      (`shouldReverifyBadge` false) — not an arbitrarily old result.
- * Any miss → null (the card simply ships without a pointer). Lazily
- * imported so this module stays loadable from Bun's test loader without the
- * MMKV surface.
- */
-export async function buildNostrPointerClaimFromCache(
-  now: number = Date.now()
-): Promise<NostrPointerClaim | null> {
-  try {
-    const [{ readCachedNostrResult, shouldReverifyBadge }, { DEFAULT_RELAYS }, { useProfileStore }] =
-      await Promise.all([
-        import('@/badges/badgeStatusCache'),
-        import('@/nostr/publish'),
-        import('@/profile/store'),
-      ]);
-
-    const record = useProfileStore.getState().record;
-    if (!record) return null;
-    const claimed = record.alsoKnownAs
-      .find((value) => value.startsWith('nostr:npub'))
-      ?.slice('nostr:'.length);
-    if (!claimed) return null;
-
-    const cached = readCachedNostrResult();
-    if (cached?.result.state !== 'verified') return null;
-    if (cached.result.npub !== claimed) return null;
-    if (shouldReverifyBadge(cached.checkedAt, record.updatedAt, now)) return null;
-
-    const npub = cached.result.npub;
-    if (!NPUB_RE.test(npub) || npub.length > MAX_NPUB_LENGTH) return null;
-    return { npub, relays: DEFAULT_RELAYS.slice(0, NOSTR_POINTER_MAX_RELAYS) };
-  } catch {
-    return null;
-  }
 }
 
 function pickRecord(value: unknown): Readonly<Record<string, unknown>> | undefined {

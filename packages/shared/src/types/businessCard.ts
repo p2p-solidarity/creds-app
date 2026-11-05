@@ -1,5 +1,5 @@
 /**
- * BusinessCard — mirrors solidarity/Models/BusinessCard.swift.
+ * BusinessCard.
  *
  * Migration shape: UUID id → string. profileImage Swift Data → base64 string
  * (we keep it as a discriminated union so callers can lazily decode). Custom

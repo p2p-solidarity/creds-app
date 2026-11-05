@@ -1,6 +1,5 @@
 /**
- * OID4VP Presenter — TS port of
- * solidarity/Services/Identity/OID4VPPresentationService.swift (`wrapCredentialsAsVP`).
+ * OID4VP Presenter.
  *
  * Builds the holder side of an OID4VP exchange:
  *   1. Collect VC JWTs from the selected provable claims (or, when the
@@ -32,7 +31,6 @@ import {
   ok,
   type PublicKeyJWK,
   type Result,
-  type Signer,
 } from '@solidarity/shared';
 
 import {
@@ -43,7 +41,6 @@ import type { ProvableClaimEntity } from '@/identity';
 
 import { oidcError, type OidcError } from './errors';
 import type { ParsedOidcRequest } from './parseAuthRequest';
-import { buildCardKeyBindingJws } from './cardKeyBinding';
 
 const VP_LIFETIME_SECONDS = 300;
 
@@ -90,11 +87,9 @@ export interface PresentationBuilderInput {
   /** Provable-claim ids OR credential ids (we look in both stores). */
   readonly selectedClaimIds: readonly string[];
   readonly holderDid: string;
-  /** Pear-only: root key authorization that anchors the card-signing DID. */
-  readonly cardKeyBinding?: {
-    readonly rootDid: string;
-    readonly sign: Signer;
-  };
+  /** Unix s. Default: 300 s after signing (an OID4VP verifier is online). A
+   *  private answer that waits on relays uses the request's expiry instead. */
+  readonly expiresAt?: number;
   readonly deps?: PresentationBuilderDeps;
 }
 
@@ -298,34 +293,6 @@ function buildPresentationSubmission(
   };
 }
 
-/** Sign the Pear root→card binding when the caller supplies one; a plain
- *  OID4VP flow has no binding and returns `undefined`. Fail-closed on signer
- *  errors. */
-async function signCardKeyBinding(
-  input: PresentationBuilderInput,
-  cardDid: string,
-  audienceDid: string,
-  nonce: string,
-  now: number,
-): Promise<Result<string | undefined, OidcError>> {
-  if (!input.cardKeyBinding) return ok(undefined);
-  try {
-    const jws = await buildCardKeyBindingJws({
-      rootDid: input.cardKeyBinding.rootDid,
-      cardDid,
-      audienceDid,
-      nonce,
-      sign: input.cardKeyBinding.sign,
-      now,
-      lifetimeSeconds: VP_LIFETIME_SECONDS,
-    });
-    return ok(jws);
-  } catch (e) {
-    const m = e instanceof Error ? e.message : String(e);
-    return err(oidcError('cryptographicError', `Failed to sign card-key binding: ${m}`));
-  }
-}
-
 export async function buildVpToken(
   input: PresentationBuilderInput
 ): Promise<Result<BuiltPresentation, OidcError>> {
@@ -353,15 +320,12 @@ export async function buildVpToken(
   const now = input.deps?.nowSeconds?.() ?? Math.floor(Date.now() / 1000);
   const audience = input.request.request.client_id;
   const nonce = input.request.request.nonce;
-  const binding = await signCardKeyBinding(input, derivedDid, audience, nonce, now);
-  if (!binding.ok) return binding;
-  const cardKeyBindingJws = binding.value;
 
   const payload: Record<string, unknown> = {
     iss: derivedDid,
     sub: derivedDid,
     iat: now,
-    exp: now + VP_LIFETIME_SECONDS,
+    exp: input.expiresAt ?? now + VP_LIFETIME_SECONDS,
     aud: audience,
     nonce,
     vp: {
@@ -370,7 +334,6 @@ export async function buildVpToken(
       holder: derivedDid,
       verifiableCredential: vcJwts,
     },
-    ...(cardKeyBindingJws ? { solidarity: { cardKeyBinding: cardKeyBindingJws } } : {}),
   };
 
   let vpJwt: string;

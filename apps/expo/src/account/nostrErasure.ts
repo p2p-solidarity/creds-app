@@ -11,6 +11,9 @@
  *   the DAG head (`solidarity-dag-v1`) and witness statements
  *   (`creds.witness:…`). Each gets an empty replacement (relays that ignore
  *   NIP-09 then serve nothing) and a NIP-09 `a` + `e` deletion request.
+ * - kind 10050 (NIP-17 DM relays), only when it is the exact list this app
+ *   published (`privateExchange/relays.ts` keeps its id): a list set in
+ *   another client is left alone.
  * - kind 0: the app only ever adds `alsoKnownAs: [did:…]` and a
  *   `nip05: name@creds.id`. Those two are stripped and the rest republished
  *   untouched; only a kind 0 left empty is also asked to be deleted.
@@ -26,6 +29,7 @@ export const OWN_D_TAG_PREFIXES = ['solidarity', 'creds.'] as const;
 const KIND_METADATA = 0;
 const KIND_APP_DATA = 30078;
 const KIND_DELETION = 5;
+const KIND_DM_RELAYS = 10050;
 const CREDS_NIP05_SUFFIX = '@creds.id';
 
 export interface UnsignedEvent {
@@ -82,6 +86,7 @@ export function planNostrErasure(
   pubkey: string,
   appRecords: readonly NostrEvent[],
   kind0: NostrEvent | null,
+  dmRelayList: { readonly latest: NostrEvent | null; readonly publishedId: string | null } = { latest: null, publishedId: null },
 ): NostrErasurePlan {
   const own = appRecords.filter((e) => isOwnAppRecord(e, pubkey));
   const dTags = [...new Set(own.flatMap((e) => dTag(e) ?? []))];
@@ -98,6 +103,14 @@ export function planNostrErasure(
         kinds.add(KIND_METADATA);
       }
     }
+  }
+
+  // Ours only while it is still the exact list we published.
+  const dm = dmRelayList.latest;
+  if (dm !== null && dm.pubkey === pubkey && dm.kind === KIND_DM_RELAYS && dm.id === dmRelayList.publishedId) {
+    replacements.push({ kind: KIND_DM_RELAYS, tags: [], content: '' });
+    eTags.push(['e', dm.id]);
+    kinds.add(KIND_DM_RELAYS);
   }
 
   const deletion: UnsignedEvent | null =
@@ -133,6 +146,8 @@ export interface NostrErasureDeps {
   /** Majority-quorum publish (`publishToRelays`). */
   readonly publish: (event: NostrEvent, relays: readonly string[]) => Promise<{ readonly success: boolean }>;
   readonly timeoutMs?: number;
+  /** Id of the kind 10050 this app published, if any. */
+  readonly publishedDmRelayListId?: string | null;
 }
 
 /** Every stored event matching `filter`; `confirmed` once any relay sent EOSE. */
@@ -181,17 +196,25 @@ export async function eraseNostrFootprint(deps: NostrErasureDeps): Promise<Resul
   const pubkey = await deps.getPubkey();
   if (!pubkey.ok) return err('noKey');
 
-  const [records, metadata] = await Promise.all([
+  const ownListId = deps.publishedDmRelayListId ?? null;
+  const [records, metadata, dmLists] = await Promise.all([
     collect(deps, { kinds: [KIND_APP_DATA], authors: [pubkey.value], limit: 500 }),
     collect(deps, { kinds: [KIND_METADATA], authors: [pubkey.value], limit: 5 }),
+    ownListId === null
+      ? Promise.resolve({ events: [], confirmed: true })
+      : collect(deps, { kinds: [KIND_DM_RELAYS], authors: [pubkey.value], limit: 1 }),
   ]);
   // Without one relay's EOSE we can't tell "nothing published" from "didn't hear".
-  if (!records.confirmed || !metadata.confirmed) return err('relaysUnreachable');
+  if (!records.confirmed || !metadata.confirmed || !dmLists.confirmed) return err('relaysUnreachable');
 
   const latestKind0 = metadata.events
     .filter((e) => e.kind === KIND_METADATA && e.pubkey === pubkey.value)
     .reduce<NostrEvent | null>((best, e) => (best === null || e.created_at > best.created_at ? e : best), null);
-  const plan = planNostrErasure(pubkey.value, records.events, latestKind0);
+  const latestDmList = dmLists.events.reduce<NostrEvent | null>(
+    (best, e) => (best === null || e.created_at > best.created_at ? e : best),
+    null,
+  );
+  const plan = planNostrErasure(pubkey.value, records.events, latestKind0, { latest: latestDmList, publishedId: ownListId });
 
   const unsigned = [...plan.replacements, ...(plan.deletion ? [plan.deletion] : [])];
   for (const event of unsigned) {

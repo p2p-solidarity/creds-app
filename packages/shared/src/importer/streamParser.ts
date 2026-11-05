@@ -1,8 +1,5 @@
 /**
- * Stream JSON-array parser — TS port of
- * solidarity/Services/Importer/StreamParser.swift.
- *
- * Consumes an async iterable of UTF-8 chunks and yields decoded elements
+ * Stream JSON-array parser — consumes an async iterable of UTF-8 chunks and yields decoded elements
  * one at a time. Mirrors the Swift `parseJSONArray` state machine so the
  * Twitter / Google Takeout importers can adopt the same wire contract.
  *

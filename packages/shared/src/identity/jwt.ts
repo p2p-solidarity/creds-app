@@ -1,6 +1,5 @@
 /**
- * JWS ES256 sign + verify — mirrors VCService.swift's JWT issue/parse + the
- * Swift JOSE helpers in OIDCService+Helpers.swift.
+ * JWS ES256 sign + verify.
  *
  * Format (RFC 7515 compact JWS): `<header>.<payload>.<signature>`
  *   - header / payload: base64url(JSON.stringify(obj))
@@ -38,8 +37,9 @@ export function signJwtEs256(
   const payloadB64 = base64UrlEncode(utf8ToBytes(JSON.stringify(payload)));
   const signingInput = `${headerB64}.${payloadB64}`;
   const digest = sha256(utf8ToBytes(signingInput));
-  // @noble/curves v2 p256.sign returns raw r||s bytes (Uint8Array) directly.
-  const sigBytes = p256.sign(digest, privateKey);
+  // `prehash: false`: `digest` already is the RFC 7515 message hash; the
+  // noble v2 default would hash it again and no other ES256 verifier agrees.
+  const sigBytes = p256.sign(digest, privateKey, { prehash: false });
   return `${signingInput}.${base64UrlEncode(sigBytes)}`;
 }
 
@@ -67,7 +67,7 @@ export function verifyJwtEs256<T = JwtPayload>(
     throw new Error('ES256 signature must be 64 raw bytes (r||s)');
   }
   const digest = sha256(utf8ToBytes(`${headerB64}.${payloadB64}`));
-  const ok = p256.verify(sigBytes, digest, jwkToPublicKey(jwk));
+  const ok = p256.verify(sigBytes, digest, jwkToPublicKey(jwk), { prehash: false });
   if (!ok) throw new Error('JWT signature verification failed');
 
   const header = JSON.parse(

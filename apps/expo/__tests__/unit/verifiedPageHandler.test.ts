@@ -1,5 +1,5 @@
 /**
- * Verified Page payload router (1.3.3 Task A2.3, US-11) —
+ * Verified Page payload router —
  * `src/scan/verifiedPageHandler.ts`. Pure logic, no RN imports, so this
  * suite drives it directly with no `mock.module` isolation needed.
  *
@@ -238,5 +238,10 @@ describe('classifyVerifiedPagePayload — handle reads', () => {
     });
     expect(classifyVerifiedPagePayload('http://app.solidarity.gg/@dns:example.com')).toBeNull();
     expect(classifyVerifiedPagePayload('https://example.com/@dns:example.com')).toBeNull();
+  });
+
+  it('reads a bare creds.id name QR, but not a site word', () => {
+    expect(classifyVerifiedPagePayload('https://creds.id/gimmy')).toEqual({ kind: 'handle', handle: 'gimmy' });
+    expect(classifyVerifiedPagePayload('https://creds.id/edit')).toBeNull();
   });
 });

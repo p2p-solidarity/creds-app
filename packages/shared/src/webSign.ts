@@ -1,6 +1,5 @@
 /**
- * webSign — the App↔Web per-action remote-signing envelopes (research
- * notes-1.3.3 §4, grill decisions G3/G4). The web draft-store never holds
+ * webSign — the App↔Web per-action remote-signing envelopes. The web draft-store never holds
  * the root mnemonic; when the user wants to sign a Profile Record from the
  * browser, the web page signs a *request* with an ephemeral P-256 "session"
  * did:key and hands it to the app (QR / deep-link — transport is a later

@@ -19,17 +19,6 @@ const repoRoot = resolve(appDir, '../..');
 const prepareScript = join(appDir, 'scripts', 'prepare-ios-workspace.sh');
 const normalizeSchemeScript = join(appDir, 'scripts', 'normalize-ios-scheme.sh');
 const cloudPostCloneScript = join(appDir, 'ci-scripts', 'ci_post_clone.sh');
-const precompiledResizerPluginPath = join(
-  appDir,
-  'plugins',
-  'withPrecompiledVisionCameraResizerMetal.js'
-);
-const precompiledResizerLibrary = join(
-  appDir,
-  'native-assets',
-  'VisionCameraResizer',
-  'default.metallib'
-);
 const jsiPatchesPluginPath = join(appDir, 'plugins', 'withExpoModulesJsiPatches.js');
 const appConfig = JSON.parse(readFileSync(join(appDir, 'app.json'), 'utf8')) as {
   readonly expo: { readonly plugins: readonly (string | readonly unknown[])[] };
@@ -667,53 +656,6 @@ rm -rf "$work"
     expect(commands).toContain(`pod\t${join(fixtureApp, 'ios')}\tinstall`);
   }, 10_000);
 
-  test('VisionCameraResizer packages a precompiled Metal library without compiling source', () => {
-    expect(existsSync(precompiledResizerPluginPath), precompiledResizerPluginPath).toBe(true);
-    expect(existsSync(precompiledResizerLibrary), precompiledResizerLibrary).toBe(true);
-    if (!existsSync(precompiledResizerPluginPath) || !existsSync(precompiledResizerLibrary)) return;
-
-    const fixtureApp = makeTempDir();
-    const packageRoot = join(fixtureApp, 'node_modules', 'react-native-vision-camera-resizer');
-    const metalDir = join(packageRoot, 'ios', 'Metal');
-    const fixtureAssetDir = join(
-      fixtureApp,
-      'native-assets',
-      'VisionCameraResizer'
-    );
-    mkdirSync(metalDir, { recursive: true });
-    mkdirSync(fixtureAssetDir, { recursive: true });
-    copyFileSync(
-      join(
-        repoRoot,
-        'node_modules',
-        'react-native-vision-camera-resizer',
-        'ios',
-        'Metal',
-        'ResizerKernels.metal'
-      ),
-      join(metalDir, 'ResizerKernels.metal')
-    );
-    copyFileSync(precompiledResizerLibrary, join(fixtureAssetDir, 'default.metallib'));
-    writeFileSync(
-      join(packageRoot, 'VisionCameraResizer.podspec'),
-      '"VisionCameraResizerShaders" => ["ios/Metal/ResizerKernels.metal"],\n'
-    );
-    const plugin = require(precompiledResizerPluginPath);
-
-    plugin._internal.stagePrecompiledLibrary(fixtureApp, packageRoot);
-    plugin._internal.stagePrecompiledLibrary(fixtureApp, packageRoot);
-
-    const podspec = readFileSync(join(packageRoot, 'VisionCameraResizer.podspec'), 'utf8');
-    expect(podspec).toContain('"ios/Metal/default.metallib"');
-    expect(podspec).not.toContain('"ios/Metal/ResizerKernels.metal"');
-    expect(readFileSync(join(metalDir, 'default.metallib'))).toEqual(
-      readFileSync(precompiledResizerLibrary)
-    );
-    expect(appConfig.expo.plugins).toContain(
-      './plugins/withPrecompiledVisionCameraResizerMetal.js'
-    );
-  });
-
   test('expo-modules-jsi patches: nested xcodebuild output cannot fail the xcframework phase', () => {
     expect(existsSync(jsiPatchesPluginPath), jsiPatchesPluginPath).toBe(true);
     if (!existsSync(jsiPatchesPluginPath)) return;
@@ -831,8 +773,6 @@ rm -rf "$work"
         AIRMEISHI_INSTALL_TOOLING: '0',
         AIRMEISHI_REPO_ROOT: fixtureRoot,
         AIRMEISHI_SEMAPHORE_SWIFT_ZIP_URL: 'https://example.invalid/semaphore.zip',
-        // The curl stub cannot serve the pinned prover; an empty pin builds without it.
-        AIRMEISHI_ZKTLS_SHA256: '',
         COMMAND_LOG: logPath,
         PATH: `${fakeBin}:${process.env['PATH'] ?? ''}`,
       },

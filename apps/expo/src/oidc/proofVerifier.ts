@@ -1,5 +1,5 @@
 /**
- * Proof verifier — mirrors Swift ProofVerifierService.swift.
+ * Proof verifier.
  *
  * Steps:
  *   1. Decode the VC JWT header → extract `kid` (DID URL fragment).
@@ -20,7 +20,6 @@ import {
   parseSdJwt,
   reconstructSdJwtClaims,
 } from '@/credentials/selectiveDisclosure';
-import { verifyCardKeyBindingJws } from './cardKeyBinding';
 
 export type TrustLevel = 'L1' | 'L2' | 'L3' | 'L3+';
 
@@ -34,8 +33,6 @@ export interface VerifiedVc {
 export interface VerifyOptions {
   /** RFC 7519 `aud` value the caller expects to find. */
   readonly expectedAud?: string;
-  /** Pear-only: root DID authenticated by the channel handshake. */
-  readonly expectedRootDid?: string;
   /** Optional clock override (test-only). */
   readonly now?: number;
 }
@@ -144,7 +141,6 @@ interface VpClaims {
   readonly nbf?: number;
   readonly exp?: number;
   readonly vp?: { readonly verifiableCredential?: readonly string[] | string };
-  readonly solidarity?: { readonly cardKeyBinding?: string };
 }
 
 export interface VerifiedVp {
@@ -180,20 +176,6 @@ export async function verifyVpToken(
   checkTime(payload, now);
   checkAud(payload, opts.expectedAud);
 
-  if (opts.expectedRootDid) {
-    const bindingJws = payload.solidarity?.cardKeyBinding;
-    if (typeof bindingJws !== 'string' || bindingJws.length === 0) {
-      throw new Error('VP missing card-key binding for expected root DID');
-    }
-    verifyCardKeyBindingJws(bindingJws, {
-      expectedRootDid: opts.expectedRootDid,
-      expectedCardDid: holder,
-      expectedAud: opts.expectedAud,
-      expectedNonce: payload.nonce,
-      now,
-    });
-  }
-
   const raw = payload.vp?.verifiableCredential;
   const vcJwts = raw === undefined ? [] : Array.isArray(raw) ? raw : [raw];
   if (vcJwts.length === 0) throw new Error('VP carries no verifiable credentials');
@@ -214,8 +196,7 @@ export async function verifyVpToken(
     // holder binding exists to prevent; it is self-contained (no
     // caller-supplied `expectedHolder` needed) so it protects every
     // caller of `verifyVpToken` — the QR-scan verify path
-    // (`app/scan/index.tsx`) and A5.3's Pear-channel verify alike — not
-    // just one call site. A VC with no holder claim at all
+    // (`app/scan/index.tsx`) included — not just one call site. A VC with no holder claim at all
     // (`holderDid === null`) also fails this (never strictly equals a
     // real did string), which is correct: an unbound credential proves
     // nothing about who may present it.

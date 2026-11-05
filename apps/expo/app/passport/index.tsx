@@ -1,6 +1,5 @@
 /**
- * Passport Setup — 1:1 port of Swift PassportOnboardingFlowView.swift +
- * PassportOnboardingFlowView+Steps.swift.
+ * Passport Setup.
  *
  * Multi-step orchestration (state machine in @/passport/pipeline):
  *   mrz   → Scan Passport / Manual Input toggle. Tap Scan → MRZCameraStep
@@ -40,15 +39,16 @@ import { SolidarityPlaceholderCard } from '@/components/passport/SolidarityPlace
 import { appAlert, showError } from '@/feedback/appAlert';
 import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
+import { capabilities } from '@/platform/distribution';
 import {
   MRZCameraStep,
   type PassportMRZDraft as MrzScannedDraft,
 } from '@/onboarding/steps/MRZCameraStep';
-import { notifyPassportOnboardingCompleted } from '@/onboarding/passportHandoff';
 import {
   chipFromNitro,
   derivePassportPublicSignals,
   initialPassportPipelineState,
+  mrzDate,
   PASSPORT_STEP_META,
   passportPipelineReducer,
   selectNfcReadStrategy,
@@ -73,26 +73,10 @@ import type { PassportReadResult } from '@solidarity/nitro-attest';
 import { uuid } from '@solidarity/shared';
 import { loadPassportNitroModules } from '@/passport/nitroModules';
 import { issuePassportStatement, preloadPassportStatement } from '@/passport/npubBinding';
+import { recordPassportPrivateClaims } from '@/passport/privateClaims';
 import { DEFAULT_RELAYS } from '@/nostr/publish';
 import { hasNostrKeySync } from '@/nostr/userKey';
 import { deviceAttestSupported } from '@/witness/deviceKey';
-
-/**
- * Parse a YYMMDD MRZ date into a JS Date in UTC. Returns null on
- * malformed input so the credential just doesn't get an expiry field
- * rather than ending up with `Invalid Date`. Years 00..69 map to
- * 2000..2069, 70..99 map to 1970..1999 — the ICAO 9303 sliding window.
- */
-function parseMrzYyMmDd(yymmdd: string): Date | null {
-  if (yymmdd.length !== 6) return null;
-  const yy = Number.parseInt(yymmdd.slice(0, 2), 10);
-  const mm = Number.parseInt(yymmdd.slice(2, 4), 10);
-  const dd = Number.parseInt(yymmdd.slice(4, 6), 10);
-  if (Number.isNaN(yy) || Number.isNaN(mm) || Number.isNaN(dd)) return null;
-  const year = yy <= 69 ? 2000 + yy : 1900 + yy;
-  const d = new Date(Date.UTC(year, mm - 1, dd));
-  return Number.isNaN(d.getTime()) ? null : d;
-}
 
 /**
  * A saved record of the same passport blocks a second save — unless it was
@@ -114,13 +98,12 @@ async function findSavedPassport(fingerprint: string) {
 }
 
 export default function PassportSetup() {
-  const params = useLocalSearchParams<{ manual?: string; from?: string }>();
-  const fromOnboarding = params.from === 'onboarding';
+  const params = useLocalSearchParams<{ manual?: string }>();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const activeDid = useActiveDid();
   const [state, dispatch] = useReducer(passportPipelineReducer, initialPassportPipelineState);
-  const [showManualInput, setShowManualInput] = useState(params.manual === '1');
+  const [showManualInput, setShowManualInput] = useState(params.manual === '1' || !capabilities.passportScan);
   const [showCamera, setShowCamera] = useState(false);
 
   const meta = PASSPORT_STEP_META[state.step];
@@ -343,7 +326,7 @@ export default function PassportSetup() {
         );
         return;
       }
-      const expiry = parseMrzYyMmDd(draft.expiryDate);
+      const expiry = mrzDate(draft.expiryDate, 'expiry');
       const chipVerified = !chip.isSimulated && chip.passiveAuthValid;
 
       // Device-attested passport statement (docs/ref/11 §6.1): only for a real
@@ -423,6 +406,7 @@ export default function PassportSetup() {
       for (const c of claims) {
         await useIdentityData.getState().upsertProvableClaim(c);
       }
+      recordPassportPrivateClaims({ credentialId: cardId, chip, draft, chipVerified, now });
 
       pushToast(
         developerMode && chip.isSimulated
@@ -434,9 +418,6 @@ export default function PassportSetup() {
               : t('passportSetup.savedLocalOnly'),
         chipVerified ? 'success' : 'warning',
       );
-      // When this flow was launched from onboarding, signal completion so the
-      // wizard advances to the `complete` step before router.back() reveals it.
-      if (fromOnboarding) notifyPassportOnboardingCompleted();
       safeBack();
     } catch (err) {
       const technicalSummary = (err instanceof Error ? err.message : String(err)).split('\n')[0];
@@ -479,6 +460,7 @@ export default function PassportSetup() {
             developerMode={developerMode}
             patch={(patch) => { dispatch({ type: 'patchDraft', patch }); }}
             onContinue={onValidateMrz}
+            canScan={capabilities.passportScan}
             onScanPressed={() => { setShowCamera(true); }}
           />
         ) : null}

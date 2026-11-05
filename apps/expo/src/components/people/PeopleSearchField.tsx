@@ -1,5 +1,5 @@
 /**
- * PeopleSearchField — 1:1 port of Swift PeopleListView.searchField.
+ * PeopleSearchField.
  * `magnifyingglass` (14pt) + TextField "Search" placeholder, 0.5pt
  * textPrimary border, 2pt corner radius.
  */

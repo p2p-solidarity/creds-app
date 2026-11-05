@@ -8,7 +8,7 @@ const ok = (): Promise<StepRunResult> => Promise.resolve({ kind: 'done' });
 
 function deps(overrides: Partial<AccountDeletionDeps>, localCalls: { n: number }): AccountDeletionDeps {
   return {
-    nostr: ok, name: ok, vault: ok, pro: ok, inbox: ok,
+    nostr: ok, name: ok, vault: ok, pro: ok,
     local: () => { localCalls.n += 1; return ok(); },
     ...overrides,
   };
@@ -30,7 +30,7 @@ describe('runAccountDeletion', () => {
 
   test('is deleted only after every server step and the local wipe went through', async () => {
     const local = { n: 0 };
-    const result = await runAccountDeletion(deps({ inbox: () => Promise.resolve({ kind: 'nothing' }) }, local));
+    const result = await runAccountDeletion(deps({ pro: () => Promise.resolve({ kind: 'nothing' }) }, local));
     expect(result.kind).toBe('deleted');
     expect(local.n).toBe(1);
     const failedWipe = await runAccountDeletion(deps({ local: () => Promise.resolve({ kind: 'failed' }) }, local));
@@ -66,5 +66,15 @@ describe('planNostrErasure', () => {
     expect(plan.replacements).toEqual([{ kind: 0, tags: [], content: '{}' }]);
     expect(plan.deletion?.tags).toContainEqual(['e', 'k0']);
     expect(planNostrErasure(PK, [], ev('k0', 0, [], JSON.stringify({ name: 'Ann' })))).toEqual({ replacements: [], deletion: null });
+  });
+
+  test('takes back a kind 10050 only while it is the exact list this app published', () => {
+    const list = ev('dm', 10050, [['relay', 'wss://nos.lol']]);
+    const ours = planNostrErasure(PK, [], null, { latest: list, publishedId: 'dm' });
+    expect(ours.replacements).toEqual([{ kind: 10050, tags: [], content: '' }]);
+    expect(ours.deletion?.tags).toContainEqual(['e', 'dm']);
+    // Replaced since (e.g. in another client) or never ours: left alone.
+    expect(planNostrErasure(PK, [], null, { latest: list, publishedId: 'older' })).toEqual({ replacements: [], deletion: null });
+    expect(planNostrErasure(PK, [], null, { latest: list, publishedId: null })).toEqual({ replacements: [], deletion: null });
   });
 });

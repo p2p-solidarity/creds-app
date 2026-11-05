@@ -1,5 +1,5 @@
 /**
- * QR scanner — mirrors Swift QRCodeManager.startScanning.
+ * QR scanner.
  *
  * Chunked frames (sqc1 prefix) are routed into the shared QR reassembler
  * automatically; the consumer's onResult fires once with the reassembled

@@ -1,5 +1,5 @@
 /**
- * Credentials store — mirrors Swift VCLibrary + IdentityCardEntity.
+ * Credentials store.
  *
  * Boot model (Path A — manifest + lazy details):
  *
@@ -32,6 +32,7 @@
 import { create } from 'zustand';
 
 import { fetchAndCacheIssuer } from '@/credentials/issuerStore';
+import { forgetPassportPrivateClaims } from '@/passport/privateClaims';
 import { forgetPassportStatement } from '@/passport/statementStore';
 import { decryptJson, encryptJson } from '@/storage/encryptionManager';
 import { ManifestStorage } from '@/storage/manifestStorage';
@@ -218,7 +219,10 @@ export const useCredentialStore = create<CredentialStoreState>((set, get) => ({
     if (!canCommitLocalData(captureLocalDataEpoch())) return;
     const type = get().details.get(id)?.type ?? get().manifest.find((m) => m.id === id)?.type;
     // A deleted passport must not keep its device-attested statement alive.
-    if (type === 'passport') forgetPassportStatement(id);
+    if (type === 'passport') {
+      forgetPassportStatement(id);
+      forgetPassportPrivateClaims(id);
+    }
     getMmkv().remove(`${PREFIX}${id}`);
     set((s) => {
       const nextManifest = s.manifest.filter((m) => m.id !== id);
@@ -245,14 +249,5 @@ export const useCredentialById = (
   id: string | undefined,
 ): StoredCredential | undefined =>
   useCredentialStore((s) => (id ? s.details.get(id) : undefined));
-
-/**
- * Selector: manifest entry by id — frame-1 safe (no decrypt). Use this
- * when the row only needs id/title/trustLevel/type.
- */
-export const useCredentialManifestById = (
-  id: string | undefined,
-): CredentialManifestEntry | undefined =>
-  useCredentialStore((s) => (id ? s.manifest.find((m) => m.id === id) : undefined));
 
 export type { CredentialManifestEntry } from './credentialManifest';

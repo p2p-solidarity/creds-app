@@ -334,8 +334,7 @@ class HybridSpruceDid : HybridSpruceDidSpec() {
   private fun p256JwkJson(pub: ECPublicKey): String = SpruceDidJwk.p256JwkJson(pub)
 
   // MARK: - Sign JWS
-  // DID derivation and JWS/VC verification are pure TS in packages/shared —
-  // the SpruceID SDK wrapper methods were removed in 1.3.3 S7a (zero callers).
+  // DID derivation and JWS/VC verification are pure TS in packages/shared.
 
   override fun signJws(alias: String, payload: ArrayBuffer): Promise<String> {
     // JS ArrayBuffers are only readable on the JS thread: copy before going async.

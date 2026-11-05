@@ -1,7 +1,6 @@
 /**
  * webSign transport — the entry-point plumbing that turns a scanned QR string
- * or a deep link into the raw request JWS the review flow consumes (research
- * notes-1.3.3 §4). Pure (imports only `@solidarity/shared`), so it is
+ * or a deep link into the raw request JWS the review flow consumes. Pure (imports only `@solidarity/shared`), so it is
  * unit-testable and shared by both the deep-link parser (`src/deeplink/
  * parser.ts`) and the in-app scanner (`app/scan/index.tsx`).
  *
@@ -15,8 +14,8 @@
  * `<X>` is either the raw request compact JWS, or its compressed
  * `fragment.ts` form for a large draft that would otherwise blow the QR /
  * URL budget — `decodeWebSignRequestParam` disambiguates deterministically.
- * The fragment form's `#req=…` never leaves the device over the network
- * (01-spec §1/§8), which is why the https variant uses the fragment, not the
+ * The fragment form's `#req=…` never leaves the device over the network,
+ * which is why the https variant uses the fragment, not the
  * query. Multi-frame QR (a wrapped string too large for one frame) is handled
  * upstream by the shared `qr/chunking.ts` reassembler inside `QrScanner`, so
  * this module only ever sees a single reassembled string.
@@ -29,8 +28,6 @@ import { isAppSchemeProtocol } from '../deeplink/appScheme';
 export const WEBSIGN_DEEPLINK_HOST = 'websign';
 /** Query/fragment parameter carrying the request payload. */
 export const WEBSIGN_REQUEST_PARAM = 'req';
-/** Query/fragment parameter carrying the response payload (offline callback). */
-export const WEBSIGN_RESPONSE_PARAM = 'res';
 
 /**
  * Decode a `req` param into the raw request compact JWS. A compact JWS is

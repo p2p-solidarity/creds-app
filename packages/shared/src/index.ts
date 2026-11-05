@@ -14,24 +14,25 @@
  *   canonical.ts  Deterministic JSON (recursive key sort) — shared by DAG
  *                 node ids (apps/expo/src/dag/node.ts) and JWS payloads
  *   jws.ts        The one compact-JWS sign/verify primitive for did:key
- *                 authenticated payloads (profile / challenge / Pear)
- *   challenge.ts  DID-challenge/response (Verify scan + Pear channel)
+ *                 authenticated payloads (profile / challenge)
+ *   challenge.ts  DID-challenge/response (Verify scan)
  *   derive.ts     Unified BIP-39 mnemonic -> P-256/secp256k1 scalar
  *                 derivation (App<->Web portability)
- *   profile.ts    Profile Record schema (01-spec §3) + Result-returning
+ *   profile.ts    Profile Record schema + Result-returning
  *                 parser
  *   publicDisclosure.ts  Presence-only, root-signed NIP-78 public claims
  *                 + strict verification and badge-pointer helpers
  *   fragment.ts   URL-fragment codec (deflate + base64url) for QR/offline
- *                 profile publication (01-spec §4.3)
+ *                 profile publication
  *   webSign.ts    App<->Web per-action remote-signing envelopes
- *                 (request/response) + fail-closed verify (notes-1.3.3 §4)
+ *                 (request/response) + fail-closed verify
  *   deviceproof/  App Attest + Android Key Attestation verifiers and p2p
  *                 witness statements (docs/ref/10 §3.11)
- *   zktls/        Notary-signed zkTLS evidence + platform rules (docs/ref/10)
+ *   socialProof/  social-link page checks + platform rules
  */
 export * from './badges';
 export * from './canonical';
+export * from './cardKeyBinding';
 export * from './challenge';
 export * from './crypto';
 export * from './derive';
@@ -53,4 +54,4 @@ export * from './types';
 export * from './vault';
 export * from './vcf';
 export * from './webSign';
-export * from './zktls';
+export * from './socialProof';

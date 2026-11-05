@@ -19,7 +19,18 @@ import { CREDS_MARK } from '@/components/brand/credsLogo';
 import { Colors } from '@/constants/Colors';
 import { IDLE } from '@/feedback/motion';
 
-export function CredsMark({ size, float = false }: { readonly size: number; readonly float?: boolean }): ReactNode {
+export function CredsMark({
+  size,
+  float = false,
+  ink,
+  accent,
+}: {
+  readonly size: number;
+  readonly float?: boolean;
+  /** Fixed ring colours for a surface that ignores the theme (a card face). */
+  readonly ink?: string;
+  readonly accent?: string;
+}): ReactNode {
   const dark = useColorScheme() === 'dark';
   const reduceMotion = useReducedMotion();
   const bob = useSharedValue(0);
@@ -39,8 +50,8 @@ export function CredsMark({ size, float = false }: { readonly size: number; read
       accessibilityRole="image"
       accessibilityLabel="creds.id">
       <Svg width={size} height={height} viewBox={`0 0 ${String(CREDS_MARK.width)} ${String(CREDS_MARK.height)}`}>
-        <Path d={CREDS_MARK.ink} fill={dark ? Colors.logoInkDark : Colors.logoInk} />
-        <Path d={CREDS_MARK.accent} fill={dark ? Colors.logoAccentDark : Colors.logoAccent} />
+        <Path d={CREDS_MARK.ink} fill={ink ?? (dark ? Colors.logoInkDark : Colors.logoInk)} />
+        <Path d={CREDS_MARK.accent} fill={accent ?? ink ?? (dark ? Colors.logoAccentDark : Colors.logoAccent)} />
       </Svg>
     </Animated.View>
   );

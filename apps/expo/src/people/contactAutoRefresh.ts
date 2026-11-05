@@ -1,8 +1,7 @@
 /**
  * Contact auto-update — the CREDS §3.3 「訂閱憑據」 lane, v1
- * (docs/ref/05-spec-qr-exchange.md §3; ruling 2026-08-25: Pear lane stays
- * the private-exchange channel, NIP-44 is an optional later lane; THIS lane
- * is the public-HEAD refresh).
+ * (docs/ref/05-spec-qr-exchange.md §3; THIS lane is the public-HEAD
+ * refresh).
  *
  * A saved VerifiedSnapshot whose signed record claims `nostr:<npub>` in
  * `alsoKnownAs` already carries its own subscription credential: the npub

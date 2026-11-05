@@ -1,6 +1,6 @@
 {
   "name": "solidarity-monorepo",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "private": true,
   "description": "Solidarity (AirMeishi) — SwiftUI legacy + Expo/RN target + Nitro modules. See docs/migration/00-MIGRATION_PLAN.md",
   "workspaces": [
@@ -43,7 +43,6 @@
   },
   "dependencies": {
     "expo": "^58.0.21",
-    "hyperswarm": "^4.17.2",
     "react": "19.3.0",
     "react-native": "0.88.1"
   },

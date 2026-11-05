@@ -8,7 +8,7 @@ import { Radius } from '@/constants/radius';
 import { showError } from '@/feedback/appAlert';
 import { haptic } from '@/feedback/haptics';
 import { useTranslation } from '@/i18n';
-import { provisionFromFreshRootMnemonic } from '@/nostr/userKey';
+import { capabilities } from '@/platform/distribution';
 import {
   createFromFreshMnemonic,
   enableICloudBackup,
@@ -68,12 +68,9 @@ export function PasskeyStep({
 
           if (!rootExists) {
             const created = await createFromFreshMnemonic();
+            // createFromFreshMnemonic also derives the Nostr key while the
+            // phrase is in hand, so the first publish needs no reveal prompt.
             if (!created.ok) throw rootKeyFailure(created.error);
-            // The publishing key comes from the same mnemonic, derived now while
-            // it is in hand — otherwise the first publish reveals it again
-            // (a red-line Face ID) right after the Page's own signing prompt.
-            // A failure here is not fatal: the first publish provisions lazily.
-            await provisionFromFreshRootMnemonic(created.value.mnemonic);
           }
 
           // Recovery remains mandatory identity setup; Web Passkey sync does not.
@@ -129,6 +126,39 @@ export function PasskeyStep({
       setWorking(false);
     }
   };
+
+  // No passkeys in this build (F-Droid): the step only sets up the identity
+  // on this phone; the recovery phrase in Settings is the backup.
+  if (!capabilities.passkeys) {
+    return (
+      <V2OnboardingScaffold
+        stepIndex={2}
+        title={t('ob.done.passkey')}
+        onBack={onBack}
+        footer={
+          <ThemedButton
+            label={working ? t('ob.passkey.working') : t('ob.passkey.create')}
+            variant="primary"
+            fullWidth
+            loading={working}
+            onPress={() => {
+              void completeIdentitySetup('skip');
+            }}
+          />
+        }>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 24 }}>
+          <ThemedSurface
+            variant="elevated"
+            className="h-28 w-28 items-center justify-center rounded-pill">
+            <SfIcon name="key.fill" size={44} color={Colors.primaryMauve} />
+          </ThemedSurface>
+          <ThemedText variant="caption" tone="tertiary" style={{ textAlign: 'center' }}>
+            {t('ob.passkey.backup.device')}
+          </ThemedText>
+        </View>
+      </V2OnboardingScaffold>
+    );
+  }
 
   return (
     <V2OnboardingScaffold

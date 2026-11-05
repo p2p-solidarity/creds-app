@@ -158,7 +158,11 @@ dependencies {
 
   // Credential Manager provides passkeys and the WebAuthn PRF extension.
   implementation "androidx.credentials:credentials:1.6.0"
-  implementation "androidx.credentials:credentials-play-services-auth:1.6.0"
+  // Play services provider: left out of the F-Droid build (the app's
+  // withFdroidFlavor plugin), which hides every passkey surface.
+  if (!(gradle.ext.has("credsFdroid") && gradle.ext.credsFdroid)) {
+    implementation "androidx.credentials:credentials-play-services-auth:1.6.0"
+  }
 
   // OkHttp for the CloudKit Drive REST calls. React Native already pulls
   // OkHttp 4.x transitively; pinning to the same major keeps the classpath

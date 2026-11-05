@@ -1,5 +1,5 @@
 /**
- * presentationQrPages — port of solidarity/Views/MeViews/PresentationQRPageBuilder.swift.
+ * presentationQrPages.
  *
  * Splits a presentation payload (VP JSON or `sce1:` compressed envelope) into
  * the same `sqc1.<session>.<index>.<total>.<digest>.<base64url>` frames Swift

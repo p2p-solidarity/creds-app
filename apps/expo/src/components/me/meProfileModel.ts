@@ -1,5 +1,4 @@
 import { linkDisplay, middleEllipsis } from '@/profile/linkPresentation';
-import { shortDid } from '@/components/id/shortDid';
 import {
   DEFAULT_HANDLE_RESOLVERS,
   encodeFragment,
@@ -17,11 +16,6 @@ import { validatePublicPageUsername } from '@/onboarding/publicPageUsername';
 const PROFILE_PAGE_ORIGIN = 'https://creds.id';
 const PROFILE_PAGE_URL = `${PROFILE_PAGE_ORIGIN}/#`;
 
-export interface ProfileIdentityLine {
-  readonly kind: 'handle' | 'did';
-  readonly label: string;
-}
-
 export function atprotoHandleClaim(record: ProfileRecord): string | null {
   const claim = record.alsoKnownAs.find((value) => value.startsWith('at://'));
   if (claim === undefined) return null;
@@ -31,17 +25,12 @@ export function atprotoHandleClaim(record: ProfileRecord): string | null {
   return normalized.startsWith('@') ? normalized.slice(1) : normalized;
 }
 
-export function profileIdentityLine(record: ProfileRecord): ProfileIdentityLine {
-  const handle = atprotoHandleClaim(record);
-  return handle
-    ? { kind: 'handle', label: `@${handle}` }
-    : { kind: 'did', label: shortDid(record.did) };
-}
-
 export interface ProfileShareModel {
   readonly offlineUrl: string;
   readonly usernameUrl: string | null;
   readonly usernameDisplayUrl: string | null;
+  /** `/@name` until 15 §6 P3: 2.0.0 apps scanning a QR only know `/@`. */
+  readonly usernameQrUrl: string | null;
   readonly shortUrl: string | null;
   readonly oversize: boolean;
 }
@@ -71,19 +60,18 @@ export function buildProfileShareModel(
     offlineUrl: `${PROFILE_PAGE_URL}${fragment.fragment}`,
     // A username is exposed only after the caller's directory + kind-0
     // readiness gate. Never append the long offline JWS to the public URL.
-    usernameUrl: validUsername
-      ? `${PROFILE_PAGE_ORIGIN}/@${validUsername}`
-      : null,
-    usernameDisplayUrl: validUsername
-      ? `${PROFILE_PAGE_ORIGIN}/@${validUsername}`
-      : null,
+    // Shared and printed as the bare `creds.id/name` (15 §6 P2).
+    usernameUrl: validUsername ? publicNameUrl(validUsername) : null,
+    usernameDisplayUrl: validUsername ? publicNameUrl(validUsername) : null,
+    usernameQrUrl: validUsername ? `${PROFILE_PAGE_ORIGIN}/@${validUsername}` : null,
     shortUrl: nostrClaim ? `${PROFILE_PAGE_URL}${nostrClaim}` : null,
     oversize: fragment.oversize,
   };
 }
 
-export function selectProfileShareUrl(model: ProfileShareModel, preferShort: boolean): string {
-  return preferShort && model.shortUrl ? model.shortUrl : model.offlineUrl;
+/** The bare `https://creds.id/name` a claimed name is shared and printed as. */
+export function publicNameUrl(name: string): string {
+  return `${PROFILE_PAGE_ORIGIN}/${name}`;
 }
 
 export type ProfileShareUrlCandidate =
@@ -91,6 +79,7 @@ export type ProfileShareUrlCandidate =
       readonly kind: 'username';
       readonly url: string;
       readonly displayUrl: string;
+      readonly qrUrl: string;
     }
   | {
       readonly kind: 'handle';
@@ -101,6 +90,11 @@ export type ProfileShareUrlCandidate =
       readonly kind: 'short' | 'offline';
       readonly url: string;
     };
+
+/** What a QR encodes: a claimed name keeps `/@name` until 15 §6 P3 (iOS universal links claim only `/@*`). */
+export function profileShareQrUrl(candidate: ProfileShareUrlCandidate): string {
+  return candidate.kind === 'username' ? candidate.qrUrl : candidate.url;
+}
 
 export type ProfileShareUrlSelection =
   | {
@@ -143,8 +137,7 @@ export function displayProfileShareUrl(candidate: ProfileShareUrlCandidate): str
 }
 
 /**
- * `@handle` share alias (`notes-1.3.3-publishing-pairing-research.md` §2,
- * grill decision 2026-07-19) — the shortest of the three share forms
+ * `@handle` share alias — the shortest of the three share forms
  * (~40 chars vs. ~96 for the Nostr pointer / ~700 for the offline
  * fragment), built ONLY from a scheme whose OWN bidirectional binding is
  * currently verified. `nip05` is excluded: no share-alias UI exists for it.
@@ -176,11 +169,12 @@ export function buildProfileShareUrlSelection(
   nostrShortUrlReady: boolean
 ): ProfileShareUrlResolution {
   const candidates: ProfileShareUrlCandidate[] = [];
-  if (model.usernameUrl !== null && model.usernameDisplayUrl !== null) {
+  if (model.usernameUrl !== null && model.usernameDisplayUrl !== null && model.usernameQrUrl !== null) {
     candidates.push({
       kind: 'username',
       url: model.usernameUrl,
       displayUrl: model.usernameDisplayUrl,
+      qrUrl: model.usernameQrUrl,
     });
   }
   if (verifiedHandle !== null) {

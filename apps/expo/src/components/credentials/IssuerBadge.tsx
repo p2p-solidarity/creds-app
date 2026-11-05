@@ -1,17 +1,6 @@
 /**
- * IssuerBadge — small "[logo] Issuer Name • verified" chip rendered above
- * the credential hero (CredentialDetailView) and inline with each row in
- * the VC list. Mirrors the issuer attribution Swift draws on top of
- * `solidarity/Views/MeViews/CredentialDetailView.swift` and the meta-row
- * in the Me-tab credential list.
- *
- * Render rules:
- *   - Logo bytes come from `issuerStore.getIssuer(id).logoBase64` (sync
- *     after hydrate). If missing, render a placeholder showing the first
- *     letter of `displayName` — never a fake logo (Rule 8).
- *   - Verified checkmark uses `Colors.accentRose`; issuer name uses
- *     `Colors.text2` per Rule 4.
- *   - 44 × 44 minimum touch target when `onPress` is provided.
+ * "[logo] Issuer Name • verified" chip. A missing logo renders the first
+ * letter of `displayName` — never a fake logo (Rule 8).
  */
 import { Image, View } from 'react-native';
 import { useMemo, type ReactNode } from 'react';
@@ -31,7 +20,7 @@ const LOGO_SIZE = 18;
 const TOUCH_TARGET = 44;
 
 export interface IssuerBadgeProps {
-  /** Issuer DID or canonical URL — same key used by `getIssuer`. */
+  /** Issuer DID or canonical URL — the issuer store's key. */
   readonly issuerId: string;
   /** Fallback display name shown when metadata hasn't been cached yet. */
   readonly fallbackName?: string;

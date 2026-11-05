@@ -1,6 +1,6 @@
 /**
  * Identity Export/Import — free App<->Web portability for the seed-derived
- * root identity (04-plan Phase A1 task A1.4, `src/identity/rootKey.ts`).
+ * root identity (`src/identity/rootKey.ts`).
  *
  * NOT the same identity as the SpruceID-managed device key (no longer shown) —
  * see rootKey.ts's module doc for the coexistence note. This screen is

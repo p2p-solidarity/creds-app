@@ -1,7 +1,6 @@
 /**
- * SettingsBlock primitives — direct port of
- * solidarity/Views/Common/SettingsBlockComponents.swift so all six settings
- * screens look identical to Swift.
+ * SettingsBlock primitives — shared by every settings screen so they look
+ * the same.
  *
  * Settings are a square, continuous list: card background, 0.5pt hairlines,
  * and no floating cards. That keeps the low-frequency routes visually aligned
@@ -13,7 +12,8 @@
  */
 import type { SFSymbol } from 'expo-symbols';
 import type { ReactNode } from 'react';
-import { Switch, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { ThemedSwitch } from '@/components/themed/ThemedSwitch';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
 
 import { PressableScale } from '@/components/common/PressableScale';
@@ -286,15 +286,7 @@ export function SettingsBlockToggleRow({
           </Text>
         ) : null}
       </View>
-      <Switch
-        style={{ alignSelf: 'center' }}
-        value={value}
-        onValueChange={onValueChange}
-        disabled={disabled}
-        trackColor={{ false: c.divider, true: Colors.primaryBlue }}
-        thumbColor={c.cardBg}
-        ios_backgroundColor={c.divider}
-      />
+      <ThemedSwitch value={value} onValueChange={onValueChange} disabled={disabled} accessibilityLabel={title} />
     </View>
   );
 }

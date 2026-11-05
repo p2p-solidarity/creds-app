@@ -1,8 +1,5 @@
 /**
- * VerifiedClaimIndex — TS port of
- * solidarity/Services/Identity/VerifiedClaimIndex.swift.
- *
- * Pure functions that walk identity cards + provable claims for a holder
+ * VerifiedClaimIndex — pure functions that walk identity cards + provable claims for a holder
  * DID and return the set of `BusinessCardField` values backed by a signed
  * source credential. The hook `useVerifiedFields` wires the same logic to
  * reactive store selectors.
@@ -55,30 +52,6 @@ export function verifiedFieldsForHolder(
 ): ReadonlySet<BusinessCardField> {
   const fields = new Set<BusinessCardField>();
   for (const claim of claimsForHolder(holderDid, identityCards, provableClaims)) {
-    const field = asField(claim.sourceField);
-    if (field) fields.add(field);
-  }
-  return fields;
-}
-
-export function isFieldVerifiedForHolder(
-  field: BusinessCardField,
-  holderDid: string,
-  identityCards: readonly IdentityCardEntity[],
-  provableClaims: readonly ProvableClaimEntity[]
-): boolean {
-  return verifiedFieldsForHolder(holderDid, identityCards, provableClaims).has(field);
-}
-
-export function verifiedFieldsFromCredentials(
-  credentialIds: readonly string[],
-  identityCards: readonly IdentityCardEntity[],
-  provableClaims: readonly ProvableClaimEntity[]
-): ReadonlySet<BusinessCardField> {
-  const idSet = new Set(credentialIds);
-  const fields = new Set<BusinessCardField>();
-  for (const claim of presentableClaims(identityCards, provableClaims)) {
-    if (!idSet.has(claim.identityCardId)) continue;
     const field = asField(claim.sourceField);
     if (field) fields.add(field);
   }

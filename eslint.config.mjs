@@ -34,13 +34,7 @@ export default tseslint.config(
       'scripts/**',
       'apps/expo/plugins/**',
       'apps/expo/__tests__/**',
-      // Bare-side worklet source (`Bare`/`BareKit`/`Buffer` globals, no RN
-      // types; packed by `bare-pack`, never part of the apps/expo TS
-      // project — see pear/worklet/index.js's header) + the Node-only
-      // packing script that bundles it. Same treatment as root
-      // `scripts/**` above; the generated `dist/` bundle is already
-      // covered by `**/dist/**`.
-      'apps/expo/pear/worklet/index.js',
+      // Node-only app scripts, same treatment as root `scripts/**` above.
       'apps/expo/scripts/**',
       // Bun-run notary key ceremony + E2E driver; the Worker itself is linted.
       'apps/notary/scripts/**',

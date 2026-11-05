@@ -9,9 +9,7 @@ export const WIPE_SECRET_TARGETS = [
   'signingKey',
   'pairwiseSeed',
   'rootKey',
-  'vaultRootSecret',
-  'recipientKeys',
-  'zkIdentity',
+  'legacyData',
   'nostrKey',
   'atprotoSession',
 ] as const;

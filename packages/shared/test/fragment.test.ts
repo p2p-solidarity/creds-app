@@ -1,6 +1,6 @@
 /**
- * fragment.ts — URL-fragment codec for Profile Record publication (01-spec
- * §4.3: `deflate + base64url` embedded after `#`, QR/offline form).
+ * fragment.ts — URL-fragment codec for Profile Record publication
+ * (`deflate + base64url` embedded after `#`, QR/offline form).
  * `encodeFragment` never throws and never blocks on size — it reports
  * `oversize` as an informational flag only (QR size budget is a UX
  * concern, not a hard cap). `decodeFragment` never throws — every

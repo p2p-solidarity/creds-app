@@ -1,5 +1,4 @@
 import * as FileSystem from 'expo-file-system/legacy';
-import * as SecureStore from 'expo-secure-store';
 
 import { signOutAtproto } from '@/atproto';
 import {
@@ -8,13 +7,11 @@ import {
 } from '@/badges/badgeStatusCache';
 import { useCardStore } from '@/cards/cardManager';
 import { useReceivedCard } from '@/cards/receivedCard';
-import { clearImageMemoryCache } from '@/components/common/imageProvider';
 import { useLeaveCardStore } from '@/contacts/leaveCardInbox';
 import { useRecentUpdatesStore } from '@/contacts/recentUpdates';
 import { useContactStore } from '@/contacts/repository';
 import { useIssuerMetadataStore } from '@/credentials/issuerStore';
 import { useCredentialStore } from '@/credentials/store';
-import { useGroupStore } from '@/groups/store';
 import {
   deleteRootKeyForLocalWipe,
   quiesceRootKeyOperations,
@@ -33,13 +30,12 @@ import {
   deleteNostrKey,
   quiesceNostrKeyOperations,
 } from '@/nostr/userKey';
-import { stopLaneManager } from '@/pear/laneManager';
 import { preparePageDesign, usePageDesignStore } from '@/page/pageDesignStore';
+import { usePrivateExchangeStore } from '@/privateExchange/store';
 import { useProEntitlementStore } from '@/pro/entitlementStore';
 import { useProfileSnapshotStore } from '@/people/profileSnapshots';
 import { useProfileStore } from '@/profile/store';
 import { useVerifiedPageResult } from '@/scan/verifiedPageResult';
-import { useSharingSettings } from '@/sharing/settingsStore';
 import { clearAllData, getMmkv } from '@/storage';
 import { deleteCacheDatabaseForLocalWipe } from '@/storage/cache';
 import {
@@ -49,15 +45,11 @@ import {
 } from '@/storage/deletionResult';
 import { rekeyEmptyMmkv } from '@/storage/mmkv';
 import { deleteMasterKey } from '@/storage/secureMasterKey';
-import {
-  deleteRootSecret,
-  quiesceRootSecretOperations,
-} from '@/vault/secretsKeychain';
 import { useWebSignPending } from '@/websign/pendingRequest';
-import { deleteIdentityForLocalWipe, useZkIdentity } from '@/zk';
-import { useZktlsProofs } from '@/zktls/store';
+import { useSocialProofs } from '@/socialProof/store';
 
 import { usePreferences } from './preferences';
+import { legacyWipe, quiesceLegacyWipe } from './legacyWipe';
 import { clearProductionAppData } from './productionAppData';
 import { deleteProductionFiles } from './productionFiles';
 import {
@@ -100,16 +92,14 @@ function clearMemoryCaches(): void {
   useLeaveCardStore.getState().resetForLocalWipe();
   useCredentialStore.getState().resetForLocalWipe();
   useIssuerMetadataStore.getState().resetForLocalWipe();
-  useGroupStore.getState().resetForLocalWipe();
-  useZktlsProofs.getState().resetForLocalWipe();
+  useSocialProofs.getState().resetForLocalWipe();
   useProfileStore.getState().resetForLocalWipe();
   useProfileSnapshotStore.getState().resetForLocalWipe();
   useIdentityData.getState().resetForLocalWipe();
   useIdentityCoordinator.getState().resetForLocalWipe();
   useIssuerTrustAnchorStore.getState().resetForLocalWipe();
-  useSharingSettings.getState().resetForLocalWipe();
-  useZkIdentity.getState().resetForLocalWipe();
   usePageDesignStore.getState().resetForLocalWipe();
+  usePrivateExchangeStore.getState().resetForLocalWipe();
   // Cached authority data, not the authority: the subscription lives in the
   // user's store account, so a wiped device re-verifies and gets it straight
   // back on next launch.
@@ -118,7 +108,6 @@ function clearMemoryCaches(): void {
   useReceivedCard.getState().dismiss();
   useVerifiedPageResult.getState().dismiss();
   useWebSignPending.getState().clear();
-  clearImageMemoryCache();
   invalidateCachedNostrResult();
   invalidateCachedAtprotoResult();
 }
@@ -140,35 +129,19 @@ function deleteProductionAppData(): Promise<LocalDeletionResult> {
 
 async function quiesceBackgroundWork(): Promise<LocalDeletionResult> {
   beginLocalDataWipe();
-  stopLaneManager();
   try {
     await Promise.all([
       quiesceNostrKeyOperations(),
       quiesceRootKeyOperations(),
       quiesceSigningKeyOperations(),
       quiescePairwiseSeedOperations(),
-      quiesceRootSecretOperations(),
       quiesceLocalDataOperations(),
+      quiesceLegacyWipe(),
     ]);
     return deletionSucceeded();
   } catch {
     return deletionFailed();
   }
-}
-
-/**
- * The retired Shoutouts relay kept two private keys in the keychain. Their code
- * is gone, but a device that once provisioned them must still lose them on wipe.
- */
-const LEGACY_RECIPIENT_KEY_ALIASES = ['gg.solidarity.sakura.enc.v1', 'gg.solidarity.sakura.sig.ed25519.v1'];
-
-async function deleteLegacyRecipientKeys(): Promise<LocalDeletionResult> {
-  const results = await Promise.allSettled(
-    LEGACY_RECIPIENT_KEY_ALIASES.map((alias) =>
-      SecureStore.deleteItemAsync(alias, { keychainAccessible: SecureStore.WHEN_UNLOCKED }),
-    ),
-  );
-  return results.some((r) => r.status === 'rejected') ? deletionFailed() : deletionSucceeded();
 }
 
 function resetPreferencesAndPolicies(): void {
@@ -214,9 +187,7 @@ export async function wipeLocalDevice(): Promise<WipeEverythingResult> {
     finalPersistentData: scrubAndVerifyPersistentData,
     masterEncryptionKey: deleteMasterKey,
     freshEncryptionKey: () => captureDeletion(rekeyEmptyMmkv),
-    vaultRootSecret: deleteRootSecret,
-    recipientKeys: deleteLegacyRecipientKeys,
-    zkIdentity: deleteIdentityForLocalWipe,
+    legacyData: legacyWipe,
     nostrKey: () => captureDeletion(deleteNostrKey),
     atprotoSession: deleteAtprotoSession,
   });

@@ -26,3 +26,4 @@ export {
   type TextInputKind,
 } from './ThemedTextInput';
 export { ThemedChoiceChip } from './ThemedChoiceChip';
+export { ThemedSwitch, type ThemedSwitchProps } from './ThemedSwitch';

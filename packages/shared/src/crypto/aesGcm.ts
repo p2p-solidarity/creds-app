@@ -1,5 +1,5 @@
 /**
- * AES-256-GCM — mirrors solidarity/Services/Utils/EncryptionManager.swift.
+ * AES-256-GCM.
  *
  * Swift CryptoKit's `AES.GCM.seal(plaintext, using: key).combined` returns
  *   nonce(12) || ciphertext || tag(16)

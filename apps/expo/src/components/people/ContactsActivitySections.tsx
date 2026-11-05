@@ -5,6 +5,7 @@ import { ModalSheet, sheetTopInset } from '@/components/common/ModalSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PressableScale } from '@/components/common/PressableScale';
+import { PrivateRequestsRow } from '@/components/privateExchange/PrivateRequestsRow';
 import { SfIcon } from '@/components/icons/SfIcon';
 import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
@@ -33,6 +34,7 @@ export function ContactsActivitySections({ onContactAdded }: { readonly onContac
 
   return (
     <>
+      <PrivateRequestsRow />
       {hasPending || hasRecentUpdates ? (
         <View className="gap-3 px-4 pb-3">
           {hasPending ? (

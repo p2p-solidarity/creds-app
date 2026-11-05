@@ -1,7 +1,6 @@
 /**
- * Result<T, E> — mirrors Swift's `CardResult<T>` (success/failure enum).
- * Swift services consistently return `Result` instead of throwing; we
- * preserve that convention so port sites read identically.
+ * Result<T, E> — success/failure; services return `Result` instead of
+ * throwing.
  *
  * Helpers (`ok`, `err`, `map`, `flatMap`) mirror the Swift methods most
  * commonly used in the codebase. Use `unwrap()` only in tests; in app

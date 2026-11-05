@@ -62,6 +62,8 @@ export interface PageAppearance {
   readonly customBackground: string | null;
   readonly showBrand: boolean;
   readonly footerText: string;
+  /** List the owner's nostr key on the Page. Absent = hidden (the default). */
+  readonly showNostr?: boolean;
 }
 
 export interface LapsedAlertPersistence {
@@ -206,6 +208,7 @@ export function toPublicPageDesign(design: PageDesign): PublicPageDesign {
       customBackground: design.appearance.customBackground,
       showBrand: design.appearance.showBrand,
       footerText: design.appearance.footerText,
+      ...(design.appearance.showNostr === true ? { showNostr: true as const } : {}),
     },
   };
 }
@@ -238,6 +241,7 @@ export function pageDesignFromPublicPage(page: PublicPageDesign): PageDesign {
       customBackground: page.appearance.customBackground,
       showBrand: page.appearance.showBrand,
       footerText: page.appearance.footerText,
+      ...(page.appearance.showNostr === true ? { showNostr: true } : {}),
     },
     lapsedAlert: INITIAL_LAPSED_ALERT,
   };
@@ -450,7 +454,8 @@ function readAppearance(value: unknown): PageAppearance | null {
     !PAGE_BACKGROUND_IDS.includes(value['background'] as PageBackgroundId) ||
     !(value['customBackground'] === null || typeof value['customBackground'] === 'string') ||
     typeof value['showBrand'] !== 'boolean' ||
-    typeof value['footerText'] !== 'string'
+    typeof value['footerText'] !== 'string' ||
+    !(value['showNostr'] === undefined || typeof value['showNostr'] === 'boolean')
   ) return null;
   return value as unknown as PageAppearance;
 }

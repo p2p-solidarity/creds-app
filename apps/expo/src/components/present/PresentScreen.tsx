@@ -20,9 +20,11 @@ import { Radius } from '@/constants/radius';
 import { useThemeColors } from '@/constants/useThemeColors';
 import { fadeUpIn } from '@/feedback/motion';
 import { useTranslation } from '@/i18n';
+import { capabilities } from '@/platform/distribution';
 import { presentPublicLinks, type PresentPublicLink } from '@/present/presentModel';
 import { linkDisplay, linkSecondaryLabel } from '@/profile/linkPresentation';
 import { useProfileStore } from '@/profile/store';
+import { usePageAddressLive } from '@/profile/usePageAddressLive';
 
 export function PresentScreen(): ReactNode {
   const insets = useSafeAreaInsets();
@@ -32,13 +34,12 @@ export function PresentScreen(): ReactNode {
   const shared = useProfileStore((state) => state.shared);
   const jws = useProfileStore((state) => state.jws);
   const published = useProfileStore((state) => state.published);
-  const nostrPublishedJws = useProfileStore((state) => state.nostrPublishedJws);
   const shareRecord = shared?.record ?? record;
   const shareJws = shared?.jws ?? jws;
   const publicPage: PublicPageShareSource | null = published
     ? { record: published.record, jws: published.jws }
     : null;
-  const nostrShortUrlReady = published !== null && nostrPublishedJws === published.jws;
+  const nostrShortUrlReady = usePageAddressLive();
   const ownerName = record?.displayName.trim() ?? '';
 
   return (
@@ -87,13 +88,15 @@ function PresentHeader({ onScan }: { readonly onScan: () => void }): ReactNode {
       >
         {t('present.title')}
       </ThemedText>
-      <View style={{ position: 'absolute', right: 16 }}>
-        <PageHeaderAction
-          icon="qrcode.viewfinder"
-          label={t('present.scanSomeone')}
-          onPress={onScan}
-        />
-      </View>
+      {capabilities.qrScanner ? (
+        <View style={{ position: 'absolute', right: 16 }}>
+          <PageHeaderAction
+            icon="qrcode.viewfinder"
+            label={t('present.scanSomeone')}
+            onPress={onScan}
+          />
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -145,7 +148,7 @@ function PublicLinkGroup({
             borderTopColor: colors.divider,
           }}
         >
-          <LinkIcon label={link.label} url={link.url} size={26} glyph={15} surface={colors.chipSurface} />
+          <LinkIcon label={link.label} url={link.url} size={26} glyph={15} surface={colors.chipSurface} brandOnly />
           <View style={{ flex: 1, gap: 1 }}>
             <ThemedText variant="bodyMedium" numberOfLines={1} ellipsizeMode="middle">
               {linkDisplay(link.label, link.url).text}

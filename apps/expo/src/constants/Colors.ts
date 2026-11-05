@@ -1,8 +1,6 @@
 /**
  * Solidarity brand palette — single source of truth for hex literals.
- * Mirrors Swift `Color.Theme.*` (ThemeManager.swift L200-330) so the same
- * name renders the same colour across the SwiftUI legacy build and the
- * Expo port.
+ * Token names are historical (some predate the creds.id palette).
  *
  * Dark-mode awareness lives at this layer so every consumer of
  * `Colors.text1`, `Colors.pageBg`, etc. *automatically* picks up the dark
@@ -157,7 +155,7 @@ const RAW = {
   /** Feature accent purple. */
   featureAccent: '#5856D6',
 
-  /** v1.3.0 per-animal card gradient accents. */
+  /** Per-animal card gradient accents. */
   cardDog: '#FFD54F',
   cardHorse: '#5C6BC0',
   cardPig: '#F06292',
@@ -379,6 +377,42 @@ export const CardMetalColors = {
   /** `.m-qr` plate and the ink of the code printed on it. */
   qrPlate: 'rgba(236,238,241,0.94)',
   qrInk: '#14161A',
+} as const;
+
+/**
+ * Card finishes beyond steel (`CardMetalColors`): the other two metals and the
+ * creds night sky, from the creds.id landing's blue-hour band (`.door-trust`:
+ * `#2c2557 → #1c1741 → #13102e`, aurora fields, twinkling dots and sparks).
+ * Like the steel card they ignore `Appearance`.
+ */
+export const CardFinishColors = {
+  blackTitanium: {
+    frontStops: ['#1B1D21', '#3B3E44', '#5A5E65', '#2C2F34', '#202226', '#44484E', '#62666D', '#2A2D31', '#17191C'],
+    backStops: ['#1F2125', '#3A3D42', '#54585E', '#2E3135', '#18191C'],
+    etch: '#DADDE2',
+    etchShadow: 'rgba(0,0,0,0.7)',
+    faceBorder: 'rgba(255,255,255,0.16)',
+  },
+  brass: {
+    frontStops: ['#6B4F1D', '#A9853D', '#D9BC74', '#8E6C2C', '#73561F', '#B8954C', '#E6CD8A', '#94722F', '#5E4418'],
+    backStops: ['#6A4E1C', '#9C7A35', '#C9AA62', '#82632A', '#563E15'],
+    etch: '#FFF6DC',
+    etchShadow: 'rgba(58,38,4,0.6)',
+    faceBorder: 'rgba(255,240,200,0.32)',
+  },
+  creds: {
+    sky: ['#2C2557', '#1C1741', '#13102E'],
+    skyLocations: [0, 0.55, 1],
+    /** `.door-aurora-a/b/c` in the dark theme, a little stronger on a small face. */
+    auroraA: '#963C8C',
+    auroraB: '#4048B0',
+    auroraC: '#FAE2A0',
+    star: '#FFFFFF',
+    spark: '#FFF6D8',
+    ink: '#FCF8F0',
+    inkShadow: 'rgba(5,6,26,0.6)',
+    faceBorder: 'rgba(255,255,255,0.18)',
+  },
 } as const;
 
 type RawKey = keyof typeof RAW;

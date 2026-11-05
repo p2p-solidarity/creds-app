@@ -1,0 +1,10 @@
+com.google.android.material:material
+com.google.auto.value:auto-value-annotations
+com.google.code.findbugs:jsr305
+com.google.code.gson:gson
+com.google.crypto.tink:tink-android
+com.google.dagger:dagger
+com.google.errorprone:error
+com.google.guava:failureaccess
+com.google.guava:guava
+com.google.guava:listenablefuture

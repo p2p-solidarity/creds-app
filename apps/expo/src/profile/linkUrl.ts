@@ -1,6 +1,5 @@
 /**
- * Forgiving link-URL normalization for the Me › Edit link rows (1.3.3 Task
- * A2.2 UX pass). The profile schema (`@solidarity/shared`'s
+ * Forgiving link-URL normalization for the Me › Edit link rows. The profile schema (`@solidarity/shared`'s
  * `profileLinkSchema`) requires every `links[].url` to match `^https?://`
  * with no surrounding whitespace — a security rule (the web viewer renders
  * each url as an `<a href>`, so `javascript:`/`data:`/scheme-less input must

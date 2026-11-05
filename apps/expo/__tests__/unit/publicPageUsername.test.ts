@@ -9,6 +9,8 @@ import {
 describe('public page username', () => {
   it('normalizes to lowercase ASCII letters and numbers', () => {
     expect(normalizePublicPageUsernameInput(' Gim_My-26! ')).toBe('gimmy26');
+    expect(normalizePublicPageUsernameInput('https://creds.id/@alice?ref=share')).toBe('alice');
+    expect(normalizePublicPageUsernameInput('creds.id/@alice#x')).toBe('alice');
   });
 
   it('requires 3–30 characters and rejects reserved product paths', () => {
@@ -19,6 +21,6 @@ describe('public page username', () => {
   });
 
   it('uses the official short @name path without a long identifier', () => {
-    expect(publicPagePath('gimmy26')).toBe('creds.id/@gimmy26');
+    expect(publicPagePath('gimmy26')).toBe('creds.id/gimmy26');
   });
 });

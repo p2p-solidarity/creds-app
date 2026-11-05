@@ -1,16 +1,16 @@
 /**
  * Profile Record — the canonical identity payload signed as a compact JWS
- * (jws.ts) and published to atproto/Nostr/URL-fragment (01-spec §3, §4).
+ * (jws.ts) and published to atproto/Nostr/URL-fragment.
  * This module owns only the schema + a `Result`-returning parser, never
  * signing or transport (see fragment.ts for the URL-fragment codec).
  *
- * Field shape is frozen exactly to 01-spec §3's JSON example:
+ * Field shape is frozen:
  *   { v, did, displayName, avatar, bio, links[], alsoKnownAs[], badges[],
  *     supersededBy, updatedAt }
  * `.strict()` so an unrecognized extra top-level key fails closed — in
  * particular, an earlier spec draft carried a `recoveryKey` field that
- * 01-spec §3 (current) does not; the App/Web key-recovery story (iCloud
- * Keychain / mnemonic, §3 "金鑰生命週期") lives entirely outside the
+ * the current shape does not; the App/Web key-recovery story (iCloud
+ * Keychain / mnemonic) lives entirely outside the
  * Profile Record, so a payload smuggling `recoveryKey` back in must be
  * rejected, not silently accepted.
  *
@@ -18,7 +18,7 @@
  * a claimed handle (`at://alice.bsky.social`, `dns:example.com`, ...) may
  * appear in `alsoKnownAs` before its reverse binding exists on the
  * platform side — a one-way claim, structurally valid but not yet a
- * green-check badge (01-spec §6: "兩向都成立才畫綠勾"). Badge
+ * green-check badge ("兩向都成立才畫綠勾"). Badge
  * *verification* is a later task's job; this schema only enforces shape.
  * `vectors/profile.json`'s `one-way-also-known-as` vector documents this
  * distinction explicitly so it isn't "fixed" by mistake later.
@@ -161,6 +161,9 @@ export const publicPageAppearanceSchema = z
     customBackground: z.string().regex(/^#[0-9A-Fa-f]{6}$/).nullable(),
     showBrand: z.boolean(),
     footerText: z.string().max(40),
+    // Opt-in: list the owner's `nostr:npub` binding on the Page. Omitted when off
+    // so Pages that never turn it on sign byte-identical to pre-3.3.0 ones.
+    showNostr: z.literal(true).optional(),
   })
   .strict();
 export type PublicPageAppearance = z.infer<typeof publicPageAppearanceSchema>;
@@ -200,16 +203,15 @@ export const publicPageDesignSchema = z
 export type PublicPageDesign = z.infer<typeof publicPageDesignSchema>;
 
 /**
- * Publication scope of a signed Profile Record (T7, `notes-1.3.3-publishing-
- * pairing-research.md` §3 / grill G4). Per-item `visibility` (public /
+ * Publication scope of a signed Profile Record. Per-item `visibility` (public /
  * link-only / private) is a LOCAL-only tag that never enters the wire record;
  * what DOES travel is which of three PROJECTIONS this signed record is:
  *   - `public` → published to Nostr/PDS: only `public`-tier items.
  *   - `shared` → direct QR / URL-fragment share: `public` + `link-only` items.
- *   - `full`   → Pear private exchange / local source of truth: all items.
+ *   - `full`   → local source of truth: all items.
  * All three are signed by the SAME root did:key — they are projections, not
  * different identities. The field is OPTIONAL and back-compat: an absent
- * `scope` means `full` (every record written before T7, and every Pear/full
+ * `scope` means `full` (every record written before T7, and every full
  * record, omits it). The People-side snapshot store keys verified snapshots by
  * `(did, scope)` so a `public` projection and a `full` card for one did coexist
  * instead of being flagged a conflict (see `profileSnapshots.ts`).
@@ -239,12 +241,12 @@ export const profileRecordSchema = z
     /** Optional for backward compatibility; when present it is signed Page
      * content, not a local draft. */
     page: publicPageDesignSchema.optional(),
-    /** Non-null once this DID has been superseded by a key rotation (01-spec §3). */
+    /** Non-null once this DID has been superseded by a key rotation. */
     supersededBy: z.string().nullable(),
     /**
      * Which projection this signed record is (T7 — see `profileScopeSchema`).
      * OPTIONAL; absent = `full`. Kept strict-accepting: a record with no
-     * `scope` (every pre-T7 record, every Pear/full card) still parses, and a
+     * `scope` (every pre-T7 record, every full card) still parses, and a
      * record with an unknown `scope` value fails closed.
      */
     scope: profileScopeSchema.optional(),

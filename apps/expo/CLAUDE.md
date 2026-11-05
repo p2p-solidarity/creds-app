@@ -1,9 +1,8 @@
 # `apps/expo` — creds.id app (Expo)
 
-The phone half of creds.id: an own-your-key link page (Page), verified badges
-(optional ZK), People and Verify, on iOS and Android via Expo + Nitro Modules.
-The look follows the creds.id web app (`../airmeishi-web`), not the deleted
-SwiftUI app — "Swift parity" comments in code are history.
+The phone half of creds.id: an own-your-key link page (Page), verified badges,
+People and Verify, on iOS and Android via Expo + Nitro Modules. The look
+follows the creds.id web app (`../airmeishi-web`).
 
 ## Quick start
 
@@ -17,35 +16,15 @@ bun run test                                                 # unit + parity
 bun run lint                                                 # 0 errors (cosmetic warnings ok)
 ```
 
-### Dev client required — Expo Go is not a development path
+### Dev client required — Expo Go cannot run this app
 
-`react-native-bare-kit` (Pear lane, `docs/ref/04-plan-app.md` Phase A3) ships
-a `BareKit` TurboModule + a vendored `BareKit.xcframework` / Bare Android
-runtime. Expo Go only bundles Expo's own module set, so **Expo Go cannot run
-this app** — it never could, given the existing Nitro modules
-(`nitro-attest`, `nitro-keystone`, …), but
-bare-kit makes it explicit. Always build a **dev client**:
+The Nitro modules (`nitro-attest`, `nitro-keystone`) are not in Expo Go. Build a
+dev client once per native dependency change (`bunx expo prebuild --clean` +
+`bun run ios` / `bun run android`), then `expo start` for the JS loop.
 
-```bash
-bunx expo prebuild --clean --platform ios --no-install
-bun run ios       # expo run:ios     — builds + installs the dev client
-bun run android   # expo run:android — builds + installs the dev client
-```
+Android `minSdkVersion` is 29 and has shipped — don't lower it.
 
-`expo start` alone (no `--dev-client` build first) will still print a QR
-code, but scanning it into Expo Go fails at the native-module-not-found
-stage. Build the dev client once per native dependency change, then
-`expo start` for the JS iteration loop.
-
-**Android `minSdkVersion` is 29**, not 26 — bumped in `app.json`
-(`expo-build-properties.android.minSdkVersion`) because
-`react-native-bare-kit`'s own `android/build.gradle` declares `minSdk 29`;
-AGP fails the manifest merge if the app's minSdk is lower than a library's.
-
-## Aniseekr-expo rules — adopted
-
-These are pinned from `../../ani/aniseekr-expo/CLAUDE.md`. Skip them and
-you re-introduce bugs the aniseekr team already paid for.
+## UI rules
 
 ### Rule 1. Buttons → `ThemedButton` only
 - `src/components/themed/ThemedButton.tsx` is the **only** primitive for
@@ -92,13 +71,10 @@ you re-introduce bugs the aniseekr team already paid for.
 ### Rule 8. No fake data
 - Three valid states for any data-driven UI: `loading | ready | error`.
 - Mock data only behind `usePreferences((s) => s.developerMode)` flag.
-- Currently legitimate mock paths (must stay labelled clearly):
-  - `/passport` "Start mock flow" button (until Nitro NFC + ZK wires).
-  - `/oidc/consent` Approve button toasts "lands next iteration".
 
 ### Rule 9. State ownership
 - High-frequency state (gestures, animations) → `SharedValue` via
-  Reanimated 4. See `RadarMatching.tsx` for the canonical pattern.
+  Reanimated 4.
 - Persisted preferences → `usePreferences` zustand store (one place).
 - Local UI state (selected variant, expanded section) → `useState` in
   the smallest component that renders the control.
@@ -111,54 +87,15 @@ you re-introduce bugs the aniseekr team already paid for.
 
 ## Repo layout (this app)
 
-```
-apps/expo/
-├── app/                       ← Expo Router screens (file-based)
-│   ├── _layout.tsx            ← MMKV init + i18n + deep-link wiring
-│   ├── index.tsx              ← onboarding gate (reads usePreferences)
-│   ├── (tabs)/                ← people / me (Page) / verify
-│   ├── onboarding/            ← V2 flow
-│   ├── settings/              ← hub + sub-pages
-│   ├── people/[id].tsx        ← PersonDetail
-│   ├── credentials/{index,[id],offer}.tsx
-│   ├── passport/index.tsx
-│   ├── scan/index.tsx         ← vision-camera QR scanner
-│   └── oidc/consent.tsx
-├── src/
-│   ├── components/
-│   │   ├── themed/            ← Themed{Text,Surface,Button} + contrast
-│   │   ├── decor/             ← DecorativeBlobs / MauvePetalMotif / PaperStack
-│   │   ├── people/ContactRow + ContactsList
-│   │   ├── settings/SettingRow + ToggleRow
-│   │   └── share/RadarMatching
-│   ├── constants/Colors.ts    ← brand palette (single source)
-│   ├── constants/radius.ts    ← radius + shadow roles (= creds.id web tokens)
-│   ├── storage/               ← MMKV + secure-store + AES-GCM
-│   ├── keychain/              ← signing key + pairwise + biometric gate
-│   ├── backup/                ← iCloud + Drive + gesture-triggered
-│   ├── contacts/              ← repository (zustand) + VCF importer
-│   ├── cards/                 ← legacy card store + card-wire DECODE only (10 §4)
-│   ├── credentials/store      ← VC library (zustand)
-│   ├── groups/store           ← frozen; UI removed (10 §5), store kept for wipe/backup
-│   ├── vault/secretsKeychain  ← legacy vault root secret (wipe only)
-│   ├── oidc/{parseAuthRequest,proofVerifier}
-│   ├── passport/pipeline      ← MRZ → NFC → ZK orchestrator
-│   ├── deeplink/{parser,router}
-│   ├── settings/preferences   ← MMKV-backed prefs (zustand)
-│   ├── feedback/{haptics,toast}
-│   ├── i18n/                  ← i18next + en/zh-Hant
-│   ├── onboarding/{state,steps}
-│   ├── people/usePeopleScreen
-│   └── scan/{QrScanner,useCameraPermission}
-└── __tests__/{unit,parity}/   ← feature, security and parity tests
-```
+- `app/` — Expo Router routes; thin orchestrators (params, store hooks, layout).
+- `src/<domain>/` — logic and stores per domain (`profile`, `people`, `nostr`,
+  `witness`, `passport`, `keychain`, `identity`, `backup`, …).
+- `src/components/<domain>/` — UI; `src/components/themed/` holds the primitives.
+- `src/constants/Colors.ts` (palette), `src/constants/radius.ts` (radius/shadow roles).
+- `__tests__/{unit,parity,ledger}/`.
 
-## Why some files use `expo-file-system/legacy`
-
-`expo-file-system` v56 split into a new `Paths` / `File` / `Directory`
-class API. The legacy `documentDirectory` + `writeAsStringAsync`
-helpers live behind the `/legacy` sub-import. We keep the legacy path
-for now because it's shorter; migrate when there's time.
+New code that touches files still on `expo-file-system/legacy` may keep that
+import; new files use the class API (`Paths` / `File` / `Directory`).
 
 ## CI
 
@@ -166,11 +103,7 @@ iOS releases ship via **Xcode Cloud** (Apple Developer 25 h/month free,
 auto cert mgmt). The `withXcodeCloudScripts` config plugin
 (`apps/expo/plugins/`) re-creates `ios/ci_scripts/ci_post_clone.sh`
 after every `expo prebuild --clean` from the persistent source at
-`ci-scripts/ci_post_clone.sh`. `withPrecompiledVisionCameraResizerMetal`
-stages a pinned `default.metallib` so Archive never depends on Xcode Cloud's
-unreliable optional Metal Toolchain; regenerate it with
-`scripts/build-vision-camera-resizer-metallib.sh` after shader updates.
-`withExpoModulesJsiPatches` rewrites `scripts/build-xcframework.sh` of the
+`ci-scripts/ci_post_clone.sh`. `withExpoModulesJsiPatches` rewrites `scripts/build-xcframework.sh` of the
 installed `expo-modules-jsi` (58.0.21) at prebuild so Xcode 27 can archive it:
 it wraps the nested `xcodebuild -quiet` whose spurious "error: … exited with
 code 0" line otherwise fails the phase with "Command PhaseScriptExecution
@@ -184,21 +117,13 @@ via `expo.install.exclude` (Expo's table pins 1.11). The pod caches its xcframew
 Never add a `ci_pre_xcodebuild.sh` that runs `xcodebuild -downloadComponent
 metalToolchain`: on Xcode Cloud it exits 70 ("Failed fetching catalog for assetType").
 
-Android builds via **EAS Build** or `expo prebuild --platform android`
-+ `./gradlew bundleRelease`.
-
-`react-native-bare-kit` needs **no custom config plugin** — it autolinks
-via its own `react-native.config.js` + `react-native-bare-kit.podspec` +
-`android/build.gradle` (same as `holepunchto/bare-expo`'s reference
-integration). The only app.json change it required is the
-`minSdkVersion: 29` bump above.
+Android release AABs build locally with `bun run build:android:local`
+(prebuild + `./gradlew bundleRelease`, signing from `secrets/`).
 
 ## Error handling & crash diagnostics
 
-Hard-won from the MRZ-camera + DAG/P2P-Lab 閃退 hunt. Read this BEFORE debugging
-any crash — it turns "hours" into "minutes". The recurring failure was an
-exception escaping opaquely (`abort() called`, no type) because error handling
-itself was broken or absent.
+Read this before debugging any crash. The usual failure is an exception
+escaping opaquely (`abort() called`, no type).
 
 ### Where crashes are caught — and where they are NOT
 
@@ -208,10 +133,10 @@ itself was broken or absent.
 | Uncaught JS error off the render path (timers, events, un-awaited rejects) | global `ErrorUtils` handler (installed by `src/feedback/RootErrorBoundary.tsx`) | Logged `[solidarity:uncaught]`, chained to default |
 | **Native** uncaught exception — a TurboModule raising an NSException on its queue, a worklet throwing out of VisionCamera's async-runner, a C++ `abort` | **nothing — it terminates the process** | …but it NAMES ITSELF (see below). Fix at the call site. |
 
-JS error boundaries CANNOT catch native crashes. The DAG/P2P-Lab crashes are a
-native TurboModule NSException (`ObjCTurboModule::performVoidMethodInvocation`) —
-no JS try/catch or boundary will stop them; read the crash report and guard the
-call site (e.g. don't mount the native view when its module is unavailable).
+JS error boundaries CANNOT catch native crashes (e.g. a TurboModule
+NSException from `ObjCTurboModule::performVoidMethodInvocation`); read the crash
+report and guard the call site (don't mount a native view whose module is
+unavailable).
 
 ### Self-identifying crashes — `MrzInstallCrashDiagnostics`
 
@@ -282,11 +207,6 @@ globals. On that runtime:
   `return Promise.async {` and capture the `Data`**, e.g.
   `let bytes = copyPayload(payload); return Promise.async { … use bytes … }`.
   Buffers you create yourself via `ArrayBuffer.copy(data:)` are owning → exempt.
-  This bug hid for months because an earlier throw (SpruceID-unavailable)
-  short-circuited the flow before signing ever reached the `ArrayBuffer` read;
-  fixing that throw unmasked it. Swept across `signJws`, proximity
-  `invitePeer`/`sendData` (L2CAP path only — Multipeer was already correct),
-  secrets-vault `wrap`, semaphore `identityFromSeed`/`importPrivateKey`,
-  passport-zk `verifyNoirProof` (commit `6c77010`). When auditing a new
+  When auditing a new
   HybridObject method: any `: ArrayBuffer` param read inside `Promise.async` is
   this bug.

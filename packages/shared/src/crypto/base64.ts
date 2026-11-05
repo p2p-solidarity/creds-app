@@ -1,5 +1,5 @@
 /**
- * Base64 + base64url codec — mirrors solidarity/Extensions/Data+Base64URL.swift.
+ * Base64 + base64url codec.
  *
  * RFC 4648 url-safe: `-` for `+`, `_` for `/`, no padding.
  *

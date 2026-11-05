@@ -1,7 +1,6 @@
 /**
  * Profile store — local Profile Record persistence + append-only save flow
- * (1.3.3 Task A2.2, apps/expo/src/profile/store.ts) + Nostr publish wiring
- * (1.3.3 Task A4.2's `publishToNostr`).
+ * (apps/expo/src/profile/store.ts) + Nostr publish wiring (`publishToNostr`).
  *
  * What this suite pins:
  *   1. `saveProfile` constructs a record that `verifyCompact` accepts as
@@ -141,7 +140,7 @@ interface RootKeyModuleSurface {
     | { readonly ok: true; readonly value: { readonly mnemonic: string; readonly did: string } }
     | { readonly ok: false; readonly error: { readonly kind: string } }
   >;
-  readonly deleteRootKey: () => Promise<void>;
+  readonly deleteRootKeyForLocalWipe: () => Promise<unknown>;
 }
 
 interface NostrUserKeyModuleSurface {
@@ -237,7 +236,7 @@ beforeEach(async () => {
     status: 'empty',
     nostrPublishedJws: null,
   });
-  await rootKeyMod.deleteRootKey();
+  await rootKeyMod.deleteRootKeyForLocalWipe();
   await nostrUserKeyMod.deleteNostrKey();
   mod.__setNostrPublishForTesting(null);
 });
@@ -689,6 +688,8 @@ describe('publishToNostr', () => {
 
   it('returns err when no Nostr key is provisioned — no biometric prompt, no MMKV mutation, no relay calls', async () => {
     await rootKeyMod.createFromFreshMnemonic();
+    // Creating a root also derives its Nostr key; this case needs none.
+    await nostrUserKeyMod.deleteNostrKey();
     await mod.useProfileStore.getState().saveProfile({ displayName: 'Alice', bio: '', links: [] });
     biometricCalls.length = 0;
     const jwsBefore = mod.useProfileStore.getState().jws;
@@ -1056,7 +1057,7 @@ describe('saveProfile — three-tier link projections', () => {
     expect(model.usernameUrl).not.toBeNull();
     if (!model.usernameUrl) return;
 
-    expect(model.usernameUrl).toBe('https://creds.id/@alice');
+    expect(model.usernameUrl).toBe('https://creds.id/alice');
     expect(new URL(model.usernameUrl).hash).toBe('');
 
     const sharedFragment = decodeFragment(new URL(model.offlineUrl).hash.slice(1));

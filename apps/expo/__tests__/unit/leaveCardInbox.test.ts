@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it } from 'bun:test';
 import { contactSchema } from '@solidarity/shared';
 
-import * as leaveCardInbox from '../../src/contacts/leaveCardInbox';
 import {
   __resetLocalDataWipeBarrierForTesting,
   beginLocalDataWipe,
@@ -44,9 +43,7 @@ describe('Pending Leave Card inbox', () => {
     hydrateLeaveCards();
     expect(useLeaveCardStore.getState().pending).toEqual([]);
 
-    const enqueue = Reflect.get(leaveCardInbox, 'enqueueLeaveCard');
-    expect(enqueue).toBeTypeOf('function');
-    if (typeof enqueue !== 'function') return;
+    const { enqueue } = useLeaveCardStore.getState();
 
     const invalid = enqueue({ name: ' ', contact: 'not-contact' });
     expect(invalid).toEqual({ ok: false, error: 'invalid' });

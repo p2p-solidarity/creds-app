@@ -1,10 +1,7 @@
 // Migration choice (a): on hydrate, mirror `useCredentialStore.items` into
 // `idcard:` storage so existing data survives without a one-shot copy.
 /**
- * IdentityDataStore — TS port of
- * solidarity/Services/Cache/IdentityDataStore.swift.
- *
- * Holds identity cards + provable claims (Swift SwiftData rows). Contacts
+ * IdentityDataStore — holds identity cards + provable claims. Contacts
  * live in `apps/expo/src/contacts/repository.ts` — that store already
  * mirrors Swift's `ContactEntity` so we do not duplicate it here.
  *
@@ -15,6 +12,7 @@ import { useMemo } from 'react';
 import { create } from 'zustand';
 
 import { decryptJson, encryptJson } from '@/storage/encryptionManager';
+import { forgetPassportPrivateClaims } from '@/passport/privateClaims';
 import { forgetPassportStatement } from '@/passport/statementStore';
 import { getMmkv } from '@/storage/mmkv';
 import {
@@ -280,6 +278,7 @@ export const useIdentityData = create<IdentityDataState>((set, get) => ({
     );
     // Every passport goes, so no statement may keep being re-signed.
     forgetPassportStatement();
+    forgetPassportPrivateClaims();
     for (const id of passportCardIds) {
       if (generation !== localWipeGeneration || !canCommitLocalData(writeEpoch)) return;
       getMmkv().remove(`${CARD_PREFIX}${id}`);
@@ -350,24 +349,4 @@ export function displayClaims(
 export function useDisplayClaims(): readonly ProvableClaimEntity[] {
   const provableClaims = useIdentityData((s) => s.provableClaims);
   return useMemo(() => displayClaims(provableClaims), [provableClaims]);
-}
-
-/**
- * Hook: `true` when the holder owns at least one presentable claim of
- * `claimType`. When `holderDid` is omitted, scans the full claim set —
- * useful before the active DID is resolved. Drives the proofs section in
- * Share Settings.
- */
-export function useHasClaim(claimType: string, holderDid?: string): boolean {
-  return useIdentityData((s) => {
-    if (holderDid === undefined) {
-      return s.provableClaims.some((c) => c.isPresentable && c.claimType === claimType);
-    }
-    const holderCardIds = new Set(
-      s.identityCards.filter((c) => c.holderDid === holderDid).map((c) => c.id)
-    );
-    return s.provableClaims.some(
-      (c) => c.isPresentable && c.claimType === claimType && holderCardIds.has(c.identityCardId)
-    );
-  });
 }

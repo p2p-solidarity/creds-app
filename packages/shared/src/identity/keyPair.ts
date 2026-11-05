@@ -1,5 +1,5 @@
 /**
- * P-256 key pair primitives — mirrors KeychainService.swift's SecKey ops.
+ * P-256 key pair primitives.
  *
  * Provides:
  *   - generation (RFC 6979 deterministic verification, randomised signing)

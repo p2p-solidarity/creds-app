@@ -1,8 +1,7 @@
 /**
  * Profile store — local source of truth for the user's signed Profile
- * Record (01-spec §3), the payload published via QR / URL fragment
- * (`packages/shared`'s `encodeFragment`) once `app/me/edit.tsx` saves it
- * (1.3.3 Task A2.2).
+ * Record, the payload published via QR / URL fragment
+ * (`packages/shared`'s `encodeFragment`) once `app/me/edit.tsx` saves it.
  *
  * Persisted at MMKV key `profile:v1` as `{ record, jws }` — mirrors
  * `settings/preferences.ts`'s DEFAULTS-in-memory + `hydrateX()`-from-MMKV
@@ -12,7 +11,7 @@
  * after `initMmkv()` resolves — see `app/_layout.tsx`) swaps in the
  * persisted pair synchronously.
  *
- * Append-only semantics (01-spec §3; Pear day-0 constraint 2): `saveProfile`
+ * Append-only semantics: `saveProfile`
  * NEVER mutates the currently-stored record in place. Every call builds a
  * BRAND NEW record object — fresh `updatedAt`, the root did resolved fresh
  * via `getRootDid()`, the editable fields (`displayName`/`bio`/`links`) from
@@ -48,6 +47,7 @@ import { getRootDid, getRootSigner, type RootKeyError } from '@/identity/rootKey
 import { publishProfile, updateKind0AlsoKnownAs, type PublishReport } from '@/nostr/publish';
 import { getNostrPubkey, npubEncode } from '@/nostr/userKey';
 import { canCommitLocalData, captureLocalDataEpoch } from '@/settings/localDataWipeBarrier';
+import { usePreferences } from '@/settings/preferences';
 import { getMmkv } from '@/storage/mmkv';
 import {
   PROFILE_VERSION,
@@ -391,8 +391,7 @@ export interface NostrPublishOutcome {
 
 interface ProfileState {
   /** The FULL source-of-truth record — every field, ALL links (`scope`
-   *  absent = full). This is the user's own view and the Pear/full exchange
-   *  card; the QR/Nostr share paths use the projections below instead. */
+   *  absent = full). This is the user's own view; the QR/Nostr share paths use the projections below instead. */
   readonly record: ProfileRecord | null;
   readonly jws: string | null;
   readonly status: ProfileStatus;
@@ -480,7 +479,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     if (!signerResult.ok) return err(rootKeyErrorMessage('profile save failed', signerResult.error));
 
     // The FULL record: source of truth, all links, `scope` left absent (= full)
-    // for back-compat with pre-T7 persisted blobs / vectors and the Pear card.
+    // for back-compat with pre-T7 persisted blobs / vectors.
     let jws: string;
     try {
       jws = await signCompact(validated.value, validated.value.did, signerResult.value);
@@ -730,6 +729,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
       return err('publishToNostr: cancelled by local wipe');
     }
     set({ nostrPublishedJws });
+    if (nostrPublishedJws !== null) usePreferences.getState().set('nostrPagePublishedOnce', true);
 
     return ok({ profile: profileReport.value, kind0: kind0Report.value });
   },

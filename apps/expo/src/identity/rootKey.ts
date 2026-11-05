@@ -1,6 +1,6 @@
 /**
  * rootKey.ts — seed-derived root identity (BIP-39 mnemonic -> HKDF ->
- * P-256 scalar -> did:key), per 04-plan Phase A1 task A1.4. The mnemonic
+ * P-256 scalar -> did:key). The mnemonic
  * derivation itself lives in `@solidarity/shared/derive.ts` (`HKDF_INFO_ROOT`
  * = 'solidarity-root-v1'); this module owns App-side storage, the Face-ID
  * gate, and the `Signer` contract from `@solidarity/shared/jws.ts`.
@@ -25,7 +25,7 @@
  * SpruceID key structurally cannot offer. Task A1.4 does not migrate any
  * existing screen onto this root key — that convergence (if any) is a
  * decision for a later phase once the Verify-tab / profile-record surfaces
- * that actually consume `getRootDid()` exist (04-plan Phase A2+). Until
+ * that actually consume `getRootDid()` exist. Until
  * then both identities coexist; nothing here reads or writes
  * `solidarity.master.v2`.
  *
@@ -342,6 +342,42 @@ async function persistSyncedMnemonicForEpoch(
   return false;
 }
 
+/**
+ * Runs after a root is persisted as the active identity. Default: make the
+ * stored Nostr key this root's (`nostr/userKey.ts` `reconcileNostrKeyWithRoot`),
+ * lazy-loaded so this module never pulls the Nostr stack in at load time.
+ */
+export type RootActivationHook = (
+  mnemonic: string,
+  did: string,
+) => Promise<Result<void, string>>;
+
+async function defaultRootActivationHook(
+  mnemonic: string,
+  did: string,
+): Promise<Result<void, string>> {
+  const { reconcileNostrKeyWithRoot } = await import('@/nostr/userKey');
+  return reconcileNostrKeyWithRoot(mnemonic, did);
+}
+
+let activeRootActivationHook: RootActivationHook = defaultRootActivationHook;
+
+/** Test-only override. Pass `null` to restore the real Nostr-key reconcile. */
+export function __setRootActivationHookForTesting(hook: RootActivationHook | null): void {
+  activeRootActivationHook = hook ?? defaultRootActivationHook;
+}
+
+async function activateRoot(mnemonic: string, did: string): Promise<Result<void, RootKeyError>> {
+  let reconciled: Result<void, string>;
+  try {
+    reconciled = await activeRootActivationHook(mnemonic, did);
+  } catch {
+    reconciled = err('nostrKeyReconcileFailed');
+  }
+  if (reconciled.ok) return ok(undefined);
+  return err({ kind: 'storageFailed', message: `Nostr key not switched: ${reconciled.error}` });
+}
+
 function normalizeMnemonic(raw: string): string {
   return raw.trim().toLowerCase().replace(/\s+/g, ' ');
 }
@@ -388,6 +424,8 @@ async function createFromFreshMnemonicAtEpoch(
   } catch (e) {
     return err(toStorageError(e));
   }
+  const activated = await activateRoot(mnemonic, didResult.value);
+  if (!activated.ok) return activated;
   return ok({ mnemonic, did: didResult.value });
 }
 
@@ -418,6 +456,8 @@ async function importFromMnemonicAtEpoch(
   } catch (e) {
     return err(toStorageError(e));
   }
+  const activated = await activateRoot(normalized, didResult.value);
+  if (!activated.ok) return activated;
   return ok({ did: didResult.value });
 }
 
@@ -493,7 +533,7 @@ export async function getRootSigner(): Promise<Result<Signer, RootKeyError>> {
   }
 
   // One user intent = one `getRootSigner()` call (a Page save signs three
-  // projections; a Pear connection signs its handshake). The signer authorizes
+  // projections). The signer authorizes
   // once and reuses that for its own next signatures for at most
   // ROOT_SIGNER_INTENT_MS, so "ask every time" means every action, not every
   // signature (Kidney, 2026-10-30). Scoped to this instance — another call
@@ -507,9 +547,7 @@ export async function getRootSigner(): Promise<Result<Signer, RootKeyError>> {
     }
     // `{ prehash: false }` — `digest` is already the single-SHA-256 RFC 7515
     // signing-input digest computed by `signCompact`; @noble/curves'
-    // default (`prehash: true`) would hash it a second time (the exact bug
-    // tracked for `identity/jwt.ts` under 04-plan task A10.4 — this signer
-    // must not repeat it).
+    // default (`prehash: true`) would hash it a second time.
     return p256.sign(digest, scalar, { prehash: false });
   };
   return ok(signer);
@@ -706,7 +744,7 @@ export type RootKeyRecovery =
  * - **Malformed synced phrase is an ERROR, never a fresh mint.** A synced
  *   value that fails BIP-39 checksum returns `err({kind:'invalidMnemonic'})`;
  *   it must never fall through to `createFromFreshMnemonic`. "Absence/badness
- *   of a cloud key is not proof the user is new" (04-plan security invariant).
+ *   of a cloud key is not proof the user is new".
  * - **Not-found is a clean signal, not an error** — `{kind:'notFound'}` so the
  *   caller can offer Retry / Enter Phrase / explicit Start Fresh.
  *
@@ -757,6 +795,8 @@ async function restoreRootKeyFromICloudAtEpoch(
   } catch (e) {
     return err(toStorageError(e));
   }
+  const activated = await activateRoot(normalized, syncedDid.value);
+  if (!activated.ok) return activated;
   return ok({ kind: 'restoredFromICloud', did: syncedDid.value });
 }
 
@@ -811,26 +851,8 @@ export async function clearSyncedRootKey(): Promise<Result<void, RootKeyError>> 
 }
 
 /**
- * Delete the persisted root key. Used by tests and by a future rotate/reset
- * flow. Also best-effort deletes the synchronizable iCloud item (if any)
- * so a reset never leaves an orphaned synced mnemonic behind — swallowed on
- * failure (Android's `secrets-vault` implementation always rejects here,
- * and an iOS delete of a missing item is already a no-op at the native
- * layer, so a real failure here is not actionable for the caller).
- */
-export async function deleteRootKey(): Promise<void> {
-  await activeStorage.deleteMnemonic();
-  try {
-    await activeSyncStorage.deleteSyncedMnemonic();
-  } catch {
-    // best-effort — see doc above.
-  }
-}
-
-/**
- * Production-wipe deletion. Unlike the general reset helper above, a wipe
- * must not report completion while either the local or synchronizable
- * recovery phrase remains. Both targets are attempted so a retry can make
+ * Production-wipe deletion. A wipe must not report completion while either
+ * the local or synchronizable recovery phrase remains. Both targets are attempted so a retry can make
  * progress even if only one backend was temporarily unavailable.
  */
 export async function deleteRootKeyForLocalWipe(): Promise<LocalDeletionResult> {

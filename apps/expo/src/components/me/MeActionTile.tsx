@@ -1,5 +1,5 @@
 /**
- * MeActionTile — Figma 737:2565. Swift parity:
+ * MeActionTile — Figma 737:2565.
  *   • 40pt primaryBlue@15% circle + 18pt icon
  *   • 15pt label
  *   • Card: mutedSurface, corner 2, pad horiz 12 vert 16, min height 72

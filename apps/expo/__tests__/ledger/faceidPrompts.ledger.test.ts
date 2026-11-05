@@ -303,12 +303,11 @@ interface Story {
 
 async function freshIdentity(): Promise<void> {
   profileStore.useProfileStore.getState().resetForLocalWipe();
-  await rootKey.deleteRootKey();
+  await rootKey.deleteRootKeyForLocalWipe();
   await nostrKey.deleteNostrKey();
   await signingKey.deleteSigningKey();
   const created = await rootKey.createFromFreshMnemonic();
   if (!created.ok) throw new Error('root');
-  await nostrKey.provisionFromFreshRootMnemonic(created.value.mnemonic);
   await signingKey.ensureSigningKey();
 }
 
@@ -318,7 +317,7 @@ const STORIES: readonly Story[] = [
     label: '建立（新身分）→ 連結頁簽 Page → 背景發佈',
     setup: async () => {
       profileStore.useProfileStore.getState().resetForLocalWipe();
-      await rootKey.deleteRootKey();
+      await rootKey.deleteRootKeyForLocalWipe();
       await nostrKey.deleteNostrKey();
       await signingKey.deleteSigningKey();
     },
@@ -328,8 +327,7 @@ const STORIES: readonly Story[] = [
         run: async () => {
           const created = await rootKey.createFromFreshMnemonic();
           if (!created.ok) throw new Error('root');
-          await nostrKey.provisionFromFreshRootMnemonic(created.value.mnemonic);
-          await signingKey.ensureSigningKey();
+                  await signingKey.ensureSigningKey();
         },
       },
       {
@@ -393,22 +391,6 @@ const STORIES: readonly Story[] = [
     intents: [
       { name: 'open Present QR', run: presentQr },
       { name: 'toggle a field (QR rebuilt)', run: presentQr },
-    ],
-  },
-  {
-    id: '4',
-    label: '收人：Pear 交換（握手 root 簽章 + 放卡）',
-    setup: freshIdentity,
-    intents: [
-      {
-        name: 'Pear exchange: handshake sign + card release',
-        run: async () => {
-          const signer = await rootKey.getRootSigner();
-          if (!signer.ok) throw new Error('signer');
-          await signer.value(sha256Bytes(new TextEncoder().encode('hello')));
-          await bio.requireBiometric('cardRelease');
-        },
-      },
     ],
   },
   {

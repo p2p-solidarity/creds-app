@@ -215,15 +215,6 @@ export function hydrateLeaveCards(): void {
   }
 }
 
-/**
- * Validated ingress seam for a future public-page receiver or relay handler.
- * It deliberately accepts `unknown`: its schema check lives at this boundary,
- * before any untrusted card can reach persisted state.
- */
-export function enqueueLeaveCard(input: unknown): EnqueueResult {
-  return useLeaveCardStore.getState().enqueue(input);
-}
-
 function stableLeaveCardUuid(identifierHash: string, namespace: string): string {
   const hash = bytesToHex(sha256Bytes(`${namespace}:${identifierHash}`));
   const variant = ['8', '9', 'a', 'b'][Number.parseInt(hash.charAt(16), 16) % 4] ?? '8';

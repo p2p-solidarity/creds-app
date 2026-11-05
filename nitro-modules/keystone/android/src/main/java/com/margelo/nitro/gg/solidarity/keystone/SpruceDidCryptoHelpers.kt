@@ -141,8 +141,3 @@ internal object SpruceDidEcdsa {
     return byteArrayOf(0x02, trimmed.size.toByte()) + trimmed
   }
 }
-
-// SpruceSdkBridge (reflective access to com.spruceid.mobile.sdk.rs.*) was
-// removed in 1.3.3 S7a together with its 5 caller methods and the Maven
-// dependency — DID derivation + JWS/VC verification are pure TS in
-// packages/shared. Inventory: docs/ref/notes-sprucekit-slim.md.

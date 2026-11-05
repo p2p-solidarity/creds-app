@@ -60,26 +60,27 @@ import { ConfirmDialogOverlay } from '@/feedback/confirmDialog';
 import { ToastOverlay } from '@/feedback/toast';
 import { prepareLeaveCards } from '@/contacts/leaveCardInbox';
 import { prepareRecentUpdates } from '@/contacts/recentUpdates';
-import { useGroupStore } from '@/groups/store';
 import { useIdentityData } from '@/identity';
 import { installI18n } from '@/i18n';
 import { hydrateSensitiveActionPolicy } from '@/keychain';
 import { warmBadgeStatusCache } from '@/badges/badgeStatusCache';
 import { warmNostrKeyMirror } from '@/nostr/userKey';
-import { PearConsentOverlay, PearPresentConsentOverlay } from '@/pear/consent';
 import { maybeRefreshVerifiedContacts } from '@/people/contactAutoRefresh';
 import { hydrateProfileSnapshots } from '@/people/profileSnapshots';
 import { prepareProEntitlement } from '@/pro/entitlementStore';
 import { initProPurchases } from '@/pro/purchases';
+import { capabilities } from '@/platform/distribution';
 import { hydrateProfile } from '@/profile/store';
 import { pushToast } from '@/feedback/toast';
 import { translate } from '@/i18n';
-import { renewDueProofs } from '@/zktls/flow';
+import { renewDueProofs } from '@/socialProof/flow';
 import { renewPassportStatement } from '@/passport/npubBinding';
 import { dropRetiredPassportZkData } from '@/passport/retiredZkData';
+import { ensureOwnDmRelays } from '@/privateExchange/relays';
 import { DEFAULT_RELAYS } from '@/nostr/publish';
-import { hydrateZktlsProofs } from '@/zktls/store';
+import { hydrateSocialProofs } from '@/socialProof/store';
 import { hydratePreferences, usePreferences } from '@/settings/preferences';
+import { runLegacyWipeOnce } from '@/settings/legacyWipe';
 import { initMmkv, ManifestStorage } from '@/storage';
 import { PRIMARY_TAB_HREFS } from '@/navigation/primaryTabs';
 import { themeRefreshLayout } from '@/navigation/themeRefresh';
@@ -88,7 +89,6 @@ import { CARDS_MANIFEST_SCOPE } from '@/cards/cardManifest';
 import { CONTACTS_MANIFEST_SCOPE } from '@/contacts/contactManifest';
 import { CREDENTIALS_MANIFEST_SCOPE } from '@/credentials/credentialManifest';
 import { ISSUERS_MANIFEST_SCOPE } from '@/credentials/issuerManifest';
-import { GROUPS_MANIFEST_SCOPE } from '@/groups/groupManifest';
 
 // App-wide JS error boundary (wraps <Stack> below so it gets the React
 // component stack of any render throw) + global uncaught-JS handler (installed
@@ -109,7 +109,6 @@ import { AppErrorBoundary } from '@/feedback/RootErrorBoundary';
 const MIGRATION_SCOPES = [
   CARDS_MANIFEST_SCOPE,
   CONTACTS_MANIFEST_SCOPE,
-  GROUPS_MANIFEST_SCOPE,
   CREDENTIALS_MANIFEST_SCOPE,
   ISSUERS_MANIFEST_SCOPE,
 ] as const;
@@ -177,7 +176,6 @@ export default function RootLayout() {
     const hydrateDetailsInBackground = () => {
       void useCardStore.getState().hydrate();
       void useContactStore.getState().hydrate();
-      void useGroupStore.getState().hydrate();
       void useCredentialStore.getState().hydrate();
       void useIssuerMetadataStore.getState().hydrate();
       void useIdentityData.getState().hydrate();
@@ -207,7 +205,6 @@ export default function RootLayout() {
         // can render on the next frame without any decryption.
         useCardStore.getState().seedFromManifest();
         useContactStore.getState().seedFromManifest();
-        useGroupStore.getState().seedFromManifest();
         useCredentialStore.getState().seedFromManifest();
         useIssuerMetadataStore.getState().seedFromManifest();
         logBoot('manifest-seed:done');
@@ -215,7 +212,7 @@ export default function RootLayout() {
         hydratePreferences();
         hydrateSensitiveActionPolicy();
         hydrateProfile();
-        hydrateZktlsProofs();
+        hydrateSocialProofs();
         hydrateProfileSnapshots();
         // Awaited, not fired-and-forgotten: every Pro gate reads this store
         // synchronously, so a late hydration would flash "locked" at someone
@@ -226,7 +223,7 @@ export default function RootLayout() {
         // the cached record above is already authoritative enough to paint. A
         // renewal, refund, or purchase made on another device lands whenever
         // this resolves.
-        void initProPurchases();
+        if (capabilities.proPurchase) void initProPurchases();
         logBoot('preferences:done');
 
         // First-boot migration: if any manifest is missing, block splash
@@ -240,7 +237,6 @@ export default function RootLayout() {
           await Promise.all([
             useCardStore.getState().hydrate(),
             useContactStore.getState().hydrate(),
-            useGroupStore.getState().hydrate(),
             useCredentialStore.getState().hydrate(),
             useIssuerMetadataStore.getState().hydrate(),
           ]);
@@ -248,6 +244,7 @@ export default function RootLayout() {
         } else {
           logBoot('migration:skip');
         }
+        void runLegacyWipeOnce();
 
         logBoot('i18n:start');
         // Pass the persisted language choice so the user's explicit selection
@@ -345,9 +342,12 @@ export default function RootLayout() {
     dropRetiredPassportZkData();
     const renew = () => {
       void renewDueProofs().then((failed) => {
-        if (failed.length > 0) pushToast(translate('zktls.renewFailed'), 'error');
+        if (failed.length > 0) pushToast(translate('socialProof.renewFailed'), 'error');
       });
       void renewPassportStatement(DEFAULT_RELAYS);
+      // Others can only send us NIP-17 messages once our kind 10050 is up;
+      // waiting for the People tab left people unreachable.
+      void ensureOwnDmRelays().catch(() => undefined);
     };
     renew();
     const sub = AppState.addEventListener('change', (state) => {
@@ -375,8 +375,6 @@ export default function RootLayout() {
               <ToastOverlay />
               <ConfirmDialogOverlay />
               <AppAlertOverlay />
-              <PearConsentOverlay />
-              <PearPresentConsentOverlay />
               <ReceivedCardSheet
                 visible={receivedCard !== null}
                 card={receivedCard}

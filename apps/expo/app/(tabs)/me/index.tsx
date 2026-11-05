@@ -11,6 +11,7 @@ import { useTranslation } from '@/i18n';
 import { hasNostrKey } from '@/nostr/userKey';
 import { usePreferences } from '@/settings/preferences';
 import { useProfileStore } from '@/profile/store';
+import { usePageAddressLive } from '@/profile/usePageAddressLive';
 import { preparePageDesign, usePageDesignStore } from '@/page/pageDesignStore';
 
 export default function MeTab() {
@@ -26,10 +27,9 @@ export default function MeTab() {
   // such a profile has no private links.
   const shared = useProfileStore((state) => state.shared);
   const published = useProfileStore((state) => state.published);
-  const nostrPublishedJws = useProfileStore((state) => state.nostrPublishedJws);
   const shareRecord = shared?.record ?? record;
   const shareJws = shared?.jws ?? jws;
-  const nostrShortUrlReady = published !== null && nostrPublishedJws === published.jws;
+  const nostrShortUrlReady = usePageAddressLive();
   const addProofRequested = params.addProof === '1';
   const { t } = useTranslation();
   const autoRepublish = usePreferences((state) => state.nostrAutoRepublish);

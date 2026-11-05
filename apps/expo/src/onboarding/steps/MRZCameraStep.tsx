@@ -1,5 +1,5 @@
 /**
- * MRZCameraStep — 1:1 visual port of Swift MRZCameraView.swift.
+ * MRZCameraStep.
  *
  * Layout (top → bottom):
  *   1. Live camera feed (fullscreen, black backdrop) — same on iOS + Android.
@@ -40,6 +40,7 @@ import {
 import { ThemedButton } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { useTranslation } from '@/i18n';
+import { mrzDate, type MrzDateKind } from '@/passport/pipeline';
 import { useCameraPermission } from '@/scan/useCameraPermission';
 import { MONO } from '@/constants/fonts';
 import { Radius } from '@/constants/radius';
@@ -254,7 +255,7 @@ export function MRZCameraStep({
    *  repeated signal never re-renders. */
   const setPhaseTo = useCallback((next: ScanPhase) => {
     if (phaseRef.current === next) return;
-    console.log(`[MRZ] phase: ${phaseRef.current} → ${next}`);
+    if (__DEV__) console.log(`[MRZ] phase: ${phaseRef.current} → ${next}`);
     phaseRef.current = next;
     setPhase(next);
   }, []);
@@ -279,7 +280,7 @@ export function MRZCameraStep({
       if (hasAcceptedRef.current) return;
       hasAcceptedRef.current = true;
       const totalMs = Date.now() - mountTimeRef.current;
-      console.log(
+      if (__DEV__) console.log(
         `[MRZ] ACCEPT after ${String(totalMs)}ms / ${String(calls)} ocr calls (avg ${String(avgMs)}ms/call)`,
       );
       clearPhaseTimers();
@@ -483,7 +484,7 @@ export function MRZCameraStep({
   );
 
   const handleRescan = useCallback(() => {
-    console.log('[MRZ] rescan — resetting counters and timers');
+    if (__DEV__) console.log('[MRZ] rescan — resetting counters and timers');
     frameTick.value = 0;
     scanAccepted.value = false;
     lastBucket.value = -1;
@@ -518,12 +519,12 @@ export function MRZCameraStep({
   }, [draft, onScanned]);
 
   useEffect(() => {
-    console.log(
+    if (__DEV__) console.log(
       `[MRZ] mount — target=${String(FRAME_OUTPUT_RESOLUTION.width)}x${String(FRAME_OUTPUT_RESOLUTION.height)} fps=30 throttle=${String(FRAME_THROTTLE)} struggleMs=${String(STRUGGLE_MS)} hold=${String(PHASE_HOLD_MS)}ms advance=${String(AUTO_ADVANCE_DELAY_MS)}ms nativeDraft=true`,
     );
     mountTimeRef.current = Date.now();
     return () => {
-      console.log(
+      if (__DEV__) console.log(
         `[MRZ] unmount after ${String(Date.now() - mountTimeRef.current)}ms / ${String(ocrCount.value)} ocr calls`,
       );
       if (phaseTimerRef.current !== null) {
@@ -757,11 +758,11 @@ function ConfirmationCard({
         />
         <InfoRow
           label={developerMode ? 'Date of Birth' : t('passportSetup.camera.birthDate')}
-          value={formatYyMmDd(draft.dateOfBirth)}
+          value={formatYyMmDd(draft.dateOfBirth, 'birth')}
         />
         <InfoRow
           label={developerMode ? 'Expiry' : t('passportSetup.camera.expiry')}
-          value={formatYyMmDd(draft.expiryDate)}
+          value={formatYyMmDd(draft.expiryDate, 'expiry')}
         />
       </View>
 
@@ -796,14 +797,10 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function formatYyMmDd(s: string): string {
-  if (s.length !== 6) return s;
-  const yy = s.slice(0, 2);
-  const mm = s.slice(2, 4);
-  const dd = s.slice(4, 6);
-  const yyNum = Number(yy);
-  const fullYear = yyNum >= 30 ? 1900 + yyNum : 2000 + yyNum;
-  return `${dd}/${mm}/${String(fullYear)}`;
+function formatYyMmDd(s: string, kind: MrzDateKind): string {
+  const date = mrzDate(s, kind);
+  if (date === null) return s;
+  return `${s.slice(4, 6)}/${s.slice(2, 4)}/${String(date.getUTCFullYear())}`;
 }
 
 const styles = StyleSheet.create({

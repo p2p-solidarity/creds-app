@@ -1,5 +1,5 @@
 /**
- * Haptic feedback bridge — mirrors Swift HapticFeedbackManager.
+ * Haptic feedback bridge.
  *
  * Funnels every haptic call through one module so feedback feels
  * consistent across the app (and so we can opt-out for accessibility

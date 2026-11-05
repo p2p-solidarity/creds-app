@@ -1,5 +1,5 @@
 /**
- * OIDC consent — mirrors Swift OIDCRequestView.
+ * OIDC consent.
  *
  * Parses the inbound openid4vp:// query, shows the requesting verifier +
  * scopes + presentation definition, and lets the user approve / deny. On

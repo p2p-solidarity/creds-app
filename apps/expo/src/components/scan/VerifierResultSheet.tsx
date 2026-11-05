@@ -1,8 +1,5 @@
 /**
- * VerifierResultSheet — 1:1 port of
- * solidarity/Views/ScanViews/VerifierResultSheet.swift.
- *
- * Bottom slide-in `Modal` that renders the outcome of a verifier scan:
+ * VerifierResultSheet — bottom slide-in `Modal` that renders the outcome of a verifier scan:
  * a SolidarityPlaceholderCard with title + reason, the list of detail
  * claims (one per line), and a Close button. The validity badge (green
  * check / red X) is colour-coded off `result.valid`.

@@ -6,3 +6,14 @@ export * from './roots';
 export * from './rsa';
 export * from './trust';
 export * from './witness';
+export {
+  PASSPORT_PRESENTATION_TYP,
+  buildPassportPresentation,
+  verifyPassportPresentation,
+  type PassportChipState,
+  type PassportClaimValues,
+  type PassportPresentation,
+  type PassportPresentationContext,
+  type PassportPresentationRejection,
+  type VerifiedPassportPresentation,
+} from './passportPresentation';

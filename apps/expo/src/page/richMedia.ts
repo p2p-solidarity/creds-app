@@ -23,14 +23,6 @@ const HANDLE = /^[\p{L}\p{N}._-]{3,30}$/u;
 const SPOTIFY_ID = /^[A-Za-z0-9]{22}$/u;
 const SPOTIFY_KINDS: readonly SpotifyKind[] = ['track', 'album', 'playlist', 'artist'];
 
-export function isYoutubeVideoId(value: string): boolean {
-  return VIDEO_ID.test(value);
-}
-
-export function isYoutubeChannelId(value: string): boolean {
-  return CHANNEL_ID.test(value);
-}
-
 function parse(raw: string | undefined): URL | null {
   if (!raw) return null;
   try {
@@ -92,18 +84,6 @@ export function classifyMediaUrl(raw: string | undefined): RichMedia | null {
   const url = parse(raw);
   if (url === null || url.username !== '' || url.password !== '') return null;
   return classifyYoutube(url) ?? classifySpotify(url);
-}
-
-/** One identity per channel / video / Spotify entity, whatever URL spelling was used. */
-export function mediaKey(media: RichMedia): string {
-  switch (media.kind) {
-    case 'youtube-channel':
-      return media.channelId ? `yt-channel:${media.channelId}` : `yt-handle:${media.handle?.toLowerCase()}`;
-    case 'youtube-video':
-      return `yt-video:${media.videoId}`;
-    case 'spotify':
-      return `spotify:${media.type}:${media.id}`;
-  }
 }
 
 /** Mirrors web `richMediaFor`: which media a block of this type plays. */

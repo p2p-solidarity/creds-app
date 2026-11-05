@@ -16,8 +16,8 @@
  * this profile — not that it's the profile the shared npub points at. A
  * hostile/misconfigured relay could hand back a different person's validly
  * signed profile. The sharer's app writes `nostr:<npub>` into its own
- * profile's `alsoKnownAs` on publish (the bidirectional binding, 01-spec
- * §5/§6, "兩向都成立才畫綠勾"); requiring it here pins the resolved profile
+ * profile's `alsoKnownAs` on publish (the bidirectional binding,
+ * "兩向都成立才畫綠勾"); requiring it here pins the resolved profile
  * back to the exact npub in the URL. Missing it → `bindingMismatch`, never a
  * silent accept.
  *

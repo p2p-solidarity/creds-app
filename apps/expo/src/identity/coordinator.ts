@@ -1,8 +1,6 @@
 /**
- * IdentityCoordinator — slim TS port of
- * solidarity/Services/Identity/IdentityCoordinator.swift, scoped to the
- * profile/DID surface the React layer needs. ZK pieces stay in
- * `apps/expo/src/zk/coordinator.ts`; this store only exposes the active
+ * IdentityCoordinator — the profile/DID surface the React layer needs;
+ * this store only exposes the active
  * `did:key` derived from the SpruceID-managed signing key.
  *
  * Hydration order mirrors Swift `loadIdentity`:
@@ -110,14 +108,4 @@ export const useIdentityCoordinator = create<IdentityCoordinatorState>((set, get
 /** Selector — cached active DID string, null until keychain resolves. */
 export function useActiveDid(): string | null {
   return useIdentityCoordinator((s) => s.profile.activeDID?.did ?? null);
-}
-
-/** Test-only — wipe the in-memory cache between suites. */
-export function __resetIdentityCoordinatorForTesting(): void {
-  useIdentityCoordinator.setState({
-    profile: { activeDID: null },
-    isLoading: false,
-    lastError: null,
-    hydrated: false,
-  });
 }

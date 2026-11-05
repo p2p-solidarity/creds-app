@@ -1,5 +1,5 @@
 /**
- * Declared link-page detail — 1.3.3 Task A2.4 (US-19). The counterpart to
+ * Declared link-page detail. The counterpart to
  * `app/people/profile/[did].tsx` for a `kind: 'declared'` snapshot
  * (`src/people/profileSnapshots.ts`) — a plaintext link page (Linktree or
  * similar) someone pasted via People's 「貼上連結頁」, NOT a cryptographically
@@ -29,7 +29,7 @@ import {
   PersonLinksCard,
   buildLinkRows,
 } from '@/components/people/personDetailSupport';
-import { snapshotDisplayName } from '@/components/people/ContactsList';
+import { snapshotDisplayName } from '@/people/person';
 import { ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { fadeUpIn } from '@/feedback/motion';

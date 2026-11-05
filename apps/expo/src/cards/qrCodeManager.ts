@@ -1,33 +1,9 @@
 /**
- * QR code facade — TS port of solidarity/Services/Card/QRCodeManager.swift.
- *
- * Two responsibilities, matching the Swift surface:
- *   - generate : turn a QR-encodable string into a renderable image source
- *                (data: URL carrying an SVG). The Swift version returns
- *                a UIImage; on RN a data URL is the closest cross-
- *                platform equivalent — drop it into `<Image source={{ uri }} />`
- *                or write it out with `expo-file-system`. Inputs that do not
- *                fit a real QR code reject explicitly; a text SVG is never a
- *                valid substitute for a scannable QR.
- *   - parse    : classify an arbitrary scanned string into the same
- *                buckets `QRCodeScanService.handleScannedString` routes
- *                into (card / vp / group / oidc / unknown).
- *
- * Don't break existing `<QRCode value={…} />` call sites — this facade
- * is additive. Generation goes through `react-native-qrcode-svg`'s
- * underlying `qrcode` core (already a transitive dep), so we don't pull
- * a new package in.
+ * Turns a QR-encodable string into a data: URL carrying an SVG. Inputs that
+ * do not fit a real QR code reject: a text SVG is never a valid substitute
+ * for a scannable QR.
  */
-import { base64Encode, decodeJwtUnsafe, utf8ToBytes } from '@solidarity/shared';
-
-import { hasAppSchemePrefix } from '@/deeplink/appScheme';
-
-export type QrPayloadKind = 'card' | 'vp' | 'group' | 'oidc' | 'unknown';
-
-export interface ParsedQrPayload {
-  readonly kind: QrPayloadKind;
-  readonly raw: string;
-}
+import { base64Encode, utf8ToBytes } from '@solidarity/shared';
 
 type ErrorCorrectionLevel = 'L' | 'M' | 'Q' | 'H';
 
@@ -119,56 +95,4 @@ export async function generateQrPng(value: string, opts: GenerateOptions = {}): 
 
   const detail = lastError instanceof Error ? ` (${lastError.message})` : '';
   throw new Error(`QR generation failed: payload could not fit in a QR code.${detail}`);
-}
-
-function isJwt(text: string): boolean {
-  const parts = text.split('.');
-  if (parts.length !== 3) return false;
-  try {
-    decodeJwtUnsafe(text);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Classify a scanned QR payload. Mirrors the buckets the Swift scan
- * service routes into.
- */
-export function parseQrPayload(text: string): ParsedQrPayload {
-  if (!text) return { kind: 'unknown', raw: text };
-
-  if (text.startsWith('openid4vp://') || text.startsWith('openid-vp://')) {
-    return { kind: 'oidc', raw: text };
-  }
-  if (text.startsWith('openid-credential-offer://')) {
-    return { kind: 'oidc', raw: text };
-  }
-
-  if (hasAppSchemePrefix(text)) {
-    if (text.includes('/group')) return { kind: 'group', raw: text };
-    if (text.includes('/card')) return { kind: 'card', raw: text };
-    return { kind: 'unknown', raw: text };
-  }
-
-  if (text.startsWith('BEGIN:VCARD')) {
-    return { kind: 'card', raw: text };
-  }
-
-  // CRD1 evidence pack / card share — verified + rebuilt by the envelope
-  // handler; classified here so scanner UIs route it as a card.
-  if (text.startsWith('CRD1:')) {
-    return { kind: 'card', raw: text };
-  }
-
-  if (text.startsWith('SOLIDARITY_VC::') || text.startsWith('AIRMEISHI_VC::')) {
-    return { kind: 'vp', raw: text };
-  }
-
-  if (isJwt(text)) {
-    return { kind: 'vp', raw: text };
-  }
-
-  return { kind: 'unknown', raw: text };
 }

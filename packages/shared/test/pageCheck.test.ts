@@ -14,7 +14,9 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { ok, type Result } from '../src/types/result';
-import { checkSocialMarker, markerInPage, type PageFetch } from '../src/zktls';
+import { checkSocialMarker, markerInPage, type PageFetch } from '../src/socialProof';
+import { bioCarriesMarker } from '../src/socialProof/platforms';
+import { isMarkerUrl } from '../src/socialProof/xProfile';
 
 const page = (file: string) => readFileSync(join(import.meta.dir, 'fixtures/pages', file), 'utf8');
 const X = page('x-kidneyweakx.html');
@@ -135,5 +137,30 @@ describe('X embedded profile', () => {
   test('the marker outside the bio links and website field does not', () => {
     const pinned = { legacy: { pinned_tweet: { entities: { urls: [{ expanded_url: 'https://creds.id/@alice' }] } } } };
     expect(markerInPage('x', 'alice', 'alice', xPage({ extra: pinned }))).toBe('missing');
+  });
+});
+
+// docs/ref/15: the marker reads with or without `@`; a longer name, a dotted
+// handle, a hyphen or a deeper path is someone else's address.
+describe('marker with and without @', () => {
+  test.each([
+    'creds.id/@alice', 'creds.id/alice', 'https://creds.id/alice', 'see creds.id/alice.', '(creds.id/alice)',
+    'creds.id/alice, hi', 'creds.id/@alice/', 'creds.id/alice/ next',
+  ])('bio %p names alice', (bio) => {
+    expect(bioCarriesMarker(bio, 'alice')).toBe(true);
+  });
+
+  test.each([
+    'creds.id/alicex', 'creds.id/@alicex', 'notcreds.id/alice', 'xcreds.id/@alice', 'creds.id/alice.eth',
+    'creds.id/@alice.eth', 'creds.id/alice-fan', 'creds.id/@alice-fan', 'creds.id/alice/foo', 'creds.id/@alice_x',
+  ])('bio %p does not name alice', (bio) => {
+    expect(bioCarriesMarker(bio, 'alice')).toBe(false);
+  });
+
+  test.each([
+    ['https://creds.id/alice', true], ['https://creds.id/@alice', true], ['http://www.creds.id/alice/', true],
+    ['https://creds.id/alice/x', false], ['https://creds.id/alicex', false], ['https://creds.id/@alice.eth', false],
+  ] as const)('X link %p → %p', (url, expected) => {
+    expect(isMarkerUrl(url, 'alice')).toBe(expected);
   });
 });

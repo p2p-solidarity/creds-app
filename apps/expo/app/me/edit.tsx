@@ -1,5 +1,5 @@
 /**
- * Me › Edit — the Profile Record (01-spec §3) editor (1.3.3 Task A2.2).
+ * Me › Edit — the Profile Record editor.
  * Edits `displayName` / `bio` / `links` plus the page photo. Library photos
  * stay device-only; a selected Bluesky photo is signed and published.
  *
@@ -16,9 +16,9 @@
  * An explicit Save may derive the separate Nostr key when auto-publish is on;
  * mount and first paint never provision it.
  */
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, usePreventRemove } from 'expo-router';
 import { safeBack } from '@/navigation/safeBack';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -37,8 +37,9 @@ import {
   type LinkPageImportResult,
 } from '@/components/profile/LinkPageImportSheet';
 import { SettingsScreenTitle } from '@/components/settings/SettingsBlocks';
-import { ThemedButton, ThemedText, ThemedTextInput } from '@/components/themed';
+import { ThemedButton, ThemedSurface, ThemedText, ThemedTextInput } from '@/components/themed';
 import { showError } from '@/feedback/appAlert';
+import { confirmDialog } from '@/feedback/confirmDialog';
 import { haptic } from '@/feedback/haptics';
 import { pushToast } from '@/feedback/toast';
 import { useTranslation } from '@/i18n';
@@ -51,12 +52,14 @@ import {
   provisionFromRootMnemonic,
 } from '@/nostr/userKey';
 import { detectLinkFromUrl, linkPresetForEditableUrl, normalizeLinkUrl } from '@/profile/linkUrl';
+import { linkDisplay } from '@/profile/linkPresentation';
 import { PublishPreviewSheet } from '@/components/me/PublishPreviewSheet';
 import {
   summarizeVisibility,
   type LinkVisibility,
   type VisibilitySummary,
 } from '@/profile/projection';
+import { clearProfileDraft, loadProfileDraft, saveProfileDraft } from '@/profile/profileDraft';
 import { useProfileStore } from '@/profile/store';
 import { usePreferences } from '@/settings/preferences';
 import { uuid, type ProfileLink } from '@solidarity/shared';
@@ -92,6 +95,7 @@ export default function MeEditScreen() {
     readonly importLinks?: string;
   }>();
   const record = useProfileStore((s) => s.record);
+  const recordJws = useProfileStore((s) => s.jws);
   const storeLinkVisibility = useProfileStore((s) => s.linkVisibility);
   const autoRepublish = usePreferences((s) => s.nostrAutoRepublish);
   // The preference is the user's explicit publishing opt-in. On a first
@@ -117,16 +121,68 @@ export default function MeEditScreen() {
     };
   }, []);
 
-  const [displayName, setDisplayName] = useState(record?.displayName ?? '');
-  const [bio, setBio] = useState(record?.bio ?? '');
+  /** Set once a save lands (or the owner chose to leave), so leaving is no longer guarded. */
+  const allowLeave = useRef(false);
+  // Unsaved edits live on as a local draft: opening the editor again picks
+  // them up where they were left, as long as the signed record is the one
+  // the draft started from.
+  const [restoredDraft] = useState(() => loadProfileDraft(recordJws));
+  const [showDraftNotice, setShowDraftNotice] = useState(restoredDraft !== null);
+  const [displayName, setDisplayName] = useState(restoredDraft?.displayName ?? record?.displayName ?? '');
+  const [bio, setBio] = useState(restoredDraft?.bio ?? record?.bio ?? '');
   const [links, setLinks] = useState<readonly EditableLink[]>(() =>
-    (record?.links ?? []).map((link, i) => toEditableLink(link, storeLinkVisibility[i] ?? 'public'))
+    restoredDraft !== null
+      ? restoredDraft.links.map((link) => ({ id: uuid(), ...link }))
+      : (record?.links ?? []).map((link, i) => toEditableLink(link, storeLinkVisibility[i] ?? 'public'))
   );
   const [saving, setSaving] = useState(false);
   const [linktreeSheetOpen, setLinktreeSheetOpen] = useState(() => importLinks === '1');
   const [previewOpen, setPreviewOpen] = useState(false);
   const [focusedMode, setFocusedMode] = useState(() => focusedEditorMode({ add, avatar }));
-  const [hasDraftEdits, setHasDraftEdits] = useState(false);
+  const [hasDraftEdits, setHasDraftEdits] = useState(restoredDraft !== null);
+  useEffect(() => {
+    if (!hasDraftEdits || allowLeave.current) return;
+    saveProfileDraft({
+      base: recordJws,
+      displayName,
+      bio,
+      links: links.map(({ label, url, preset, visibility }) => ({ label, url, preset, visibility })),
+    });
+  }, [hasDraftEdits, recordJws, displayName, bio, links]);
+  const disableLeaveGuard = usePreventRemove(hasDraftEdits, ({ repeat }) => {
+    const leave = (): void => {
+      allowLeave.current = true;
+      disableLeaveGuard();
+      repeat();
+    };
+    if (allowLeave.current) {
+      leave();
+      return;
+    }
+    // The edits are already a draft on this phone, so leaving loses nothing.
+    void confirmDialog({
+      title: t('meEdit.unpublishedTitle'),
+      message: t('meEdit.unpublishedMessage'),
+      confirmLabel: t('meEdit.leaveKeepDraft'),
+      cancelLabel: t('meEdit.keepEditing'),
+    }).then((ok) => { if (ok) leave(); });
+  });
+  const discardDraft = (): void => {
+    void confirmDialog({
+      title: t('meEdit.discardDraftTitle'),
+      message: t('meEdit.discardDraftMessage'),
+      confirmLabel: t('meEdit.discardAction'),
+      destructive: true,
+    }).then((ok) => {
+      if (!ok) return;
+      clearProfileDraft();
+      setDisplayName(record?.displayName ?? '');
+      setBio(record?.bio ?? '');
+      setLinks((record?.links ?? []).map((link, i) => toEditableLink(link, storeLinkVisibility[i] ?? 'public')));
+      setHasDraftEdits(false);
+      setShowDraftNotice(false);
+    });
+  };
   const [linkSheetTarget, setLinkSheetTarget] = useState<LinkSheetTarget>(() =>
     focusedMode === 'add' ? { kind: 'add' } : null
   );
@@ -148,8 +204,18 @@ export default function MeEditScreen() {
     setLinkSheetTarget(null);
   };
   const removeLink = (id: string) => {
-    setHasDraftEdits(true);
-    setLinks((prev) => prev.filter((l) => l.id !== id));
+    const link = links.find((l) => l.id === id);
+    if (link === undefined) return;
+    void confirmDialog({
+      title: t('meEdit.removeLinkTitle', { link: linkDisplay(link.label, link.url).text }),
+      message: t('meEdit.removeLinkMessage'),
+      confirmLabel: t('meEdit.removeLink'),
+      destructive: true,
+    }).then((ok) => {
+      if (!ok) return;
+      setHasDraftEdits(true);
+      setLinks((prev) => prev.filter((l) => l.id !== id));
+    });
   };
   const reorderLink = (sourceIndex: number, destinationIndex: number) => {
     setHasDraftEdits(true);
@@ -291,6 +357,8 @@ export default function MeEditScreen() {
         ),
         'success'
       );
+      allowLeave.current = true;
+      clearProfileDraft();
       safeBack();
     } finally {
       setSaving(false);
@@ -360,6 +428,14 @@ export default function MeEditScreen() {
         }}
         keyboardShouldPersistTaps="handled"
         bottomOffset={16}>
+        {showDraftNotice ? (
+          <ThemedSurface variant="card" className="flex-row items-center gap-2" style={{ minHeight: 52, paddingHorizontal: 16, paddingVertical: 8 }}>
+            <ThemedText variant="bodySmall" tone="secondary" style={{ flex: 1 }}>
+              {t('meEdit.draftRestored')}
+            </ThemedText>
+            <ThemedButton label={t('meEdit.discardDraft')} variant="secondary" size="sm" onPress={discardDraft} />
+          </ThemedSurface>
+        ) : null}
         <AvatarEditor
           recordAvatar={record?.avatar ?? null}
           displayName={displayName}

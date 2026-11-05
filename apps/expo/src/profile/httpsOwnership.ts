@@ -325,7 +325,6 @@ interface OwnershipCacheEntry {
 
 const resultCache = new Map<string, OwnershipCacheEntry>();
 const inFlightCache = new Map<string, Promise<readonly HttpsOwnershipEvidence[]>>();
-let nowFn: () => number = () => Date.now();
 
 /** Stable key: order-independent in both `links` and `profileUrls`, so the
  * Me tab and /verify/nostr (which build the URL lists independently) collapse
@@ -345,7 +344,7 @@ export function verifyHttpsOwnership(
   if (input.fetchImpl !== undefined) return performVerification(input);
 
   const key = httpsOwnershipCacheKey(input.did, input.links, input.profileUrls);
-  const now = nowFn();
+  const now = Date.now();
 
   const cached = resultCache.get(key);
   if (cached && cached.expiresAt > now) return Promise.resolve(cached.value);
@@ -363,7 +362,7 @@ export function verifyHttpsOwnership(
     timeoutMs: input.timeoutMs,
   })
     .then((value) => {
-      resultCache.set(key, { value, expiresAt: nowFn() + HTTPS_OWNERSHIP_TTL_MS });
+      resultCache.set(key, { value, expiresAt: Date.now() + HTTPS_OWNERSHIP_TTL_MS });
       return value;
     })
     .finally(() => {
@@ -371,15 +370,4 @@ export function verifyHttpsOwnership(
     });
   inFlightCache.set(key, run);
   return run;
-}
-
-/** Test-only: clear both cache layers between cases. */
-export function __resetHttpsOwnershipCacheForTesting(): void {
-  resultCache.clear();
-  inFlightCache.clear();
-}
-
-/** Test-only: inject a deterministic clock (pass `null` to restore Date.now). */
-export function __setHttpsOwnershipClockForTesting(fn: (() => number) | null): void {
-  nowFn = fn ?? (() => Date.now());
 }

@@ -1,7 +1,6 @@
 /**
  * `src/oidc/proofVerifier.ts` — `verifyVpToken` holder-binding hardening
- * (A5.3). Investigated while wiring SD-JWT presentation over the Pear
- * channel: the pre-existing implementation verified the OUTER VP signature
+ * hardening: the pre-existing implementation verified the OUTER VP signature
  * (self-certifying against its own `iss`/`kid` did:key) and verified EACH
  * embedded VC's own issuer signature independently, but never checked that
  * an embedded VC's holder (`sub`/`credentialSubject.id`) actually matches
@@ -15,15 +14,12 @@
  * `signJwtEs256` primitive `spruceDid.parity.test.ts` uses).
  */
 import { describe, expect, it } from 'bun:test';
-import { p256 } from '@noble/curves/nist.js';
 
 import {
   didKeyFromPublicKey,
   publicKeyFromPrivate,
   publicKeyToJwk,
   signJwtEs256,
-  signCompact,
-  type Signer,
 } from '@solidarity/shared';
 
 import { verifyVpToken } from '../../src/oidc/proofVerifier';
@@ -37,14 +33,6 @@ void HOLDER_JWK;
 const OTHER_PRIV = new Uint8Array(32).fill(0).map((_, i) => (i * 7 + 3) & 0xff);
 const OTHER_PUB = publicKeyFromPrivate(OTHER_PRIV);
 const OTHER_DID = didKeyFromPublicKey(OTHER_PUB);
-
-const ROOT_PRIV = new Uint8Array(32).fill(0).map((_, i) => (i * 11 + 5) & 0xff);
-const ROOT_PUB = publicKeyFromPrivate(ROOT_PRIV);
-const ROOT_DID = didKeyFromPublicKey(ROOT_PUB);
-
-const OTHER_ROOT_PRIV = new Uint8Array(32).fill(0).map((_, i) => (i * 13 + 9) & 0xff);
-const OTHER_ROOT_PUB = publicKeyFromPrivate(OTHER_ROOT_PRIV);
-const OTHER_ROOT_DID = didKeyFromPublicKey(OTHER_ROOT_PUB);
 
 const NOW = Math.floor(Date.now() / 1000);
 
@@ -62,7 +50,7 @@ function signVp(
   holderDid: string,
   holderPriv: Uint8Array,
   vcJwts: readonly string[],
-  opts: { readonly aud?: string; readonly nonce?: string; readonly cardKeyBinding?: string } = {}
+  opts: { readonly aud?: string; readonly nonce?: string } = {}
 ): string {
   return signJwtEs256(
     { alg: 'ES256', typ: 'vp+jwt', kid: `${holderDid}#0` },
@@ -73,7 +61,6 @@ function signVp(
       exp: NOW + 300,
       ...(opts.aud ? { aud: opts.aud } : {}),
       ...(opts.nonce ? { nonce: opts.nonce } : {}),
-      ...(opts.cardKeyBinding ? { solidarity: { cardKeyBinding: opts.cardKeyBinding } } : {}),
       vp: {
         '@context': ['https://www.w3.org/2018/credentials/v1'],
         type: ['VerifiablePresentation'],
@@ -82,32 +69,6 @@ function signVp(
       },
     },
     holderPriv
-  );
-}
-
-function signerFor(privateKey: Uint8Array): Signer {
-  return async (digest) => p256.sign(digest, privateKey, { prehash: false });
-}
-
-async function signCardKeyBinding(opts: {
-  readonly rootDid: string;
-  readonly rootPriv: Uint8Array;
-  readonly cardDid: string;
-  readonly aud: string;
-  readonly nonce: string;
-}): Promise<string> {
-  return signCompact(
-    {
-      typ: 'solidarity.cardKeyBinding.v1',
-      rootDid: opts.rootDid,
-      cardDid: opts.cardDid,
-      aud: opts.aud,
-      nonce: opts.nonce,
-      iat: NOW,
-      exp: NOW + 300,
-    },
-    opts.rootDid,
-    signerFor(opts.rootPriv)
   );
 }
 
@@ -176,45 +137,5 @@ describe('verifyVpToken — holder binding', () => {
 
     const result = await verifyVpToken(vp, { expectedAud: 'did:key:zMe' });
     expect(result.holderDid).toBe(HOLDER_DID);
-  });
-
-  it('expectedRootDid rejects a Pear VP with no root-to-card binding', async () => {
-    const vc = signVc(HOLDER_DID, HOLDER_PRIV);
-    const vp = signVp(HOLDER_DID, HOLDER_PRIV, [vc], {
-      aud: 'did:key:zMe',
-      nonce: 'pear-nonce',
-    });
-
-    await expectRejectsWith(
-      verifyVpToken(vp, {
-        expectedAud: 'did:key:zMe',
-        expectedRootDid: ROOT_DID,
-      }),
-      /card-key binding/u
-    );
-  });
-
-  it('expectedRootDid rejects a Pear VP whose card key is bound to a different root DID', async () => {
-    const vc = signVc(HOLDER_DID, HOLDER_PRIV);
-    const binding = await signCardKeyBinding({
-      rootDid: ROOT_DID,
-      rootPriv: ROOT_PRIV,
-      cardDid: HOLDER_DID,
-      aud: 'did:key:zMe',
-      nonce: 'pear-nonce',
-    });
-    const vp = signVp(HOLDER_DID, HOLDER_PRIV, [vc], {
-      aud: 'did:key:zMe',
-      nonce: 'pear-nonce',
-      cardKeyBinding: binding,
-    });
-
-    await expectRejectsWith(
-      verifyVpToken(vp, {
-        expectedAud: 'did:key:zMe',
-        expectedRootDid: OTHER_ROOT_DID,
-      }),
-      /root DID/u
-    );
   });
 });

@@ -1,6 +1,5 @@
 /**
- * normalizeLinkUrl — Me › Edit's on-blur link normalization (1.3.3 A2.2 UX
- * pass). Pins the "forgiving but not misleading" contract: a scheme-less
+ * normalizeLinkUrl — Me › Edit's on-blur link normalization. Pins the "forgiving but not misleading" contract: a scheme-less
  * host gets `https://`, but anything that already carries a scheme is left
  * verbatim so an invalid scheme still fails the save-time schema loudly
  * instead of being rewritten into a plausible-looking https URL.

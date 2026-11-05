@@ -1,6 +1,6 @@
 /**
- * Parity between the app's own NIP-01 routines (`dag/node.ts`'s
- * `computeNip01EventId`, `dag/nostrAdapter.ts`'s `verifyNostrEvent`) and the
+ * Parity between the app's own NIP-01 routines (`nostr/nip01.ts`'s
+ * `computeNip01EventId`, `nostr/nostrAdapter.ts`'s `verifyNostrEvent`) and the
  * shared implementation the web builder signs with (`@solidarity/shared`
  * `nostr/event.ts`). The two must agree byte-for-byte on the id and accept
  * each other's signatures, or a page published from the web would not
@@ -8,7 +8,7 @@
  */
 import { describe, expect, it } from 'bun:test';
 
-import { computeNip01EventId as appEventId } from '../../src/nostr/dagNode';
+import { computeNip01EventId as appEventId } from '../../src/nostr/nip01';
 import { verifyNostrEvent as appVerify } from '../../src/nostr/nostrAdapter';
 import {
   computeNip01EventId as sharedEventId,

@@ -62,7 +62,17 @@ export type PublicPageUsernameValidation =
   | { readonly kind: 'valid' };
 
 export function normalizePublicPageUsernameInput(value: string): string {
-  return value.trim().toLowerCase().replace(/[^a-z0-9]/gu, '');
+  // `@alice`, `creds.id/@alice` or a full link all mean `alice`; strip the
+  // address first or `creds.id/@alice` collapses to `credsidalice`.
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//u, '')
+    .replace(/^(www\.)?creds\.id\/?/u, '')
+    .replace(/^@/u, '')
+    // A pasted link's `?ref=…`, `#…` or trailing path is not part of the name.
+    .replace(/[/?#].*$/u, '')
+    .replace(/[^a-z0-9]/gu, '');
 }
 
 export function validatePublicPageUsername(
@@ -77,9 +87,5 @@ export function validatePublicPageUsername(
 }
 
 export function publicPagePath(username: string): string {
-  return `creds.id/@${username}`;
-}
-
-export function publicPageUrl(username: string): string {
-  return `https://${publicPagePath(username)}`;
+  return `creds.id/${username}`;
 }

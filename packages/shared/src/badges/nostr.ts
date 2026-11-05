@@ -1,5 +1,5 @@
 /**
- * Nostr badge bidirectional-binding verifier — 04-plan Phase A4 task A4.3.
+ * Nostr badge bidirectional-binding verifier.
  * PURE module: no network, no WebSocket, no storage. IO is injected via
  * `NostrKind0Fetcher` so this file is consumed identically by apps/expo
  * and the future web viewer (05-plan V3 replays `verifyNostrBinding`
@@ -15,7 +15,7 @@
  *   `alsoKnownAs: string[]` containing `profile.did` — the Nostr identity
  *   is claiming back "this did:key is me".
  *
- * BOTH must hold for `verified` — this is 01-spec §7 / 03-spec §3's
+ * BOTH must hold for `verified` — this is the
  * single-direction-no-green-check rule, the entire point of this module.
  *
  * ── The state-mapping table (the honesty contract) ───────────────────────
@@ -40,7 +40,7 @@
  *
  * ── The "no claim at all" case ────────────────────────────────────────────
  *
- * `BadgeState` (01-spec §7) is a closed 4-value enum with no explicit
+ * `BadgeState` is a closed 4-value enum with no explicit
  * "not applicable" state. When `profile.alsoKnownAs` carries no
  * `nostr:npub…` entry at all, there is no Nostr binding to verify — this
  * is not-a-badge, not an unconfirmed one-way claim. The AUTHORITATIVE

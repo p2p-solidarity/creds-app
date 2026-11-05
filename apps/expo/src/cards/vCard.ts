@@ -1,5 +1,5 @@
 /**
- * Minimal vCard 3.0 writer — mirrors Swift BusinessCard.vCardData. Used
+ * Minimal vCard 3.0 writer. Used
  * only for FILE sharing (`shareVCard` → OS share sheet / AirDrop as a
  * .vcf importable into iOS Contacts / Google Contacts) — it is never
  * rendered into a QR, and the scanner has no vCard parser

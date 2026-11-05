@@ -1,6 +1,6 @@
 /**
  * webSign › Review — the consent screen for an App↔Web per-action signing
- * request (research notes-1.3.3 §4, grill G3/G4). A website (untrusted draft
+ * request. A website (untrusted draft
  * surface) asks the app — the ONLY holder of the root key — to root-sign a
  * Profile Record. This screen:
  *   1. verifies the request (shared fail-closed boundary) and renders a

@@ -1,8 +1,5 @@
 /**
- * PersonDetailMoreSheet — 1:1 port of
- * solidarity/Views/PeopleViews/PersonDetailMoreSheet.swift.
- *
- * "More" sheet presented from the Person detail hero edit pencil. Contains:
+ * PersonDetailMoreSheet — "More" sheet presented from the Person detail hero edit pencil. Contains:
  *   • chevron.left back + dark "Done" pill in the top bar
  *   • Note label + 48pt searchBg input (placeholder)
  *   • Destructive "Delete Contact" row (rgba destructive @ 10% fill,

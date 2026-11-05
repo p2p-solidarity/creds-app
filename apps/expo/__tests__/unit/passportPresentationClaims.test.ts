@@ -2,9 +2,7 @@ import { describe, expect, it } from 'bun:test';
 
 import {
   buildPassportProvableClaims,
-  filterAvailablePassportPresentationClaims,
   filterPassportPublicDisclosureClaims,
-  selectPassportShowPresentationClaims,
 } from '../../src/passport/presentationClaims';
 import type { ProvableClaimEntity } from '../../src/identity/entities';
 
@@ -31,7 +29,7 @@ function claim(
 }
 
 describe('passport presentation claims', () => {
-  it('creates a selectable nationality claim for OpenAC show presentations', () => {
+  it('creates a selectable nationality claim', () => {
     const claims = buildPassportProvableClaims({
       cardId: 'passport-card-1',
       proofType: 'passport_v3',
@@ -55,38 +53,6 @@ describe('passport presentation claims', () => {
     const nationality = claims.find((c) => c.claimType === 'nationality');
     expect(nationality?.title).toBe('Nationality verified by passport');
     expect(nationality?.payload).toContain('"claim":"nationality"');
-  });
-
-  it('passes only proof-backed show claims into the passport show flow', () => {
-    const claims = [
-      claim('age', 'age_over_18'),
-      claim('human', 'is_human'),
-      claim('name', 'field_name'),
-      claim('nat', 'nationality'),
-    ];
-    const selected = new Set(['age', 'human', 'name', 'nat']);
-
-    expect(
-      selectPassportShowPresentationClaims(claims, selected).map((c) => c.claimType)
-    ).toEqual(['age_over_18', 'nationality']);
-  });
-
-  it('offers only claims the active passport presentation path can disclose', () => {
-    const claims = [
-      claim('age', 'age_over_18'),
-      claim('human', 'is_human'),
-      claim('name', 'field_name'),
-      claim('nat', 'nationality'),
-      { ...claim('orphan', 'age_over_18'), identityCardId: 'missing-card' },
-    ];
-
-    expect(
-      filterAvailablePassportPresentationClaims(
-        claims,
-        new Set(['passport-card-1']),
-        new Set(['passport-card-1']),
-      ).map((candidate) => candidate.id)
-    ).toEqual(['age', 'nat']);
   });
 
   it('offers only presentable passport-sourced age claims for public disclosure', () => {

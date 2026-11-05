@@ -19,9 +19,7 @@
 //
 //  DID derivation + JWS/VC verification are pure TS in packages/shared
 //  (didKeyFromJwk / resolveDidKey / verifyJwtEs256) — this module is only
-//  the hardware signing shell. The SpruceID Mobile SDK dependency and its 5
-//  wrapper methods were removed in 1.3.3 S7a (they had zero production
-//  callers — inventory: docs/ref/notes-sprucekit-slim.md).
+//  the hardware signing shell.
 //
 //  All Apple @objc / NSObject delegate protocols are routed through proxies
 //  (LAContextProxy pattern) so the NitroSpec subclass doesn't need to

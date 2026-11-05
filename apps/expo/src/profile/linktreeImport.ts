@@ -1,5 +1,5 @@
 /**
- * Linktree import — 1.3.3 Task A2.4 (US-19), the migration funnel from a
+ * Linktree import — the migration funnel from a
  * plaintext link-in-bio page (Linktree, or any similar personal page) into
  * a Solidarity Profile Record (Me › Edit) or a People "declared" contact.
  *

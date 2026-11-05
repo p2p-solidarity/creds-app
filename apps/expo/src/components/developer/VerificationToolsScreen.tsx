@@ -24,6 +24,7 @@ import { ThemedText } from '@/components/themed';
 import { credentialTrustDisplayFor } from '@/credentials/trustDisplay';
 import { fadeUpIn } from '@/feedback/motion';
 import { useTranslation } from '@/i18n';
+import { capabilities } from '@/platform/distribution';
 import {
   useDisplayClaims,
   useIdentityData,
@@ -76,9 +77,11 @@ export function VerificationToolsScreen({
 
       <ScrollView contentContainerStyle={{ paddingTop: 12, paddingBottom: 100 }}>
         <View className="gap-8">
-          <Animated.View entering={fadeUpIn(0, reduceMotion)}>
-            <ScanEntrySection onScan={() => { router.push('/scan'); }} />
-          </Animated.View>
+          {capabilities.qrScanner ? (
+            <Animated.View entering={fadeUpIn(0, reduceMotion)}>
+              <ScanEntrySection onScan={() => { router.push('/scan'); }} />
+            </Animated.View>
+          ) : null}
 
           <Animated.View entering={fadeUpIn(1, reduceMotion)}>
             <VerifiedCredentialsSection

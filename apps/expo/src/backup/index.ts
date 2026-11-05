@@ -18,7 +18,6 @@ export {
   signInForDrive,
   refreshDriveAccessToken,
   signOut as googleSignOut,
-  googleStatusCodes,
 } from './googleAuth';
 export {
   performBackupNow,

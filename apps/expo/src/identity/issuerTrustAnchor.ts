@@ -1,8 +1,5 @@
 /**
- * IssuerTrustAnchorStore — TS port of
- * solidarity/Services/Identity/IssuerTrustAnchorStore.swift.
- *
- * Holds the user's trusted issuer DIDs. Used by parseAuthRequest /
+ * IssuerTrustAnchorStore — holds the user's trusted issuer DIDs. Used by parseAuthRequest /
  * verifyVcJwt to decide whether a Request-Object signature or VC issuer is
  * acceptable. Persistence is encrypted MMKV under the `trust-anchor:`
  * prefix, matching the AES-GCM blob format the credential store already
@@ -141,20 +138,3 @@ export const useIssuerTrustAnchorStore = create<IssuerTrustAnchorState>((set, ge
     set({ trusted: [], hydrated: true });
   },
 }));
-
-/** Hook selector: list of trusted anchors (paint-stable, no per-render compute). */
-export function useTrustAnchors(): readonly TrustAnchor[] {
-  return useIssuerTrustAnchorStore((s) => s.trusted);
-}
-
-/** Test-only — wipe in-memory state. */
-export function __resetIssuerTrustAnchorStoreForTesting(): void {
-  useIssuerTrustAnchorStore.setState({ trusted: [], hydrated: false });
-  try {
-    for (const k of getMmkv().getAllKeys()) {
-      if (k.startsWith(KEY_PREFIX)) getMmkv().remove(k);
-    }
-  } catch {
-    // ignore — MMKV may not be initialised in tests
-  }
-}

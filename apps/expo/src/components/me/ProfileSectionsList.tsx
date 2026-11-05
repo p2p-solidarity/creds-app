@@ -1,10 +1,8 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { router } from 'expo-router';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, ScrollView, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-import type { SFSymbol } from 'expo-symbols';
 
 import { ModalSheet, sheetTopInset } from '@/components/common/ModalSheet';
 import { PressableScale } from '@/components/common/PressableScale';
@@ -14,6 +12,8 @@ import { Colors } from '@/constants/Colors';
 import { useThemeColors } from '@/constants/useThemeColors';
 import { useTranslation } from '@/i18n';
 import { haptic } from '@/feedback/haptics';
+import { confirmDialog } from '@/feedback/confirmDialog';
+import { isHttpsLinkUrl, normalizeLinkUrl } from '@/profile/linkUrl';
 import {
   PAGE_BLOCK_CATALOG,
   MAX_PAGE_BLOCK_TITLE_LENGTH,
@@ -23,12 +23,9 @@ import {
   MAX_PAGE_SECTIONS,
   blockHasCardSize,
   cardSizeOf,
-  createInitialPageDesign,
-  pageSectionCount,
-  publicPageDesignEquals,
-  toPublicPageDesign,
   type PageBlock,
   type PageBlockItem,
+  type PageBlockType,
 } from '@/page/pageDesign';
 import { preparePageDesign, usePageDesignStore } from '@/page/pageDesignStore';
 import { useProGate } from '@/pro/useProGate';
@@ -36,17 +33,13 @@ import { useProGate } from '@/pro/useProGate';
 import { CardSizePicker } from './CardSizePicker';
 import { PHONE_SCREEN_RADIUS, PageBlockPreview, PageLivePreview, type PreviewBlockEditing } from './PageLivePreview';
 import { PageCollapsibleHeader } from './PageCollapsibleHeader';
-import { PublishChangesCard, type PublishCardState } from './PublishChangesCard';
-import {
-  isBiometricCancellation,
-  isNostrPublishOutcomePartiallyAccepted,
-  isNostrPublishOutcomeSuccessful,
-  publishWithNostrAutoSetup,
-} from '@/nostr/connectWizard';
-import { DEFAULT_RELAYS } from '@/nostr/publish';
-import { hasNostrKey, provisionFromRootMnemonic } from '@/nostr/userKey';
+import { PublishChangesCard } from './PublishChangesCard';
+import { usePagePublish } from './usePagePublish';
 import { useProfileStore } from '@/profile/store';
-import { uuid, type ProfileRecord, type PublicPageDesign } from '@solidarity/shared';
+import { isRenderableLinkUrl, uuid, type ProfileRecord } from '@solidarity/shared';
+
+/** Blocks whose items show an image (`MediaTile` / thumbnails) — matches web `MEDIA_BLOCK_TYPES`. */
+const MEDIA_BLOCK_TYPES: ReadonlySet<PageBlockType> = new Set(['portfolio', 'featured', 'video', 'shop']);
 
 export interface ProfileSectionsListProps {
   /** Opens the add sheet scoped to sections (the header's ＋). */
@@ -70,39 +63,11 @@ export function ProfileSectionsList({
   const design = usePageDesignStore((state) => state.design);
   const blocks = usePageDesignStore((state) => state.design.blocks);
   const moveBlock = usePageDesignStore((state) => state.moveBlock);
+  const removeBlock = usePageDesignStore((state) => state.removeBlock);
   const { locked } = useProGate();
-  const record = useProfileStore((state) => state.record);
-  const published = useProfileStore((state) => state.published);
-  const nostrPublishedJws = useProfileStore((state) => state.nostrPublishedJws);
   const [editing, setEditing] = useState<PageBlock | null>(null);
-  const [publishing, setPublishing] = useState(false);
-  // What the last publish actually did. `done` / `partial` stay until
-  // dismissed or the next edit; the others until the next try. Everything
-  // after a successful local sign (`unpublished`, `relayError`) keeps the
-  // card up even though the signed record already matches the editor.
-  const [publishResult, setPublishResult] = useState<PublishResult>('idle');
-  const [open, setOpen] = useState(false);
-  const publishedDesign = record?.page ?? toPublicPageDesign(createInitialPageDesign());
-  const pageHasChanges = status === 'ready' && record !== null && !publicPageDesignEquals(
-    toPublicPageDesign(design),
-    publishedDesign,
-  );
-  // Signed here but never confirmed on a relay (an earlier local-only save,
-  // or a publish that failed): visitors still get the older Page.
-  const pageNotLive = record !== null && published !== null && nostrPublishedJws !== published.jws;
-  const needsPublish = pageHasChanges || pageNotLive;
+  const pagePublish = usePagePublish(previewHandle);
   const movableBlocks = blocks.filter((block) => block.type !== 'links');
-
-  // A section added from ＋ 新增 unfolds this group, so its placeholder shows
-  // up on the page where it will live instead of disappearing into a fold.
-  const seenBlockIds = useRef<ReadonlySet<string> | null>(null);
-  useEffect(() => {
-    if (status !== 'ready') return;
-    const ids = new Set(blocks.map((block) => block.id));
-    const previous = seenBlockIds.current;
-    seenBlockIds.current = ids;
-    if (previous !== null && [...ids].some((id) => !previous.has(id))) setOpen(true);
-  }, [blocks, status]);
 
   /** Pro-only section on a lapsed plan: its controls go to the plan, never edit. */
   const proLocked = (block: PageBlock): boolean =>
@@ -124,24 +89,18 @@ export function ProfileSectionsList({
       const direction = destination < from ? 'up' : 'down';
       for (let step = 0; step < Math.abs(destination - from); step += 1) moveBlock(block.id, direction);
     },
-  };
-
-  // Sign locally (only when the design moved), then publish to Nostr — the
-  // card says "live" only once relays have actually taken the new record.
-  const publishPageChanges = (): void => {
-    if (publishing || !record || status !== 'ready') return;
-    setPublishing(true);
-    void signAndPublishPage(pageHasChanges ? toPublicPageDesign(design) : null)
-      .then((result) => {
-        if (result === 'done' || result === 'partial') haptic('success');
-        else if (result !== 'unpublished') haptic('error');
-        setPublishResult(result);
-      })
-      .catch(() => {
-        haptic('error');
-        setPublishResult('relayError');
-      })
-      .finally(() => { setPublishing(false); });
+    onRemove: (block) => {
+      void confirmDialog({
+        title: t('pageDesign.removeSectionConfirmTitle', { title: block.title }),
+        message: t('pageDesign.removeSectionConfirmBody'),
+        confirmLabel: t('pageDesign.removeShort'),
+        destructive: true,
+      }).then((ok) => {
+        if (!ok) return;
+        removeBlock(block.id);
+        haptic('success');
+      });
+    },
   };
 
   return (
@@ -149,8 +108,6 @@ export function ProfileSectionsList({
       <PageCollapsibleHeader
         title={t('mePage.sections')}
         summary={status === 'ready' ? `${movableBlocks.length}/${MAX_PAGE_SECTIONS}` : null}
-        open={open}
-        onToggle={() => { setOpen((current) => !current); }}
         add={{
           label: t('pageDesign.addSection'),
           disabled: status !== 'ready' || movableBlocks.length >= MAX_PAGE_SECTIONS,
@@ -158,7 +115,9 @@ export function ProfileSectionsList({
         }}
       />
 
-      {!open ? null : status === 'loading' ? (
+      {/* Never folded: a section just added from ＋ must show up where it
+          will live, not disappear into a closed group. */}
+      {status === 'loading' ? (
         <ThemedSurface padded className="items-center gap-2">
           <ActivityIndicator color={Colors.primaryBlue} />
           <ThemedText variant="caption" tone="secondary">{t('pageDesign.loading')}</ThemedText>
@@ -176,10 +135,9 @@ export function ProfileSectionsList({
       ) : (
         <>
           {/* The page itself is the editor: it paints as visitors see it, a
-              tapped block opens its editor (order, hide, remove live there)
-              and a long-pressed one drags to a new place;
-              the links block stays first and is edited from the list above.
-              New sections come from the tab's ＋ 新增. */}
+              tapped block opens its editor, a long-pressed one drags to a new
+              place and a swiped-left one asks to be removed; the links block
+              stays first and is edited from the list above. */}
           <View
             style={{
               borderRadius: PHONE_SCREEN_RADIUS + 6,
@@ -196,53 +154,25 @@ export function ProfileSectionsList({
               editing={blockEditing}
             />
           </View>
+          {movableBlocks.length > 0 ? (
+            <ThemedText variant="caption" tone="tertiary" style={{ textAlign: 'center' }}>
+              {t('pageDesign.gestureHint')}
+            </ThemedText>
+          ) : null}
         </>
       )}
 
-      {/* Outside the fold: unpublished changes always show, folded or not. */}
-      {status === 'ready' && (needsPublish || publishResult !== 'idle') ? (
+      {pagePublish.showCard ? (
         <PublishChangesCard
-          state={publishCardState(publishing, pageHasChanges, needsPublish, publishResult, previewHandle)}
-          onPublish={publishPageChanges}
-          onDismiss={() => { setPublishResult('idle'); }}
+          state={pagePublish.cardState}
+          onPublish={pagePublish.publish}
+          onDismiss={pagePublish.dismiss}
         />
       ) : null}
 
       <PageBlockEditorSheet block={editing} onClose={() => { setEditing(null); }} />
     </View>
   );
-}
-
-type PublishResult = 'idle' | 'done' | 'partial' | 'unpublished' | 'saveError' | 'relayError';
-
-async function signAndPublishPage(page: PublicPageDesign | null): Promise<PublishResult> {
-  const { savePageDesign, publishToNostr } = useProfileStore.getState();
-  if (page !== null) {
-    const saved = await savePageDesign(page);
-    if (!saved.ok) return isBiometricCancellation(saved.error) ? 'idle' : 'saveError';
-  }
-  const published = await publishWithNostrAutoSetup({
-    hasKey: hasNostrKey,
-    provision: provisionFromRootMnemonic,
-    publish: async () => await publishToNostr(DEFAULT_RELAYS),
-  });
-  if (!published.ok) return isBiometricCancellation(published.error) ? 'unpublished' : 'relayError';
-  if (isNostrPublishOutcomeSuccessful(published.value)) return 'done';
-  return isNostrPublishOutcomePartiallyAccepted(published.value) ? 'partial' : 'relayError';
-}
-
-function publishCardState(
-  publishing: boolean,
-  pageHasChanges: boolean,
-  needsPublish: boolean,
-  result: PublishResult,
-  handle: string | null,
-): PublishCardState {
-  if (publishing) return { kind: 'publishing' };
-  if (result === 'saveError' && pageHasChanges) return { kind: 'error', reason: 'save' };
-  if (result === 'relayError') return { kind: 'error', reason: 'relay' };
-  if (needsPublish || result === 'unpublished' || result === 'idle') return { kind: 'pending' };
-  return { kind: 'done', handle, partial: result === 'partial' };
 }
 
 function openProSettings(): void {
@@ -259,57 +189,104 @@ function PageBlockEditorContent({ block, onClose }: { readonly block: PageBlock;
   const c = useThemeColors();
   const insets = useSafeAreaInsets();
   const updateBlock = usePageDesignStore((state) => state.updateBlock);
-  const removeBlock = usePageDesignStore((state) => state.removeBlock);
-  const moveBlock = usePageDesignStore((state) => state.moveBlock);
   const setBlockVisible = usePageDesignStore((state) => state.setBlockVisible);
   const appearance = usePageDesignStore((state) => state.design.appearance);
-  // Order and visibility apply at once, so they read the live store, not the
-  // snapshot the sheet opened with.
+  // Visibility applies at once, so it reads the live store, not the snapshot
+  // the sheet opened with. Hiding is gone from the editor; this only lets a
+  // section hidden by an older version come back.
   const visible = usePageDesignStore((state) => state.design.blocks.find((candidate) => candidate.id === block.id)?.visible ?? block.visible);
-  const position = usePageDesignStore((state) => state.design.blocks
-    .filter((candidate) => candidate.type !== 'links')
-    .findIndex((candidate) => candidate.id === block.id));
-  const sectionCount = usePageDesignStore((state) => pageSectionCount(state.design.blocks));
   const record = useProfileStore((state) => state.record);
   const [title, setTitle] = useState(block.title);
   const [style, setStyle] = useState(block.style);
   const [size, setSize] = useState(cardSizeOf(block));
   const setBlockSize = usePageDesignStore((state) => state.setBlockSize);
   const [items, setItems] = useState<readonly PageBlockItem[]>(block.items);
+  // A text section is just text: one box, each line one signed item (the
+  // schema caps a line at 160 characters and a block at 24 items).
+  const isText = block.type === 'text';
+  const [text, setText] = useState(() => block.items.map((item) => item.title).join('\n'));
+  const textLines = text.split('\n').map((line) => line.trim()).filter((line) => line.length > 0);
+  const textError = textLines.length > MAX_PAGE_ITEMS_PER_BLOCK || textLines.some((line) => line.length > MAX_PAGE_ITEM_TITLE_LENGTH)
+    ? t('pageDesign.textTooLong', { lines: MAX_PAGE_ITEMS_PER_BLOCK, chars: MAX_PAGE_ITEM_TITLE_LENGTH })
+    : null;
   const catalog = PAGE_BLOCK_CATALOG.find((entry) => entry.type === block.type);
   if (!catalog) return null;
-  const cleanedItems = items
+  // A bare `instagram.com/x` becomes https:// like the link sheet does; what
+  // still isn't an https address is flagged on its field instead of being
+  // signed into a Page the schema would refuse at publish time.
+  const addressOf = (value: string | undefined): string | undefined => {
+    const trimmed = value?.trim() ?? '';
+    return trimmed.length > 0 ? normalizeLinkUrl(trimmed) : undefined;
+  };
+  const addressError = (value: string | undefined): string | null => {
+    const address = addressOf(value);
+    return address === undefined || (isHttpsLinkUrl(address) && isRenderableLinkUrl(address)) ? null : t('pageDesign.itemAddressInvalid');
+  };
+  const titleError = (item: PageBlockItem): string | null =>
+    item.title.trim().length === 0 && [item.url, item.media, item.price].some((value) => (value?.trim() ?? '').length > 0)
+      ? t('pageDesign.itemTitleRequired')
+      : null;
+  const itemsValid = isText ? textError === null : items.every((item) => titleError(item) === null && addressError(item.url) === null && addressError(item.media) === null);
+  const cleanedItems = isText
+    ? textLines.map((line, index) => ({ id: block.items[index]?.id ?? `${block.id}-t${String(index)}`, title: line }))
+    : items
     .filter((item) => item.title.trim().length > 0)
-    .map((item) => ({
-      ...item,
-      title: item.title.trim(),
-      ...(item.url?.trim() ? { url: item.url.trim() } : { url: undefined }),
-      ...(item.price?.trim() ? { price: item.price.trim() } : { price: undefined }),
-    }));
+    .map((item) => {
+      const url = addressError(item.url) === null ? addressOf(item.url) : undefined;
+      const media = addressError(item.media) === null ? addressOf(item.media) : undefined;
+      return {
+        ...item,
+        title: item.title.trim(),
+        url,
+        ...(item.price?.trim() ? { price: item.price.trim() } : { price: undefined }),
+        media,
+      };
+    });
+  // A text block has no heading on the Page; its first line names it in the
+  // section list and satisfies the schema's required title.
+  const savedTitle = isText
+    ? (textLines[0]?.slice(0, MAX_PAGE_BLOCK_TITLE_LENGTH) ?? block.title)
+    : title;
   // The card at the top is this draft painted exactly as the Page will.
-  const draft: PageBlock = { ...block, title: title.trim() || block.title, style, size, items: cleanedItems };
-  const canSave = title.trim().length > 0;
+  const draft: PageBlock = { ...block, title: savedTitle.trim() || block.title, style, size, items: cleanedItems };
+  const canSave = savedTitle.trim().length > 0 && itemsValid;
+  const dirty = (!isText && title !== block.title) || style !== block.style || size !== cardSizeOf(block)
+    || (isText
+      ? text !== block.items.map((item) => item.title).join('\n')
+      : JSON.stringify(items) !== JSON.stringify(block.items));
   const save = () => {
     if (!canSave) return;
-    updateBlock(block.id, { title, style, items: cleanedItems });
+    updateBlock(block.id, { title: savedTitle, style, items: cleanedItems });
     setBlockSize(block.id, size);
     onClose();
   };
+  const cancel = () => {
+    if (!dirty) {
+      onClose();
+      return;
+    }
+    void confirmDialog({
+      title: t('meEdit.discardTitle'),
+      message: t('meEdit.discardMessage'),
+      confirmLabel: t('meEdit.discardAction'),
+      cancelLabel: t('meEdit.keepEditing'),
+      destructive: true,
+    }).then((discard) => { if (discard) onClose(); });
+  };
   return (
-    <ModalSheet visible onRequestClose={onClose}>
+    <ModalSheet visible onRequestClose={cancel}>
       <View className="flex-1 bg-pageBg" style={{ paddingTop: sheetTopInset(insets.top) }}>
         {/* Cancel / title / Save, like iOS edit sheets: no stack of buttons. */}
         <View className="min-h-14 flex-row items-center justify-between border-b border-divider px-2">
-          <SheetTextButton label={t('common.cancel')} onPress={onClose} />
+          <SheetTextButton label={t('common.cancel')} onPress={cancel} />
           <ThemedText variant="titleMedium">{t('pageDesign.editSectionTitle')}</ThemedText>
           <SheetTextButton label={t('common.save')} strong disabled={!canSave} onPress={save} />
         </View>
-        <KeyboardAwareScrollView
-          keyboardShouldPersistTaps="handled"
-          bottomOffset={16}
-          contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 24, gap: 18 }}>
-          {record !== null ? (
-            <View className="gap-2">
+        {/* The draft painted exactly as the Page will, pinned above the
+            fields so every keystroke shows while the form scrolls. */}
+        {record !== null ? (
+          <View className="border-b border-divider" style={{ maxHeight: 280 }}>
+            <ScrollView contentContainerStyle={{ padding: 12 }} showsVerticalScrollIndicator={false}>
               <View style={{ opacity: visible ? 1 : 0.45 }}>
                 <PageBlockPreview
                   block={draft}
@@ -318,38 +295,22 @@ function PageBlockEditorContent({ block, onClose }: { readonly block: PageBlock;
                   emptyHint={t('pageDesign.previewEmptyHint')}
                 />
               </View>
-            </View>
-          ) : null}
-
-          <ThemedSurface className="flex-row" style={{ paddingVertical: 4 }}>
-            <SheetTool
-              icon="arrow.up"
-              label={t('pageDesign.moveUpShort')}
-              accessibilityLabel={t('pageDesign.moveUp', { title: block.title })}
-              disabled={position <= 0}
-              onPress={() => { moveBlock(block.id, 'up'); }}
+            </ScrollView>
+          </View>
+        ) : null}
+        <KeyboardAwareScrollView
+          keyboardShouldPersistTaps="handled"
+          bottomOffset={16}
+          contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 24, gap: 18 }}>
+          {visible ? null : (
+            <ThemedButton
+              label={t('pageDesign.showSection', { title: block.title })}
+              icon="eye"
+              variant="secondary"
+              fullWidth
+              onPress={() => { setBlockVisible(block.id, true); }}
             />
-            <SheetTool
-              icon="arrow.down"
-              label={t('pageDesign.moveDownShort')}
-              accessibilityLabel={t('pageDesign.moveDown', { title: block.title })}
-              disabled={position < 0 || position >= sectionCount - 1}
-              onPress={() => { moveBlock(block.id, 'down'); }}
-            />
-            <SheetTool
-              icon={visible ? 'eye.slash' : 'eye'}
-              label={t(visible ? 'pageDesign.hideShort' : 'pageDesign.showShort')}
-              accessibilityLabel={t(visible ? 'pageDesign.hideSection' : 'pageDesign.showSection', { title: block.title })}
-              onPress={() => { setBlockVisible(block.id, !visible); }}
-            />
-            <SheetTool
-              icon="trash"
-              color={Colors.destructive}
-              label={t('pageDesign.removeShort')}
-              accessibilityLabel={t('pageDesign.removeSectionNamed', { title: block.title })}
-              onPress={() => { removeBlock(block.id); onClose(); }}
-            />
-          </ThemedSurface>
+          )}
 
           {catalog.styles.length > 1 ? (
             <View className="gap-2">
@@ -367,14 +328,26 @@ function PageBlockEditorContent({ block, onClose }: { readonly block: PageBlock;
             </View>
           ) : null}
           {blockHasCardSize(style) ? <CardSizePicker value={size} onChange={setSize} /> : null}
-          <ThemedTextInput
-            label={t('pageDesign.sectionTitle')}
-            value={title}
-            maxLength={MAX_PAGE_BLOCK_TITLE_LENGTH}
-            onChangeText={setTitle}
-            showClear
-          />
+          {isText ? null : (
+            <ThemedTextInput
+              label={t('pageDesign.sectionTitle')}
+              value={title}
+              maxLength={MAX_PAGE_BLOCK_TITLE_LENGTH}
+              onChangeText={setTitle}
+              showClear
+            />
+          )}
 
+          {isText ? (
+            <ThemedTextInput
+              accessibilityLabel={t('pageDesign.block.text')}
+              value={text}
+              onChangeText={setText}
+              placeholder={t('pageDesign.textPlaceholder')}
+              error={textError}
+              multiline
+            />
+          ) : (
           <View className="gap-2">
             <ThemedText variant="label" tone="tertiary">
               {`${t('pageDesign.items')} ${items.length}/${MAX_PAGE_ITEMS_PER_BLOCK}`}
@@ -387,6 +360,7 @@ function PageBlockEditorContent({ block, onClose }: { readonly block: PageBlock;
                       label={t('pageDesign.itemTitle')}
                       value={item.title}
                       maxLength={MAX_PAGE_ITEM_TITLE_LENGTH}
+                      error={titleError(item)}
                       onChangeText={(nextTitle) => {
                         setItems((current) => current.map((candidate) => candidate.id === item.id ? { ...candidate, title: nextTitle } : candidate));
                       }}
@@ -406,11 +380,24 @@ function PageBlockEditorContent({ block, onClose }: { readonly block: PageBlock;
                   kind="url"
                   label={t('pageDesign.itemUrl')}
                   value={item.url ?? ''}
+                  error={addressError(item.url)}
                   onChangeText={(url) => {
                     setItems((current) => current.map((candidate) => candidate.id === item.id ? { ...candidate, url } : candidate));
                   }}
                   showClear
                 />
+                {MEDIA_BLOCK_TYPES.has(block.type) ? (
+                  <ThemedTextInput
+                    kind="url"
+                    label={t('pageDesign.itemMedia')}
+                    value={item.media ?? ''}
+                    error={addressError(item.media)}
+                    onChangeText={(media) => {
+                      setItems((current) => current.map((candidate) => candidate.id === item.id ? { ...candidate, media } : candidate));
+                    }}
+                    showClear
+                  />
+                ) : null}
                 {block.type === 'shop' ? (
                   <ThemedTextInput
                     label={t('pageDesign.itemPrice')}
@@ -433,6 +420,7 @@ function PageBlockEditorContent({ block, onClose }: { readonly block: PageBlock;
               />
             ) : null}
           </View>
+          )}
         </KeyboardAwareScrollView>
       </View>
     </ModalSheet>
@@ -459,40 +447,6 @@ function SheetTextButton({
       accessibilityState={{ disabled }}
       style={{ minWidth: 64, height: 44, paddingHorizontal: 8, justifyContent: 'center', opacity: disabled ? 0.35 : 1 }}>
       <ThemedText variant={strong ? 'titleMedium' : 'bodyLarge'} style={{ textAlign: 'center' }}>{label}</ThemedText>
-    </PressableScale>
-  );
-}
-
-/** One of the block's whole-section actions: icon over a short word. */
-function SheetTool({
-  icon,
-  label,
-  accessibilityLabel,
-  color,
-  disabled = false,
-  onPress,
-}: {
-  readonly icon: SFSymbol;
-  readonly label: string;
-  readonly accessibilityLabel: string;
-  readonly color?: string;
-  readonly disabled?: boolean;
-  readonly onPress: () => void;
-}): ReactNode {
-  const c = useThemeColors();
-  const tint = color ?? c.text1;
-  return (
-    <PressableScale
-      haptic="tap"
-      onPress={onPress}
-      disabled={disabled}
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-      accessibilityState={{ disabled }}
-      containerStyle={{ flex: 1 }}
-      style={{ minHeight: 52, alignItems: 'center', justifyContent: 'center', gap: 4, opacity: disabled ? 0.3 : 1 }}>
-      <SfIcon name={icon} size={17} color={tint} />
-      <ThemedText variant="caption" style={{ color: tint }}>{label}</ThemedText>
     </PressableScale>
   );
 }

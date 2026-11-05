@@ -2,10 +2,10 @@
  * Profile snapshots — local record of pages the user has scanned/verified
  * or imported and saved to People.
  *
- * Two kinds, one store (1.3.3 Task A2.4, US-19 fast-follow to A2.3):
+ * Two kinds, one store:
  *   - `kind: 'verified'` — a Verified Page the device cryptographically
  *     checked itself (record + jws + `verifiedAt`), scanned via the Verify
- *     tab (Task A2.3, commit 1afb4a2). Keyed by `did`, its one stable
+ *     tab. Keyed by `did`, its one stable
  *     identity — the natural de-dupe key for "I already have this person".
  *   - `kind: 'declared'` — a plaintext link page (Linktree or similar) the
  *     user pasted a URL for (`src/profile/linktreeImport.ts`). There is NO
@@ -20,7 +20,7 @@
  * pinned by `profileSnapshots.test.ts`'s "legacy shape" describe block.
  *
  * Deliberately a PARALLEL store, not folded into `src/contacts/repository.ts`:
- * a Profile Record (`displayName`/`bio`/`links`/`badges`, 01-spec §3) is a
+ * a Profile Record (`displayName`/`bio`/`links`/`badges`) is a
  * structurally different shape from `Contact`'s BusinessCard-derived model
  * (`name`/`title`/`company`/`email`/`phone`/`sharingPreferences`/exchange
  * signatures/...). Mapping a scanned Profile Record into a `Contact` would
@@ -71,9 +71,9 @@ const KEY = 'profileSnapshots:v1';
 
 /**
  * The projection scope a signed record represents (T7). An absent `record.
- * scope` means `full` — every pre-T7 record and every Pear/full card omits it.
+ * scope` means `full` — every pre-T7 record and every full card omits it.
  * Verified snapshots are keyed by `(did, scope)` so a `public` projection
- * (fetched from Nostr) and a `full` card (Pear-exchanged) for the SAME did
+ * (fetched from Nostr) and a `full` card for the SAME did
  * COEXIST instead of being flagged a `conflict`; the equal-`updatedAt`-
  * different-content conflict rule only ever fires WITHIN one scope.
  */
@@ -136,6 +136,14 @@ export interface VerifiedSnapshot {
    *  unset. Never shown as part of the person's signed Page. */
   readonly phone: string | null;
   readonly email: string | null;
+  /** The creds.id name (`gimmy` for creds.id/@gimmy) this phone last
+   *  checked both ways for this Page — the name directory points at the
+   *  Page's Nostr key and the key's profile names it back. Device-owned like
+   *  `note`; null when unknown or the last check said it no longer holds. */
+  readonly handle: string | null;
+  /** The manual contact the user merged into this Page (`contacts/repository`
+   *  id). Device-owned; null when not merged. */
+  readonly linkedContactId: string | null;
   /** Same-timestamp, different-content forks kept as conflict markers. */
   readonly conflicts: readonly VerifiedConflict[];
 }
@@ -225,9 +233,8 @@ export function stableDeclaredId(sourceUrl: string): string {
  *     stored primary is kept and the incoming version is recorded as a
  *     `VerifiedConflict` marker; NEVER a silent overwrite.
  *
- * Used by BOTH the Verify-tab revisit-revalidate path and the T5 Pear mutual
- * card import, so the exact same freshness/conflict semantics apply however a
- * signed page arrives.
+ * Used by the Verify-tab revisit-revalidate path, so the same
+ * freshness/conflict semantics apply however a signed page arrives.
  */
 export type SnapshotMergeOutcome =
   | { readonly kind: 'saved'; readonly snapshot: VerifiedSnapshot }
@@ -268,7 +275,7 @@ export function mergeVerifiedSnapshot(
   if (!existing) {
     return {
       kind: 'saved',
-      snapshot: { kind: 'verified', did: record.did, scope, record, jws, verifiedAt: nowIso, note: null, phone: null, email: null, conflicts: [] },
+      snapshot: { kind: 'verified', did: record.did, scope, record, jws, verifiedAt: nowIso, note: null, phone: null, email: null, handle: null, linkedContactId: null, conflicts: [] },
     };
   }
 
@@ -297,6 +304,8 @@ export function mergeVerifiedSnapshot(
         note: existing.note,
         phone: existing.phone,
         email: existing.email,
+        handle: existing.handle,
+        linkedContactId: existing.linkedContactId,
         conflicts: [],
       },
     };
@@ -326,6 +335,8 @@ interface PersistedVerifiedEntry {
   readonly note?: unknown; // absent on pre-T5 entries — back-compat
   readonly phone?: unknown; // absent on entries saved before local details — back-compat
   readonly email?: unknown;
+  readonly handle?: unknown; // absent on entries saved before usernames — back-compat
+  readonly linkedContactId?: unknown;
   readonly conflicts?: unknown; // absent on pre-T5 entries — back-compat
 }
 
@@ -401,6 +412,8 @@ function readPersistedVerified(entry: PersistedVerifiedEntry): VerifiedSnapshot 
     note,
     phone: persistedText(entry.phone),
     email: persistedText(entry.email),
+    handle: persistedText(entry.handle),
+    linkedContactId: persistedText(entry.linkedContactId),
     conflicts: readPersistedConflicts(entry.conflicts),
   };
 }
@@ -459,6 +472,8 @@ function writePersisted(
               note: snapshot.note,
               phone: snapshot.phone,
               email: snapshot.email,
+              handle: snapshot.handle,
+              linkedContactId: snapshot.linkedContactId,
               conflicts: snapshot.conflicts.map((c) => ({
                 record: c.record,
                 jws: c.jws,
@@ -504,8 +519,7 @@ interface ProfileSnapshotState {
    * (`mergeVerifiedSnapshot`) instead of the old unconditional overwrite.
    * Returns the tagged `SnapshotMergeOutcome` so a caller can HONESTLY report
    * what happened (saved / already current / kept newer / conflict) — the
-   * distinction the Pear mutual-import receipt and the scan-result toast both
-   * depend on. Preserves any device note across updates.
+   * distinction the scan-result toast depends on. Preserves any device note across updates.
    */
   readonly mergeVerified: (record: ProfileRecord, jws: string) => SnapshotMergeOutcome;
   /** Set (or clear, with `null`/blank) the device-owned note for a saved
@@ -515,6 +529,11 @@ interface ProfileSnapshotState {
    *  snapshot in one write (blank clears a field). No-op if the DID isn't a
    *  saved verified page. */
   readonly setLocalDetails: (did: string, details: LocalDetails) => void;
+  /** Record the creds.id name last checked for this did (null clears). Set on
+   *  every stored scope of the did so a richer projection keeps it. */
+  readonly setHandle: (did: string, handle: string | null) => void;
+  /** Merge (contact id) or unmerge (null) a manual contact into this Page. */
+  readonly linkContact: (did: string, contactId: string | null) => void;
   /** Insert-or-replace by `stableDeclaredId(sourceUrl)` — re-pasting the
    * same link page updates the saved link list rather than duplicating. */
   readonly upsertDeclared: (
@@ -540,7 +559,16 @@ export const useProfileSnapshotStore = create<ProfileSnapshotState>((set, get) =
     const key = verifiedKey(record.did, scopeOf(record));
     const current = get().snapshots.get(key);
     const existing = current?.kind === 'verified' ? current : undefined;
-    const outcome = mergeVerifiedSnapshot(existing, record, jws, new Date().toISOString());
+    const merged = mergeVerifiedSnapshot(existing, record, jws, new Date().toISOString());
+    // A first projection of a new scope inherits the person-level fields
+    // (name, merge) from the scopes already stored for this did.
+    const sibling = existing ? undefined : bestVerifiedForDid(get().snapshots, record.did);
+    const outcome: SnapshotMergeOutcome = sibling
+      ? {
+          ...merged,
+          snapshot: { ...merged.snapshot, handle: sibling.handle, linkedContactId: sibling.linkedContactId },
+        }
+      : merged;
     if (existing && outcome.kind === 'saved') {
       if (canCommitLocalData(writeEpoch)) {
         useRecentUpdatesStore.getState().recordMerge(existing.record, record);
@@ -579,6 +607,14 @@ export const useProfileSnapshotStore = create<ProfileSnapshotState>((set, get) =
     if (writePersisted(next, writeEpoch)) set({ snapshots: next });
   },
 
+  setHandle: (did, handle) => {
+    patchAllScopes(did, { handle });
+  },
+
+  linkContact: (did, contactId) => {
+    patchAllScopes(did, { linkedContactId: contactId });
+  },
+
   upsertDeclared: (sourceUrl, title, links) => {
     const writeEpoch = captureLocalDataEpoch();
     const id = stableDeclaredId(sourceUrl);
@@ -614,6 +650,27 @@ export const useProfileSnapshotStore = create<ProfileSnapshotState>((set, get) =
     set({ snapshots: new Map() });
   },
 }));
+
+/** Patch person-level device fields on every stored scope of a did. */
+function patchAllScopes(
+  did: string,
+  patch: Partial<Pick<VerifiedSnapshot, 'handle' | 'linkedContactId'>>,
+): void {
+  const writeEpoch = captureLocalDataEpoch();
+  const { snapshots } = useProfileSnapshotStore.getState();
+  const next = new Map(snapshots);
+  let changed = false;
+  for (const scope of SCOPE_BY_RANK) {
+    const key = verifiedKey(did, scope);
+    const current = next.get(key);
+    if (current?.kind !== 'verified') continue;
+    const updated = { ...current, ...patch };
+    if (updated.handle === current.handle && updated.linkedContactId === current.linkedContactId) continue;
+    next.set(key, updated);
+    changed = true;
+  }
+  if (changed && writePersisted(next, writeEpoch)) useProfileSnapshotStore.setState({ snapshots: next });
+}
 
 /** Swap in the persisted snapshot set from MMKV. Call once from the root
  * layout after `initMmkv()` resolves — mirrors `hydrateProfile()`. */
@@ -661,13 +718,6 @@ export function getProfileSnapshot(did: string): VerifiedSnapshot | undefined {
 export const useProfileSnapshot = (did: string | undefined): VerifiedSnapshot | undefined =>
   useProfileSnapshotStore((s) => (did ? bestVerifiedForDid(s.snapshots, did) : undefined));
 
-/** Declared-only lookup by `stableDeclaredId(sourceUrl)` — used by
- * `/people/declared/[id]`. */
-export function getDeclaredSnapshot(id: string): DeclaredSnapshot | undefined {
-  const found = useProfileSnapshotStore.getState().snapshots.get(id);
-  return found?.kind === 'declared' ? found : undefined;
-}
-
 export const useDeclaredSnapshot = (id: string | undefined): DeclaredSnapshot | undefined =>
   useProfileSnapshotStore((s) => {
     if (!id) return undefined;
@@ -707,8 +757,6 @@ export function sortedProfileSnapshots(
 
 /** `useShallow` is required: this selector derives a fresh array every
  * call, and Zustand v5's `useSyncExternalStore` snapshot caching would
- * otherwise treat that new reference as a state change on every render —
- * see the equivalent note on `useContactListDetail` in
- * `contacts/repository.ts`. */
+ * otherwise treat that new reference as a state change on every render. */
 export const useSortedProfileSnapshots = (): readonly ProfileSnapshot[] =>
   useProfileSnapshotStore(useShallow((s) => sortedProfileSnapshots(s.snapshots)));

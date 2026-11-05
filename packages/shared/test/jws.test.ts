@@ -2,13 +2,13 @@
  * jws.ts — compact JWS (ES256, did:key) sign + verify. Covers the
  * signCompact/verifyCompact contract directly, plus consumption of the
  * frozen conformance vectors in ../vectors/jws.json — the same vectors the
- * web viewer will later replay against its own implementation (03-spec §3).
+ * web viewer will later replay against its own implementation.
  */
 import { describe, expect, test } from 'bun:test';
 import { p256 } from '@noble/curves/nist.js';
 
 import { signCompact, verifyCompact, type Signer } from '../src/jws';
-import { didKeyFromPublicKey, publicKeyFromPrivate, publicKeyToJwk } from '../src/identity';
+import { didKeyFromPublicKey, publicKeyFromPrivate, publicKeyToJwk, signJwtEs256, verifyJwtEs256 } from '../src/identity';
 import { base64UrlDecode, base64UrlEncode, bytesToUtf8, utf8ToBytes } from '../src/crypto/base64';
 import { sha256Bytes } from '../src/crypto/hash';
 import { hexToBytes } from '../src/crypto/hex';
@@ -274,4 +274,24 @@ describe('jws.json conformance vectors', () => {
       expect(result.ok).toBe(false);
     });
   }
+});
+
+describe('identity/jwt ES256 is standard single-hash', () => {
+  // Regression (2026-11-05 E2E): noble v2's default prehash hashed the digest
+  // twice, so phone-signed (standard) JWTs never verified.
+  const input = `${base64UrlEncode(utf8ToBytes('{"alg":"ES256"}'))}.${base64UrlEncode(utf8ToBytes('{"sub":"x"}'))}`;
+  const jwk = publicKeyToJwk(publicKeyFromPrivate(TEST_PRIV));
+
+  test('verifies a standard ES256 signature and rejects a double-hashed one', () => {
+    const single = p256.sign(sha256Bytes(utf8ToBytes(input)), TEST_PRIV, { prehash: false });
+    const double = p256.sign(sha256Bytes(utf8ToBytes(input)), TEST_PRIV);
+    expect(verifyJwtEs256(`${input}.${base64UrlEncode(single)}`, jwk).payload).toEqual({ sub: 'x' });
+    expect(() => verifyJwtEs256(`${input}.${base64UrlEncode(double)}`, jwk)).toThrow();
+  });
+
+  test('signJwtEs256 output verifies with a plain single-hash ES256 check', () => {
+    const [h, p, s] = signJwtEs256({ alg: 'ES256' }, { sub: 'x' }, TEST_PRIV).split('.') as [string, string, string];
+    const digest = sha256Bytes(utf8ToBytes(`${h}.${p}`));
+    expect(p256.verify(base64UrlDecode(s), digest, publicKeyFromPrivate(TEST_PRIV), { prehash: false })).toBe(true);
+  });
 });

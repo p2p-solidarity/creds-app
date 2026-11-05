@@ -1,5 +1,5 @@
 /**
- * VerifiedCredentialRow — Figma 743:2981. Swift parity:
+ * VerifiedCredentialRow — Figma 743:2981.
  *   • Card: mutedSurface, corner 8, pad 12, horiz mx 16
  *   • Top row: 14pt icon + 15pt title + chevron.right (12pt semibold)
  *   • Divider: 0.5pt

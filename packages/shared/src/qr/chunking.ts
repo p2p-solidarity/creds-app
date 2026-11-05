@@ -1,5 +1,5 @@
 /**
- * QR code chunking — mirrors solidarity/Services/Card/QRCodeChunkingService.swift.
+ * QR code chunking.
  *
  * Wire format (per Swift impl, fields dot-separated, base64url chunk last):
  *   sqc1.<sessionId>.<index>.<totalCount>.<sha256_hex>.<base64url_chunk>
@@ -10,7 +10,7 @@
  *   sha256_hex     64-char hex SHA-256 of the FULL reassembled UTF-8 payload.
  *   base64url      RFC 4648 url-safe, no padding.
  *
- * Constraints (Swift parity):
+ * Constraints:
  *   - minChunkDataBytes      512
  *   - defaultChunkDataBytes  2100
  *   - maxFramePayloadBytes   2950   (frame's UTF-8 length budget)

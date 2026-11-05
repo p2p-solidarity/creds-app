@@ -140,7 +140,7 @@ export function WitnessSection({ record }: { readonly record: ProfileRecord }): 
     const event = await createWitness(target, page.name, page.subject);
     if (!event.ok) {
       setWitnessing(null);
-      pushToast(t(`zktls.error.${event.error === 'noNostrKey' ? 'noNostrKey' : event.error}`, { platform: target.platform }), 'error');
+      pushToast(t(`socialProof.error.${event.error === 'noNostrKey' ? 'noNostrKey' : event.error}`, { platform: target.platform }), 'error');
       return;
     }
     const report = await publishWitness(event.value, DEFAULT_RELAYS);
@@ -149,7 +149,7 @@ export function WitnessSection({ record }: { readonly record: ProfileRecord }): 
       rememberMyWitness(claim, page.subjectHex, event.value.created_at);
       setWitnessed((prev) => new Set(prev).add(claim));
     }
-    pushToast(t(report.success ? 'witness.published' : 'zktls.publishPending'), report.success ? 'success' : 'error');
+    pushToast(t(report.success ? 'witness.published' : 'socialProof.publishPending'), report.success ? 'success' : 'error');
   };
 
   const offered: string[] = [];

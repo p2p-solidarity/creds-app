@@ -1,5 +1,5 @@
 /**
- * profile.ts — Profile Record schema (01-spec §3) round trip: a valid
+ * profile.ts — Profile Record schema round trip: a valid
  * shape parses to a `ProfileRecord`; any structural deviation (wrong
  * literal `v`, missing field, wrong type, unrecognized extra key,
  * malformed `updatedAt`) is rejected via `Result`, never thrown. Plus

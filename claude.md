@@ -5,13 +5,14 @@
 ## Where truth lives (read in this order)
 
 1. `apps/expo/CLAUDE.md` — the coding rulebook. Mandatory before editing anything under `apps/expo/`.
-2. **Live plan**: `docs/ref/10-plan-simplify-and-verify.md` — 5 user stories (§1); social verification = **§3.11 local-first** (device attestation via App Attest / Android Key Attestation, viewer's own fetch, p2p witnesses, Pro-only creds.id notary witness, passport nullifier; built 2026-10-30, not yet run on a real device); one card / two QR forms (§4, P4) and hidden passport ZK (§5, P5) — **not built yet**. zkTLS / TLSNotary / notary-evidence sections (§2 notary parts, §3.1–§3.10) are retired history. Newer plans `docs/ref/11-*` take over pieces of 10 when present (UI rebrand + P4/P5, passport OpenAC review).
-3. **Built mechanisms (still accurate)**: `08-plan-passkey-root-sync.md` (passkey PRF root vault, ciphertext-only service, owner index; Page content syncs through Nostr, not the vault), `09-plan-pro-entitlement.md` (IAP + license bridge), `05-spec-qr-exchange.md` (QR wire SSOT until P4 removes the chunk wires), `06-plan-convergence-2.0.0.md` (north star "company dies, page still works" and old-feature keep/cut; its Q2 is voided by 10).
-4. **Background spec**: `docs/ref/01–03` (1.3.3 "Verified Page" spec; §6 of 03 = kept/evolved/frozen/deleted table). `notes-rebrand-audit-2026-10.md` = 2026-10-28 rebrand audit.
-5. **History only**: `docs/archive/` (done or superseded plans and audits), `docs/ref/04-plan-app.md` (superseded 1.3.3 plan, still cited by code comments), `docs/ref/notes-archive-pre-2.0.0.md` (distilled pre-2.0.0 plans; `docs/superpowers` and `.superpowers` are deleted).
-6. **STALE — do not trust**: `README.md`, `spec.md`, `architecture.png` describe the deleted SwiftUI app and pre-pivot architecture.
+2. **Live plan**: `docs/ref/10-plan-simplify-and-verify.md` — 5 user stories (§1); social verification = **§3.11 local-first** (device attestation via App Attest / Android Key Attestation, viewer's own fetch, p2p witnesses, Pro-only creds.id witness that fetches the page itself — no TLSNotary, passport nullifier; built 2026-10-30, not yet run on a real device); one card / two QR forms (§4, P4) and hidden passport ZK (§5, P5) — **not built yet**. `docs/ref/11-plan-passport-openac.md` (passport honesty) and `12-plan-ui-rebrand.md` (rebrand + P4/P5) take over pieces of 10.
+3. **Built mechanisms**: `08-plan-passkey-root-sync.md` (passkey PRF root vault, ciphertext-only service, owner index; Page content syncs through Nostr, not the vault), `09-plan-pro-entitlement.md` (IAP + license bridge), `05-spec-qr-exchange.md` (QR wire SSOT until P4 removes the chunk wires), `13-plan-fdroid.md` (F-Droid flavor). `14-goal-code-cleanup.md` = the open dead-code / legacy-subsystem / comment cleanup goal. `15-plan-bare-name-url.md` = `creds.id/name` without `@` + the reserved-name table (design, not built).
 
-Evidence of what actually ran lives in `docs/e2e/<date>-<slug>/result.md` — check the "Not run" list there before claiming a feature works.
+Older specs, plans and audits (01–04, 06, archive, notes) were deleted 2026-11-04; `git log -- docs/` has them. Code comments that cite them are stale.
+
+Decisions in plans and grill results are the recommendation as of their date, not law. When new facts contradict one, say so and propose a change with a recommendation — don't defend the old decision, and don't treat an old plan section as a rule.
+
+Evidence of what actually ran lives in `docs/e2e/<date>-<slug>/result.md` — check the "Not run" list there before claiming a feature works. Screenshots are gitignored: keep them next to `result.md` locally, commit only the `.md`.
 
 ## Workflow — every coding task
 
@@ -25,7 +26,7 @@ Evidence of what actually ran lives in `docs/e2e/<date>-<slug>/result.md` — ch
 - Sensitive paths: `apps/expo/src/{passport,keychain,identity,vault,witness}`, `packages/shared/src/{deviceproof,rootVault.ts,pro}` and `nitro-modules/{attest,keystone}` (attest = mrz-ocr+nfc-passport+semaphore+DeviceAttest; passport-zk removed in 11 P2; keystone = secrets-vault+spruce-did+cloudkit). Any change here is size **L** in flow — never S.
 - Never read, print, or commit: `apps/expo/secrets/`, any `.env*`, `apps/expo/infra/terraform/terraform.tfstate*` / `terraform.tfvars`.
 - Security-path errors use tagged unions (e.g. `BiometricResult`) — never throw raw, never swallow, never log PII.
-- Face ID gates: `ALWAYS_PROMPT_ACTIONS` (rotateMasterKey, revealRecoveryBundle, deleteZKIdentity) deliberately bypass the biometric grace window (`apps/expo/src/keychain/sensitiveActionPolicy.ts`). Adding a grace period there is a security regression, not an optimization. Default gate mode is `redLineOnly` and showing your own card QR never prompts (the one card shows the already-signed Page; nothing signs at display time) — Kidney's call, 2026-10-30 (`docs/e2e/2026-10-30-faceid-prompts/result.md`); Pear `cardRelease` still always prompts.
+- Face ID gates: `ALWAYS_PROMPT_ACTIONS` (rotateMasterKey, revealRecoveryBundle, deleteZKIdentity) deliberately bypass the biometric grace window (`apps/expo/src/keychain/sensitiveActionPolicy.ts`). Adding a grace period there is a security regression, not an optimization. Default gate mode is `redLineOnly` and showing your own card QR never prompts (the one card shows the already-signed Page; nothing signs at display time) — Kidney's call, 2026-10-30 (`docs/e2e/2026-10-30-faceid-prompts/result.md`).
 - Nitro `ArrayBuffer` args are non-owning: touching `buffer.data`/`.size` inside `Promise.async` is an uncatchable native crash. Copy the bytes synchronously first. Treat every new HybridObject method with an ArrayBuffer param as suspect.
 - Passport honesty: the app proves nothing about a passport in a circuit any more (`docs/ref/11` P2). L3 = passive auth + device-attested statement, L2 = passive auth on this phone only, L1 = unverified; ZK-era passport records display L1 and ask for a rescan. Never present a lower tier as a higher one.
 - Witness honesty (10 §3.11): device attestation proves "genuine creds App on a real phone", not "a distinct person" — one phone can mint unlimited attested keys, so only the passport nullifier counts distinct people. The owner can never witness themselves (witness npub and device key must differ from the owner's). Badges say "checked by the creds App on a real phone", never "unforgeable".
@@ -34,7 +35,7 @@ Evidence of what actually ran lives in `docs/e2e/<date>-<slug>/result.md` — ch
 ## Traps (verified 2026-10-30)
 
 - `.claude/worktrees/*` are other sessions' live checkouts — **exclude them from every search**, and never edit them from here.
-- Root `ios/`, `android/`, `app.json`, `solidarity.xcodeproj/`, `ci_scripts/` are stale artifacts. Real native projects: `apps/expo/{ios,android}` (regenerated by prebuild). Real CI script source: `apps/expo/ci-scripts/ci_post_clone.sh`.
+- Real native projects: `apps/expo/{ios,android}` (regenerated by prebuild). Real CI script source: `apps/expo/ci-scripts/ci_post_clone.sh`.
 - `packages/parity-fixtures/` is frozen: the Swift `FixtureExporter` that generated it was deleted — never regenerate or edit fixtures (its README explains the policy).
 - No fake data — ever: data-driven UI renders exactly `loading` / `ready` / `error`; never a plausible placeholder. Full rule with examples: `apps/expo/CLAUDE.md` Rule 8.
 - App Attest does not exist on simulators: anything in the witness / device-key path can only be proven on a real device.

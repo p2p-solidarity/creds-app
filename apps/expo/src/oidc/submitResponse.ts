@@ -1,7 +1,5 @@
 /**
- * OIDC response submission — TS port of
- * solidarity/Services/Identity/OIDCService+Submit.swift +
- * `+Response.swift`, scoped to the vp_token path.
+ * OIDC response submission, scoped to the vp_token path.
  *
  * Behaviour parity with Swift:
  *   - `response_uri` present + response_mode starts with `direct_post`

@@ -1,7 +1,5 @@
 /**
- * App preferences — zustand-backed prefs persisted in MMKV. Mirrors Swift
- * UserDefaults-derived stores (NotificationSettingsManager, ShareSettingsStore,
- * BackupSettings, etc.) collapsed into one TS surface.
+ * App preferences — zustand-backed prefs persisted in MMKV, one surface.
  *
  * Reads start with DEFAULTS so the store is safe to subscribe to BEFORE
  * `initMmkv()` finishes. Call `hydratePreferences()` from the root layout
@@ -39,8 +37,6 @@ export type SensitiveActionKey =
   | 'revealRecoveryBundle'
   | 'registerTrustAnchor'
   | 'deleteZKIdentity';
-
-/** Mirrors Swift AppColorScheme (system / light / dark). */
 export type AppColorScheme = 'system' | 'light' | 'dark';
 
 export interface Preferences {
@@ -81,7 +77,6 @@ export interface Preferences {
   readonly notificationsEnabled: boolean;
   readonly developerMode: boolean;
   readonly themeMode: 'auto' | 'light' | 'dark';
-  /** Mirrors Swift ThemeManager.appColorScheme. */
   readonly appColorScheme: AppColorScheme;
   /**
    * Per-action Face ID requirement flags (Swift SensitiveActionPolicyStore).
@@ -89,17 +84,11 @@ export interface Preferences {
    * @deprecated No longer written or read as a gate — see `SensitiveActionKey`.
    */
   readonly biometricPolicy: Readonly<Record<SensitiveActionKey, boolean>>;
-  /** Mirrors Swift BackupSettings.enabled. */
   readonly backupEnabled: boolean;
-  /** Mirrors Swift NotificationSettingsManager.enableInAppToast. */
   readonly notificationsInAppToast: boolean;
-  /** Mirrors Swift NotificationSettingsManager.enableRemoteNotification. */
   readonly notificationsRemote: boolean;
-  /** Mirrors Swift NotificationSettingsManager.enableAutoSync. */
   readonly notificationsAutoSync: boolean;
-  /** Mirrors Swift NotificationSettingsManager.syncIntervalSeconds. */
   readonly notificationsSyncIntervalSeconds: number;
-  /** Mirrors Swift DeveloperModeManager.simulateNFC. */
   readonly simulateNfc: boolean;
   /** Share-field toggles — mirror Swift ShareSettingsView @AppStorage keys. */
   readonly shareTitle: boolean;
@@ -117,8 +106,9 @@ export interface Preferences {
   readonly language: string;
   /** Re-publish later profile edits after the user has explicitly published once. */
   readonly nostrAutoRepublish: boolean;
-  /** Allow user-initiated, on-demand Pear peer exchange in production UI. */
-  readonly pearExchangeEnabled: boolean;
+  /** Relays confirmed this Page at least once, so its online address
+   *  resolves even while newer local edits wait to be published. */
+  readonly nostrPagePublishedOnce: boolean;
   /**
    * Root-key (seed-derived did:key, `src/identity/rootKey.ts`) backup
    * consent — recorded at the onboarding `backup.tsx` step. `'icloud'` is
@@ -179,7 +169,7 @@ const DEFAULTS: Preferences = {
   // overrides the device locale on relaunch.
   language: '',
   nostrAutoRepublish: false,
-  pearExchangeEnabled: true,
+  nostrPagePublishedOnce: false,
   rootKeySyncChoice: 'undecided',
 };
 

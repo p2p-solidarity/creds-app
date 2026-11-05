@@ -126,13 +126,6 @@ build/
 *.tsbuildinfo
 .eslintcache
 
-# Exception: the checked-in `bare-pack` worklet bundle is a committed
-# artifact, not disposable build output — regenerate via
-# `bun run pear:pack` (apps/expo/scripts/pack-pear-worklet.mjs) whenever
-# apps/expo/pear/worklet/index.js changes; see that file's header.
-!apps/expo/pear/worklet/dist/
-!apps/expo/pear/worklet/dist/**
-
 # Expo
 .expo/
 .expo-shared/
@@ -245,3 +238,12 @@ system_logs.logarchive/
 __pycache__/
 *.pyc
 .alma-snapshots
+
+# E2E screenshots and recordings stay local; result.md is the committed evidence
+docs/e2e/**/*.png
+docs/e2e/**/*.jpg
+docs/e2e/**/*.jpeg
+docs/e2e/**/*.gif
+docs/e2e/**/*.webp
+docs/e2e/**/*.mp4
+docs/e2e/**/*.mov

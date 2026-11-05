@@ -1,6 +1,5 @@
 /**
- * projection.ts — three-tier link privacy → signed Profile Record projections
- * (T7, `notes-1.3.3-publishing-pairing-research.md` §3 / grill G4).
+ * projection.ts — three-tier link privacy → signed Profile Record projections.
  *
  * Per-item `visibility` is LOCAL only: each link carries a
  * `'public' | 'link-only' | 'private'` tier stored in the profile store's MMKV
@@ -14,7 +13,7 @@
  *   |----------|-------------------------------|-----------------------------------|
  *   | public   | `public`                      | Nostr / PDS (published)           |
  *   | shared   | `public` + `link-only`        | QR / URL fragment (direct share)  |
- *   | full     | all (`public`/`link-only`/`private`) | Pear private exchange / local |
+ *   | full     | all (`public`/`link-only`/`private`) | local source of truth        |
  *
  * Only LINKS gain a tier in v1 — identity bindings (`alsoKnownAs`) and
  * `badges` are what make the green check work and are copied verbatim into
@@ -39,7 +38,7 @@ export const LINK_VISIBILITIES: readonly LinkVisibility[] = ['public', 'link-onl
  * The link visibilities each published scope INCLUDES. `public` is the
  * narrowest (only public links reach a relay); `shared` widens it to also
  * carry link-only links (someone you handed the QR to); `full` keeps
- * everything (your own source of truth / a mutually-authenticated Pear peer).
+ * everything (your own source of truth).
  */
 const SCOPE_INCLUDES: Record<ProfileScope, ReadonlySet<LinkVisibility>> = {
   public: new Set<LinkVisibility>(['public']),

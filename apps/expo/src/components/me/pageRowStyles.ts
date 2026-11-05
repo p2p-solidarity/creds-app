@@ -20,13 +20,12 @@ export const ROW_RADIUS = Radius.card;
 /** `.f-ico` — round icon tile and the glyph it frames. */
 export const ICON_TILE_SIZE = 36;
 export const ICON_TILE_GLYPH = 18;
-/** Row heights. The drag strides below must stay derived from these — the
- * reorder math reads a row's travel as height + gap, so a height edited
- * without its stride desyncs the drop slot from what the finger sees. */
+/** Row heights. The drag stride must stay derived from these — the reorder
+ * math reads a row's travel as height + gap, so a height edited without its
+ * stride desyncs the drop slot from what the finger sees. */
 export const FIELD_ROW_HEIGHT = 54;
 export const BLOCK_ROW_HEIGHT = 48;
 export const FIELD_ROW_STRIDE = FIELD_ROW_HEIGHT + ROW_GAP;
-export const BLOCK_ROW_STRIDE = BLOCK_ROW_HEIGHT + ROW_GAP;
 
 /** One row's travel (its measured height + the gap), or `stride` while the
  * row has not been measured. Rows may differ in height — a link row grows a

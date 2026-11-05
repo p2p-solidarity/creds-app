@@ -134,7 +134,7 @@ export default function UsernameSettings(): ReactNode {
               </View>
               <ThemedTextInput
                 value={username}
-                inlinePrefix="creds.id/@"
+                inlinePrefix="creds.id/"
                 kind="handle"
                 maxLength={30}
                 placeholder="name"
