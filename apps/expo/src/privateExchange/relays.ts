@@ -60,7 +60,7 @@ let ownList: { readonly hex: string; readonly relays: readonly string[] } | null
 
 /**
  * Make sure others can reach us, and return the relays to read our inbox from.
- * Publishes `DM_RELAYS` as our 10050 only after a confirmed "none"; an existing
+ * Publishes `DM_RELAYS` as our 10050 only after every relay confirmed "none"; an existing
  * list (maybe set in another client) is kept and read from.
  */
 export function ensureOwnDmRelays(): Promise<readonly string[]> {
@@ -69,12 +69,20 @@ export function ensureOwnDmRelays(): Promise<readonly string[]> {
       const me = await getNostrPubkey();
       if (!me.ok) return DM_RELAYS;
       if (ownList?.hex === me.value) return ownList.relays;
-      const lookup = await lookupDmRelays(me.value);
-      if (lookup.kind === 'found') {
-        ownList = { hex: me.value, relays: [...new Set([...lookup.relays, ...DM_RELAYS])] };
+      const filter: NostrFilter = { kinds: [KIND_DM_RELAYS], authors: [me.value], limit: 1 };
+      let lookup = await collectEvents(LOOKUP_RELAYS, filter, LOOKUP_TIMEOUT_MS);
+      // A relay's first dial of a cold process often drops (damus); one retry.
+      if (!lookup.complete && lookup.events.length === 0) lookup = await collectEvents(LOOKUP_RELAYS, filter, LOOKUP_TIMEOUT_MS);
+      const latest = lookup.events
+        .filter((e) => e.pubkey === me.value)
+        .reduce<NostrEvent | null>((best, e) => (best === null || e.created_at > best.created_at ? e : best), null);
+      if (latest !== null) {
+        ownList = { hex: me.value, relays: [...new Set([...parseDmRelayList(latest), ...DM_RELAYS])] };
         return ownList.relays;
       }
-      if (lookup.kind === 'unreachable') return DM_RELAYS;
+      // Writing over a list we could not fully read might replace one set in
+      // another client, so publish only when every relay answered "none".
+      if (!lookup.complete) return DM_RELAYS;
       const signed = await signNostrEvent(buildDmRelayListEvent(DM_RELAYS));
       if (!signed.ok) return DM_RELAYS;
       const report = await publishToRelays(signed.value, LOOKUP_RELAYS, publishEvent);
@@ -109,6 +117,8 @@ export interface CollectedEvents {
   readonly events: readonly NostrEvent[];
   /** At least one relay delivered its whole result set. */
   readonly confirmed: boolean;
+  /** Every relay delivered its whole result set. */
+  readonly complete: boolean;
 }
 
 /** Every event matching `filter` across `relays`, plus whether any relay reached EOSE. */
@@ -118,19 +128,23 @@ export function collectEvents(relays: readonly string[], filter: NostrFilter, ti
     const handles: SubscriptionHandle[] = [];
     const settled = new Set<number>();
     let confirmed = false;
+    let eoseCount = 0;
     let done = false;
     const finish = (): void => {
       if (done) return;
       done = true;
       clearTimeout(timer);
       for (const h of handles) h.close();
-      resolve({ events: [...found.values()], confirmed });
+      resolve({ events: [...found.values()], confirmed, complete: relays.length > 0 && eoseCount === relays.length });
     };
     const timer = setTimeout(finish, timeoutMs);
     const settle = (index: number, eose: boolean): void => {
       if (settled.has(index)) return;
       settled.add(index);
-      if (eose) confirmed = true;
+      if (eose) {
+        confirmed = true;
+        eoseCount += 1;
+      }
       if (settled.size === relays.length) finish();
     };
     if (relays.length === 0) finish();
