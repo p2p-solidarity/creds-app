@@ -61,11 +61,12 @@ export function ProfileShareReadyContent({
   const { selected } = state;
   const otherCandidates = state.candidates.filter((candidate) => candidate.kind !== selected.kind);
   const qrBlockedBySize = profileShareQrIsOversize(selected, state.model);
+  const qrUrl = profileShareQrUrl(selected);
   const visibleQrState: ProfileShareQrState = qrBlockedBySize
-    ? { kind: 'oversize', url: selected.url }
+    ? { kind: 'oversize', url: qrUrl }
     : qrState;
   const qrImageUri =
-    !qrBlockedBySize && qrState.kind === 'ready' && qrState.url === profileShareQrUrl(selected)
+    !qrBlockedBySize && qrState.kind === 'ready' && qrState.url === qrUrl
       ? qrState.uri
       : null;
 
@@ -73,7 +74,7 @@ export function ProfileShareReadyContent({
     <>
       <CopyableUrlPill candidate={selected} onCopy={onCopy} />
 
-      <QrPreview url={selected.url} state={visibleQrState} onRetry={onRetryQr} />
+      <QrPreview url={qrUrl} state={visibleQrState} onRetry={onRetryQr} />
 
       <View className="flex-row gap-2">
         <View style={{ flex: 1 }}>
