@@ -28,6 +28,8 @@ import {
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 
+import { ToastOverlay } from '@/feedback/toast';
+
 export type ModalSheetPresentation = 'pageSheet' | 'formSheet';
 
 export interface ModalSheetProps {
@@ -74,7 +76,10 @@ export function ModalSheet({
       presentationStyle={presentation}
       onRequestClose={onRequestClose}
       onDismiss={onDismiss}>
-      <SafeAreaProvider initialMetrics={initialMetrics}>{children}</SafeAreaProvider>
+      <SafeAreaProvider initialMetrics={initialMetrics}>
+        {children}
+        {Platform.OS === 'android' ? <ToastOverlay /> : null}
+      </SafeAreaProvider>
     </Modal>
   );
 }

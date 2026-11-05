@@ -22,7 +22,7 @@
  */
 import type { ReactNode } from 'react';
 import { useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useReducedMotion,
@@ -30,6 +30,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FullWindowOverlay } from 'react-native-screens';
 import { create } from 'zustand';
 
 import { PressableScale } from '@/components/common/PressableScale';
@@ -174,11 +175,17 @@ function ToastItem({ toast }: { readonly toast: Toast }): ReactNode {
   );
 }
 
-/** Mount once near the top of your layout (`_layout.tsx`). */
+/**
+ * Mount once near the top of your layout (`_layout.tsx`). On iOS a presented
+ * formSheet/pageSheet covers the root view, so the stack lives in a
+ * `FullWindowOverlay`; Android sheets are separate dialog windows, so
+ * `ModalSheet` and `SlideUpSheet` mount their own copy instead.
+ */
 export function ToastOverlay(): ReactNode {
   const toasts = useToastStore((s) => s.toasts);
   const insets = useSafeAreaInsets();
-  return (
+  if (toasts.length === 0) return null;
+  const stack = (
     <View
       pointerEvents="box-none"
       style={[styles.overlay, { top: insets.top + 4 }]}
@@ -188,6 +195,7 @@ export function ToastOverlay(): ReactNode {
       ))}
     </View>
   );
+  return Platform.OS === 'ios' ? <FullWindowOverlay>{stack}</FullWindowOverlay> : stack;
 }
 
 const styles = StyleSheet.create({
