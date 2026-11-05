@@ -144,9 +144,9 @@ export function CardFaceBackground({
 
 /** Fixed sky — the same stars every time, so the card never reshuffles. */
 const STARS: readonly { x: number; y: number; r: number; spark?: boolean; period: number; phase: number }[] = [
-  { x: 0.08, y: 0.18, r: 1.2, period: 4200, phase: 0 },
+  { x: 0.06, y: 0.44, r: 1.2, period: 4200, phase: 0 },
   { x: 0.22, y: 0.62, r: 1, period: 5600, phase: 900 },
-  { x: 0.31, y: 0.12, r: 4.5, spark: true, period: 6400, phase: 300 },
+  { x: 0.52, y: 0.08, r: 4.5, spark: true, period: 6400, phase: 300 },
   { x: 0.44, y: 0.4, r: 0.9, period: 3800, phase: 1500 },
   { x: 0.56, y: 0.2, r: 1.3, period: 5000, phase: 600 },
   { x: 0.63, y: 0.74, r: 1, period: 4600, phase: 2100 },
@@ -154,7 +154,7 @@ const STARS: readonly { x: number; y: number; r: number; spark?: boolean; period
   { x: 0.82, y: 0.14, r: 1.1, period: 4400, phase: 400 },
   { x: 0.9, y: 0.52, r: 0.9, period: 5200, phase: 1800 },
   { x: 0.94, y: 0.86, r: 1.2, period: 3900, phase: 700 },
-  { x: 0.13, y: 0.88, r: 3.5, spark: true, period: 6800, phase: 2400 },
+  { x: 0.4, y: 0.6, r: 3.5, spark: true, period: 6800, phase: 2400 },
   { x: 0.5, y: 0.9, r: 0.8, period: 4800, phase: 1000 },
 ];
 
@@ -167,21 +167,21 @@ function CredsSky({ mirrored }: { readonly mirrored: boolean }): ReactNode {
       <Svg width="100%" height="100%" viewBox="0 0 160 100" preserveAspectRatio="none">
         <Defs>
           <RadialGradient id="auroraA" cx="50%" cy="50%" r="50%">
-            <Stop offset="0" stopColor={c.auroraA} />
+            <Stop offset="0" stopColor={c.auroraA} stopOpacity={0.62} />
             <Stop offset="1" stopColor={c.auroraA} stopOpacity={0} />
           </RadialGradient>
           <RadialGradient id="auroraB" cx="50%" cy="50%" r="50%">
-            <Stop offset="0" stopColor={c.auroraB} />
+            <Stop offset="0" stopColor={c.auroraB} stopOpacity={0.6} />
             <Stop offset="1" stopColor={c.auroraB} stopOpacity={0} />
           </RadialGradient>
           <RadialGradient id="auroraC" cx="50%" cy="50%" r="50%">
-            <Stop offset="0" stopColor={c.auroraC} />
+            <Stop offset="0" stopColor={c.auroraC} stopOpacity={0.16} />
             <Stop offset="1" stopColor={c.auroraC} stopOpacity={0} />
           </RadialGradient>
         </Defs>
         <Ellipse cx={18} cy={-6} rx={78} ry={58} fill="url(#auroraA)" />
         <Ellipse cx={150} cy={22} rx={70} ry={56} fill="url(#auroraB)" />
-        <Ellipse cx={92} cy={88} rx={52} ry={34} fill="url(#auroraC)" />
+        <Ellipse cx={104} cy={96} rx={46} ry={26} fill="url(#auroraC)" />
       </Svg>
       {STARS.map((star) => (
         <Star key={`${String(star.x)}-${String(star.y)}`} {...star} />

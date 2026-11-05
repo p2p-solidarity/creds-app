@@ -404,9 +404,9 @@ export const CardFinishColors = {
     sky: ['#2C2557', '#1C1741', '#13102E'],
     skyLocations: [0, 0.55, 1],
     /** `.door-aurora-a/b/c` in the dark theme, a little stronger on a small face. */
-    auroraA: 'rgba(150,60,140,0.62)',
-    auroraB: 'rgba(64,72,176,0.6)',
-    auroraC: 'rgba(250,226,160,0.2)',
+    auroraA: '#963C8C',
+    auroraB: '#4048B0',
+    auroraC: '#FAE2A0',
     star: '#FFFFFF',
     spark: '#FFF6D8',
     ink: '#FCF8F0',
