@@ -840,6 +840,7 @@
   "pageDesign.proControl": "Pro 功能，點一下查看方案。",
   "pageDesign.footer": "頁尾",
   "pageDesign.showBrand": "顯示 creds.id",
+  "pageDesign.showNostr": "在 Page 顯示我的 Nostr 公鑰",
   "pageDesign.footerText": "頁尾文字",
   "pageDesign.lapsedTitle": "{{names}} 的勾勾失效了",
   "pageDesign.lapsedBody": "下方仍會標示需要重新驗證。",

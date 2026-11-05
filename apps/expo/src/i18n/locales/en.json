@@ -840,6 +840,7 @@
   "pageDesign.proControl": "Pro feature. Tap to see the plan.",
   "pageDesign.footer": "Footer",
   "pageDesign.showBrand": "Show creds.id",
+  "pageDesign.showNostr": "Show my Nostr key on the Page",
   "pageDesign.footerText": "Footer Text",
   "pageDesign.lapsedTitle": "The check on {{names}} has lapsed",
   "pageDesign.lapsedBody": "It is still marked below as needing re-verification.",

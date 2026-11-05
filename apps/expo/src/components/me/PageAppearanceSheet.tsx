@@ -411,6 +411,13 @@ function FooterControls(): ReactNode {
           accessibilityHint={designUnlocked ? undefined : t('pageDesign.proControl')}
         />
       </View>
+      <View className="flex-row items-center justify-between">
+        <ThemedText variant="bodyMedium" className="flex-1 pr-3">{t('pageDesign.showNostr')}</ThemedText>
+        <ThemedSwitch
+          value={appearance.showNostr === true}
+          onValueChange={(showNostr) => { setAppearance({ showNostr }); }}
+        />
+      </View>
       <ProTextField
         label={t('pageDesign.footerText')}
         value={appearance.footerText}
