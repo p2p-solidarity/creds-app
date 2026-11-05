@@ -161,6 +161,9 @@ export const publicPageAppearanceSchema = z
     customBackground: z.string().regex(/^#[0-9A-Fa-f]{6}$/).nullable(),
     showBrand: z.boolean(),
     footerText: z.string().max(40),
+    // Opt-in: list the owner's `nostr:npub` binding on the Page. Omitted when off
+    // so Pages that never turn it on sign byte-identical to pre-3.3.0 ones.
+    showNostr: z.literal(true).optional(),
   })
   .strict();
 export type PublicPageAppearance = z.infer<typeof publicPageAppearanceSchema>;
