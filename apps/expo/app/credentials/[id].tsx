@@ -7,14 +7,13 @@
  *     gradient.
  *   • Metadata section ("Credential metadata"): 5 joined mutedSurface rows
  *     (Issuer / Holder / Issued / Expires / Proof).
- *   • Selective Disclosures section ("Selective Disclosures"): list of
- *     claim rows with checkbox. Empty state: "No claims associated with
- *     this credential."
+ *   • Claims section: read-only claim rows (one proof covers what it
+ *     covers; nothing to pick). Hidden when the proof has no claim rows.
  *   • Bottom bar: "Present proof" primary (disabled if no claims),
  *     "Regenerate Credential" secondary text button.
  *
- * Selective Disclosures are sourced from `useIdentityData.provableClaims`
- * filtered by this credential's id.
+ * Claims are sourced from `useIdentityData.provableClaims` filtered by this
+ * credential's id.
  */
 import { router, useLocalSearchParams } from 'expo-router';
 import { safeBack } from '@/navigation/safeBack';
@@ -29,7 +28,7 @@ import { PresentationProofQr } from '@/components/credentials/PresentationProofQ
 import { PresentationSheet } from '@/components/credentials/PresentationSheet';
 import { PressableScale } from '@/components/common/PressableScale';
 import { SfIcon } from '@/components/icons/SfIcon';
-import { ON_DARK, ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
+import { ThemedButton, ThemedSurface, ThemedText } from '@/components/themed';
 import { Colors } from '@/constants/Colors';
 import { Radius } from '@/constants/radius';
 import { useIssuerMetadataStore } from '@/credentials/issuerStore';
@@ -297,17 +296,8 @@ function claimIcon(claimType: string): SFSymbol {
   }
 }
 
-function ClaimRow({
-  claim,
-  selected,
-  onToggle,
-}: {
-  readonly claim: ProvableClaimEntity;
-  readonly selected: boolean;
-  /** Absent when nothing can be presented from here (passport): a plain row, no checkbox. */
-  readonly onToggle?: () => void;
-}) {
-  const row = (
+function ClaimRow({ claim }: { readonly claim: ProvableClaimEntity }) {
+  return (
     <ThemedSurface variant="inset" className="flex-row items-center gap-2 px-3 py-3">
       <View style={{ width: 18, height: 18, alignItems: 'center', justifyContent: 'center' }}>
         <SfIcon name={claimIcon(claim.claimType)} size={14} color={Colors.terminalGreen} />
@@ -315,28 +305,7 @@ function ClaimRow({
       <ThemedText variant="bodyMedium" style={{ flex: 1 }}>
         {claim.title}
       </ThemedText>
-      {onToggle ? (
-        <View
-          style={{
-            width: 18,
-            height: 18,
-            borderRadius: Radius.xs,
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: selected ? Colors.terminalGreen : 'transparent',
-            borderWidth: selected ? 0 : 1,
-            borderColor: Colors.text3,
-          }}>
-          {selected ? <SfIcon name="checkmark" size={11} weight="bold" color={ON_DARK} /> : null}
-        </View>
-      ) : null}
     </ThemedSurface>
-  );
-  if (!onToggle) return row;
-  return (
-    <PressableScale onPress={onToggle} accessibilityRole="checkbox" accessibilityState={{ checked: selected }}>
-      {row}
-    </PressableScale>
   );
 }
 
@@ -347,8 +316,8 @@ export default function CredentialDetailScreen() {
   const insets = useSafeAreaInsets();
   const { id, context, groupId, claimId, product } = useLocalSearchParams<{
     id: string;
-    /** Optional disclosure-row entry point. When present, start with only
-     *  that claim selected so "Show" does not over-disclose. */
+    /** Optional disclosure-row entry point (developer tools): present only
+     *  that claim so "Show" does not over-disclose. */
     claimId?: string;
     /** 'work' when launched from the Me "Work" action — scopes the
      *  presentation to the group identified by `groupId`. */
@@ -368,7 +337,6 @@ export default function CredentialDetailScreen() {
   const hydrateIssuers = useIssuerMetadataStore((s) => s.hydrate);
   const allClaims = useIdentityData((s) => s.provableClaims);
   const markPresented = useIdentityData((s) => s.markClaimPresented);
-  const [selectedClaimIDs, setSelectedClaimIDs] = useState<ReadonlySet<string> | null>(null);
   const [presenting, setPresenting] = useState(false);
 
   // The credential went away while this screen was open — a passport rescan
@@ -389,7 +357,6 @@ export default function CredentialDetailScreen() {
   }, [hydrateIdentity, hydrateIssuers, loadDetail, id]);
 
   useEffect(() => {
-    setSelectedClaimIDs(null);
     setPresenting(false);
   }, [id, claimId]);
 
@@ -404,18 +371,13 @@ export default function CredentialDetailScreen() {
   const isPassportCredential = credential?.type === 'passport';
   const presentationClaimRows = associatedClaims;
 
-  const initialClaimIdsForPresentation = useMemo(
+  const selectedClaimIdsForPresentation = useMemo(
     () =>
       initialPresentationClaimIds(
         presentationClaimRows,
         typeof claimId === 'string' ? claimId : undefined
       ),
     [presentationClaimRows, claimId]
-  );
-
-  const selectedClaimIdsForPresentation = useMemo(
-    () => selectedClaimIDs ?? initialClaimIdsForPresentation,
-    [initialClaimIdsForPresentation, selectedClaimIDs]
   );
 
   const selectedClaimsForPresentation = useMemo(
@@ -496,15 +458,6 @@ export default function CredentialDetailScreen() {
         });
       }
     })();
-  };
-
-  const toggleClaim = (claimID: string) => {
-    setSelectedClaimIDs((prev) => {
-      const next = new Set(prev ?? initialClaimIdsForPresentation);
-      if (next.has(claimID)) next.delete(claimID);
-      else next.add(claimID);
-      return next;
-    });
   };
 
   const onRegenerate = () => {
@@ -670,40 +623,28 @@ export default function CredentialDetailScreen() {
             )}
           </View>
 
-          {/* Selective Disclosures section */}
-          <View className="gap-2">
-            <SectionHeader title={t('credentialDetail.disclosuresHeader')} />
-            {presentationClaimRows.length === 0 ? (
-              <View className="px-4">
-                <ThemedText variant="bodySmall" tone="tertiary">
-                  {t('credentialDetail.noClaims')}
-                </ThemedText>
-              </View>
-            ) : (
+          {/* Claims section — absent when the proof carries no claim rows */}
+          {presentationClaimRows.length === 0 ? null : (
+            <View className="gap-2">
+              <SectionHeader title={t('credentialDetail.disclosuresHeader')} />
               <View className="px-4" style={{ gap: 16 }}>
                 {isPassportCredential ? null : (
                   <PresentationProofQr
                     selectedClaims={selectedClaimsForPresentation}
                     pages={presentation.pages}
                     emptyText={presentation.error ?? t('credentialDetail.noClaims')}
+                    footerText={null}
                     showClaimDetails={!isProductContext}
                   />
                 )}
                 <View style={{ gap: 8 }}>
                   {presentationClaimRows.map((c) => (
-                    <ClaimRow
-                      key={c.id}
-                      claim={c}
-                      selected={selectedClaimIdsForPresentation.has(c.id)}
-                      onToggle={isPassportCredential ? undefined : () => {
-                        toggleClaim(c.id);
-                      }}
-                    />
+                    <ClaimRow key={c.id} claim={c} />
                   ))}
                 </View>
               </View>
-            )}
-          </View>
+            </View>
+          )}
         </View>
       </ScrollView>
 
