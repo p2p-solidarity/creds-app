@@ -14,15 +14,27 @@ const LOCAL_AVATAR_DIR = FileSystem.documentDirectory
   ? `${FileSystem.documentDirectory}profile-avatar/`
   : null;
 
-function isOwnedAvatarUri(value: string): boolean {
-  return LOCAL_AVATAR_DIR !== null && value.startsWith(LOCAL_AVATAR_DIR);
+const AVATAR_FILE_NAME = /^avatar-[A-Za-z0-9-]+$/;
+
+/**
+ * iOS moves the app container (new UUID in the path) on every app update, so a
+ * stored absolute URI goes stale. Keep only our file name and rebase it onto
+ * the current documents directory.
+ */
+function resolveOwnedAvatarUri(value: string): string | null {
+  if (LOCAL_AVATAR_DIR === null) return null;
+  const marker = '/profile-avatar/';
+  const at = value.lastIndexOf(marker);
+  if (at === -1) return null;
+  const name = value.slice(at + marker.length);
+  return AVATAR_FILE_NAME.test(name) ? `${LOCAL_AVATAR_DIR}${name}` : null;
 }
 
 /** Sync mirror read for frame-one rendering after the root MMKV bootstrap. */
 export function readLocalAvatarUri(): string | null {
   try {
     const value = getMmkv().getString(LOCAL_AVATAR_KEY);
-    return value && isOwnedAvatarUri(value) ? value : null;
+    return value ? resolveOwnedAvatarUri(value) : null;
   } catch {
     return null;
   }
