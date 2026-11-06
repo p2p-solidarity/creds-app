@@ -66,6 +66,7 @@ export function AvatarEditorSheet({
       canRemove={controller.canRemove}
       linkAvatars={controller.linkAvatars}
       onClose={controller.close}
+      onDismissed={controller.onSheetDismissed}
       onChooseLibrary={() => {
         void controller.chooseFromLibrary();
       }}

@@ -1,7 +1,7 @@
 import * as ImagePicker from 'expo-image-picker';
 import { safeBack } from '@/navigation/safeBack';
-import { useEffect, useMemo, useState } from 'react';
-import { Linking } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Linking, Platform } from 'react-native';
 
 import { getAtprotoSession } from '@/atproto/oauth';
 import { appAlert } from '@/feedback/appAlert';
@@ -39,6 +39,8 @@ export interface AvatarEditorController {
   readonly linkAvatars: readonly LinkAvatarChoice[];
   readonly open: () => void;
   readonly close: () => void;
+  /** The sheet's dismissal animation finished (iOS `Modal.onDismiss`). */
+  readonly onSheetDismissed: () => void;
   readonly chooseFromLibrary: () => Promise<void>;
   readonly useBluesky: () => Promise<void>;
   readonly useLinkAvatar: (picture: string) => Promise<void>;
@@ -74,11 +76,20 @@ export function useAvatarEditor({
   const [localAvatar, setLocalAvatar] = useState(readLocalAvatarUri);
   const handle = blueskyHandle(record);
   const linkAvatars = useLinkAvatars(record);
+  // The system photo picker presents over the top-most view controller. On
+  // iPad that is not the sheet while it is still on screen, so the picker
+  // opened from inside the sheet landed behind it. Close the sheet first and
+  // open the picker once its dismissal has finished.
+  const libraryPending = useRef(false);
+
+  const finish = () => {
+    if (returnToMeOnFinish) safeBack();
+  };
 
   const close = () => {
     setSheetOpen(false);
     setPhase({ step: 'ready' });
-    if (returnToMeOnFinish) safeBack();
+    finish();
   };
 
   const errorMessage = (reason: BlueskyAvatarError): string => {
@@ -115,32 +126,58 @@ export function useAvatarEditor({
         });
         return;
       }
+    } catch {
+      setPhase({ step: 'error', message: t('meEdit.avatar.localSaveFailed') });
+      return;
+    }
 
+    setSheetOpen(false);
+    // Android has no Modal dismiss event; its picker is an Activity that
+    // always opens above the dialog.
+    if (Platform.OS === 'ios') libraryPending.current = true;
+    else void pickFromLibrary();
+  };
+
+  const onSheetDismissed = () => {
+    if (!libraryPending.current) return;
+    libraryPending.current = false;
+    void pickFromLibrary();
+  };
+
+  /** Runs with the sheet closed; reopens it only to show a failure. */
+  const pickFromLibrary = async (): Promise<void> => {
+    const fail = () => {
+      setPhase({ step: 'error', message: t('meEdit.avatar.localSaveFailed') });
+      setSheetOpen(true);
+    };
+    try {
       const picked = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.9,
       });
-      if (picked.canceled) return;
+      if (picked.canceled) {
+        finish();
+        return;
+      }
       const sourceUri = picked.assets[0]?.uri;
       if (!sourceUri) {
-        setPhase({ step: 'error', message: t('meEdit.avatar.localSaveFailed') });
+        fail();
         return;
       }
 
-      setPhase({ step: 'loading', message: t('meEdit.avatar.savingOnDevice') });
       const persisted = await persistLocalAvatar(sourceUri);
       if (!persisted.ok) {
-        setPhase({ step: 'error', message: t('meEdit.avatar.localSaveFailed') });
+        fail();
         return;
       }
       setLocalAvatar(persisted.value);
-      close();
+      finish();
       haptic('success');
       pushToast(t('meEdit.avatar.savedOnDevice'), 'success');
     } catch {
-      setPhase({ step: 'error', message: t('meEdit.avatar.localSaveFailed') });
+      fail();
     }
   };
 
@@ -243,6 +280,7 @@ export function useAvatarEditor({
       setSheetOpen(true);
     },
     close,
+    onSheetDismissed,
     chooseFromLibrary,
     useBluesky,
     useLinkAvatar: commitRemoteAvatar,

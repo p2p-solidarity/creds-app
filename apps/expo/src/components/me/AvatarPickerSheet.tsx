@@ -26,6 +26,7 @@ export interface AvatarPickerSheetProps {
   /** Pictures the Page's links already serve — one tap instead of an upload. */
   readonly linkAvatars: readonly LinkAvatarChoice[];
   readonly onClose: () => void;
+  readonly onDismissed: () => void;
   readonly onChooseLibrary: () => void;
   readonly onUseBluesky: () => void;
   readonly onUseLinkAvatar: (picture: string) => void;
@@ -40,6 +41,7 @@ export function AvatarPickerSheet({
   canRemove,
   linkAvatars,
   onClose,
+  onDismissed,
   onChooseLibrary,
   onUseBluesky,
   onUseLinkAvatar,
@@ -54,7 +56,8 @@ export function AvatarPickerSheet({
   return (
     <ModalSheet
       visible={visible}
-      onRequestClose={close}>
+      onRequestClose={close}
+      onDismiss={onDismissed}>
       {visible ? (
         <View
           className="flex-1 bg-pageBg"
