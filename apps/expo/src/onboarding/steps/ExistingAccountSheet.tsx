@@ -21,7 +21,7 @@ export function ExistingAccountSheet({
 }: {
   readonly visible: boolean;
   readonly onClose: () => void;
-  readonly onRecovered: () => void;
+  readonly onRecovered: () => Promise<void>;
 }): ReactNode {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -38,11 +38,11 @@ export function ExistingAccountSheet({
     return () => { live = false; };
   }, [visible]);
 
-  const finish = (): void => {
+  const finish = async (): Promise<void> => {
+    setPhrase('');
+    await onRecovered();
     haptic('success');
     setPhase('options');
-    setPhrase('');
-    onRecovered();
   };
 
   const run = async (action: () => Promise<void>): Promise<void> => {
@@ -69,7 +69,7 @@ export function ExistingAccountSheet({
       t('security.prompt.presentProof')
     );
     if (!gate.success) return;
-    finish();
+    await finish();
   };
 
   const restoreIcloud = async (): Promise<void> => {
@@ -80,14 +80,14 @@ export function ExistingAccountSheet({
     await ensureSigningKey();
     const backup = await probeLatestBackup();
     if (backup !== null) await restoreFromBackup();
-    finish();
+    await finish();
   };
 
   const restorePhrase = async (): Promise<void> => {
     const imported = await importFromMnemonic(phrase);
     if (!imported.ok) throw new Error(imported.error.kind);
     await ensureSigningKey();
-    finish();
+    await finish();
   };
 
   return (

@@ -22,6 +22,7 @@ import {
   resumeOnboardingState,
   type OnboardingStep,
 } from '@/onboarding/state';
+import { recoverOwnPage } from '@/profile/recoverOwnPage';
 import { useProfileStore } from '@/profile/store';
 import { usePreferences } from '@/settings/preferences';
 
@@ -39,8 +40,6 @@ export default function OnboardingFlow(): ReactNode {
   const [takenName, setTakenName] = useState<string | null>(null);
   const [onPickAnother, setOnPickAnother] = useState<(() => void) | null>(null);
   const setPref = usePreferences((preferences) => preferences.set);
-  const username = usePreferences((preferences) => preferences.publicPageUsername);
-  const profileStatus = useProfileStore((profile) => profile.status);
 
   useEffect(() => {
     if (!isReplay) setPref('onboardingProgress', state);
@@ -72,9 +71,13 @@ export default function OnboardingFlow(): ReactNode {
     });
   };
 
-  const recoveredExistingAccount = (): void => {
+  const recoveredExistingAccount = async (): Promise<void> => {
+    await recoverOwnPage();
     setLoginOpen(false);
-    if (username.length > 0 && profileStatus === 'ready') finishToPage();
+    // Read the stores now, not the render-time closure: the restore just wrote them.
+    const hasName = usePreferences.getState().publicPageUsername.length > 0;
+    const hasPage = useProfileStore.getState().status === 'ready';
+    if (hasName && hasPage) finishToPage();
     else goTo('username');
   };
 
