@@ -1080,7 +1080,6 @@
   "meEdit.avatar.loadingBluesky": "Getting your Bluesky photo…",
   "meEdit.avatar.publishing": "Confirm publishing your profile photo…",
   "meEdit.avatar.savingProfile": "Saving your profile photo…",
-  "meEdit.avatar.savingOnDevice": "Saving your photo on this device…",
   "meEdit.avatar.removing": "Removing your profile photo…",
   "meEdit.avatar.noBlueskyAvatar": "Add a photo on Bluesky first, then try again.",
   "meEdit.avatar.reconnectBluesky": "Reconnect Bluesky, then try again.",

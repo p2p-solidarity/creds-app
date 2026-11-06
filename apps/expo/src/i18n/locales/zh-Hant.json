@@ -1080,7 +1080,6 @@
   "meEdit.avatar.loadingBluesky": "正在取得 Bluesky 照片…",
   "meEdit.avatar.publishing": "請確認發布你的個人照片…",
   "meEdit.avatar.savingProfile": "正在儲存個人照片…",
-  "meEdit.avatar.savingOnDevice": "正在將照片儲存在這台裝置…",
   "meEdit.avatar.removing": "正在移除個人照片…",
   "meEdit.avatar.noBlueskyAvatar": "請先在 Bluesky 加入照片，再試一次。",
   "meEdit.avatar.reconnectBluesky": "請重新連結 Bluesky，再試一次。",
