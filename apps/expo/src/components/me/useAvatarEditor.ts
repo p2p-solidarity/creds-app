@@ -81,6 +81,10 @@ export function useAvatarEditor({
   // opened from inside the sheet landed behind it. Close the sheet first and
   // open the picker once its dismissal has finished.
   const libraryPending = useRef(false);
+  // From picker launch until the copy lands the sheet is closed, so nothing on
+  // screen is locked: refuse to reopen it (Remove, a second pick) until then,
+  // or a late save could resurrect a removed photo or beat the newer pick.
+  const savingFromLibrary = useRef(false);
 
   const finish = () => {
     if (returnToMeOnFinish) safeBack();
@@ -108,6 +112,7 @@ export function useAvatarEditor({
   };
 
   const chooseFromLibrary = async (): Promise<void> => {
+    if (savingFromLibrary.current) return;
     try {
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
@@ -146,6 +151,7 @@ export function useAvatarEditor({
 
   /** Runs with the sheet closed; reopens it only to show a failure. */
   const pickFromLibrary = async (): Promise<void> => {
+    savingFromLibrary.current = true;
     const fail = () => {
       setPhase({ step: 'error', message: t('meEdit.avatar.localSaveFailed') });
       setSheetOpen(true);
@@ -178,6 +184,8 @@ export function useAvatarEditor({
       pushToast(t('meEdit.avatar.savedOnDevice'), 'success');
     } catch {
       fail();
+    } finally {
+      savingFromLibrary.current = false;
     }
   };
 
@@ -237,6 +245,7 @@ export function useAvatarEditor({
   };
 
   const remove = async (): Promise<void> => {
+    if (savingFromLibrary.current) return;
     setPhase({ step: 'loading', message: t('meEdit.avatar.removing') });
     const hadRecordAvatar = record?.avatar !== null && record?.avatar !== undefined;
     if (hadRecordAvatar) {
@@ -276,6 +285,7 @@ export function useAvatarEditor({
     linkAvatars,
     canRemove: record?.avatar != null || localAvatar !== null,
     open: () => {
+      if (savingFromLibrary.current) return;
       setPhase({ step: 'ready' });
       setSheetOpen(true);
     },

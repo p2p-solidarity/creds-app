@@ -30,3 +30,16 @@ A0：iPad 點「從照片圖庫選擇」→ 畫面無變化（`A0-baseline-old-b
 - iPad：測試後用「移除」刪掉本機頭像（`A-cleanup-removed.png`，toast「已移除個人照片」），回到 baseline（無本機頭像）。Page record 沒有 avatar，沒有發佈。
 - iPhone 18 Pro：本機頭像選回原本的 creds logo；App 換成本次 Release sim build（原本也是 Release build）。
 - `xcrun simctl shutdown all` 已執行。
+
+## Codex review（PR #24）修正 — 存檔中鎖住
+Codex P2：picker 回來後 sheet 已關，`persistLocalAvatar` 還在複製時沒有任何鎖，此時「移除」或再選一次會競態（移除的照片復活／較舊的一張蓋過新的）。
+
+- 第一版（存檔時重開 sheet 顯示「儲存中」）實測 FAIL：存檔太快，sheet 剛開就被關，iOS 卡在一張空白 sheet 關不掉。已撤回。
+- 採用：`useAvatarEditor` 內 `savingFromLibrary` 鎖，從 picker 開啟到存檔結束（`finally` 必解鎖），`open`／`chooseFromLibrary`／`remove` 直接忽略。
+
+| Case | 預期 | 實際 | 判定 |
+|---|---|---|---|
+| C1 iPhone 選照片 | picker 開，選後 toast，回 Page，無殘留 sheet | 同預期（逐格截圖） | PASS |
+| C2 存檔後再點大頭貼 | sheet 正常開（鎖已解） | 同預期 | PASS |
+
+未驗證：存檔進行中去按「移除」的真實競態（複製只要幾百毫秒，模擬器上無法穩定製造）；iPad 這輪沒重跑（iPad 模擬器 Face ID 登入失敗，與本修正無關）。
