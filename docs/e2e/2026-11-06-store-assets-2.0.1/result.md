@@ -21,9 +21,11 @@ Build：iPhone 18 Pro 模擬器（iOS 27），**Release** 模擬器版（`xcodeb
 - 第 5 張標題 `creds.id/@你` → `creds.id/你`；聯絡人放大框移到 `@gimmy` 那列。
 - `store-copy/2.0.1.json`：描述裡的 `creds.id/@you` 改成 `creds.id/you`，新的「新功能」文案。
 
+- 第 5 張改拍真的「頁面內容沒被改過」驗證卡（@gimmy 聯絡人）。模擬器沒有 App Attest，拍不到手機見證的綠勾。
+- 第 3 張改成「iPhone duo」：前面出示 QR、後面對方掃到的「已驗證頁面／存入聯絡人」（`render.ts` 的 `duo` 欄位），`creds-marketing-assets@1df796c`。
+- iPad 13″ 01/03/04/06 中英各 4 張重拍（`creds.id/credsdesign`、creds night 卡、7 位聯絡人），`creds-marketing-assets@73cb92c`。iPad 帳號用救援詞還原，途中抓到還原 bug，見 `docs/e2e/2026-11-06-phrase-restore-page/result.md`。
+
 ## 沒跑／沒換
 
-- 「綠勾，訪客自己查」那張（`05-verified`）沒重拍：要 Kidney 自己有見證的頁面，模擬器沒有；畫面上「簽章有效」是 2.0.0 文案（現在叫「頁面內容沒被改過」），內容沒有錯但字不同。
-- `06-add`（貼上連結）沒重拍，畫面沒改版。
-- iPad 13″ 4 張沒重拍（仍是 2.0.0 畫面，網址帶 @）。
+- `06-add`（iPhone，貼上連結）沒重拍，畫面沒改版。
 - 沒有上傳到 App Store Connect / Play Console；沒跑實機、Android、深色模式。
